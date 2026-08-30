@@ -1,0 +1,11 @@
+# Place-Dateien - nur Transportmittel, nicht versionieren
+/*.rbxl
+/*.rbxlx
+*.rbxl.lock
+*.rbxlx.lock
+
+# Build-Artefakte
+build/
+
+# Editor
+.vscode/
