@@ -40,9 +40,14 @@
     },
     "ReplicatedStorage": {
       "$className": "ReplicatedStorage",
+      "$path": "src/ReplicatedStorage",
       "$ignoreUnknownInstances": true,
-      "$path": "src/ReplicatedStorage"
+
+      "TrenchbornAssetWorkshop": {
+        "$path": "packages/trenchborn-asset-workshop/package.project.json"
+      }
     },
+    
     "ServerScriptService": {
       "$className": "ServerScriptService",
       "$ignoreUnknownInstances": true,
