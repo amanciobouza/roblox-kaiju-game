@@ -1,0 +1,3 @@
+[submodule "packages/trenchborn-asset-workshop"]
+	path = packages/trenchborn-asset-workshop
+	url = https://github.com/amanciobouza/trenchborn-asset-workshop.git
