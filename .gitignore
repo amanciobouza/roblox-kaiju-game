@@ -9,3 +9,9 @@ build/
 
 # Editor
 .vscode/
+
+# Lokale Verzeichnis-Verknüpfung auf .agents/skills -- damit Claude Code die Skills
+# findet, ohne dass sie zweimal im Repo landen. Die Quelle ist .agents/skills/,
+# verwaltet über skills-lock.json. Neu einrichten mit:
+#   cmd //c "mklink /J .claude\skills\<name> .agents\skills\<name>"
+.claude/skills/
