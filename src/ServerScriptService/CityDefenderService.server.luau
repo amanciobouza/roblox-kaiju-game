@@ -193,7 +193,129 @@ local function buildFallbackGuardian()
 	return model
 end
 
+-- ===== TEMPORÄR: Warden-I Shepherd aus dem Asset-Workshop als Guardian =====
+-- Baut das Modell zur Laufzeit aus ReplicatedStorage.TrenchbornAssetWorkshop, statt ein
+-- fertiges Modell aus ServerStorage.GuardianModels zu klonen.
+--
+-- BEWUSST nur GoldenMaster.Build + Dressing.Apply -- NICHT WardenShepherdInstaller.Install().
+-- Der Installer hängt zusätzlich die workshop-eigene Gameplay- und Reaktionslogik an, die
+-- gegen die Zustandsmaschine hier (SCAN/POSITION/BLOCK/COUNTER) arbeiten würde.
+--
+-- Zum Abschalten: WARDEN_CITIES leeren -- dann greift wieder ServerStorage/Platzhalter.
+local WARDEN_CITIES = { City = true }
+
+-- Der Dienst setzt den Guardian mit model:PivotTo(spawnPosition) ab; der Pivot ist der
+-- PrimaryPart. Der "GuardianSpawn"-Part markiert in der Praxis den BODEN -- die
+-- Spawn-Zeremonie stösst dort auch ihren Dampf aus ("am Boden", siehe playDeploySequence).
+-- Deshalb wird der Warden-Root auf Sohlenhöhe gelegt: dann landen die Füsse genau auf
+-- dem Spawn-Punkt. (Der Platzhalter macht das NICHT -- sein PrimaryPart sitzt 15 Studs
+-- über der Sohle, er steckt also seit jeher entsprechend tief im Terrain. Das ist ein
+-- Altfehler dieses Dienstes und hier bewusst nicht mitgeändert.)
+--
+-- Feinjustierung, falls der Warden schwebt oder einsinkt: positiv = höher.
+local WARDEN_GROUND_CLEARANCE = 0
+
+local function buildWardenGuardian()
+	local workshop = ReplicatedStorage:FindFirstChild("TrenchbornAssetWorkshop")
+	if not workshop then
+		warn("[CityDefenderService] ReplicatedStorage.TrenchbornAssetWorkshop nicht gefunden -- nutze Platzhalter statt Warden.")
+		return nil
+	end
+
+	local ok, model = pcall(function()
+		local builder = require(workshop:WaitForChild("WardenShepherdGoldenMaster", 5))
+		local dressing = require(workshop:WaitForChild("WardenShepherdDressing", 5))
+
+		-- Build() setzt model.Parent selbst -- deshalb ein Ablage-Ordner, aus dem das
+		-- fertige Modell wieder herausgelöst wird (der Aufrufer parentet nach Workspace).
+		local staging = Instance.new("Folder")
+		staging.Name = "WardenStaging"
+		staging.Parent = ServerStorage
+
+		local built = builder.Build(staging)
+		dressing.Apply(built) -- sucht "VisorSensor"/"Lens" -- MUSS vor dem Umbenennen laufen
+		built.Parent = nil
+		staging:Destroy()
+		return built
+	end)
+
+	if not ok or not model then
+		warn("[CityDefenderService] Warden konnte nicht gebaut werden (" .. tostring(model) .. ") -- nutze Platzhalter.")
+		return nil
+	end
+
+	-- Root auf Sohlenhöhe bringen (siehe Kommentar oben). Root ist ein eigenes,
+	-- unsichtbares Teil -- es allein zu verschieben verändert die Geometrie nicht.
+	local root = model.PrimaryPart
+	if root then
+		local boundsCFrame, boundsSize = model:GetBoundingBox()
+		local soleY = boundsCFrame.Position.Y - boundsSize.Y * 0.5
+		root.Position = Vector3.new(
+			root.Position.X,
+			soleY - WARDEN_GROUND_CLEARANCE,
+			root.Position.Z
+		)
+	end
+
+	-- Der Workshop baut jedes Teil mit CanCollide = false -- als reines Anschauungsmodell
+	-- richtig, als Boss falsch: der Spieler läuft sonst mühelos durch den Warden hindurch.
+	-- NUR sichtbare Teile fest machen; die sechs unsichtbaren Hitbox-Blöcke und der
+	-- unsichtbare Root bleiben durchlässig, sonst entstünde eine unsichtbare Wand rings
+	-- um das Modell. Alle Teile sind Anchored -- feste Kollision kostet also keine Physik.
+	local solidParts = 0
+	for _, descendant in ipairs(model:GetDescendants()) do
+		if descendant:IsA("BasePart") and descendant.Transparency < 1 then
+			descendant.CanCollide = true
+			solidParts += 1
+		end
+	end
+
+	-- Namens-Brücke: der Dienst sucht feste Teilenamen (setVisorActive, fireImpactFist,
+	-- fireRepulsorPulse, setAegisShieldDeployed). Der Warden bringt eigene Namen mit.
+	-- Was nicht zugeordnet wird, ist überall nil-geprüft und schaltet nur die jeweilige
+	-- Optik ab -- keine Fehler.
+	local visor = model:FindFirstChild("VisorSensor", true)
+	if visor then
+		visor.Name = "Visor"
+	end
+
+	-- ACHTUNG: "RightHand" ist beim Warden ein FOLDER. Der Dienst tweent .Position am
+	-- gefundenen Objekt -- ein Folder würde dort abstürzen. Deshalb die Handfläche darin.
+	local rightHand = model:FindFirstChild("RightHand", true)
+	local palm = rightHand and rightHand:FindFirstChild("Palm")
+	if palm then
+		palm.Name = "ImpactFist"
+	end
+
+	-- "ChestCore" heisst beim Warden bereits so -- der Repulsor-Puls findet es von selbst.
+	--
+	-- "AegisShieldPanel" wird BEWUSST NICHT zugeordnet: der Warden hat keinen Armschild,
+	-- sondern einen Schockstock. setAegisShieldDeployed blendet sein Panel im Ruhezustand
+	-- auf Transparency 1 -- ein echtes Warden-Teil würde dabei verschwinden. Der
+	-- Schild-EFFEKT (Schadensabsorption, _G.IsGuardianProtectingBuilding) hängt am
+	-- Zustand, nicht am Teil, und funktioniert weiterhin.
+
+	print(
+		"[Kaiju-Debug] Guardian-Modell: Warden-I Shepherd gebaut (temporär)",
+		"-- Visor:", visor and "ja" or "NEIN",
+		"| ImpactFist:", palm and "ja" or "NEIN",
+		"| ChestCore:", model:FindFirstChild("ChestCore", true) and "ja" or "NEIN",
+		"| feste Teile:", solidParts
+	)
+
+	return model
+end
+
 local function getGuardianTemplate(cityName)
+	-- Temporärer Vorrang vor ServerStorage, siehe WARDEN_CITIES oben.
+	if WARDEN_CITIES[cityName] then
+		local warden = buildWardenGuardian()
+		if warden then
+			return warden
+		end
+		-- Fehlgeschlagen: unten normal weiter mit ServerStorage/Platzhalter.
+	end
+
 	local folder = ServerStorage:FindFirstChild("GuardianModels")
 	local custom = folder and folder:FindFirstChild(cityName)
 	if custom then
@@ -213,10 +335,24 @@ end
 -- ===== Health-Bar (gleiches Muster wie an anderen Stellen im Projekt) =====
 local function createHealthBar(guardian)
 	local anchorPart = guardian.model.PrimaryPart
+
+	-- Höhe der Leiste aus der Modellgrösse ableiten statt fest 11 Studs über dem
+	-- PrimaryPart. Beim Platzhalter (rund 21 Studs hoch, PrimaryPart in der Mitte)
+	-- kommt dabei praktisch derselbe Wert heraus wie bisher -- bei einem 42 Studs hohen
+	-- Modell wie dem Warden-I Shepherd lag die Leiste dagegen mitten auf der Brust.
+	local barOffsetY = 11
+	local okBounds, boundsCFrame, boundsSize = pcall(function()
+		return guardian.model:GetBoundingBox()
+	end)
+	if okBounds and boundsSize then
+		local modelTopY = boundsCFrame.Position.Y + boundsSize.Y * 0.5
+		barOffsetY = (modelTopY - anchorPart.Position.Y) + 9
+	end
+
 	local billboard = Instance.new("BillboardGui")
 	billboard.Name = "GuardianHealthBar"
 	billboard.Size = UDim2.new(0, 220, 0, 44)
-	billboard.StudsOffsetWorldSpace = Vector3.new(0, 11, 0)
+	billboard.StudsOffsetWorldSpace = Vector3.new(0, barOffsetY, 0)
 	billboard.AlwaysOnTop = true
 	billboard.MaxDistance = 600
 	billboard.Parent = anchorPart
@@ -314,9 +450,16 @@ local function damageGuardian(cityName, amount, attackerPlayer)
 		return
 	end
 
+	-- WICHTIG: die Regenerations-Sperre gilt für JEDEN Treffer, nicht nur für Treffer auf
+	-- den Schild. Vorher stand diese Zeile nur im Schild-Zweig -- sobald der Schild einmal
+	-- auf 0 war, lief die 10-Sekunden-Sperre durch, obwohl der Spieler ununterbrochen auf
+	-- die HP einschlug. Danach lud der Schild komplett nach und der Kampf begann von vorn:
+	-- der Guardian war so nicht zu besiegen. Der Kommentar unten ("falls eine Weile kein
+	-- Treffer kam") beschreibt das hier gemeinte Verhalten.
+	guardian.lastHitAt = os.clock()
+
 	if guardian.shield > 0 then
 		guardian.shield = math.max(guardian.shield - amount, 0)
-		guardian.lastHitAt = os.clock()
 	else
 		guardian.hp = math.max(guardian.hp - amount, 0)
 	end
@@ -372,6 +515,89 @@ local function damageGuardian(cityName, amount, attackerPlayer)
 	end
 end
 _G.DamageGuardian = damageGuardian
+
+-- ===== Sprung-Schaden (Touch-basiert, gleiches Muster wie bei Feuerwehrautos in
+-- FireEngineController.lua und bei Häusern in HouseHandler.lua) =====
+-- UNTERSCHIED zu den Feuerwehrautos: dort macht auch blosses Berühren Schaden. Bei einem
+-- Boss, neben dem man dauerhaft steht, wäre das geschenkter Dauerschaden -- hier zählt
+-- deshalb NUR der echte Sprungangriff.
+local JUMP_FALL_VELOCITY_THRESHOLD = -5
+local TRAMPLE_COOLDOWN = 0.5
+local recentFallVelocity = {} -- [player] = Y-Geschwindigkeit
+
+RunService.Heartbeat:Connect(function()
+	for _, player in ipairs(Players:GetPlayers()) do
+		local character = player.Character
+		local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+		if rootPart then
+			recentFallVelocity[player] = rootPart.AssemblyLinearVelocity.Y
+		end
+	end
+end)
+
+local function handleGuardianTouch(cityName, hit)
+	local guardian = activeGuardians[cityName]
+	if not guardian or guardian.defeated then
+		return
+	end
+	local character = hit.Parent
+	local player = character and Players:GetPlayerFromCharacter(character)
+	if not player then
+		return
+	end
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid or humanoid.Health <= 0 then
+		return
+	end
+
+	local state = humanoid:GetState()
+	local velocityY = recentFallVelocity[player] or 0
+	local isJumping = state == Enum.HumanoidStateType.Jumping
+		or state == Enum.HumanoidStateType.Freefall
+		or velocityY < JUMP_FALL_VELOCITY_THRESHOLD
+	if not isJumping then
+		return
+	end
+
+	guardian.lastTrampleAt = guardian.lastTrampleAt or {}
+	local now = os.clock()
+	local last = guardian.lastTrampleAt[player]
+	if last and now - last < TRAMPLE_COOLDOWN then
+		return
+	end
+	guardian.lastTrampleAt[player] = now
+
+	local baseDamage = (character:GetAttribute("Damage") or 10)
+		* ((_G.GetBerserkerDamageMultiplier and _G.GetBerserkerDamageMultiplier(player)) or 1.0)
+
+	-- Gleiche Bein-Verhältnis-Formel wie bei Häusern und Feuerwehrautos: 1x bis 2x.
+	local legPower = player:FindFirstChild("LegPower")
+	local legValue = legPower and legPower.Value or 0
+	local legCap = math.max(player:GetAttribute("LegStatCap") or 1, 1)
+	local legRatio = math.clamp(legValue / legCap, 0, 1)
+
+	if _G.AddJumpHeat then
+		_G.AddJumpHeat(player)
+	end
+
+	damageGuardian(cityName, baseDamage * (1 + legRatio), player)
+end
+
+-- Touched auf ALLEN sichtbaren Teilen verbinden, nicht nur auf dem PrimaryPart: der
+-- Guardian besteht aus vielen Teilen, und man landet selten genau auf dem einen. Die
+-- unsichtbaren Hitbox-Blöcke und der Root bleiben aussen vor.
+local function connectGuardianTouch(cityName, model)
+	local connected = 0
+	for _, part in ipairs(model:GetDescendants()) do
+		if part:IsA("BasePart") and part.Transparency < 1 then
+			part.Touched:Connect(function(hit)
+				handleGuardianTouch(cityName, hit)
+			end)
+			connected += 1
+		end
+	end
+	return connected
+end
 
 _G.GetGuardianInfo = function(model)
 	for cityName, guardian in pairs(activeGuardians) do
@@ -533,6 +759,130 @@ end
 -- ===== Haupt-Verhalten: SCAN -> POSITIONIEREN -> BLOCKIEREN -> KONTERN =====
 local ARRIVAL_THRESHOLD = 4
 
+-- ===== Bodenverfolgung beim Laufen =====
+-- Die Bewegung unten verschiebt den Guardian nur waagerecht -- die Höhe blieb dadurch auf
+-- dem Wert vom Spawn-Punkt stehen, und der Guardian schwebte über jedem Gelände, das
+-- tiefer liegt. Hier wird die Zielposition auf den tatsächlichen Boden gesetzt.
+--
+-- Ausgeschlossen werden das Guardian-Modell selbst (sonst trifft der Strahl seine eigenen
+-- Füsse) und alle Spielerfiguren. Gebäude zählen bewusst ALS Boden -- ein Guardian, der
+-- über Trümmer steigt, sieht besser aus als einer, der darin versinkt.
+local GROUND_RAY_UP = 60
+local GROUND_RAY_DOWN = 400
+
+-- ===== Laufanimation =====
+-- Prozedural statt per Rig: alle Teile des Warden-Modells sind verankert, ihre CFrames
+-- lassen sich also direkt setzen. Pro Bild wird jedes Beinteil um den HÜFTPUNKT gedreht,
+-- die beiden Beine gegenphasig -- dazu ein leichtes Auf und Ab des ganzen Körpers.
+--
+-- Bewusst KEIN Kniebeugen in dieser Fassung: ein starres Schwingen um die Hüfte liest
+-- sich bei einem schweren Panzerbein sauber, während ein schlecht sitzender Kniewinkel
+-- sofort kaputt aussieht. Lässt sich später ergänzen, wenn das Grundgefühl stimmt.
+--
+-- Die Teilenamen sind die des Warden-I Shepherd. Der Platzhalter-Guardian benennt seine
+-- Beine anders ("Leg"/"Foot", ohne Seite) -- für ihn bleibt das Gerüst leer und es wird
+-- wie bisher nichts animiert.
+local WALK_CYCLE_SPEED = 1.15 -- Schrittzyklen pro Sekunde
+local WALK_LEG_SWING_DEGREES = 20
+local WALK_BODY_BOB_STUDS = 0.45
+local WALK_BLEND_PER_SECOND = 4 -- wie schnell die Animation ein- und ausblendet
+
+local WALK_LEG_PART_SUFFIXES = {
+	"UpperLeg", "ThighPlate",
+	"KneeBearing", "KneeGuard", "KneeJointCover", "KneeJointHub",
+	"LowerLeg", "ShinPlate", "RearHydraulic",
+	"Ankle", "FootHeel", "FootMain", "ToeOuter", "ToeInner",
+}
+
+-- Merkt sich die Ruhelage jedes Beinteils RELATIV zum Modell-Pivot. Dadurch bleibt die
+-- Animation unabhängig davon, wo der Guardian gerade steht und wohin er schaut.
+local function captureWalkRig(guardian)
+	local model = guardian.model
+	local pivot = model:GetPivot()
+	local rig = {}
+
+	for _, side in ipairs({ "Left", "Right" }) do
+		local hip = model:FindFirstChild(side .. "HipBearing", true)
+		if hip and hip:IsA("BasePart") then
+			local leg = { hipLocal = pivot:ToObjectSpace(hip.CFrame).Position, rest = {} }
+			local count = 0
+			for _, suffix in ipairs(WALK_LEG_PART_SUFFIXES) do
+				local part = model:FindFirstChild(side .. suffix, true)
+				if part and part:IsA("BasePart") then
+					leg.rest[part] = pivot:ToObjectSpace(part.CFrame)
+					count += 1
+				end
+			end
+			if count > 0 then
+				table.insert(rig, leg)
+			end
+		end
+	end
+
+	guardian.walkRig = rig
+	guardian.walkPhase = 0
+	guardian.walkBlend = 0
+	return rig
+end
+
+-- Setzt die Beine auf die Pose zum aktuellen Phasenwinkel. Bei walkBlend = 0 landen sie
+-- exakt wieder in der Ruhelage -- die Funktion darf also jedes Bild laufen, auch im Stand.
+local function applyWalkPose(guardian)
+	local rig = guardian.walkRig
+	if not rig or #rig == 0 then
+		return
+	end
+	local pivot = guardian.model:GetPivot()
+	for index, leg in ipairs(rig) do
+		local phaseSign = (index == 1) and 1 or -1
+		local angle = math.rad(WALK_LEG_SWING_DEGREES)
+			* (guardian.walkBlend or 0)
+			* math.sin(guardian.walkPhase or 0)
+			* phaseSign
+		-- Drehung um die Hüfte, ausgedrückt in Modellkoordinaten: an den Hüftpunkt
+		-- verschieben, um die seitliche Achse (X) drehen, zurückverschieben.
+		local hipPivot = CFrame.new(leg.hipLocal)
+		local rotation = hipPivot * CFrame.Angles(angle, 0, 0) * hipPivot:Inverse()
+		for part, rest in pairs(leg.rest) do
+			part.CFrame = pivot * rotation * rest
+		end
+	end
+end
+
+-- Gegenstück fürs Stehen: blendet die Animation aus, bis die Beine wieder exakt in der
+-- Ruhelage stehen. Ohne das bliebe der Guardian mitten im Schritt eingefroren stehen.
+-- Fester Zeitschritt statt echtem Delta -- updateGuardian läuft pro Heartbeat, das reicht
+-- für eine Überblendung völlig.
+local function relaxWalkPose(guardian)
+	if not guardian.walkRig or (guardian.walkBlend or 0) <= 0 then
+		return
+	end
+	guardian.walkBlend = math.max(guardian.walkBlend - (1 / 60) * WALK_BLEND_PER_SECOND, 0)
+	applyWalkPose(guardian)
+end
+
+local function groundedPosition(guardian, position)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	local ignore = { guardian.model }
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player.Character then
+			table.insert(ignore, player.Character)
+		end
+	end
+	params.FilterDescendantsInstances = ignore
+
+	local result = Workspace:Raycast(
+		position + Vector3.new(0, GROUND_RAY_UP, 0),
+		Vector3.new(0, -(GROUND_RAY_UP + GROUND_RAY_DOWN), 0),
+		params
+	)
+	if not result then
+		return position -- kein Boden gefunden (z.B. über Wasser) -- Höhe unverändert lassen
+	end
+	return Vector3.new(position.X, result.Position.Y + (guardian.soleOffset or 0), position.Z)
+end
+
 local function updateGuardian(cityName, guardian, config)
 	if guardian.defeated or not guardian.model or not guardian.model.Parent then
 		return
@@ -564,6 +914,7 @@ local function updateGuardian(cityName, guardian, config)
 		guardian.protectingBuilding = nil
 		setVisorActive(guardian, false)
 		setAegisShieldDeployed(guardian, false)
+		relaxWalkPose(guardian)
 		return
 	end
 
@@ -611,21 +962,39 @@ local function updateGuardian(cityName, guardian, config)
 			guardian.state = "Position"
 			setAegisShieldDeployed(guardian, false)
 			local direction = Vector3.new(toBlockPosition.X, 0, toBlockPosition.Z).Unit
-			local step = direction * config.GuardianMoveSpeed * RunService.Heartbeat:Wait()
+			local deltaTime = RunService.Heartbeat:Wait()
+			local step = direction * config.GuardianMoveSpeed * deltaTime
 			if step.Magnitude > horizontalDistance then
 				step = Vector3.new(toBlockPosition.X, 0, toBlockPosition.Z)
 			end
-			local newPosition = currentPosition + step
-			local facingCFrame = CFrame.lookAt(newPosition, newPosition - toPlayerDirection)
+			-- Auf Bodenhöhe setzen, statt auf der Spawn-Höhe weiterzuschweben.
+			local newPosition = groundedPosition(guardian, currentPosition + step)
+
+			-- Laufanimation: Phase weiterdrehen und einblenden.
+			guardian.walkPhase = (guardian.walkPhase or 0) + deltaTime * WALK_CYCLE_SPEED * math.pi * 2
+			guardian.walkBlend = math.min((guardian.walkBlend or 0) + deltaTime * WALK_BLEND_PER_SECOND, 1)
+
+			-- Körper wiegt im Schritttakt. Zweimal pro Zyklus -- einmal je aufsetzendem
+			-- Fuss -- deshalb der Betrag des Sinus.
+			local bob = math.abs(math.sin(guardian.walkPhase)) * WALK_BODY_BOB_STUDS * guardian.walkBlend
+			newPosition = newPosition + Vector3.new(0, bob, 0)
+
+			-- In LAUFRICHTUNG schauen. Vorher wurde "newPosition - toPlayerDirection"
+			-- anvisiert -- das ist die Richtung VOM Spieler WEG, der Guardian lief also
+			-- rückwärts bzw. seitlich auf den Spieler zu.
+			local facingCFrame = CFrame.lookAt(newPosition, newPosition + direction)
 			guardian.model:PivotTo(facingCFrame)
+			applyWalkPose(guardian)
 		else
 			-- Angekommen -- blockieren + ggf. kontern.
 			guardian.state = "Block"
 			setAegisShieldDeployed(guardian, true)
-			local facingCFrame = CFrame.lookAt(currentPosition, currentPosition + (targetRoot.Position - currentPosition) * Vector3.new(1, 0, 1))
+			local standPosition = groundedPosition(guardian, currentPosition)
+			local facingCFrame = CFrame.lookAt(standPosition, standPosition + (targetRoot.Position - standPosition) * Vector3.new(1, 0, 1))
 			guardian.model:PivotTo(facingCFrame)
+			relaxWalkPose(guardian)
 
-			local distanceToPlayer = (targetRoot.Position - currentPosition).Magnitude
+			local distanceToPlayer = (targetRoot.Position - standPosition).Magnitude
 			if distanceToPlayer <= config.GuardianImpactFistRange then
 				guardian.state = "Counter"
 				fireImpactFist(guardian, target, config)
@@ -638,6 +1007,7 @@ local function updateGuardian(cityName, guardian, config)
 		guardian.state = "Scan"
 		setVisorActive(guardian, false)
 		setAegisShieldDeployed(guardian, false)
+		relaxWalkPose(guardian)
 	end
 
 	updateHealthBar(guardian)
@@ -769,6 +1139,8 @@ _G.SpawnGuardianForCity = function(cityName)
 	model:PivotTo(CFrame.new(spawnPosition))
 	model.Parent = Workspace
 	CollectionService:AddTag(model, "Guardian")
+	local touchParts = connectGuardianTouch(cityName, model)
+	print("[Kaiju-Debug] Guardian '" .. cityName .. "' gespawnt -- Sprung-Trefferflächen verbunden:", touchParts)
 
 	local guardian = {
 		model = model,
@@ -783,6 +1155,24 @@ _G.SpawnGuardianForCity = function(cityName)
 		lastRepulsorAt = 0,
 		shieldDeployed = false,
 	}
+	-- Abstand des PrimaryPart zur Sohle merken. Die Modelle unterscheiden sich darin
+	-- erheblich (Platzhalter: Torso, rund 15 Studs über der Sohle -- Warden: Root genau
+	-- AUF der Sohle). Beim Laufen wird der Wert gebraucht, um den Guardian auf dem Boden
+	-- zu halten, statt ihn auf der Spawn-Höhe schweben zu lassen.
+	guardian.soleOffset = 0
+	local okBounds, boundsCFrame, boundsSize = pcall(function()
+		return model:GetBoundingBox()
+	end)
+	if okBounds and boundsSize then
+		guardian.soleOffset = model.PrimaryPart.Position.Y - (boundsCFrame.Position.Y - boundsSize.Y * 0.5)
+	end
+
+	-- Ruhelage der Beine erfassen. MUSS nach dem PivotTo auf den Spawn-Punkt passieren --
+	-- die Posen werden relativ zum Modell-Pivot gespeichert, das Modell muss dafür fertig
+	-- platziert sein.
+	local walkRig = captureWalkRig(guardian)
+	print("[Kaiju-Debug] Guardian '" .. cityName .. "' Laufanimation -- Beine erfasst:", #walkRig)
+
 	guardian.healthBar = createHealthBar(guardian)
 	activeGuardians[cityName] = guardian
 

@@ -173,6 +173,18 @@ local FOCUS_ATTACK_CONE_ANGLE = 25 -- Grad Toleranz zur Blickrichtung -- kein ex
 -- wird ignoriert) -- sonst fällt ein Ziel, das deutlich tiefer/höher liegt (oder bei
 -- geringer Distanz, wo schon ein kleiner Höhenunterschied einen grossen 3D-Winkel
 -- ergibt), fälschlich aus dem Ziel-Kegel, obwohl es horizontal genau vor einem liegt.
+-- Zielpunkt am Guardian. Der PrimaryPart taugt dafür NICHT: je nach Modell sitzt er auf
+-- Sohlenhöhe (Warden-I Shepherd) statt in der Körpermitte -- Umkreis- und Kegelprüfungen
+-- lägen bei einem 42 Studs hohen Boss dann deutlich daneben, und der Fokusstrahl würde auf
+-- die Füsse zeigen. "ChestCore" gibt es bei beiden Guardian-Modellen, auf Brusthöhe.
+local function getGuardianAimPart(guardianModel)
+	local chest = guardianModel:FindFirstChild("ChestCore", true)
+	if chest and chest:IsA("BasePart") then
+		return chest
+	end
+	return guardianModel.PrimaryPart
+end
+
 local function horizontalConeAngle(lookVector, toTarget)
 	local flatLook = Vector3.new(lookVector.X, 0, lookVector.Z)
 	local flatTarget = Vector3.new(toTarget.X, 0, toTarget.Z)
@@ -259,6 +271,25 @@ local function findFocusTarget(player, rootPart)
 					if angle <= FOCUS_ATTACK_CONE_ANGLE then
 						bestDistance = distance
 						bestTarget = { type = "militaryUnit", instance = unitModel, trackPart = unitPart }
+					end
+				end
+			end
+		end
+	end
+
+	-- Guardian-Boss (Alert Level 5) als anvisierbares Fokus-Ziel, gleiches Muster wie
+	-- Militär-Einheiten.
+	if _G.GetGuardianInfo then
+		for _, guardianModel in ipairs(CollectionService:GetTagged("Guardian")) do
+			local aimPart = getGuardianAimPart(guardianModel)
+			if aimPart then
+				local toTarget = aimPart.Position - originPosition
+				local distance = toTarget.Magnitude
+				if distance > 0 and distance <= bestDistance then
+					local angle = horizontalConeAngle(lookVector, toTarget)
+					if angle <= FOCUS_ATTACK_CONE_ANGLE then
+						bestDistance = distance
+						bestTarget = { type = "guardian", instance = guardianModel, trackPart = aimPart }
 					end
 				end
 			end
@@ -372,6 +403,19 @@ local function performAreaDamage(player, chargePosition, radius, damage)
 				local cityName, unitType, unitId = _G.GetMilitaryUnitInfo(unitModel)
 				if cityName and unitType and unitId then
 					_G.DamageMilitaryUnit(cityName, unitType, unitId, damage, player)
+				end
+			end
+		end
+	end
+
+	-- Guardian-Boss (Alert Level 5) im Radius beschädigen -- gleiches Muster.
+	if _G.DamageGuardian and _G.GetGuardianInfo then
+		for _, guardianModel in ipairs(CollectionService:GetTagged("Guardian")) do
+			local aimPart = getGuardianAimPart(guardianModel)
+			if aimPart and (aimPart.Position - chargePosition).Magnitude <= radius then
+				local cityName = _G.GetGuardianInfo(guardianModel)
+				if cityName then
+					_G.DamageGuardian(cityName, damage, player)
 				end
 			end
 		end
@@ -517,6 +561,20 @@ FocusAttackEvent.OnServerEvent:Connect(function(player)
 						hitPosition = target.trackPart.Position
 						targetStillValid = true
 					end
+				elseif target.type == "guardian" then
+					-- Zusätzlich zur Existenz auch prüfen, ob der Guardian noch aktiv ist:
+					-- ein besiegter Guardian bleibt für seine Sturz-Animation kurz im
+					-- Workspace stehen und soll in dieser Zeit kein Ziel mehr sein.
+					if
+						target.instance.Parent
+						and target.trackPart
+						and target.trackPart.Parent
+						and _G.GetGuardianInfo
+						and _G.GetGuardianInfo(target.instance)
+					then
+						hitPosition = target.trackPart.Position
+						targetStillValid = true
+					end
 				elseif target.type == "player" then
 					if target.humanoid.Health > 0 and target.trackPart and target.trackPart.Parent then
 						hitPosition = target.trackPart.Position
@@ -569,6 +627,11 @@ FocusAttackEvent.OnServerEvent:Connect(function(player)
 					local cityName, unitType, unitId = _G.GetMilitaryUnitInfo(target.instance)
 					if cityName and unitType and unitId then
 						_G.DamageMilitaryUnit(cityName, unitType, unitId, damagePerTick, player)
+					end
+				elseif target.type == "guardian" and _G.DamageGuardian and _G.GetGuardianInfo then
+					local cityName = _G.GetGuardianInfo(target.instance)
+					if cityName then
+						_G.DamageGuardian(cityName, damagePerTick, player)
 					end
 				elseif target.type == "player" then
 					local wasAlive = target.humanoid.Health > 0
