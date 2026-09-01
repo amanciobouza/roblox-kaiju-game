@@ -121,6 +121,13 @@ local function triggerCityBroken(cityName)
 	end
 	cityBrokenActive[cityName] = true
 
+	-- Lebensstatistik: wie die Alarmstufen ein Stadt-Ereignis ohne einzelnen Verursacher
+	-- (triggerCityBroken kennt keinen Spieler) -- geht an alle, die gerade dort sind.
+	if _G.RecordStatForCity then
+		_G.RecordStatForCity(cityName, "CityBroken")
+		_G.RecordStatForCity(cityName, "CityBroken." .. cityName)
+	end
+
 	local endsAt = os.clock() + FREE_DESTRUCTION_DURATION
 	cityBrokenValues[cityName].Value = true
 	cityBrokenEndsAtValues[cityName].Value = endsAt

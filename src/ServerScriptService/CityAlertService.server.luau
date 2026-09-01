@@ -93,6 +93,13 @@ local function setCityLevel(cityName, newLevel)
 	if cityLevelValues[cityName] then
 		cityLevelValues[cityName].Value = newLevel
 	end
+	-- Lebensstatistik: eine erreichte Alarmstufe ist ein STADT-Ereignis ohne einzelnen
+	-- Verursacher. Sie geht deshalb an alle Spieler, die gerade in dieser Stadt sind --
+	-- im Koop hat sie miterlebt, wer dabei war. Nur AUFSTIEGE zählen.
+	if newLevel > oldLevel and _G.RecordStatForCity then
+		_G.RecordStatForCity(cityName, "AlertReached." .. newLevel .. "." .. cityName)
+	end
+
 	CityAlertLevelChanged:Fire(cityName, newLevel, oldLevel)
 
 	-- Eskalations-Zähler (Stufe 2/3/4, siehe EscalationService.lua) zurücksetzen, sobald

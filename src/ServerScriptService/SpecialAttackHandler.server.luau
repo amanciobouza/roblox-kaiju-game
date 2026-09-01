@@ -390,7 +390,7 @@ local function performAreaDamage(player, chargePosition, radius, damage)
 	end
 	if _G.DamageGenerator and _G.GetGeneratorsInRange then
 		for _, hit in ipairs(_G.GetGeneratorsInRange(chargePosition, radius)) do
-			_G.DamageGenerator(hit.cityName, hit.clusterId, hit.side, damage)
+			_G.DamageGenerator(hit.cityName, hit.clusterId, hit.side, damage, player)
 		end
 	end
 
@@ -438,6 +438,14 @@ local function performAreaDamage(player, chargePosition, radius, damage)
 	end
 
 	ShowDamageEvent:FireClient(player, damage)
+
+	-- Lebensstatistik: EINMAL pro Auslösung, nicht pro getroffenem Ziel -- sonst erschiene
+	-- eine Ladung, die zehn Häuser erwischt, als zehn Angriffe.
+	if _G.RecordStat then
+		_G.RecordStat(player, "Attacks.Area")
+		_G.RecordStat(player, "DamageDealt", damage)
+		_G.RecordStatMax(player, "MaxDamage.Area", damage)
+	end
 end
 
 -- Berechnet den Flächenschaden pro Treffer inkl. aller Talent-Effekte: Trade-off-Malus
@@ -640,6 +648,15 @@ FocusAttackEvent.OnServerEvent:Connect(function(player)
 				end
 
 				ShowDamageEvent:FireClient(player, damagePerTick)
+
+				-- Lebensstatistik. Der Fokusstrahl trifft in TICKS -- gezaehlt wird jeder
+				-- Tick als Treffer, der Hoechstwert bezieht sich entsprechend auf einen
+				-- einzelnen Tick, nicht auf den ganzen Strahl.
+				if _G.RecordStat then
+					_G.RecordStat(player, "Attacks.Focus")
+					_G.RecordStat(player, "DamageDealt", damagePerTick)
+					_G.RecordStatMax(player, "MaxDamage.Focus", damagePerTick)
+				end
 
 				-- Talent "Combo Chain" (Kaiju-Talentbaum, Synergie): 3 Fokus-TREFFER in
 				-- Folge lösen automatisch einen kostenlosen Flächenangriff aus (kein

@@ -437,7 +437,11 @@ local function damageFireEngine(engine, amount, attackerPlayer)
 		GroundVehicleSeparation.Unregister(engine)
 
 		-- Achievements: "Erste Feuerwehr besiegt".
-		if attackerPlayer and _G.OnFireEngineDestroyedForAchievements then
+		if attackerPlayer and _G.RecordStat then
+		_G.RecordStat(attackerPlayer, "FireEnginesDestroyed")
+	end
+
+	if attackerPlayer and _G.OnFireEngineDestroyedForAchievements then
 			_G.OnFireEngineDestroyedForAchievements(attackerPlayer)
 		end
 
@@ -464,7 +468,11 @@ local function damageFireEngine(engine, amount, attackerPlayer)
 			-- zum Zerstörungs-Combo des Spielers.
 			local leaderstats = attackerPlayer:FindFirstChild("leaderstats")
 			if leaderstats and leaderstats:FindFirstChild("Coins") then
-				leaderstats.Coins.Value += math.max(math.floor((engine:GetAttribute("MaxHealth") or 0) * 0.05), 5)
+				local coinReward = math.max(math.floor((engine:GetAttribute("MaxHealth") or 0) * 0.05), 5)
+				leaderstats.Coins.Value += coinReward
+				if _G.RecordStat then
+					_G.RecordStat(attackerPlayer, "CoinsCollected", coinReward)
+				end
 			end
 
 			-- Zähler für Jaeger-Fraktions-Freischaltung (siehe FactionUnlockService.lua) --
@@ -591,6 +599,11 @@ local function handleFireEngineTouch(engine, hit)
 
 		if _G.AddJumpHeat then
 			_G.AddJumpHeat(player)
+		end
+
+		-- Lebensstatistik: gezählt wird der SPRUNGANGRIFF (ein Treffer), nicht jeder Sprung.
+		if _G.RecordStat then
+			_G.RecordStat(player, "Attacks.Jump")
 		end
 	end
 

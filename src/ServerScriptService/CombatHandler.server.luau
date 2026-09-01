@@ -171,7 +171,7 @@ AttackEvent.OnServerEvent:Connect(function(player, comboStep)
 	-- Fraktions-Beschränkung kann ergänzt werden, sobald das existiert.
 	if _G.DamageGenerator and _G.GetGeneratorsInRange then
 		for _, hit in ipairs(_G.GetGeneratorsInRange(root.Position, ATTACK_RANGE)) do
-			_G.DamageGenerator(hit.cityName, hit.clusterId, hit.side, damage)
+			_G.DamageGenerator(hit.cityName, hit.clusterId, hit.side, damage, player)
 			ShowDamageEvent:FireClient(player, damage, isFinisher)
 			didHit = true
 		end
@@ -245,5 +245,15 @@ AttackEvent.OnServerEvent:Connect(function(player, comboStep)
 	-- Energy, kein Schlag ins Leere. Skaliert mit dem Combo-Schritt (Finisher gibt mehr).
 	if didHit and _G.AwardSpecialEnergyForComboHit then
 		_G.AwardSpecialEnergyForComboHit(player, tonumber(comboStep))
+	end
+
+	-- Lebensstatistik. Gezaehlt wird nur ein TREFFER, nicht jeder Tastendruck -- ein
+	-- Schlag ins Leere ist kein Angriff im Sinne der Statistik. Der Schaden wird einmal
+	-- pro Angriff verbucht, nicht pro getroffenem Ziel: sonst wuerde ein Schlag, der
+	-- zufaellig fuenf Haeuser erwischt, als fuenffacher Schaden erscheinen.
+	if didHit and _G.RecordStat then
+		_G.RecordStat(player, "Attacks.Punch")
+		_G.RecordStat(player, "DamageDealt", damage)
+		_G.RecordStatMax(player, "MaxDamage.Punch", damage)
 	end
 end)

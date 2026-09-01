@@ -649,7 +649,16 @@ _G.DamageMilitaryUnit = function(cityName, unitType, unitId, amount, attackerPla
 				table.remove(units, i)
 
 				-- Achievements: "Erste Militär-Einheit besiegt".
-				if attackerPlayer and _G.OnMilitaryUnitDestroyedForAchievements then
+				-- Lebensstatistik: pro Einheitentyp, ohne Stadt (bewusste Entscheidung -- die Stadt
+	-- sagt bei Militaereinheiten nichts aus, was der Typ nicht schon sagt).
+	if attackerPlayer and _G.RecordStat then
+		_G.RecordStat(attackerPlayer, "MilitaryDestroyed")
+		if unitType then
+			_G.RecordStat(attackerPlayer, "MilitaryDestroyed." .. tostring(unitType))
+		end
+	end
+
+	if attackerPlayer and _G.OnMilitaryUnitDestroyedForAchievements then
 					_G.OnMilitaryUnitDestroyedForAchievements(attackerPlayer)
 				end
 
@@ -866,6 +875,14 @@ local function updateTank(cityName, unit, config)
 			fireTankShell(shellStartPosition, shellTargetPosition, function()
 				if humanoid.Parent and humanoid.Health > 0 then
 					humanoid:TakeDamage(config.TankDamage or 25)
+					-- Lebensstatistik: Treffer AM Spieler, je Einheitentyp (Stadt bewusst nicht --
+					-- siehe StatsService).
+					local hitPlayer = Players:GetPlayerFromCharacter(humanoid.Parent)
+					if hitPlayer and _G.RecordStat then
+						_G.RecordStat(hitPlayer, "HitBy.Military")
+						_G.RecordStat(hitPlayer, "HitBy.Military.Tank")
+						_G.RecordStat(hitPlayer, "DamageTaken", config.TankDamage or 25)
+					end
 				end
 			end)
 
@@ -980,6 +997,14 @@ local function updateRocketLauncher(cityName, unit, config)
 		fireVisibleRocket(launchPosition, targetPositionAtLaunch, function()
 			if humanoid.Parent and humanoid.Health > 0 then
 				humanoid:TakeDamage(config.RocketLauncherDamage or 40)
+				-- Lebensstatistik: Treffer AM Spieler, je Einheitentyp (Stadt bewusst nicht --
+				-- siehe StatsService).
+				local hitPlayer = Players:GetPlayerFromCharacter(humanoid.Parent)
+				if hitPlayer and _G.RecordStat then
+					_G.RecordStat(hitPlayer, "HitBy.Military")
+					_G.RecordStat(hitPlayer, "HitBy.Military.RocketLauncher")
+					_G.RecordStat(hitPlayer, "DamageTaken", config.RocketLauncherDamage or 40)
+				end
 			end
 		end)
 	end
@@ -1037,6 +1062,14 @@ local function fireHelicopterShot(unit, currentPosition, targetPosition, humanoi
 	fireVisibleRocket(launchPosition, targetPosition, function()
 		if humanoid.Parent and humanoid.Health > 0 then
 			humanoid:TakeDamage(config.HelicopterDamage or 10)
+			-- Lebensstatistik: Treffer AM Spieler, je Einheitentyp (Stadt bewusst nicht --
+			-- siehe StatsService).
+			local hitPlayer = Players:GetPlayerFromCharacter(humanoid.Parent)
+			if hitPlayer and _G.RecordStat then
+				_G.RecordStat(hitPlayer, "HitBy.Military")
+				_G.RecordStat(hitPlayer, "HitBy.Military.Helicopter")
+				_G.RecordStat(hitPlayer, "DamageTaken", config.HelicopterDamage or 10)
+			end
 		end
 	end)
 end

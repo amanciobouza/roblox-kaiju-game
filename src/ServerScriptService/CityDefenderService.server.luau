@@ -470,6 +470,20 @@ local function damageGuardian(cityName, amount, attackerPlayer)
 		guardian.state = "Defeated"
 
 		-- Achievements: "Ersten Guardian besiegt".
+		-- Lebensstatistik. Im Mehrspielerbetrieb zaehlt der LETZTE Treffer: attackerPlayer
+		-- ist der, dessen Schaden den Guardian auf 0 gebracht hat.
+		if attackerPlayer and _G.RecordStat then
+			_G.RecordStat(attackerPlayer, "GuardianDefeated")
+			_G.RecordStat(attackerPlayer, "GuardianDefeated." .. cityName)
+
+			-- Kapitelabschluss: wer dem MegaCity-Guardian den TÖDLICHEN Treffer versetzt,
+			-- hat das Kapitel durchgespielt. Im Mehrspielerbetrieb zählt ausdrücklich nur
+			-- der letzte Schlag, nicht die Beteiligung.
+			if cityName == "MegaCity" then
+				_G.RecordStat(attackerPlayer, "ChaptersCompleted")
+			end
+		end
+
 		if attackerPlayer and _G.OnGuardianDefeatedForAchievements then
 			_G.OnGuardianDefeatedForAchievements(attackerPlayer)
 		end
@@ -580,6 +594,11 @@ local function handleGuardianTouch(cityName, hit)
 		_G.AddJumpHeat(player)
 	end
 
+	-- Lebensstatistik: gezählt wird der SPRUNGANGRIFF (ein Treffer), nicht jeder Sprung.
+	if _G.RecordStat then
+		_G.RecordStat(player, "Attacks.Jump")
+	end
+
 	damageGuardian(cityName, baseDamage * (1 + legRatio), player)
 end
 
@@ -672,6 +691,11 @@ local function fireImpactFist(guardian, target, config)
 	local targetRoot = target.Character and target.Character:FindFirstChild("HumanoidRootPart")
 	if targetHumanoid and targetRoot and targetHumanoid.Health > 0 then
 		targetHumanoid:TakeDamage(config.GuardianImpactFistDamage)
+		if _G.RecordStat then
+			_G.RecordStat(target, "HitBy.Guardian")
+			_G.RecordStat(target, "HitBy.Guardian." .. cityName)
+			_G.RecordStat(target, "DamageTaken", config.GuardianImpactFistDamage)
+		end
 		local pushDirection = (targetRoot.Position - rootPart.Position)
 		pushDirection = Vector3.new(pushDirection.X, 0, pushDirection.Z)
 		if pushDirection.Magnitude > 0.1 then
@@ -717,6 +741,13 @@ local function fireRepulsorPulse(guardian, cityName, config)
 				local distance = (targetRoot.Position - origin).Magnitude
 				if distance <= config.GuardianRepulsorRadius then
 					targetHumanoid:TakeDamage(config.GuardianRepulsorDamage)
+					-- Lebensstatistik: der Repulsor trifft alle Spieler im Radius -- hier
+					-- ist "player" die Schleifenvariable, also das getroffene Ziel.
+					if _G.RecordStat then
+						_G.RecordStat(player, "HitBy.Guardian")
+						_G.RecordStat(player, "HitBy.Guardian." .. cityName)
+						_G.RecordStat(player, "DamageTaken", config.GuardianRepulsorDamage)
+					end
 					local pushDirection = (targetRoot.Position - origin)
 					pushDirection = Vector3.new(pushDirection.X, 0, pushDirection.Z)
 					if pushDirection.Magnitude > 0.1 then

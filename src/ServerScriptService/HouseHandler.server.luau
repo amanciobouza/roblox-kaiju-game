@@ -1409,6 +1409,17 @@ local function destroyHouse(house, destroyerPlayer, originPosition)
 	local isProloguePlayer = destroyerPlayer and destroyerPlayer:GetAttribute("IsInPrologue") == true
 
 	-- Achievements: Zähler für "X Gebäude zerstört".
+	-- Lebensstatistik: gezaehlt werden die getaggten SEKTIONEN, nicht ganze Bauwerke --
+	-- ein Asset wie die Marina traegt 7 KaijuHouse-Tags und zaehlt als 7. Entspricht dem,
+	-- was die Achievement-Schwellen schon tun.
+	if destroyerPlayer and not isProloguePlayer and _G.RecordStat then
+		_G.RecordStat(destroyerPlayer, "BuildingsDestroyed")
+		local statCity = _G.ResolveCityName and _G.ResolveCityName(house)
+		if statCity then
+			_G.RecordStat(destroyerPlayer, "BuildingsDestroyed." .. statCity)
+		end
+	end
+
 	if destroyerPlayer and not isProloguePlayer and _G.OnBuildingDestroyedForAchievements then
 		_G.OnBuildingDestroyedForAchievements(destroyerPlayer)
 	end
@@ -1603,6 +1614,9 @@ local function destroyHouse(house, destroyerPlayer, originPosition)
 			end
 
 			leaderstats.Coins.Value += reward
+			if _G.RecordStat then
+				_G.RecordStat(destroyerPlayer, "CoinsCollected", reward)
+			end
 
 			local originPosition = house.PrimaryPart and house.PrimaryPart.Position or house:GetPivot().Position
 			CoinsEarnedEvent:FireClient(destroyerPlayer, reward, originPosition)
@@ -1991,6 +2005,11 @@ onHouseTouched = function(house, housePart, hit)
 		-- Heat-System: Sprungschaden erzeugt Hitze.
 		if _G.AddJumpHeat then
 			_G.AddJumpHeat(player)
+		end
+
+		-- Lebensstatistik: gezählt wird der SPRUNGANGRIFF (ein Treffer), nicht jeder Sprung.
+		if _G.RecordStat then
+			_G.RecordStat(player, "Attacks.Jump")
 		end
 
 		-- Special Energy: Sprung-Landung gibt einen festen Bonus.

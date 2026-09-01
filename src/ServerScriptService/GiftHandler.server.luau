@@ -86,10 +86,23 @@ local function grantGift(player, n)
 		return
 	end
 
+	-- Lebensstatistik: hier oben, damit JEDES vergebene Geschenk zählt -- nicht nur die
+	-- Coins-Geschenke. Darunter folgt eine if/elseif-Kette über die Geschenktypen; ein
+	-- Zähler in einem der Zweige würde die anderen Typen stillschweigend übergehen.
+	if _G.RecordStat then
+		_G.RecordStat(player, "GiftsReceived")
+		if gift.type then
+			_G.RecordStat(player, "GiftsReceived." .. tostring(gift.type))
+		end
+	end
+
 	if gift.type == "Coins" then
 		local leaderstats = player:FindFirstChild("leaderstats")
 		if leaderstats and leaderstats:FindFirstChild("Coins") then
 			leaderstats.Coins.Value += gift.amount
+			if _G.RecordStat then
+				_G.RecordStat(player, "CoinsCollected", gift.amount)
+			end
 		end
 	elseif gift.type == "XP" then
 		if _G.AwardXP then
