@@ -38,6 +38,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
 local TweenService = game:GetService("TweenService")
 local ServerStorage = game:GetService("ServerStorage")
+local Players = game:GetService("Players") -- für den Elektrozaun (Touched -> Spieler auflösen)
 
 local CityAlertConfig = require(ReplicatedStorage:WaitForChild("CityAlertConfig"))
 
@@ -94,6 +95,90 @@ end
 
 -- [cityName][clusterId] = Cluster-Datenstruktur
 local activeClusters = {}
+
+-- ===== Elektrozaun =====
+-- Der Stromschlag am Elektrozaun war laut Konfiguration immer vorgesehen (ElectricDamage
+-- je Stadt, 10 bis 625) und wird seit jeher als Attribut an jede Barrikade geschrieben --
+-- ausgewertet hat es zuletzt aber NIEMAND mehr. Zustaendig war das eingebettete Script im
+-- Barrikaden-Modell, und das liegt in ServerStorage, also ausserhalb der Versionierung:
+-- eine Modelaenderung in Studio konnte das Feature spurlos entfernen. Deshalb steht die
+-- Logik jetzt hier, wo sie versioniert ist und nicht wieder still verschwinden kann.
+--
+-- Erwartete Struktur laut Dateikopf: Barricade > ElectrifiedCables > ElectricHitbox.
+-- Gesucht wird rekursiv, damit eine Umbauung des Modells sie nicht sofort unbrauchbar
+-- macht.
+local ELECTRIC_SHOCK_COOLDOWN = 1.2 -- Sekunden je Spieler -- ohne das entlaedt Anlehnen sofort
+local electricShockAt = {} -- [player] = os.clock() des letzten Schlags
+
+local function connectElectricFence(barricade, cityName, clusterId)
+	local hitbox = barricade:FindFirstChild("ElectricHitbox", true)
+	if not hitbox or not hitbox:IsA("BasePart") then
+		warn(
+			"[BarricadeClusterService] Barrikade '"
+				.. clusterId
+				.. "' hat keine 'ElectricHitbox' -- Elektrozaun bleibt wirkungslos."
+		)
+		return
+	end
+
+	-- Bestätigung im Erfolgsfall, nicht nur Warnung im Fehlerfall: sonst lässt sich
+	-- "scharf" nicht von "nie gelaufen" unterscheiden -- genau der Fehlermodus, an dem
+	-- dieses Feature schon einmal unbemerkt verschwunden ist.
+	print(
+		string.format(
+			"[Kaiju-Debug] Elektrozaun scharf an '%s' (%s) -- Hitbox '%s', %s Schaden je Berührung, %.1fs Sperre.",
+			clusterId,
+			cityName,
+			hitbox:GetFullName(),
+			tostring(barricade:GetAttribute("ElectricDamage")),
+			ELECTRIC_SHOCK_COOLDOWN
+		)
+	)
+
+	hitbox.Touched:Connect(function(hit)
+		local character = hit.Parent
+		local player = character and Players:GetPlayerFromCharacter(character)
+		if not player then
+			return
+		end
+		local humanoid = character:FindFirstChildOfClass("Humanoid")
+		if not humanoid or humanoid.Health <= 0 then
+			return
+		end
+
+		-- Nur ein AKTIVES Schild steht unter Strom -- eine besiegte Barrikade darf den
+		-- Spieler nicht weiter bestrafen.
+		--
+		-- Maßgeblich ist cluster.ShieldActive, NICHT das Attribut ShieldEnabled: das wird
+		-- beim Spawn einmal auf true gesetzt und nie zurückgenommen (es steuert nur die
+		-- Visuals im eingebetteten Modell-Script). Eine Prüfung darauf wäre immer wahr
+		-- gewesen und hätte auch tote Barrikaden weiter schocken lassen.
+		local clusters = activeClusters[cityName]
+		local cluster = clusters and clusters[clusterId]
+		if not cluster or not cluster.ShieldActive then
+			return
+		end
+
+		local now = os.clock()
+		local last = electricShockAt[player]
+		if last and now - last < ELECTRIC_SHOCK_COOLDOWN then
+			return
+		end
+		electricShockAt[player] = now
+
+		local damage = barricade:GetAttribute("ElectricDamage") or 0
+		if damage <= 0 then
+			return
+		end
+		humanoid:TakeDamage(damage)
+
+		if _G.RecordStat then
+			_G.RecordStat(player, "HitBy.Barricade")
+			_G.RecordStat(player, "DamageTaken", damage)
+		end
+	end)
+end
+
 
 -- [cityName] = true, sobald IRGENDEIN Cluster dieser Stadt jemals aktiviert wurde --
 -- fürs CITY-BROKEN-Task-System (CityBrokenService.lua): unterscheidet "noch nie
@@ -729,6 +814,8 @@ local function spawnCluster(cityName, tierName, clusterId, barricadeSpawnPart, c
 	barricade:SetAttribute("ShieldEnabled", true)
 	barricade:SetAttribute("ElectricDamage", config.ElectricDamage or 40)
 
+	connectElectricFence(barricade, cityName, clusterId)
+
 	local generatorsFolder = barricade:FindFirstChild("ShieldGenerators")
 	local leftGenerator = generatorsFolder and generatorsFolder:FindFirstChild("LeftGenerator")
 	local rightGenerator = generatorsFolder and generatorsFolder:FindFirstChild("RightGenerator")
@@ -894,7 +981,11 @@ _G.DamageBarricadeShield = function(cityName, clusterId, amount, attackerPlayer)
 		destroyedThisCycle[cityName][clusterId] = true
 
 		-- Achievements: "Erste Barrikade durchbrochen".
-		if attackerPlayer and _G.OnBarricadeDestroyedForAchievements then
+		if attackerPlayer and _G.RecordStat then
+		_G.RecordStat(attackerPlayer, "BarricadesDestroyed")
+	end
+
+	if attackerPlayer and _G.OnBarricadeDestroyedForAchievements then
 			_G.OnBarricadeDestroyedForAchievements(attackerPlayer)
 		end
 
@@ -908,7 +999,10 @@ _G.DamageBarricadeShield = function(cityName, clusterId, amount, attackerPlayer)
 end
 
 -- side muss "Left" oder "Right" sein.
-_G.DamageGenerator = function(cityName, clusterId, side, amount)
+-- attackerPlayer ist optional und kam frueher nicht vor -- alle anderen Damage-Funktionen
+-- fuehren ihn, diese nicht, wodurch sich zerstoerte Generatoren niemandem zuschreiben
+-- liessen. Aeltere Aufrufer ohne den Parameter funktionieren unveraendert weiter.
+_G.DamageGenerator = function(cityName, clusterId, side, amount, attackerPlayer)
 	local clusters = activeClusters[cityName]
 	local cluster = clusters and clusters[clusterId]
 	if not cluster or not cluster.ShieldActive then
@@ -927,9 +1021,16 @@ _G.DamageGenerator = function(cityName, clusterId, side, amount)
 		return false
 	end
 
+	local wasAlive = cluster[healthKey] > 0
 	cluster[healthKey] = math.max(0, cluster[healthKey] - amount)
 	applyGeneratorHealth(generatorPart, cluster[healthKey])
 	updateBarBillboard(cluster[billboardKey], cluster[healthKey], cluster.MaxGeneratorHealth, label)
+
+	-- Lebensstatistik: nur der UEBERGANG lebendig -> zerstoert zaehlt. Ohne wasAlive
+	-- wuerde jeder weitere Treffer auf einen bereits toten Generator mitzaehlen.
+	if wasAlive and cluster[healthKey] <= 0 and attackerPlayer and _G.RecordStat then
+		_G.RecordStat(attackerPlayer, "GeneratorsDestroyed")
+	end
 
 	if cluster.LeftGeneratorHealth <= 0 and cluster.RightGeneratorHealth <= 0 then
 		-- BEIDE Generatoren sind jetzt tot -- Flankengebäude verlieren den Schutz. Die
