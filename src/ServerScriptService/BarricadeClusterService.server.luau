@@ -13,7 +13,7 @@
 --   │   ├── LeftGenerator   (Attribute: Health, Active)
 --   │   └── RightGenerator  (Attribute: Health, Active)
 --   ├── EnergyShieldPanels  (Parts, werden vom Barrikaden-Script an/aus geschaltet)
---   ├── ElectrifiedCables   (Beams + ElectricHitbox -- verlangsamt Spieler bei Berührung)
+--   ├── ElectrifiedCables   (Beams + ElectricHitbox -- Stromschlag bei Berührung)
 --   └── WarningTowers       (blinkende Alarm-Leuchten)
 --
 -- Unser Service kümmert sich NICHT mehr um diese Visuals -- das eingebettete Script
@@ -107,6 +107,13 @@ local activeClusters = {}
 -- Erwartete Struktur laut Dateikopf: Barricade > ElectrifiedCables > ElectricHitbox.
 -- Gesucht wird rekursiv, damit eine Umbauung des Modells sie nicht sofort unbrauchbar
 -- macht.
+--
+-- ENTSCHIEDEN: nur Schaden, KEINE Verlangsamung. Der Dateikopf sprach frueher von
+-- "verlangsamt Spieler bei Beruehrung" -- das beschrieb eine aeltere Fassung des
+-- eingebetteten Modell-Scripts und ist nicht mehr gemeint. Der Zaun bestraft die
+-- Beruehrung, er behindert die Bewegung nicht: Bewegungsdrosselung waere im Kampf gegen
+-- Barrikaden schwer zu lesen (der Spieler wuesste nicht, warum er langsamer ist), waehrend
+-- Schaden mit Zahl und Sperre unmittelbar verstaendlich ist.
 local ELECTRIC_SHOCK_COOLDOWN = 1.2 -- Sekunden je Spieler -- ohne das entlaedt Anlehnen sofort
 local electricShockAt = {} -- [player] = os.clock() des letzten Schlags
 
