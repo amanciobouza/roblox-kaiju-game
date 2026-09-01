@@ -16,6 +16,125 @@ local StarterPlayer = game:GetService("StarterPlayer")
 local SkinsConfig = require(ReplicatedStorage:WaitForChild("SkinsConfig"))
 local PlayerDataStore = DataStoreService:GetDataStore("KaijuGame_PlayerData_v1")
 
+-- Prolog-Version (Major/Minor, siehe PrologueConfig.luau). Bewusst als Modul und nicht
+-- ueber _G: PlayerSetup braucht sie beim LADEN, also moeglicherweise bevor der
+-- PrologueOrchestrator ueberhaupt gestartet ist.
+local PrologueConfig = require(ReplicatedStorage:WaitForChild("PrologueConfig"))
+
+-- ===== Speicherstand-Versionierung =====
+-- Ohne Versionsnummer lässt sich ein Feld später weder umbenennen noch umbauen, ohne
+-- Bestandsspielern still den Fortschritt zu verbiegen: alter Speicher trifft neuen Code,
+-- und niemand merkt, welche Annahme gerade nicht mehr stimmt.
+--
+-- Beim Anheben: SAVE_SCHEMA_VERSION erhöhen UND eine Migration von der Vorgängerversion
+-- ergänzen. Migrationen laufen beim Laden schrittweise, bis der Stand aktuell ist.
+local SAVE_SCHEMA_VERSION = 4
+
+-- [n] = function(data) -> data   -- hebt einen Stand von Version n auf n+1.
+local SAVE_MIGRATIONS = {
+	-- 0 -> 1: Stände von VOR der Versionierung. Sie tragen kein SchemaVersion-Feld und
+	-- werden deshalb als 0 gelesen.
+	--
+	-- Die Prolog-Regel stand bisher direkt in loadPlayerData: fehlt das Feld, stammt der
+	-- Speicher von vor der Prolog-Einführung, und der Prolog gilt als absolviert -- er
+	-- soll Bestandsspielern nicht rückwirkend aufgezwungen werden. Dieselbe Regel, jetzt
+	-- an der Stelle, an der sie hingehört.
+	[0] = function(data)
+		if data.HasCompletedPrologue == nil then
+			data.HasCompletedPrologue = true
+		end
+		return data
+	end,
+
+	-- 1 -> 2: Lebensstatistiken (StatsService). Bestandsspieler starten mit einem leeren
+	-- Zweig -- rueckwirkend laesst sich nicht rekonstruieren, was sie schon zerstoert
+	-- haben. Der Achievement-Zaehler Counter_BuildingsDestroyed bleibt davon unberuehrt
+	-- und laeuft weiter wie bisher.
+	[1] = function(data)
+		data.Stats = data.Stats or {}
+		return data
+	end,
+
+	-- 2 -> 3: Prolog-Version statt Ja/Nein. Der bisherige Boolean sagt nur, DASS jemand
+	-- den Prolog gespielt hat, nicht WELCHE Fassung -- damit laesst sich eine inhaltliche
+	-- Neuauflage nicht erzwingen.
+	--
+	-- Wer ihn bereits gespielt hat, wird auf die AKTUELLE Major-Version gesetzt und muss
+	-- also NICHT erneut ran. Alles andere waere ein rueckwirkendes Erzwingen bei
+	-- Bestandsspielern -- dieselbe Ueberlegung wie schon bei der Migration 0 -> 1.
+	[2] = function(data)
+		if data.HasCompletedPrologue then
+			data.PrologueCompletedMajor = PrologueConfig.Major
+			data.PrologueCompletedMinor = PrologueConfig.Minor
+		else
+			data.PrologueCompletedMajor = nil
+			data.PrologueCompletedMinor = nil
+		end
+		data.HasCompletedPrologue = nil -- ersetzt durch die beiden Versionsfelder
+		return data
+	end,
+
+	-- 3 -> 4: die laufende Talentforschung speichert jetzt die INVESTIERTE Zeit
+	-- (TalentData.research.investedSeconds) statt eines absoluten Fertigstellungs-
+	-- zeitpunkts. Am Stand selbst ist hier nichts umzurechnen -- TalentTreeService liest
+	-- beide Formen und rechnet alte Staende beim Laden um.
+	--
+	-- Die Version steigt trotzdem, und zwar als SCHUTZ: ein aelterer Server kennt
+	-- investedSeconds nicht und wuerde beim Laden ueber das fehlende completesAt
+	-- stolpern. Mit Version 4 verweigert er Migration UND Speichern (siehe
+	-- migrateSaveData, SaveSchemaTooNew) und laesst den Stand unangetastet.
+	[3] = function(data)
+		return data
+	end,
+}
+
+-- Hebt einen geladenen Stand auf die aktuelle Version.
+--
+-- Sonderfall NEUER als der Code: der Spieler war auf einem aktuelleren Server und landet
+-- jetzt auf einem älteren. Dann darf NICHT migriert und vor allem nicht gespeichert
+-- werden -- Speichern würde den neueren Stand mit einem alten Schema überschreiben und
+-- Fortschritt vernichten. Der Stand wird unverändert durchgereicht und der Spieler für
+-- diese Sitzung als "nicht speicherbar" markiert.
+local function migrateSaveData(player, data)
+	local fromVersion = data.SchemaVersion or 0
+
+	if fromVersion > SAVE_SCHEMA_VERSION then
+		warn(
+			string.format(
+				"[Kaiju-Debug] Speicherstand von %s hat Schema-Version %d, dieser Server kennt nur %d -- "
+					.. "wird NICHT migriert und NICHT gespeichert, um keinen neueren Fortschritt zu überschreiben.",
+				player.Name,
+				fromVersion,
+				SAVE_SCHEMA_VERSION
+			)
+		)
+		player:SetAttribute("SaveSchemaTooNew", true)
+		return data
+	end
+
+	while fromVersion < SAVE_SCHEMA_VERSION do
+		local step = SAVE_MIGRATIONS[fromVersion]
+		if not step then
+			warn(
+				string.format(
+					"[Kaiju-Debug] Keine Migration von Schema-Version %d auf %d für %s -- Stand bleibt auf %d.",
+					fromVersion,
+					fromVersion + 1,
+					player.Name,
+					fromVersion
+				)
+			)
+			break
+		end
+		data = step(data)
+		fromVersion += 1
+		data.SchemaVersion = fromVersion
+		print(string.format("[Kaiju-Debug] Speicherstand von %s auf Schema-Version %d gehoben.", player.Name, fromVersion))
+	end
+
+	return data
+end
+
 local EquipSkinEvent = RemoteEventUtils.GetOrCreate("EquipSkinEvent")
 local PurchaseSkinEvent = RemoteEventUtils.GetOrCreate("PurchaseSkinEvent")
 
@@ -457,24 +576,152 @@ local function computeStarterStats()
 end
 _G.ComputeStarterStats = computeStarterStats
 
-local function loadPlayerData(player)
-	local success, data = pcall(function()
-		return PlayerDataStore:GetAsync("Player_" .. player.UserId)
-	end)
+-- ===== Sitzungssperre =====
+-- Bisher lief das Speichern über SetAsync -- ein blindes Überschreiben. Hält derselbe
+-- Spieler zwei Sitzungen gleichzeitig (Teleport, Serverwechsel, Doppel-Join), gewinnt der
+-- zuletzt schreibende Server, und der Fortschritt der anderen Sitzung ist weg. Mit
+-- Talentbaum und über dreissig Statistikwerten wiegt das inzwischen schwer.
+--
+-- Der Speicherstand liegt deshalb jetzt in einem UMSCHLAG:
+--   { Data = <der eigentliche Stand>, LockJobId = <Server>, LockAt = <os.time()> }
+-- Alte, blanke Stände (ohne Data-Feld) werden beim ersten Laden umgehüllt.
+--
+-- WICHTIG -- was bei einer fremden Sperre passiert: der Spieler wird NICHT hinausgeworfen.
+-- Er lädt seinen Stand und darf spielen, aber diese Sitzung SPEICHERT NICHT
+-- (Attribut SaveLockedElsewhere). Das ist die konservative Wahl: eine verlorene Sitzung
+-- ist ärgerlich, ein zerschossener Spielstand ist unwiederbringlich.
+local LOCK_STALE_SECONDS = 360 -- ab wann eine Sperre als verwaist gilt (Serverabsturz)
+local LOCK_ACQUIRE_ATTEMPTS = 4
+local LOCK_ACQUIRE_WAIT = 2
 
-	if success and data then
-		-- Bestehender Spieler (Speicherdaten vorhanden). Fehlt das Feld (Speicher von
-		-- VOR der Prolog-Einführung), gilt der Prolog automatisch als bereits
-		-- absolviert -- kein rückwirkendes Erzwingen bei bereits bestehenden Spielern.
-		if data.HasCompletedPrologue == nil then
-			data.HasCompletedPrologue = true
+-- Muss der Spieler den Prolog (erneut) spielen?
+--
+-- Massgeblich ist AUSSCHLIESSLICH die Major-Version: eine hoehere Minor-Version bedeutet
+-- Korrekturen ohne inhaltliche Folgen und loest bewusst keinen erneuten Durchlauf aus.
+-- Wer nie gespielt hat (kein Feld), muss ran.
+local function hasCompletedCurrentPrologue(data)
+	local completedMajor = data.PrologueCompletedMajor
+	if type(completedMajor) ~= "number" then
+		return false
+	end
+	return completedMajor >= PrologueConfig.Major
+end
+
+local function dataStoreKey(player)
+	return "Player_" .. player.UserId
+end
+
+-- Macht aus einem beliebigen gespeicherten Wert einen Umschlag. Deckt drei Fälle ab:
+-- nichts gespeichert, alter blanker Stand, bereits ein Umschlag.
+-- Ausdrückliche Kennzeichnung statt Raterei. Die erste Fassung hat den Umschlag am Feld
+-- "Data" erkannt -- das ist falsch, sobald ein Umschlag OHNE Data existiert: genau das
+-- entsteht, wenn ein Spieler ohne vorherigen Speicherstand die Sperre übernimmt. Beim
+-- nächsten Laden galt so ein Umschlag als blanker Altstand und wurde ein zweites Mal
+-- verpackt -- der echte Stand war damit verdeckt.
+local ENVELOPE_MARKER = "TrenchbornSave"
+
+local function toEnvelope(raw)
+	if type(raw) ~= "table" then
+		return { Envelope = ENVELOPE_MARKER, Data = nil }
+	end
+
+	if raw.Envelope == ENVELOPE_MARKER then
+		return raw
+	end
+
+	-- Umschlag aus der ersten Fassung (noch ohne Kennzeichnung): erkennbar an Data ODER
+	-- an den Sperrfeldern. Das zweite ist der Fall, der oben schiefging.
+	if raw.Data ~= nil or raw.LockJobId ~= nil or raw.LockAt ~= nil then
+		raw.Envelope = ENVELOPE_MARKER
+		return raw
+	end
+
+	-- Blanker Altstand aus der Zeit vor den Umschlägen.
+	return { Envelope = ENVELOPE_MARKER, Data = raw }
+end
+
+-- Versucht die Sperre zu übernehmen und liefert den Stand zurück.
+-- Rückgabe: data, lockedByOtherServer
+local function acquireLockAndLoad(player)
+	local key = dataStoreKey(player)
+
+	-- In Studio wechselt game.JobId je nach Version zwischen "" und einer neuen Kennung
+	-- pro Play-Durchlauf. Im zweiten Fall haelt sich jede Sitzung fuer einen FREMDEN
+	-- Server und blockiert den eigenen Spielstand. Die Kennung deshalb mit ausgeben.
+
+	for attempt = 1, LOCK_ACQUIRE_ATTEMPTS do
+		local loadedData, blockedBy
+		local ok, err = pcall(function()
+			PlayerDataStore:UpdateAsync(key, function(raw)
+				local envelope = toEnvelope(raw)
+				local now = os.time()
+				local heldBy = envelope.LockJobId
+				local heldAt = envelope.LockAt or 0
+
+				-- Fremde, noch frische Sperre: NICHTS schreiben (nil bricht UpdateAsync ab,
+				-- der gespeicherte Wert bleibt unangetastet).
+				if heldBy and heldBy ~= game.JobId and (now - heldAt) < LOCK_STALE_SECONDS then
+					blockedBy = heldBy
+					return nil
+				end
+
+				envelope.LockJobId = game.JobId
+				envelope.LockAt = now
+				loadedData = envelope.Data
+				return envelope
+			end)
+		end)
+
+		if not ok then
+			warn("[Kaiju-Debug] Laden für " .. player.Name .. " FEHLGESCHLAGEN (Versuch " .. attempt .. "): " .. tostring(err))
+		elseif not blockedBy then
+			return loadedData, false
+		else
+			warn(
+				string.format(
+					"[Kaiju-Debug] Spielstand von %s ist von Server '%s' GESPERRT (Versuch %d von %d).",
+					player.Name,
+					tostring(blockedBy),
+					attempt,
+					LOCK_ACQUIRE_ATTEMPTS
+				)
+			)
 		end
-		return data
+
+		if attempt < LOCK_ACQUIRE_ATTEMPTS then
+			task.wait(LOCK_ACQUIRE_WAIT)
+		end
+	end
+
+	-- Aufgegeben: Stand nur LESEN, diese Sitzung speichert nicht.
+	local readOk, raw = pcall(function()
+		return PlayerDataStore:GetAsync(key)
+	end)
+	player:SetAttribute("SaveLockedElsewhere", true)
+	local fallbackData = readOk and toEnvelope(raw).Data or nil
+	warn(string.format(
+		"[Kaiju-Debug] Sperre für %s NICHT übernommen -- Notfall-Lesen: %s, Daten: %s. "
+			.. "Diese Sitzung wird NICHT gespeichert.",
+		player.Name,
+		readOk and "ok" or "fehlgeschlagen",
+		fallbackData and "vorhanden" or "KEINE"
+	))
+	return fallbackData, true
+end
+
+local function loadPlayerData(player)
+	local data = acquireLockAndLoad(player)
+
+	if data then
+		-- Bestehender Spieler. Alles, was alte Stände auf den aktuellen Stand hebt,
+		-- läuft in migrateSaveData -- inklusive der früheren Prolog-Sonderregel.
+		return migrateSaveData(player, data)
 	end
 
 	local starterStats = computeStarterStats()
 
 	return {
+		SchemaVersion = SAVE_SCHEMA_VERSION,
 		Level = 0,
 		XP = 0,
 		Kills = 0,
@@ -512,32 +759,130 @@ local function loadPlayerData(player)
 		-- Playable Prologue ("The Fall"): false bedeutet, dieser Spieler hat NOCH KEINEN
 		-- Speicher (echter Erstspieler) -- der Prolog soll einmalig laufen, siehe
 		-- Players.PlayerAdded weiter unten.
-		HasCompletedPrologue = false,
+		-- Prolog: kein Feld = noch nie gespielt (siehe hasCompletedCurrentPrologue).
+		PrologueCompletedMajor = nil,
+		PrologueCompletedMinor = nil,
+		-- Lebenslange Statistiken -- beim Erstspieler leer.
+		Stats = {},
 	}
 end
 
-local function savePlayerData(player, data)
+-- releaseLockAfterwards = true: Sperre im SELBEN Schreibvorgang freigeben, statt danach
+-- ein zweites Mal zu schreiben. Genau daran ging zuvor Fortschritt verloren -- die
+-- Freigabe las den Umschlag erneut ein, bekam von Roblox aber noch den Stand VOR dem
+-- Speichern (Lesevorgaenge unmittelbar nach einem Schreibvorgang auf denselben Schluessel
+-- liefern haeufig den alten Wert) und schrieb diesen zurueck. Das Speichern wurde so
+-- stillschweigend rueckgaengig gemacht -- ohne Fehlermeldung, denn beide Schreibvorgaenge
+-- meldeten Erfolg.
+-- Spieler, deren ABSCHLIESSENDER Speichervorgang gelaufen ist. Beim Beenden feuern
+-- PlayerRemoving UND BindToClose -- ohne diesen Riegel speichert der zweite denselben
+-- Spieler ein weiteres Mal, und zwar mit einem Zustand, den die aufraeumenden Dienste
+-- inzwischen geleert haben. Der gute Stand wurde so von einem leeren ueberschrieben.
+local finalSaveDone = {}
+
+-- Spieler, deren Schreibvorgang GERADE laeuft. BindToClose wartet darauf, statt einen
+-- zweiten zu starten -- der DataStore-Aufruf unterbricht, und ohne dieses Warten beendet
+-- Roblox den Prozess mittendrin.
+local saveInFlight = {}
+
+local function savePlayerData(player, data, releaseLockAfterwards)
+	if finalSaveDone[player] then
+		print("[Kaiju-Debug] Speichern für " .. player.Name .. " übersprungen -- Abschluss-Speicherung lief bereits.")
+		return
+	end
+	-- Speicherstand stammt aus einer neueren Spielversion (siehe migrateSaveData): dieser
+	-- Server würde ihn mit einem älteren Schema überschreiben und Fortschritt vernichten.
+	-- Lieber gar nicht speichern -- diese Sitzung geht verloren, der Spielstand nicht.
+	if player:GetAttribute("SaveSchemaTooNew") then
+		warn(
+			"[Kaiju-Debug] Speichern für "
+				.. player.Name
+				.. " ÜBERSPRUNGEN -- sein Stand stammt aus einer neueren Spielversion als dieser Server."
+		)
+		return
+	end
+
+	-- Die Sperre hält ein anderer Server (siehe acquireLockAndLoad): dieser Spieler ist
+	-- hier nur zu Gast. Schreiben würde die andere, gültige Sitzung überschreiben.
+	if player:GetAttribute("SaveLockedElsewhere") then
+		warn(
+			"[Kaiju-Debug] Speichern für "
+				.. player.Name
+				.. " ÜBERSPRUNGEN -- sein Spielstand ist von einem anderen Server gesperrt."
+		)
+		return
+	end
+
+	if releaseLockAfterwards then
+		-- VOR dem Schreiben setzen, nicht danach: der DataStore-Aufruf unten unterbricht,
+		-- und in dieser Luecke laeuft sonst der zweite Aufruf ungebremst durch.
+		finalSaveDone[player] = true
+	end
+
 	print("[Kaiju-Debug] savePlayerData für", player.Name, "-- TalentData:", data.TalentData and game:GetService("HttpService"):JSONEncode(data.TalentData) or "nil")
+
+	-- UpdateAsync statt SetAsync: liest und schreibt in EINEM atomaren Schritt. Damit
+	-- lässt sich vor dem Schreiben prüfen, ob die Sperre inzwischen jemand anderem gehört
+	-- -- bei SetAsync gäbe es diese Möglichkeit nicht, es überschreibt bedingungslos.
+	local skipped = false
+	saveInFlight[player] = true
 	local ok, err = pcall(function()
-		PlayerDataStore:SetAsync("Player_" .. player.UserId, data)
+		PlayerDataStore:UpdateAsync(dataStoreKey(player), function(raw)
+			local envelope = toEnvelope(raw)
+
+			-- Sperre gehört inzwischen einem anderen Server: nicht schreiben. Das passiert,
+			-- wenn unsere Sperre als verwaist galt und übernommen wurde -- dann ist die
+			-- andere Sitzung die aktuelle, und unsere Daten sind veraltet.
+			if envelope.LockJobId and envelope.LockJobId ~= game.JobId then
+				skipped = true
+				return nil
+			end
+
+			envelope.Data = data
+			if releaseLockAfterwards then
+				-- Letztes Speichern dieser Sitzung: Daten schreiben UND Sperre loesen, in
+				-- einem Zug. Der naechste Server kann sofort uebernehmen.
+				envelope.LockJobId = nil
+				envelope.LockAt = nil
+			else
+				envelope.LockJobId = game.JobId
+				envelope.LockAt = os.time() -- Sperre bei jedem Speichern auffrischen
+			end
+			return envelope
+		end)
 	end)
-	if ok then
-		print("[Kaiju-Debug] savePlayerData: SetAsync erfolgreich für", player.Name)
+
+	saveInFlight[player] = nil
+
+	if not ok then
+		warn("[Kaiju-Debug] savePlayerData FEHLGESCHLAGEN für", player.Name, "-- Fehler:", tostring(err))
+	elseif skipped then
+		warn(
+			"[Kaiju-Debug] Speichern für "
+				.. player.Name
+				.. " ÜBERSPRUNGEN -- die Sperre wurde inzwischen von einem anderen Server übernommen."
+		)
+		player:SetAttribute("SaveLockedElsewhere", true)
 	else
-		warn("[Kaiju-Debug] savePlayerData: SetAsync FEHLGESCHLAGEN für", player.Name, "-- Fehler:", tostring(err))
+		print("[Kaiju-Debug] savePlayerData: erfolgreich für", player.Name)
 	end
 end
 
 Players.PlayerAdded:Connect(function(player)
 	local data = loadPlayerData(player)
-	player:SetAttribute("HasCompletedPrologue", data.HasCompletedPrologue)
+	-- Das Attribut bleibt das Laufzeit-Signal fuer alle uebrigen Stellen (Prolog-Start,
+	-- Spawn-Logik, PrologueOrchestrator) -- es wird jetzt nur aus der Version ABGELEITET
+	-- statt direkt gespeichert.
+	player:SetAttribute("HasCompletedPrologue", hasCompletedCurrentPrologue(data))
+	player:SetAttribute("PrologueCompletedMajor", data.PrologueCompletedMajor)
+	player:SetAttribute("PrologueCompletedMinor", data.PrologueCompletedMinor)
 
 	-- Playable Prologue ("The Fall"): bei einem echten Erstspieler soll NICHT der normale
 	-- automatische Charakter-Spawn passieren -- stattdessen übernimmt die (separate)
 	-- Prolog-Orchestrierung das manuelle Spawnen (erst in die Prolog-Zone, am Ende ins
 	-- echte Sanctuary). AutoLoadCharacter MUSS früh (vor jedem Yield) deaktiviert werden,
 	-- sonst hat Roblox den Charakter evtl. schon automatisch gespawnt.
-	if not data.HasCompletedPrologue then
+	if not hasCompletedCurrentPrologue(data) then
 		player.AutoLoadCharacter = false
 	end
 
@@ -655,6 +1000,19 @@ Players.PlayerAdded:Connect(function(player)
 		end)
 	end
 
+	-- Lebenslange Statistiken (siehe StatsService.lua) -- gleiches defensive Muster:
+	-- Scripts in ServerScriptService starten in unbestimmter Reihenfolge, der
+	-- StatsService kann beim ersten Spieler-Join noch nicht geladen sein.
+	if _G.LoadStatsSaveData then
+		_G.LoadStatsSaveData(player, data.Stats)
+	else
+		task.defer(function()
+			if _G.LoadStatsSaveData then
+				_G.LoadStatsSaveData(player, data.Stats)
+			end
+		end)
+	end
+
 	player.CharacterAdded:Connect(function(character)
 		local finalCharacter = applyFactionModel(player, character)
 		if finalCharacter == character then
@@ -691,7 +1049,7 @@ Players.PlayerAdded:Connect(function(player)
 	-- wird vom künftigen Prolog-Orchestrierungs-Script bereitgestellt; bis es existiert,
 	-- fällt dies defensiv auf einen normalen Spawn zurück (Spiel bleibt so lange
 	-- durchgehend spielbar, auch während der Prolog noch gebaut wird).
-	if not data.HasCompletedPrologue then
+	if not hasCompletedCurrentPrologue(data) then
 		task.spawn(function()
 			if _G.StartPrologue then
 				_G.StartPrologue(player)
@@ -726,6 +1084,9 @@ local function buildPlayerSaveData(player)
 	end
 
 	return {
+		-- Immer die Version des SCHREIBENDEN Servers -- ein Stand, der hier entsteht,
+		-- entspricht dem Schema dieses Codes.
+		SchemaVersion = SAVE_SCHEMA_VERSION,
 		Level = leaderstats and leaderstats.Level.Value or 0,
 		XP = getVal("XP", 0),
 		Kills = leaderstats and leaderstats.Kills.Value or 0,
@@ -735,7 +1096,9 @@ local function buildPlayerSaveData(player)
 		BodyPower = getVal("BodyPower", 0),
 		EquippedSkin = getVal("EquippedSkin", 0),
 		UnlockedSkins = unlockedIds,
-		HasCompletedPrologue = player:GetAttribute("HasCompletedPrologue") ~= false, -- true als sicherer Default (nil zählt als "ja")
+		-- Prolog: welche Fassung dieser Spieler zuletzt abgeschlossen hat. nil = nie.
+		PrologueCompletedMajor = player:GetAttribute("PrologueCompletedMajor"),
+		PrologueCompletedMinor = player:GetAttribute("PrologueCompletedMinor"),
 		EvolutionPoints = getVal("EvolutionPoints", 0),
 		EvoSpeedLevel = getVal("EvoSpeedLevel", 0),
 		EvoMoneyLevel = getVal("EvoMoneyLevel", 0),
@@ -760,11 +1123,20 @@ local function buildPlayerSaveData(player)
 		TalentData = _G.GetTalentSaveData and _G.GetTalentSaveData(player) or nil,
 		-- Achievements: freigeschaltete IDs + Zähler-Fortschritt.
 		Achievements = _G.GetAchievementSaveData and _G.GetAchievementSaveData(player) or nil,
+		-- Lebenslange Statistiken (siehe StatsService.lua) -- flache Schlüssel-Wert-Paare,
+		-- ein neuer Wert braucht deshalb keine Schema-Änderung.
+		Stats = _G.GetStatsSaveData and _G.GetStatsSaveData(player) or nil,
 	}
 end
 
 Players.PlayerRemoving:Connect(function(player)
-	savePlayerData(player, buildPlayerSaveData(player))
+	-- Daten schreiben und Sperre freigeben in EINEM Vorgang (siehe savePlayerData).
+	savePlayerData(player, buildPlayerSaveData(player), true)
+	-- Eintrag spaeter wieder loesen, damit die Tabelle nicht mitwaechst. Grosszuegig
+	-- verzoegert, damit ein BindToClose kurz danach noch am Riegel scheitert.
+	task.delay(60, function()
+		finalSaveDone[player] = nil
+	end)
 end)
 
 -- WICHTIG: ohne dies geht Fortschritt (v.a. Talente/Achievements) beim Beenden des
@@ -774,13 +1146,41 @@ end)
 -- wird -- funktioniert sowohl live als auch beim Beenden einer Studio-Play-Session
 -- (Team-Test/Server-Modus; bei reinem "Play Solo" ist das Verhalten je nach
 -- Studio-Version leider nicht immer garantiert, das liegt ausserhalb unserer Kontrolle).
+local BIND_TO_CLOSE_MAX_WAIT = 10 -- Sekunden
+
+local function anySaveInFlight()
+	for _ in pairs(saveInFlight) do
+		return true
+	end
+	return false
+end
+
 game:BindToClose(function()
+	-- ZUERST warten, nicht speichern. Beim Herunterfahren hat PlayerRemoving fuer jeden
+	-- Spieler bereits einen Schreibvorgang angestossen; der laeuft noch. BindToClose ist
+	-- der einzige Ort, an dem sich der Serverstart-Prozess so lange offenhalten laesst.
+	-- Kehrte diese Funktion sofort zurueck, wuerde Roblox mitten im DataStore-Aufruf
+	-- abbrechen -- der Spielstand waere geschrieben worden, kommt aber nie an.
+	local deadline = os.clock() + BIND_TO_CLOSE_MAX_WAIT
+	while anySaveInFlight() and os.clock() < deadline do
+		task.wait(0.1)
+	end
+	if anySaveInFlight() then
+		warn("[Kaiju-Debug] BindToClose: Speichervorgänge nach " .. BIND_TO_CLOSE_MAX_WAIT .. "s noch offen -- fahre trotzdem herunter.")
+	end
+
+	-- DANACH: nur die Spieler, fuer die noch gar nicht abschliessend gespeichert wurde
+	-- (z.B. weil PlayerRemoving fuer sie nicht mehr gelaufen ist). Wer den Riegel traegt,
+	-- ist fertig -- ein zweiter Schreibvorgang wuerde nur einen inzwischen aufgeraeumten,
+	-- also leeren Zustand ueber den guten schreiben.
 	for _, player in ipairs(Players:GetPlayers()) do
-		local ok, err = pcall(function()
-			savePlayerData(player, buildPlayerSaveData(player))
-		end)
-		if not ok then
-			warn("[PlayerSetup] BindToClose: Speichern für " .. player.Name .. " fehlgeschlagen: " .. tostring(err))
+		if not finalSaveDone[player] then
+			local ok, err = pcall(function()
+				savePlayerData(player, buildPlayerSaveData(player), true)
+			end)
+			if not ok then
+				warn("[Kaiju-Debug] BindToClose: Speichern für " .. player.Name .. " fehlgeschlagen: " .. tostring(err))
+			end
 		end
 	end
 end)
@@ -801,7 +1201,7 @@ task.spawn(function()
 				savePlayerData(player, buildPlayerSaveData(player))
 			end)
 			if not ok then
-				warn("[PlayerSetup] Auto-Save: Speichern für " .. player.Name .. " fehlgeschlagen: " .. tostring(err))
+				warn("[Kaiju-Debug] Auto-Save: Speichern für " .. player.Name .. " fehlgeschlagen: " .. tostring(err))
 			end
 		end
 	end
@@ -1081,7 +1481,13 @@ _G.ApplySkinToCharacter = applySkinToCharacter
 -- periodischen Auto-Save -- ein Server-Absturz kurz danach soll dieses einmalige Flag
 -- nicht verlieren können) und spawnt den Spieler danach normal (ins echte Sanctuary).
 _G.MarkPrologueComplete = function(player)
+	-- Die zum Zeitpunkt des Abschlusses gueltige Fassung festhalten -- daran entscheidet
+	-- sich beim naechsten Beitritt, ob er erneut ran muss.
+	player:SetAttribute("PrologueCompletedMajor", PrologueConfig.Major)
+	player:SetAttribute("PrologueCompletedMinor", PrologueConfig.Minor)
 	player:SetAttribute("HasCompletedPrologue", true)
+	print(string.format("[Kaiju-Debug] Prolog abgeschlossen von %s -- Fassung %d.%d festgehalten.",
+		player.Name, PrologueConfig.Major, PrologueConfig.Minor))
 	savePlayerData(player, buildPlayerSaveData(player))
 	player:LoadCharacter()
 end
