@@ -202,6 +202,9 @@ task.spawn(function()
 				state[research.faction][research.talentId] = (state[research.faction][research.talentId] or 0) + 1
 				activeResearch[player] = nil
 
+				print(string.format("[Kaiju-Debug] Forschung FERTIG: %s / %s / %s -- neue Stufe %d",
+					player.Name, research.faction, research.talentId, state[research.faction][research.talentId]))
+
 				ResearchCompleteEvent:FireClient(player, research.faction, research.talentId, state[research.faction][research.talentId])
 
 				if research.faction == "Kaiju" and _G.RecalculateStrength then
@@ -222,12 +225,20 @@ end)
 _G.GetTalentSaveData = function(player)
 	local state = talentLevels[player] or { Kaiju = {}, Jaeger = {}, Ronin = {} }
 	local research = activeResearch[player]
+
 	local researchData = nil
 	if research then
+		-- Gespeichert wird die INVESTIERTE Zeit, nicht der Fertigstellungszeitpunkt.
+		-- Vorher stand hier completesAt, ein absoluter Zeitstempel -- damit lief die
+		-- Forschung auch waehrend der Abwesenheit weiter. Jetzt zaehlt ausschliesslich
+		-- Online-Zeit: der Spieler macht dort weiter, wo er aufgehoert hat.
+		local now = Workspace:GetServerTimeNow()
+		local remaining = math.max(research.completesAt - now, 0)
+		local invested = math.clamp(research.totalDuration - remaining, 0, research.totalDuration)
 		researchData = {
 			faction = research.faction,
 			talentId = research.talentId,
-			completesAt = research.completesAt,
+			investedSeconds = invested,
 			totalDuration = research.totalDuration,
 		}
 	end
@@ -238,9 +249,10 @@ _G.GetTalentSaveData = function(player)
 end
 
 -- Stellt einen gespeicherten Zustand wieder her. WICHTIG: Die Forschungszeit läuft auf
--- Basis der echten Server-Uhrzeit (completesAt ist ein absoluter Zeitstempel) -- lief die
--- Zeit schon ab, WÄHREND der Spieler ausgeloggt war, wird die Forschung hier sofort als
--- abgeschlossen gewertet, statt erneut von vorne zu laufen.
+-- Basis der INVESTIERTEN Zeit: Forschung schreitet nur voran, solange der Spieler
+-- online ist. Beim Beitritt wird aus der investierten Zeit die Restzeit gebildet und neu
+-- abgezaehlt -- er macht also dort weiter, wo er aufgehoert hat. Alte Staende mit
+-- completesAt werden dabei umgerechnet, nicht verworfen.
 _G.LoadTalentSaveData = function(player, data)
 	if not data then
 		return
@@ -257,21 +269,33 @@ _G.LoadTalentSaveData = function(player, data)
 
 	if data.research then
 		local now = Workspace:GetServerTimeNow()
-		if now >= data.research.completesAt then
-			-- Forschung ist während der Abwesenheit fertig geworden -- sofort die Stufe
-			-- gutschreiben, keine weitere Wartezeit.
+		local totalDuration = data.research.totalDuration or 0
+
+		-- investedSeconds ist das neue Feld. Alte Staende tragen stattdessen completesAt
+		-- (absoluter Zeitstempel) -- daraus laesst sich die investierte Zeit herleiten,
+		-- damit niemand seinen Fortschritt verliert.
+		local invested = data.research.investedSeconds
+		if type(invested) ~= "number" then
+			local remaining = math.max((data.research.completesAt or now) - now, 0)
+			invested = math.clamp(totalDuration - remaining, 0, totalDuration)
+		end
+		invested = math.clamp(invested, 0, totalDuration)
+
+		if invested >= totalDuration and totalDuration > 0 then
+			-- Fertig geforscht -- Stufe gutschreiben statt erneut warten zu lassen.
 			local state = talentLevels[player]
 			state[data.research.faction][data.research.talentId] =
 				(state[data.research.faction][data.research.talentId] or 0) + 1
 		else
-			-- Läuft noch -- Countdown mit der ORIGINALEN Fertigstellungszeit fortsetzen
-			-- (nicht neu starten), damit die Restzeit korrekt weiterzählt.
+			-- Weiterlaufen lassen: die RESTZEIT wird ab jetzt neu abgezaehlt. Der intern
+			-- gefuehrte completesAt bleibt damit die guenstige Form fuer die Tick-Schleife
+			-- und den Client, waehrend gespeichert weiterhin die investierte Zeit wird.
 			activeResearch[player] = {
 				faction = data.research.faction,
 				talentId = data.research.talentId,
 				startedAt = now,
-				completesAt = data.research.completesAt,
-				totalDuration = data.research.totalDuration,
+				completesAt = now + (totalDuration - invested),
+				totalDuration = totalDuration,
 			}
 		end
 	end
@@ -318,6 +342,19 @@ _G.ResetPlayerTalents = function(player)
 end
 
 Players.PlayerRemoving:Connect(function(player)
-	talentLevels[player] = nil
-	activeResearch[player] = nil
+	-- WICHTIG -- task.defer, NICHT sofort aufräumen: PlayerSetup speichert ebenfalls in
+	-- PlayerRemoving und holt sich den Talentstand dort über _G.GetTalentSaveData.
+	-- Roblox ruft die Handler in der Reihenfolge ihrer VERBINDUNG auf, und Scripts in
+	-- ServerScriptService starten in unbestimmter Reihenfolge -- lief dieses Aufräumen
+	-- zuerst, las das Speichern eine bereits geleerte Tabelle und der komplette
+	-- Talentfortschritt ging verloren. Ohne Fehlermeldung, und je nach Startreihenfolge
+	-- mal so und mal so.
+	--
+	-- task.defer schiebt das Aufräumen hinter alle unmittelbar laufenden Handler. Der
+	-- Speicherstand wird dort synchron eingesammelt, bevor der DataStore-Aufruf
+	-- überhaupt beginnt -- danach darf geleert werden.
+	task.defer(function()
+		talentLevels[player] = nil
+		activeResearch[player] = nil
+	end)
 end)
