@@ -162,7 +162,24 @@ Quelle; hier steht bewusst keine zweite Fassung, sonst laufen die beiden
 auseinander (siehe „Spec-getriebene Entwicklung").
 
 Die Eskalation verlagert den Spieler schrittweise: erst Beobachtung, dann
-geringerer Ertrag, dann räumliche Umlenkung, dann Kampf, dann Vertreibung.
+geringerer Ertrag, dann räumliche Umlenkung, dann Kampf – und zuletzt die Prüfung
+am Guardian.
+
+### CITY BROKEN – die Auszahlung
+
+Der vierte und letzte Baustein des Alert-Konzepts, und der Grund, warum Stufe 5
+nicht das Ende ist. Jede Stadt hat pro Alarmstufe eine Aufgabe (Feuerwehr,
+Barrikaden, Militär, Guardian) – nur bis zu ihrem eigenen `MaxAlertLevel`.
+
+Steht eine Stadt auf ihrer Höchststufe und sind **alle** Aufgaben erledigt, bricht
+sie für **75 Sekunden** zusammen: freie Zerstörung, keine Eskalation. Danach fällt
+der Alarm auf 0 und der Kreislauf beginnt von vorn.
+
+**Daraus folgt für Änderungen an Stufe 5**: der Druck dort kommt aus der Gefahr,
+nicht aus dem Ertrag. Belohnungen fließen bewusst weiter. Eine Belohnungssperre
+würde kurz vor der Auszahlung bestrafen und das Vermeiden von Stufe 5 zur
+vernünftigen Spielweise machen – und damit den Bosskampf zu etwas, das man
+umgeht. `CityBrokenService.server.luau`.
 
 Beteiligte Dienste: `CityAlertService`, `EscalationService`, `CityDefenderService`,
 `MilitaryService`, `BarricadeClusterService`, `AlertHelicopterService`.
@@ -288,8 +305,16 @@ git commit -am "Workshop-Submodul aktualisiert"
 
 Diese Punkte sind teils erschlossen und teils noch offen:
 
-- [ ] **`_G`-Globals**: Werden im Bestand verwendet, aber Herkunft und Zweck sind
-      nicht dokumentiert. Bei Gelegenheit erfassen – oder ablösen.
+- [ ] **Drei wirkungslose `_G`-Funktionen**: `GetTalentHeatCoolingBonus` (3 Lesestellen
+      in `HeatHandler` – das Hitze-Kühlungstalent hat dadurch **keine Wirkung**),
+      `StopArmGauntletSession` und `StopBodyCircuitSession` (je 2 Lesestellen in
+      `TrainingHandler`). Alle drei werden gelesen, aber **nirgends gesetzt**; die
+      Lesestellen sind nil-geprüft und laufen still ins Leere.
+- [ ] **Achievement-Vergabe für den Altbestand**: 30 der 41 Achievements hängen an
+      `_G.IncrementAchievementCounter`, das von **keiner Stelle** aufgerufen wird – sie
+      werden nie vergeben. Die 11 neuen laufen über `statKey` und die Lebensstatistik
+      (siehe `AchievementService`, `achievementsByStatKey`). Wo eine passende Statistik
+      existiert, ließen sich alte nach demselben Muster nachziehen.
 - [ ] **Workshop und Spiel zusammenführen?** Der Warden-I Shepherd ist laut seiner
       Spezifikation eine „Guardian Defense Platform" – inhaltlich ein Kandidat für
       `CityDefenderService`. Der lädt seine Guardians aber als fertiges Model aus
@@ -300,6 +325,9 @@ Diese Punkte sind teils erschlossen und teils noch offen:
       vor, nur hier. Was ist das, und wird es noch gebraucht?
 - [ ] **Fraktionswechsel**: Wählt der Spieler eine Figur dauerhaft, oder wechselt
       er zwischen den Kapiteln? Was schaltet `FactionUnlockService` frei?
-- [ ] **Datenhaltung**: Wie wird Spielerfortschritt gespeichert (DataStore-Struktur)?
+- [x] **Datenhaltung**: erledigt. `PlayerSetup` schreibt einen versionierten Umschlag
+      (`{ Envelope, Data, LockJobId, LockAt }`) per `UpdateAsync`, mit Migrationskette
+      und Sitzungssperre. Untersysteme hängen sich über `_G.Get<X>SaveData` /
+      `_G.Load<X>SaveData` ein. Die Regeln dazu stehen in `Specs/PlayerDataSpec.luau`.
 - [ ] **Bezug zur Uhrenkollektion**: Soll sich Bildsprache oder Mechanik an den
       Uhren orientieren, oder ist es reine Namensgebung?

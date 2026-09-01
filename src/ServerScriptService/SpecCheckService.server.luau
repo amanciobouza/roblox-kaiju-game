@@ -88,6 +88,25 @@ local function buildWorkspaceContext()
 		GetTagged = function(tagName)
 			return CollectionService:GetTagged(tagName)
 		end,
+
+		-- Zählt getaggte Instanzen JE STADT und liefert eine schlichte Tabelle
+		-- { [Stadtname] = Anzahl }. Bewusst hier und nicht in der Regel: die Auflösung
+		-- braucht _G.ResolveCityName und CollectionService, und eine Spec-Regel darf
+		-- nichts Roblox-Spezifisches anfassen -- sonst läuft sie im kopflosen Prüfer
+		-- nicht mehr.
+		CountTaggedByCity = function(tagName)
+			local counts = {}
+			if not _G.ResolveCityName then
+				return counts
+			end
+			for _, instance in ipairs(CollectionService:GetTagged(tagName)) do
+				local cityName = _G.ResolveCityName(instance)
+				if cityName then
+					counts[cityName] = (counts[cityName] or 0) + 1
+				end
+			end
+			return counts
+		end,
 		FindByAttribute = function(attributeName, value)
 			local found = {}
 			for _, descendant in ipairs(Workspace:GetDescendants()) do

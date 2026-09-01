@@ -159,32 +159,59 @@ return {
 			end,
 		},
 		{
-			id = "alert.level5.pushes-player-out",
-			intent = "WEICH und HEUTE NICHT UMGESETZT: Stufe 5 soll den Spieler aus der Stadt "
-				.. "drängen -- keine Belohnungen mehr, Ausweichen auf eine andere Stadt. "
-				.. "Tatsächlich fliessen Belohnungen unverändert weiter; weder "
-				.. "EnergyCollectionHandler noch HouseHandler fragen die Alarmstufe ab. "
-				.. "Der Guardian allein erzeugt den Druck nicht.",
+			id = "alert.level5.is-the-test-before-the-payoff",
+			intent = "WEICH: Stufe 5 ist die PRÜFUNG vor der Belohnung, nicht das Ende der "
+				.. "Leiter. Wer alle Aufgaben der Stadt erfüllt -- zuletzt den Guardian --, "
+				.. "löst CITY BROKEN aus: 75 Sekunden freie Zerstörung ohne Eskalation, "
+				.. "danach fällt der Alarm auf 0 und der Kreislauf beginnt von vorn. "
+				.. "Der Druck auf Stufe 5 kommt aus der GEFAHR, nicht aus dem Ertrag. "
+				.. "Belohnungen fliessen bewusst weiter.\n"
+				.. "KORRIGIERT am 01.09.2026: Diese Stufe war früher als 'drängt den Spieler "
+				.. "aus der Stadt -- keine Belohnungen mehr' beschrieben. Das stammt aus "
+				.. "einer Zeit, in der Stufe 5 der Endzustand war; CITY BROKEN ist laut "
+				.. "eigenem Kopfkommentar der 'vierte und letzte Baustein' und kam später "
+				.. "dazu. Eine Belohnungssperre wäre heute schädlich: sie bestraft kurz vor "
+				.. "der Auszahlung, macht das Vermeiden von Stufe 5 zur vernünftigen "
+				.. "Spielweise -- und damit den ganzen Bosskampf zu etwas, das man umgeht.",
+		},
+		{
+			id = "alert.level5.guardian-animation-is-provisional",
+			intent = "WEICH und VORLÄUFIG: Die Guardian-Animation läuft zunächst "
+				.. "CLIENTSEITIG -- ein LocalScript registriert die KeyframeSequence aus "
+				.. "GuardianAnimationLibrary.BuildIdle() und spielt sie über den Animator "
+				.. "des gerigten Modells ab. "
+				.. "Das ist ausdrücklich ein Zwischenstand, kein Endzustand. Der Guardian "
+				.. "gehört dem SERVER; clientseitig registrierte Sequenzen replizieren "
+				.. "nicht, zwei Spieler sehen ihn also in unterschiedlicher Phase des "
+				.. "Zyklus. Bewusst in Kauf genommen, solange die Wardens noch gebaut "
+				.. "werden -- clientseitig lässt sich ohne Upload iterieren. "
+				.. "SPÄTER: Animation hochladen, Asset-ID wie SkinsConfig.AttackAnimationId "
+				.. "an einen benannten Ort legen, Server abspielen lassen. Beide Wege enden "
+				.. "bei Animator:LoadAnimation -- es unterscheidet sich nur, woher die ID "
+				.. "kommt und wer abspielt.",
 		},
 		{
 			id = "alert.level5.has-protected-buildings",
 			intent = "Der Guardian stellt sich vor wichtige Gebäude, markiert per "
-				.. "'GuardianProtect'-Tag. Ohne Markierung greift ein Rückfall, der EIN "
-				.. "einziges Gebäude wählt (das mit der höchsten MaxHealth) -- der Guardian "
-				.. "bewacht dann eine Ecke der Stadt statt sie zu verteidigen.",
+				.. "'GuardianProtect'-Tag. JEDE Stadt mit Guardian braucht mindestens eines. "
+				.. "Ohne Markierung greift ein Rückfall, der EIN einziges Gebäude wählt (das "
+				.. "mit der höchsten MaxHealth) -- der Guardian bewacht dann eine Ecke der "
+				.. "Stadt statt sie zu verteidigen. Seit der Spawn-Punkt ersatzweise aus "
+				.. "diesem Gebäude abgeleitet wird (für Städte ohne 'GuardianSpawn'-Part), "
+				.. "entscheidet die Markierung zusätzlich darüber, WO der Guardian erscheint.",
 			needsWorkspace = true,
-			-- Der Tag wird NIRGENDS im Code vergeben (kein AddTag("GuardianProtect")), er
-			-- müsste von Hand in Studio gesetzt werden. Betrifft damit jede Stadt mit
-			-- Guardian. Ob der Prolog davon ausgenommen gehören soll -- sein Guardian ist
-			-- der geskriptete Bosskampf, kein Gebäudewächter -- ist offen und Amancios
-			-- Entscheidung; bis dahin steht er hier als bekannte Abweichung.
-			knownViolations = { "City", "PrologueCity" },
+			-- Geprüft wird JE STADT. Die frühere Fassung fragte nur, ob IRGENDWO auf der
+			-- Welt etwas markiert ist -- das sagt nichts darüber, ob diese eine Stadt
+			-- versorgt ist, und hätte eine vergessene Stadt durchgewinkt.
 			check = function(ctx)
 				local violations = {}
-				local taggedCount = ctx.workspace.CountTagged("GuardianProtect")
-				if taggedCount == 0 then
-					for _, city in ipairs(citiesOf(ctx)) do
-						if (city.data.MaxAlertLevel or 0) >= 5 and city.data.GuardianHP then
+				local byCity = ctx.workspace.CountTaggedByCity and ctx.workspace.CountTaggedByCity("GuardianProtect")
+				if not byCity then
+					return { "CountTaggedByCity fehlt im Prüfer-Kontext -- Regel nicht auswertbar" }
+				end
+				for _, city in ipairs(citiesOf(ctx)) do
+					if (city.data.MaxAlertLevel or 0) >= 5 and city.data.GuardianHP then
+						if (byCity[city.name] or 0) == 0 then
 							table.insert(
 								violations,
 								city.name .. ": kein Gebäude mit 'GuardianProtect' getaggt -- Guardian nutzt den Ein-Gebäude-Rückfall"
