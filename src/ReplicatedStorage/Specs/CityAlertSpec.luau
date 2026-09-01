@@ -141,7 +141,9 @@ return {
 			intent = "Stufe 5 ist der City Defender. Eine Stadt, die Stufe 5 erreichen kann, "
 				.. "MUSS ihn haben -- sonst eskaliert sie in eine Stufe, in der nichts "
 				.. "passiert ausser einer Warnung im Log.",
-			knownViolations = { "LargeCity", "MegaCity", "DefaultCity" },
+			-- Ehemals bekannte Abweichungen (LargeCity, MegaCity, DefaultCity) sind
+			-- behoben. Bewusst KEIN knownViolations mehr: der Eintrag wuerde einen
+			-- kuenftigen echten Verstoss dieser Staedte stillschweigend durchwinken.
 			check = function(ctx)
 				local violations = {}
 				for _, city in ipairs(citiesOf(ctx)) do
@@ -201,7 +203,7 @@ return {
 			id = "alert.thresholds.complete",
 			intent = "Zu jeder erreichbaren Stufe gehört eine Schwelle, ab der sie greift. "
 				.. "Fehlt sie, ist die Stufe unerreichbar und MaxAlertLevel eine Lüge.",
-			knownViolations = { "LargeCity", "MegaCity", "DefaultCity" },
+			-- Ehemals bekannte Abweichungen behoben -- siehe oben, kein knownViolations.
 			check = function(ctx)
 				local violations = {}
 				for _, city in ipairs(citiesOf(ctx)) do
@@ -223,10 +225,6 @@ return {
 			intent = "Die Schwellen müssen mit der Stufe steigen. Eine niedrigere Schwelle für "
 				.. "eine höhere Stufe würde zwei Stufen gleichzeitig auslösen und die "
 				.. "Eskalation überspringen.",
-			-- DefaultCity: Level3 und Level4 stehen beide auf 2000 -- in einer unbekannten
-			-- Stadt würden Stufe 3 und 4 gleichzeitig auslösen. Beim Aufbau dieser Regel
-			-- gefunden; erwartet war, dass sie durchläuft.
-			knownViolations = { "DefaultCity" },
 			check = function(ctx)
 				local violations = {}
 				for _, city in ipairs(citiesOf(ctx)) do

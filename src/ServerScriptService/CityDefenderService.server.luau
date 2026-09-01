@@ -202,7 +202,10 @@ end
 -- gegen die Zustandsmaschine hier (SCAN/POSITION/BLOCK/COUNTER) arbeiten würde.
 --
 -- Zum Abschalten: WARDEN_CITIES leeren -- dann greift wieder ServerStorage/Platzhalter.
-local WARDEN_CITIES = { City = true }
+-- Alle Staedte mit Guardian. Der Warden ist bis auf Weiteres das Provisorium fuer alle
+-- drei -- ohne ihn wuerde in LargeCity und MegaCity der Block-Platzhalter stehen, und die
+-- Staedte waeren zwar abschliessbar, aber der Bosskampf saehe nach Baustelle aus.
+local WARDEN_CITIES = { City = true, LargeCity = true, MegaCity = true }
 
 -- Der Dienst setzt den Guardian mit model:PivotTo(spawnPosition) ab; der Pivot ist der
 -- PrimaryPart. Der "GuardianSpawn"-Part markiert in der Praxis den BODEN -- die
@@ -421,7 +424,16 @@ local function findProtectedBuildings(cityName)
 	local tagged = {}
 	for _, house in ipairs(CollectionService:GetTagged(GUARDIAN_PROTECT_TAG)) do
 		if not house:GetAttribute("Destroyed") and house:GetAttribute("CityNameResolved") ~= false then
-			table.insert(tagged, house)
+			-- WICHTIG: nach Stadt filtern. Vorher nahm dieser Zweig JEDES getaggte Gebäude
+			-- der ganzen Welt -- sobald irgendwo eines markiert war, hätte der Guardian
+			-- jeder Stadt dasselbe, womöglich weit entfernte Gebäude bewacht. Solange
+			-- nichts getaggt ist, greift der Rückfall darunter und es fiel nicht auf.
+			-- Seit der Spawn-Punkt ersatzweise aus diesem Gebäude abgeleitet wird, würde
+			-- der Fehler den Guardian in der falschen Stadt erscheinen lassen.
+			local houseCity = _G.ResolveCityName and _G.ResolveCityName(house)
+			if houseCity == cityName then
+				table.insert(tagged, house)
+			end
 		end
 	end
 	if #tagged > 0 then
@@ -1105,11 +1117,51 @@ local function findCitySpawnPoint(cityName)
 	if spawnPart and spawnPart:IsA("BasePart") then
 		return spawnPart.Position
 	end
+
+	-- RÜCKFALL 1: vor das Gebäude, das der Guardian ohnehin bewachen wird.
+	--
+	-- Sinnvoller als der Modell-Pivot: der Guardian verbringt sein ganzes Leben damit,
+	-- sich vor dieses Gebäude zu stellen -- dort zu erscheinen erspart ihm den langen
+	-- Anmarsch und liegt garantiert innerhalb der Stadt. Der Pivot eines Stadtmodells
+	-- kann dagegen irgendwo liegen, auch unter dem Boden oder in einem Gebäude.
+	--
+	-- Gedacht als Notnagel für Städte ohne vorbereiteten 'GuardianSpawn'-Part. Für eine
+	-- inszenierte Ankunft (Sichtachse, Abstand, Blickrichtung) gehört weiterhin ein
+	-- eigener Part in den Workspace -- deshalb die Warnung.
+	local buildings = findProtectedBuildings(cityName)
+	local building = buildings and buildings[1]
+	local buildingPart = building and (building.PrimaryPart or building:FindFirstChildWhichIsA("BasePart", true))
+	if buildingPart then
+		local ok, _, size = pcall(function()
+			return building:GetBoundingBox()
+		end)
+		-- Etwas Abstand, damit er nicht IM Gebäude steht.
+		local offset = (ok and size) and math.max(size.X, size.Z) * 0.6 + 25 or 45
+		warn(
+			string.format(
+				"[CityDefenderService] '%s' hat keinen 'GuardianSpawn'-Part -- Guardian erscheint "
+					.. "ersatzweise %d Studs vor '%s'. Für eine kontrollierte Ankunft bitte in Studio "
+					.. "einen 'GuardianSpawn'-Part in der Stadt anlegen.",
+				cityName,
+				math.floor(offset),
+				building.Name
+			)
+		)
+		return buildingPart.Position + Vector3.new(offset, 0, 0)
+	end
+
+	-- RÜCKFALL 2: Modell-Pivot. Letzte Möglichkeit, oft unschön, aber besser als gar
+	-- kein Guardian -- ohne ihn lässt sich die Stadt nicht abschliessen.
 	if cityContainer:IsA("Model") then
 		local ok, cframe = pcall(function()
 			return cityContainer:GetPivot()
 		end)
 		if ok then
+			warn(
+				"[CityDefenderService] '"
+					.. cityName
+					.. "' hat weder 'GuardianSpawn' noch ein geschütztes Gebäude -- Guardian erscheint am Modell-Pivot der Stadt."
+			)
 			return cframe.Position
 		end
 	end

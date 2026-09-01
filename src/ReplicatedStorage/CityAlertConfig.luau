@@ -231,6 +231,30 @@ CityAlertConfig.Cities = {
 		HelicopterDamage = 165,
 		HelicopterAttackRange = 95,
 		HelicopterSpeed = 21,
+
+		-- ===== Stufe 5: Guardian =====
+		-- Werte folgen der Skalierung, die im Bestand durchgehend gilt: Alarmschwellen
+		-- x4 je Stadtstufe, Trefferpunkte ~x3, Schaden ~x2.7 (siehe Tank/Raketenwerfer
+		-- eine Zeile hoeher). Ausgehend von City als erster Stadt mit Guardian.
+		--
+		-- Ohne AlertThresholdLevel5 war Stufe 5 hier UNERREICHBAR, obwohl MaxAlertLevel
+		-- sie versprach -- die Stadt liess sich damit nicht abschliessen, denn die
+		-- CITY-BROKEN-Aufgabe "Guardian eliminated" setzt einen Guardian voraus.
+		AlertThresholdLevel5 = 409600, -- Level4: 102400 x4
+		GuardianHP = 540000,
+		GuardianShieldHP = 216000,
+		GuardianShieldRegenDelay = 10,
+		GuardianShieldRegenRate = 0.04,
+		GuardianImpactFistDamage = 500,
+		GuardianImpactFistCooldown = 3,
+		GuardianImpactFistRange = 14,
+		GuardianImpactFistKnockback = 112,
+		GuardianRepulsorDamage = 250,
+		GuardianRepulsorCooldown = 6,
+		GuardianRepulsorRadius = 22,
+		GuardianRepulsorKnockback = 150,
+		GuardianMoveSpeed = 15,
+		GuardianProtectRadius = 30,
 	},
 
 	MegaCity = {
@@ -278,6 +302,30 @@ CityAlertConfig.Cities = {
 		HelicopterDamage = 450,
 		HelicopterAttackRange = 100,
 		HelicopterSpeed = 22,
+
+		-- ===== Stufe 5: Guardian =====
+		-- Werte folgen der Skalierung, die im Bestand durchgehend gilt: Alarmschwellen
+		-- x4 je Stadtstufe, Trefferpunkte ~x3, Schaden ~x2.7 (siehe Tank/Raketenwerfer
+		-- eine Zeile hoeher). Ausgehend von City als erster Stadt mit Guardian.
+		--
+		-- Ohne AlertThresholdLevel5 war Stufe 5 hier UNERREICHBAR, obwohl MaxAlertLevel
+		-- sie versprach -- die Stadt liess sich damit nicht abschliessen, denn die
+		-- CITY-BROKEN-Aufgabe "Guardian eliminated" setzt einen Guardian voraus.
+		AlertThresholdLevel5 = 1638400, -- Level4: 409600 x4
+		GuardianHP = 1620000,
+		GuardianShieldHP = 648000,
+		GuardianShieldRegenDelay = 10,
+		GuardianShieldRegenRate = 0.04,
+		GuardianImpactFistDamage = 1375,
+		GuardianImpactFistCooldown = 3,
+		GuardianImpactFistRange = 14,
+		GuardianImpactFistKnockback = 112,
+		GuardianRepulsorDamage = 690,
+		GuardianRepulsorCooldown = 6,
+		GuardianRepulsorRadius = 22,
+		GuardianRepulsorKnockback = 150,
+		GuardianMoveSpeed = 15,
+		GuardianProtectRadius = 30,
 	},
 
 	-- ===== Playable Prologue ("The Fall") =====
@@ -386,8 +434,15 @@ CityAlertConfig.DefaultCity = {
 	FlankAutoDetectRadius = 40,
 
 	-- ===== Stufe 4: Militär (Panzer, Raketenwerfer, Militär-Helikopter) =====
-	AlertThresholdLevel4 = 2000,
-	MaxAlertLevel = 5, -- Konzept-Vorgabe: nicht jede Stadt kennt alle Alert-Stufen
+	-- War 2000 und damit IDENTISCH mit AlertThresholdLevel3 -- Stufe 3 und 4 haetten in
+	-- einer unbekannten Stadt gleichzeitig ausgeloest und die Eskalation uebersprungen.
+	-- Jetzt dem 4x-Muster folgend.
+	AlertThresholdLevel4 = 8000,
+	-- War 5, obwohl hier weder eine Stufe-5-Schwelle noch Guardian-Werte stehen: die
+	-- Rueckfall-Konfiguration versprach eine Stufe, die sie nicht liefern kann. Eine
+	-- unbekannte Stadt eskaliert deshalb bis 4. Wer eine neue Stadt aufnimmt, gibt ihr
+	-- einen eigenen Eintrag in Cities -- der Rueckfall ist ein Notnagel, kein Vorbild.
+	MaxAlertLevel = 4,
 	MilitaryTankCount = 1,
 	MilitaryRocketLauncherCount = 1,
 	MilitaryHelicopterCount = 1,
