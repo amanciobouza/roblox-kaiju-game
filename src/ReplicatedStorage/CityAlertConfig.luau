@@ -173,7 +173,12 @@ CityAlertConfig.Cities = {
 		GuardianHP = 180000,
 		GuardianShieldHP = 72000,
 		GuardianShieldRegenDelay = 10,
-		GuardianShieldRegenRate = 0.04,
+		-- Anteil des MAXIMALSCHILDS pro Sekunde. War 0.04 und damit staerker als der
+		-- Spielerschaden: bei 2200 Schaden je Schlag regenerierte der Schild mit rund
+		-- 105 % des DPS. Elf Sekunden Pause kosteten dadurch den gesamten
+		-- Schildfortschritt, und der Kampf war nach einer Unterbrechung praktisch
+		-- zurueckgesetzt. Jetzt 0.005 -- eine Achtelung.
+		GuardianShieldRegenRate = 0.005,
 		GuardianImpactFistDamage = 188,
 		GuardianImpactFistCooldown = 3,
 		GuardianImpactFistRange = 14,
@@ -244,7 +249,12 @@ CityAlertConfig.Cities = {
 		GuardianHP = 540000,
 		GuardianShieldHP = 216000,
 		GuardianShieldRegenDelay = 10,
-		GuardianShieldRegenRate = 0.04,
+		-- Anteil des MAXIMALSCHILDS pro Sekunde. War 0.04 und damit staerker als der
+		-- Spielerschaden: bei 2200 Schaden je Schlag regenerierte der Schild mit rund
+		-- 105 % des DPS. Elf Sekunden Pause kosteten dadurch den gesamten
+		-- Schildfortschritt, und der Kampf war nach einer Unterbrechung praktisch
+		-- zurueckgesetzt. Jetzt 0.005 -- eine Achtelung.
+		GuardianShieldRegenRate = 0.005,
 		GuardianImpactFistDamage = 500,
 		GuardianImpactFistCooldown = 3,
 		GuardianImpactFistRange = 14,
@@ -315,7 +325,12 @@ CityAlertConfig.Cities = {
 		GuardianHP = 1620000,
 		GuardianShieldHP = 648000,
 		GuardianShieldRegenDelay = 10,
-		GuardianShieldRegenRate = 0.04,
+		-- Anteil des MAXIMALSCHILDS pro Sekunde. War 0.04 und damit staerker als der
+		-- Spielerschaden: bei 2200 Schaden je Schlag regenerierte der Schild mit rund
+		-- 105 % des DPS. Elf Sekunden Pause kosteten dadurch den gesamten
+		-- Schildfortschritt, und der Kampf war nach einer Unterbrechung praktisch
+		-- zurueckgesetzt. Jetzt 0.005 -- eine Achtelung.
+		GuardianShieldRegenRate = 0.005,
 		GuardianImpactFistDamage = 1375,
 		GuardianImpactFistCooldown = 3,
 		GuardianImpactFistRange = 14,
@@ -393,7 +408,12 @@ CityAlertConfig.Cities = {
 		GuardianHP = 60000,
 		GuardianShieldHP = 10000,
 		GuardianShieldRegenDelay = 10,
-		GuardianShieldRegenRate = 0.04,
+		-- Anteil des MAXIMALSCHILDS pro Sekunde. War 0.04 und damit staerker als der
+		-- Spielerschaden: bei 2200 Schaden je Schlag regenerierte der Schild mit rund
+		-- 105 % des DPS. Elf Sekunden Pause kosteten dadurch den gesamten
+		-- Schildfortschritt, und der Kampf war nach einer Unterbrechung praktisch
+		-- zurueckgesetzt. Jetzt 0.005 -- eine Achtelung.
+		GuardianShieldRegenRate = 0.005,
 		GuardianImpactFistDamage = 60,
 		GuardianImpactFistCooldown = 3,
 		GuardianImpactFistRange = 14,
