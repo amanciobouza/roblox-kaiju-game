@@ -45,6 +45,7 @@ local DebugSetFactionEvent = waitForRemote("DebugSetFactionEvent")
 local DebugSetCityAlertEvent = waitForRemote("DebugSetCityAlertEvent")
 local DebugToggleSkipCollapseEvent = waitForRemote("DebugToggleSkipCollapseEvent")
 local DebugStartPrologueEvent = waitForRemote("DebugStartPrologueEvent")
+local DebugRunSpecCheckEvent = waitForRemote("DebugRunSpecCheckEvent")
 local DebugStartPrologueResultEvent = waitForRemote("DebugStartPrologueResultEvent")
 
 player:SetAttribute("DebugMode", false)
@@ -85,7 +86,8 @@ backdrop.Parent = screenGui
 
 local panel = Instance.new("Frame")
 panel.Name = "DebugPanel"
-panel.Size = UDim2.new(0, 340, 0, 340 + 60 + 90 + 50 + 50 + 50)
+-- Letzter Summand: Zeile für den Spec-Prüfer-Knopf.
+panel.Size = UDim2.new(0, 340, 0, 340 + 60 + 90 + 50 + 50 + 50 + 50)
 panel.AnchorPoint = Vector2.new(0.5, 0.5)
 panel.Position = UDim2.new(0.5, 0, 0.5, 0)
 panel.BackgroundColor3 = Color3.fromRGB(35, 32, 45)
@@ -743,6 +745,42 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if input.KeyCode == TOGGLE_KEY then
 		toggleDebugMode()
 	end
+end)
+
+-- ===== Spec-Prüfung erneut auslösen =====
+-- Der SpecCheckService prüft beim Serverstart automatisch, aber nur die Regeln, die ohne
+-- laufendes Spiel auskommen. Von HIER ausgelöst laufen zusätzlich die Laufzeit-Regeln
+-- (needsRuntime) -- also nach dem Spawnen eines Guardians, nach einer Alarmstufe, nach
+-- allem, was den Zustand ändert. Die Ausgabe erscheint mit Präfix [Kaiju Spec] im Server-
+-- Log, nicht hier im Panel.
+local specCheckButton = Instance.new("TextButton")
+specCheckButton.Name = "RunSpecCheckButton"
+specCheckButton.Size = UDim2.new(1, -32, 0, 40)
+specCheckButton.Position = UDim2.new(0, 16, 0, 316 + 90 + 50 + 50 + 50 + 50)
+specCheckButton.BackgroundColor3 = Color3.fromRGB(70, 110, 100)
+specCheckButton.Font = Enum.Font.FredokaOne
+specCheckButton.TextScaled = true
+specCheckButton.TextColor3 = Color3.new(1, 1, 1)
+specCheckButton.Text = "📋 Spec-Prüfung"
+specCheckButton.AutoButtonColor = true
+specCheckButton.Parent = panel
+applyComicStyle(specCheckButton, 10, 2)
+
+specCheckButton.MouseButton1Click:Connect(function()
+	if not DebugRunSpecCheckEvent then
+		specCheckButton.Text = "⚠️ Event fehlt"
+		task.delay(2.5, function()
+			specCheckButton.Text = "📋 Spec-Prüfung"
+		end)
+		return
+	end
+	DebugRunSpecCheckEvent:FireServer()
+	-- Kurze Rückmeldung am Knopf: das Ergebnis steht im Server-Log, nicht hier -- ohne
+	-- diesen Hinweis klickt man sonst mehrfach und glaubt, es passiere nichts.
+	specCheckButton.Text = "📋 läuft -- siehe Output"
+	task.delay(3, function()
+		specCheckButton.Text = "📋 Spec-Prüfung"
+	end)
 end)
 
 player:GetAttributeChangedSignal("DebugMode"):Connect(updateCheckboxVisual)

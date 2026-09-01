@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python tools/spec_check_hook.py",
+            "timeout": 90,
+            "statusMessage": "Spec-Prüfung läuft…"
+          }
+        ]
+      }
+    ]
+  }
+}
