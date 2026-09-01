@@ -48,6 +48,12 @@ end
 
 local function setStat(player, key, value)
 	player:SetAttribute(STAT_ATTRIBUTE_PREFIX .. key, value)
+	-- Achievements, die an einer Statistik hängen, hier auslösen (siehe
+	-- AchievementService, achievementsByStatKey). Bewusst nur EINE Zahl für beides:
+	-- eine zweite Zählung im Achievement-System könnte von der Statistik abweichen.
+	if _G.OnStatChanged then
+		_G.OnStatChanged(player, key, value)
+	end
 end
 
 -- ===== Öffentliche API =====
@@ -123,6 +129,15 @@ _G.LoadStatsSaveData = function(player, saveData)
 		end
 	end
 	print(string.format("[Kaiju-Debug] Statistiken geladen für %s -- %d Werte.", player.Name, count))
+
+	-- Nach dem Laden einmal nachprüfen: ein Spieler kann eine Schwelle längst
+	-- überschritten haben, ohne das Achievement zu besitzen -- etwa weil es erst später
+	-- in den Katalog kam. Ohne diesen Durchlauf bekäme er es erst beim nächsten
+	-- Ereignis derselben Art, bei Spielzeit-Achievements also frühestens 30 Sekunden
+	-- später, bei einmaligen Dingen womöglich nie.
+	if _G.ReevaluateStatAchievements then
+		_G.ReevaluateStatAchievements(player)
+	end
 end
 
 -- Liefert alle Statistiken als Tabelle -- für Anzeige/Debug.

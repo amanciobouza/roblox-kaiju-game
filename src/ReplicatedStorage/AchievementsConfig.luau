@@ -44,9 +44,28 @@ AchievementsConfig.List = {
 	{ id = "GuardianSlayer", category = "Alert-Eskalation", icon = "🤖", name = "Guardian-Bezwinger", description = "Ersten Guardian besiegt (Level 5)", type = "flag" },
 	{ id = "SerialOffender", category = "Alert-Eskalation", icon = "🔁", name = "Serientäter", description = "Level 5 in 3 verschiedenen Städten erreicht", type = "counter", threshold = 3 },
 
-	-- ===== 3. Stadt-Kontrolle (CITY BROKEN -- noch nicht gebaut) =====
-	{ id = "FirstCityBroken", category = "Stadt-Kontrolle", icon = "💀", name = "Erste Stadt gebrochen", description = "1 Stadt komplett zu Fall gebracht", type = "flag", dormant = true },
-	{ id = "NoPlaceSafe", category = "Stadt-Kontrolle", icon = "🌍", name = "Kein Ort ist sicher", description = "Alle freigeschalteten Städte mindestens einmal gebrochen", type = "flag", dormant = true },
+	-- Militär je Einheitentyp. "WarZone" oben belohnt die ERSTE Einheit überhaupt --
+	-- diese drei erzählen, womit man sich angelegt hat. Schwelle 25: bei 2 bis 4 Panzern
+	-- je Stadt sind das rund zehn durchgestandene Eskalationen.
+	{ id = "TankBuster", category = "Alert-Eskalation", icon = "💣", name = "Panzerknacker", description = "25 Panzer zerstört", type = "counter", threshold = 25, statKey = "MilitaryDestroyed.Tank" },
+	{ id = "SkyCleared", category = "Alert-Eskalation", icon = "🚁", name = "Vom Himmel geholt", description = "25 Helikopter zerstört", type = "counter", threshold = 25, statKey = "MilitaryDestroyed.Helicopter" },
+	{ id = "RocketsIntercepted", category = "Alert-Eskalation", icon = "🚀", name = "Raketen abgefangen", description = "25 Raketenwerfer zerstört", type = "counter", threshold = 25, statKey = "MilitaryDestroyed.RocketLauncher" },
+
+	-- ===== 3. Stadt-Kontrolle (CITY BROKEN) =====
+	-- Nicht mehr dormant: CityBrokenService läuft, und StatsService zählt CityBroken je
+	-- Stadt mit. Die Vergabe hängt am statKey (siehe unten).
+	{ id = "FirstCityBroken", category = "Stadt-Kontrolle", icon = "💀", name = "Erste Stadt gebrochen", description = "1 Stadt komplett zu Fall gebracht", type = "counter", threshold = 1, statKey = "CityBroken" },
+	{ id = "NoPlaceSafe", category = "Stadt-Kontrolle", icon = "🌍", name = "Kein Ort ist sicher", description = "Alle 5 Städte mindestens einmal gebrochen", type = "flag", dormant = true },
+
+	-- Jede Stadt einzeln. Sechs Städte mit stark unterschiedlicher Schwierigkeit -- eine
+	-- MegaCity zu brechen ist etwas anderes als ein Village, das verdient eigene
+	-- Anerkennung. Der Prolog zählt bewusst nicht mit: seine Läufe sind von der
+	-- Lebensstatistik ohnehin ausgenommen (siehe StatsService, IsInPrologue).
+	{ id = "BrokeVillage", category = "Stadt-Kontrolle", icon = "🏡", name = "Dorf gebrochen", description = "Village zu Fall gebracht", type = "counter", threshold = 1, statKey = "CityBroken.Village" },
+	{ id = "BrokeSmallTown", category = "Stadt-Kontrolle", icon = "🏘️", name = "Kleinstadt gebrochen", description = "Small Town zu Fall gebracht", type = "counter", threshold = 1, statKey = "CityBroken.SmallTown" },
+	{ id = "BrokeCity", category = "Stadt-Kontrolle", icon = "🏙️", name = "Stadt gebrochen", description = "City zu Fall gebracht", type = "counter", threshold = 1, statKey = "CityBroken.City" },
+	{ id = "BrokeLargeCity", category = "Stadt-Kontrolle", icon = "🌆", name = "Grossstadt gebrochen", description = "Large City zu Fall gebracht", type = "counter", threshold = 1, statKey = "CityBroken.LargeCity" },
+	{ id = "BrokeMegaCity", category = "Stadt-Kontrolle", icon = "🌃", name = "Megacity gebrochen", description = "Megacity zu Fall gebracht -- die letzte und härteste Stadt", type = "counter", threshold = 1, statKey = "CityBroken.MegaCity" },
 
 	-- ===== 4. Berserker & Meltdown =====
 	{ id = "LossOfControl", category = "Berserker & Meltdown", icon = "🔥", name = "Kontrollverlust", description = "Zum ersten Mal Berserk aktiviert", type = "flag" },
@@ -58,6 +77,12 @@ AchievementsConfig.List = {
 	{ id = "FirstSteps", category = "Fortschritt", icon = "👣", name = "Erste Schritte", description = "Spieler-Level 10 erreicht", type = "flag" },
 	{ id = "TitanLevel", category = "Fortschritt", icon = "🗿", name = "Titan", description = "Spieler-Level 25 erreicht", type = "flag" },
 	{ id = "FullyTrained", category = "Fortschritt", icon = "💯", name = "Vollständig trainiert", description = "Arm, Bein UND Körper gleichzeitig auf Cap", type = "flag" },
+
+	-- Spielzeit über alle Sessions. StatsService führt PlaytimeSeconds alle 30 Sekunden
+	-- nach, gezählt wird nur ONLINE verbrachte Zeit -- kein Fortschritt im Abseits.
+	{ id = "FirstHour", category = "Fortschritt", icon = "⏱️", name = "Erste Stunde", description = "1 Stunde gespielt", type = "counter", threshold = 3600, statKey = "PlaytimeSeconds" },
+	{ id = "Veteran", category = "Fortschritt", icon = "🕰️", name = "Veteran", description = "10 Stunden gespielt", type = "counter", threshold = 36000, statKey = "PlaytimeSeconds" },
+	{ id = "Relentless", category = "Fortschritt", icon = "♾️", name = "Unermüdlich", description = "50 Stunden gespielt", type = "counter", threshold = 180000, statKey = "PlaytimeSeconds" },
 
 	-- ===== 6. Spezialangriffe =====
 	{ id = "Focused", category = "Spezialangriffe", icon = "🎯", name = "Fokussiert", description = "50× Fokus-Angriff genutzt", type = "counter", threshold = 50 },

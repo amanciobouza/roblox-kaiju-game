@@ -84,6 +84,62 @@ local function incrementCounter(player, counterName, amount, achievementId)
 end
 _G.IncrementAchievementCounter = incrementCounter
 
+-- ===== Statistik-getriebene Achievements =====
+-- Der Zähler-Mechanismus oben (incrementCounter) ist vorhanden, wird aber von keiner
+-- Stelle im Spiel aufgerufen -- deshalb wurde bisher KEIN Achievement je vergeben.
+--
+-- Statt das nachzubauen, hängen neue Achievements an den Lebensstatistiken, die der
+-- StatsService ohnehin führt und die nachweislich funktionieren: ein Achievement mit
+-- "statKey" wird freigeschaltet, sobald der zugehörige Statistikwert seinen threshold
+-- erreicht. Ein Wert, zwei Verwendungen -- keine zweite Zählung, die auseinanderlaufen
+-- kann.
+--
+-- Vorberechnete Zuordnung statKey -> Achievements, damit nicht bei jedem Statistik-
+-- Ereignis (und das sind viele pro Sekunde) die ganze Liste durchlaufen wird.
+local achievementsByStatKey = {}
+for _, achievement in ipairs(AchievementsConfig.List) do
+	if achievement.statKey and achievement.threshold then
+		local list = achievementsByStatKey[achievement.statKey]
+		if not list then
+			list = {}
+			achievementsByStatKey[achievement.statKey] = list
+		end
+		table.insert(list, achievement)
+	end
+end
+
+-- Wird vom StatsService nach jeder Änderung eines Statistikwertes gerufen.
+_G.OnStatChanged = function(player, statKey, value)
+	local candidates = achievementsByStatKey[statKey]
+	if not candidates then
+		return
+	end
+	for _, achievement in ipairs(candidates) do
+		if value >= achievement.threshold then
+			unlockAchievement(player, achievement.id)
+		end
+	end
+end
+
+-- Beim Beitritt einmal alles nachprüfen: geladene Statistiken können Schwellen bereits
+-- überschritten haben (z.B. wenn ein Achievement später hinzukommt, wie hier gerade),
+-- ohne dass danach noch ein Ereignis dieser Art auftritt.
+_G.ReevaluateStatAchievements = function(player)
+	local unlocked = 0
+	for statKey, candidates in pairs(achievementsByStatKey) do
+		local value = player:GetAttribute("Stat_" .. statKey) or 0
+		for _, achievement in ipairs(candidates) do
+			if value >= achievement.threshold and not isUnlocked(player, achievement.id) then
+				unlockAchievement(player, achievement.id)
+				unlocked += 1
+			end
+		end
+	end
+	if unlocked > 0 then
+		print(string.format("[Kaiju-Debug] %s: %d Achievement(s) nachträglich freigeschaltet.", player.Name, unlocked))
+	end
+end
+
 -- ===== Persistenz: von PlayerSetup.lua beim Laden/Speichern aufgerufen. =====
 _G.GetAchievementSaveData = function(player)
 	local unlocked = {}
