@@ -193,32 +193,78 @@ local function buildFallbackGuardian()
 	return model
 end
 
--- ===== TEMPORÄR: Warden-I Shepherd aus dem Asset-Workshop als Guardian =====
+-- ===== TEMPORÄR: Guardians aus dem Asset-Workshop =====
 -- Baut das Modell zur Laufzeit aus ReplicatedStorage.TrenchbornAssetWorkshop, statt ein
 -- fertiges Modell aus ServerStorage.GuardianModels zu klonen.
 --
--- BEWUSST nur GoldenMaster.Build + Dressing.Apply -- NICHT WardenShepherdInstaller.Install().
+-- BEWUSST nur GoldenMaster.Build + Dressing.Apply -- NICHT <Asset>Installer.Install().
 -- Der Installer hängt zusätzlich die workshop-eigene Gameplay- und Reaktionslogik an, die
 -- gegen die Zustandsmaschine hier (SCAN/POSITION/BLOCK/COUNTER) arbeiten würde.
+-- ===== Welcher Guardian erscheint wo? =====
+-- Die drei Workshop-Assets bilden eine Vererbungskette: Marshal baut das Warden-Modell
+-- und tauscht dessen Ausruestung, Aegis baut den Marshal. Das Grundgeruest ist deshalb in
+-- allen dreien dasselbe -- die Namensbruecke weiter unten (Visor, ImpactFist, ChestCore)
+-- traegt fuer alle.
 --
--- Zum Abschalten: WARDEN_CITIES leeren -- dann greift wieder ServerStorage/Platzhalter.
--- Alle Staedte mit Guardian. Der Warden ist bis auf Weiteres das Provisorium fuer alle
--- drei -- ohne ihn wuerde in LargeCity und MegaCity der Block-Platzhalter stehen, und die
--- Staedte waeren zwar abschliessbar, aber der Bosskampf saehe nach Baustelle aus.
-local WARDEN_CITIES = { City = true, LargeCity = true, MegaCity = true }
+-- Die Zuordnung haengt am KAPITEL: in Kapitel I beginnt die Guardian-Kette bei City, und
+-- jedes weitere Kapitel schiebt sie eine Stadt nach vorne.
+--
+--   Kapitel I     City -> Warden-I   LargeCity -> Marshal-II   MegaCity  -> Aegis-III
+--   Kapitel II    SmallTown -> I     City      -> II           LargeCity -> III
+--   Kapitel III   Village -> I       SmallTown -> II           City      -> III
+--
+-- Welches Kapitel gilt, entscheidet der hoechste anwesende Spieler (siehe
+-- CityAlertService, _G.GetHighestChapterInCity) -- derselbe Wert, der auch die
+-- Hoechst-Alarmstufe bestimmt. Beides muss zusammenpassen: eine Stadt bekommt ihren
+-- Guardian erst, wenn sie Stufe 5 ueberhaupt erreichen kann.
+--
+-- Zum Abschalten: GUARDIAN_LADDER leeren -- dann greift wieder ServerStorage/Platzhalter.
 
--- Der Dienst setzt den Guardian mit model:PivotTo(spawnPosition) ab; der Pivot ist der
--- PrimaryPart. Der "GuardianSpawn"-Part markiert in der Praxis den BODEN -- die
--- Spawn-Zeremonie stösst dort auch ihren Dampf aus ("am Boden", siehe playDeploySequence).
--- Deshalb wird der Warden-Root auf Sohlenhöhe gelegt: dann landen die Füsse genau auf
--- dem Spawn-Punkt. (Der Platzhalter macht das NICHT -- sein PrimaryPart sitzt 15 Studs
--- über der Sohle, er steckt also seit jeher entsprechend tief im Terrain. Das ist ein
--- Altfehler dieses Dienstes und hier bewusst nicht mitgeändert.)
---
--- Feinjustierung, falls der Warden schwebt oder einsinkt: positiv = höher.
+-- Staedte nach Groesse. Bewusst NICHT CityAlertConfig.CityOrder: dort steht PrologueCity
+-- mit drin, die keinen Platz in dieser Staffel hat (der Prolog ist geskriptet und behaelt
+-- seinen Guardian aus ServerStorage).
+local CITY_SIZE_LADDER = { "Village", "SmallTown", "City", "LargeCity", "MegaCity" }
+
+local GUARDIAN_LADDER = {
+	{ asset = "WardenShepherd", label = "Warden-I Shepherd" },
+	{ asset = "MarshalRoadblock", label = "Marshal-II Roadblock" },
+	{ asset = "AegisInterceptor", label = "Aegis-III Interceptor" },
+}
+
+-- In Kapitel I steht der erste Guardian in City -- Position 3 der Staffel oben.
+local FIRST_GUARDIAN_CITY_IN_CHAPTER_1 = 3
+
+local cityLadderIndex = {}
+for index, cityName in ipairs(CITY_SIZE_LADDER) do
+	cityLadderIndex[cityName] = index
+end
+
+local function getGuardianPlan(cityName)
+	local cityIndex = cityLadderIndex[cityName]
+	if not cityIndex or #GUARDIAN_LADDER == 0 then
+		return nil
+	end
+
+	local chapter = 1
+	if _G.GetHighestChapterInCity then
+		chapter = _G.GetHighestChapterInCity(cityName) or 1
+	end
+
+	local firstGuardianCity = FIRST_GUARDIAN_CITY_IN_CHAPTER_1 - (chapter - 1)
+	local rung = cityIndex - firstGuardianCity + 1
+	if rung < 1 then
+		return nil -- Stadt liegt in diesem Kapitel noch unterhalb der Guardian-Kette
+	end
+
+	-- Generation 4 und 5 gibt es als Asset noch nicht. Bis dahin bekommen die oberen
+	-- Staedte die hoechste vorhandene -- besser ein zu schwacher Guardian als gar keiner,
+	-- und der Platzhalter waere die schlechtere Alternative.
+	return GUARDIAN_LADDER[math.min(rung, #GUARDIAN_LADDER)]
+end
+
 local WARDEN_GROUND_CLEARANCE = 0
 
-local function buildWardenGuardian()
+local function buildWardenGuardian(plan)
 	local workshop = ReplicatedStorage:FindFirstChild("TrenchbornAssetWorkshop")
 	if not workshop then
 		warn("[CityDefenderService] ReplicatedStorage.TrenchbornAssetWorkshop nicht gefunden -- nutze Platzhalter statt Warden.")
@@ -226,8 +272,8 @@ local function buildWardenGuardian()
 	end
 
 	local ok, model = pcall(function()
-		local builder = require(workshop:WaitForChild("WardenShepherdGoldenMaster", 5))
-		local dressing = require(workshop:WaitForChild("WardenShepherdDressing", 5))
+		local builder = require(workshop:WaitForChild(plan.asset .. "GoldenMaster", 5))
+		local dressing = require(workshop:WaitForChild(plan.asset .. "Dressing", 5))
 
 		-- Build() setzt model.Parent selbst -- deshalb ein Ablage-Ordner, aus dem das
 		-- fertige Modell wieder herausgelöst wird (der Aufrufer parentet nach Workspace).
@@ -243,7 +289,7 @@ local function buildWardenGuardian()
 	end)
 
 	if not ok or not model then
-		warn("[CityDefenderService] Warden konnte nicht gebaut werden (" .. tostring(model) .. ") -- nutze Platzhalter.")
+		warn("[CityDefenderService] " .. plan.label .. " konnte nicht gebaut werden (" .. tostring(model) .. ") -- nutze Platzhalter.")
 		return nil
 	end
 
@@ -299,7 +345,7 @@ local function buildWardenGuardian()
 	-- Zustand, nicht am Teil, und funktioniert weiterhin.
 
 	print(
-		"[Kaiju-Debug] Guardian-Modell: Warden-I Shepherd gebaut (temporär)",
+		"[Kaiju-Debug] Guardian-Modell: " .. plan.label .. " gebaut (temporär)",
 		"-- Visor:", visor and "ja" or "NEIN",
 		"| ImpactFist:", palm and "ja" or "NEIN",
 		"| ChestCore:", model:FindFirstChild("ChestCore", true) and "ja" or "NEIN",
@@ -310,9 +356,10 @@ local function buildWardenGuardian()
 end
 
 local function getGuardianTemplate(cityName)
-	-- Temporärer Vorrang vor ServerStorage, siehe WARDEN_CITIES oben.
-	if WARDEN_CITIES[cityName] then
-		local warden = buildWardenGuardian()
+	-- Temporärer Vorrang vor ServerStorage, siehe GUARDIAN_LADDER oben.
+	local plan = getGuardianPlan(cityName)
+	if plan then
+		local warden = buildWardenGuardian(plan)
 		if warden then
 			return warden
 		end
