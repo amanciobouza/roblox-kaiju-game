@@ -31,7 +31,13 @@ local function teleport(player, character, humanoid, root, portal)
 		return
 	end
 
-	local ws, jp, ar = humanoid.WalkSpeed, humanoid.JumpPower, humanoid.AutoRotate
+	-- JumpPower wird bewusst NICHT gemerkt. Ein Portal kann in eine andere Zone fuehren,
+	-- und dort hat die Figur eine andere Groesse (Sanctuary: 0.5 + Scale*0.1, sonst bis
+	-- Scale 6). PlayerSetup berechnet die Sprungkraft beim Zonenwechsel aus der neuen
+	-- Groesse neu -- ein hier gemerkter Wert waere danach veraltet und wuerde die
+	-- korrekte Neuberechnung ueberschreiben. Genau so ging das Springen verloren:
+	-- aus dem Sanctuary in eine Stadt behielt die grosse Figur die kleine Sprungkraft.
+	local ws, ar = humanoid.WalkSpeed, humanoid.AutoRotate
 	humanoid.WalkSpeed = 0
 	humanoid.JumpPower = 0
 	humanoid.AutoRotate = false
@@ -55,8 +61,38 @@ local function teleport(player, character, humanoid, root, portal)
 	task.wait(0.55)
 	if humanoid.Parent then
 		humanoid.WalkSpeed = ws
-		humanoid.JumpPower = jp
 		humanoid.AutoRotate = ar
+
+		-- Immer aus der TATSAECHLICHEN Charaktergroesse neu berechnen. Das ist zugleich
+		-- die Rettung fuer den zweiten Weg, auf dem das Springen verloren ging: der
+		-- SpecialAttackClient setzt JumpPower beim Sprungangriff 1.2s lang auf 0 -- wer
+		-- in diesem Fenster ein Portal betrat, konservierte diese 0.
+		if _G.RecalculateJumpPower then
+			_G.RecalculateJumpPower(character, humanoid)
+		else
+			warn("[Kaiju-Debug] Portal: _G.RecalculateJumpPower fehlt -- "
+				.. "Sprungkraft bleibt wie sie ist.")
+		end
+
+		-- WICHTIG: JumpPower zurueckzusetzen reicht NICHT. Der abrupte CFrame-Sprung oben
+		-- kann den Humanoid-Zustand durcheinanderbringen und den Jumping-Zustand
+		-- deaktiviert zuruecklassen -- der Spieler hat dann wieder seinen vollen
+		-- JumpPower-Wert und kann trotzdem nicht springen, dauerhaft, bis er stirbt oder
+		-- den Skin wechselt. Genau dieselbe Behandlung steht im TeleportHomeHandler und
+		-- im TrainingScaleHandler; sie fehlte hier als einziger Teleport-Stelle.
+		humanoid.PlatformStand = false
+		humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
+
+		-- Beim Schwimmen NICHT gewaltsam auf Running umschalten -- das erzeugt einen
+		-- Konflikt mit der Auftriebsphysik (Durchfallen/Hochschleudern im Wasser), siehe
+		-- die ausfuehrliche Begruendung in PlayerSetup.
+		if humanoid:GetState() ~= Enum.HumanoidStateType.Swimming then
+			humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+			task.wait()
+			if humanoid.Parent and humanoid:GetState() ~= Enum.HumanoidStateType.Swimming then
+				humanoid:ChangeState(Enum.HumanoidStateType.Running)
+			end
+		end
 	end
 	task.wait(1.0)
 	busy[player] = nil

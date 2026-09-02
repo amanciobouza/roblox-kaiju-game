@@ -361,6 +361,14 @@ local function recalculateJumpPower(character, humanoid)
 	humanoid.JumpPower = math.sqrt(2 * gravity * desiredJumpHeight)
 end
 
+-- Global verfügbar, damit andere Dienste die Sprungkraft WIEDERHERSTELLEN können, statt
+-- einen gemerkten Wert zurückzuschreiben. Der Unterschied ist wichtig: wer sich
+-- JumpPower merkt, während ein anderes System sie gerade auf 0 gesetzt hat, merkt sich
+-- die 0 -- und schreibt sie danach dauerhaft zurück. Genau so ging die Sprungfähigkeit
+-- verloren, wenn ein Portal betreten wurde, während die Sprungsperre des
+-- Spezialangriffs noch lief (siehe TrenchbornPortalController).
+_G.RecalculateJumpPower = recalculateJumpPower
+
 -- Boden-Stabilisierung nach einer Skalierungsänderung: HipHeight neu berechnen (verhindert
 -- Schweben/Einsinken) + eine Boden-Kollisionsprüfung per Raycast, die den Charakter bei
 -- Bedarf sanft anhebt. Eigenständige Funktion (siehe recalculateJumpPower oben) -- wird
