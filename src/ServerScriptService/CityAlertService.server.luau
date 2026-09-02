@@ -11,6 +11,7 @@
 -- CityAlertLevelChanged. Künftige Alert-Level 3+ brauchen NUR einen weiteren Eintrag in
 -- CityAlertConfig + einen weiteren Listener, OHNE dieses Script anzufassen.
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -43,6 +44,7 @@ cityAlertFolder.Parent = ReplicatedStorage
 
 local cityLevelValues = {} -- [cityName] = IntValue
 local cityProgressValues = {} -- [cityName] = NumberValue
+local cityMaxLevelValues = {} -- [cityName] = IntValue (kapitelabhaengige Hoechststufe)
 for _, cityName in ipairs(CityAlertConfig.CityOrder) do
 	local levelValue = Instance.new("IntValue")
 	levelValue.Name = cityName .. "Level"
@@ -55,6 +57,15 @@ for _, cityName in ipairs(CityAlertConfig.CityOrder) do
 	progressValue.Value = 0
 	progressValue.Parent = cityAlertFolder
 	cityProgressValues[cityName] = progressValue
+
+	-- Die AKTUELL geltende Hoechststufe. Seit sie vom Kapitel abhaengt, kann der Client
+	-- sie nicht mehr aus dem Config ableiten -- dort steht nur der Kapitel-I-Wert. Das
+	-- HUD zeichnet daraus die gedimmten "Deckel"-Sterne.
+	local maxLevelValue = Instance.new("IntValue")
+	maxLevelValue.Name = cityName .. "MaxLevel"
+	maxLevelValue.Value = CityAlertConfig.GetCityConfig(cityName).MaxAlertLevel or 5
+	maxLevelValue.Parent = cityAlertFolder
+	cityMaxLevelValues[cityName] = maxLevelValue
 end
 
 -- ===== Stadt-Auflösung: läuft die Ancestor-Kette hoch und sucht das erste "CityName"-
@@ -112,12 +123,87 @@ local function setCityLevel(cityName, newLevel)
 	end
 end
 
+-- ===== Kapitel-abhängige Höchststufe =====
+-- Die drei Figuren sind zugleich die drei Kapitel (siehe CLAUDE.md). Dieselbe Karte
+-- härtet sich über die Kapitel hinweg: das Village lernt in Kapitel II das Militär
+-- kennen, SmallTown steigt auf Stufe 5, und in Kapitel III bekommt auch das Village
+-- einen Guardian. Eine Stadt, die man in Kapitel I gebrochen hat, ist damit später
+-- wieder eine echte Aufgabe.
+--
+-- Gewählter Ansatz: HÖCHSTES KAPITEL IM RAUM GEWINNT. Der Alarmzustand gehört der
+-- STADT, nicht dem einzelnen Spieler -- eine Stufe, ein Fortschritt, für alle
+-- Anwesenden. Steht ein Jaeger im Village, gilt dessen Kapitel auch für den Kaiju
+-- daneben. Das ist die einfachste der drei Auflösungen und bewusst als Startpunkt
+-- gewählt; die Kehrseite ist, dass ein Neuling in eine Eskalation geraten kann, für die
+-- er nicht ausgerüstet ist.
+local FACTION_CHAPTER = { Kaiju = 1, Jaeger = 2, Ronin = 3 }
+
+local function getHighestChapterInCity(cityName)
+	local highest = 1
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player:GetAttribute("CurrentCityName") == cityName then
+			local chapter = FACTION_CHAPTER[player:GetAttribute("Faction")] or 1
+			if chapter > highest then
+				highest = chapter
+			end
+		end
+	end
+	return highest
+end
+
+-- Auch fuer andere Dienste: CityDefenderService leitet daraus ab, WELCHE
+-- Guardian-Generation in dieser Stadt erscheint (die Kette wandert je Kapitel eine
+-- Stadt nach vorne).
+_G.GetHighestChapterInCity = getHighestChapterInCity
+
+-- MaxAlertLevel bleibt der Grundwert und zugleich der Rückfall: Städte, die in jedem
+-- Kapitel dieselbe Höchststufe haben (City, LargeCity, MegaCity), brauchen kein
+-- MaxAlertLevelByChapter.
+-- [cityName] = zuletzt veroeffentlichte Obergrenze -- verhindert eine Ausgabe pro Aufruf.
+local lastReportedMaxLevel = {}
+
+local function getMaxAlertLevel(cityName, config)
+	local byChapter = config.MaxAlertLevelByChapter
+	if type(byChapter) == "table" then
+		local level = byChapter[getHighestChapterInCity(cityName)]
+		if type(level) == "number" then
+			return level
+		end
+	end
+	return config.MaxAlertLevel or 5
+end
+
+-- Berechnet die geltende Obergrenze neu und veroeffentlicht sie fuer den Client.
+-- Bewusst NICHT nur aus checkLevelThresholds heraus: das laeuft nur, wenn sich der
+-- Fortschritt aendert. Betritt ein Jaeger eine ruhige Stadt, muesste das HUD sonst warten,
+-- bis jemand etwas zerstoert.
+local function refreshMaxAlertLevel(cityName)
+	local config = CityAlertConfig.GetCityConfig(cityName)
+	local base = config.MaxAlertLevel or 5
+	local effective = getMaxAlertLevel(cityName, config)
+
+	if lastReportedMaxLevel[cityName] ~= effective then
+		lastReportedMaxLevel[cityName] = effective
+		if cityMaxLevelValues[cityName] then
+			cityMaxLevelValues[cityName].Value = effective
+		end
+		print(string.format(
+			"[Kaiju-Debug] %s: Hoechststufe %d (Grundwert %d, hoechstes Kapitel im Raum: %d)",
+			cityName, effective, base, getHighestChapterInCity(cityName)))
+	end
+	return effective
+end
+
 local function checkLevelThresholds(cityName)
 	local state = cityState[cityName]
 	local config = CityAlertConfig.GetCityConfig(cityName)
-	-- Konzept-Vorgabe: nicht jede Stadt kennt alle Alert-Stufen (z.B. Village nur bis
-	-- Level 3) -- gilt NUR für den Aufstieg, der Abstieg bleibt uneingeschränkt möglich.
-	local maxLevel = config.MaxAlertLevel or 5
+	-- Konzept-Vorgabe: nicht jede Stadt kennt alle Alert-Stufen (z.B. Village in
+	-- Kapitel I nur bis Level 3) -- gilt NUR für den Aufstieg, der Abstieg bleibt
+	-- uneingeschränkt möglich. Verlässt der Jaeger das Village wieder, fällt die
+	-- Obergrenze also zurück, die bereits erreichte Stufe bleibt aber bestehen, bis der
+	-- Fortschritt sinkt. Das ist gewollt: eine losgetretene Eskalation soll nicht
+	-- verschwinden, nur weil jemand weggeht.
+	local maxLevel = refreshMaxAlertLevel(cityName)
 
 	-- Schleife statt einzelner if/elseif-Prüfung: ein direkter Sprung (z.B. per Debug-
 	-- Regler von Level 1 auf einen Fortschritt weit über der Level-3-Schwelle) soll ALLE
@@ -217,7 +303,6 @@ end
 -- Studio nötig) und prüft periodisch, in welcher (falls überhaupt) sich jeder Spieler
 -- befindet. Setzt "CurrentCityName" als Attribut am Spieler ("None" falls in keiner
 -- Stadt) -- der Client liest das für die Alert-Level-Anzeige im HUD.
-local Players = game:GetService("Players")
 
 -- [cityName] = { minX, maxX, minZ, maxZ } -- wird beim ersten Zugriff pro Stadt berechnet
 -- und dann zwischengespeichert (Städte bewegen sich nicht, einmal reicht).
@@ -284,6 +369,12 @@ task.spawn(function()
 				end
 			end
 		end
+		-- Die Anwesenheit hat sich moeglicherweise geaendert -- also auch das hoechste
+		-- Kapitel im Raum und damit die Obergrenze jeder Stadt.
+		for _, cityName in ipairs(CityAlertConfig.CityOrder) do
+			refreshMaxAlertLevel(cityName)
+		end
+
 		task.wait(1) -- reicht völlig -- Städte wechseln sich nicht sekündlich
 	end
 end)

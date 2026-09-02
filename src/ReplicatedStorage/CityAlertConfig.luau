@@ -56,6 +56,13 @@ CityAlertConfig.Cities = {
 		-- ===== Stufe 4: Militär (Panzer, Raketenwerfer, Militär-Helikopter) =====
 		AlertThresholdLevel4 = 1600,
 		MaxAlertLevel = 3, -- Konzept-Vorgabe: nicht jede Stadt kennt alle Alert-Stufen
+		-- Kapitel I / II / III. Dieselbe Karte härtet sich über die Kapitel: das Village
+		-- lernt in Kapitel II das Militär kennen und bekommt in Kapitel III einen Guardian.
+		-- Stufe 5 bleibt hier vorerst folgenlos -- ohne AlertThresholdLevel5 steigt
+		-- CityAlertService gar nicht erst dorthin auf (siehe checkLevelThresholds). Das ist
+		-- Absicht: der Mechanismus steht, die Inhalte (Schwelle, Guardian-Werte, Modell)
+		-- kommen nach.
+		MaxAlertLevelByChapter = { 3, 4, 5 },
 		MilitaryTankCount = 1,
 		MilitaryRocketLauncherCount = 1,
 		MilitaryHelicopterCount = 1,
@@ -71,7 +78,25 @@ CityAlertConfig.Cities = {
 		HelicopterAttackRange = 80,
 		HelicopterSpeed = 18,
 
-		-- Village stoppt bei MaxAlertLevel=3 (siehe oben) -- kein Level 5, kein Guardian.
+
+		-- ===== Stufe 5: Guardian =====
+		-- Erreichbar erst ab Kapitel III (siehe MaxAlertLevelByChapter oben) -- in Kapitel I
+		-- bleibt diese Stadt darunter, die Werte liegen dann brach.
+		AlertThresholdLevel5 = 6400, -- setzt das 4x-Muster der Stufen 2-4 fort
+		GuardianHP = 20000,
+		GuardianShieldHP = 8000, -- 40% der HP, wie bei LargeCity und MegaCity
+		GuardianShieldRegenDelay = 10,
+		GuardianShieldRegenRate = 0.005,
+		GuardianImpactFistDamage = 26,
+		GuardianImpactFistCooldown = 3,
+		GuardianImpactFistRange = 14,
+		GuardianImpactFistKnockback = 112,
+		GuardianRepulsorDamage = 13,
+		GuardianRepulsorCooldown = 6,
+		GuardianRepulsorRadius = 22,
+		GuardianRepulsorKnockback = 150,
+		GuardianMoveSpeed = 15,
+		GuardianProtectRadius = 30,
 	},
 
 	SmallTown = {
@@ -105,6 +130,9 @@ CityAlertConfig.Cities = {
 		-- ===== Stufe 4: Militär (Panzer, Raketenwerfer, Militär-Helikopter) =====
 		AlertThresholdLevel4 = 6400,
 		MaxAlertLevel = 4, -- Konzept-Vorgabe: nicht jede Stadt kennt alle Alert-Stufen
+		-- Ab Kapitel II erreicht SmallTown Stufe 5 samt Guardian. Wie beim Village gilt:
+		-- ohne AlertThresholdLevel5 bleibt es faktisch bei 4, bis die Schwelle gesetzt ist.
+		MaxAlertLevelByChapter = { 4, 5, 5 },
 		MilitaryTankCount = 2,
 		MilitaryRocketLauncherCount = 1,
 		MilitaryHelicopterCount = 1,
@@ -119,6 +147,25 @@ CityAlertConfig.Cities = {
 		HelicopterDamage = 25,
 		HelicopterAttackRange = 85,
 		HelicopterSpeed = 19,
+
+		-- ===== Stufe 5: Guardian =====
+		-- Erreichbar erst ab Kapitel II (siehe MaxAlertLevelByChapter oben) -- in Kapitel I
+		-- bleibt diese Stadt darunter, die Werte liegen dann brach.
+		AlertThresholdLevel5 = 25600, -- setzt das 4x-Muster der Stufen 2-4 fort
+		GuardianHP = 60000,
+		GuardianShieldHP = 24000, -- 40% der HP, wie bei LargeCity und MegaCity
+		GuardianShieldRegenDelay = 10,
+		GuardianShieldRegenRate = 0.005,
+		GuardianImpactFistDamage = 70,
+		GuardianImpactFistCooldown = 3,
+		GuardianImpactFistRange = 14,
+		GuardianImpactFistKnockback = 112,
+		GuardianRepulsorDamage = 35,
+		GuardianRepulsorCooldown = 6,
+		GuardianRepulsorRadius = 22,
+		GuardianRepulsorKnockback = 150,
+		GuardianMoveSpeed = 15,
+		GuardianProtectRadius = 30,
 	},
 
 	City = {

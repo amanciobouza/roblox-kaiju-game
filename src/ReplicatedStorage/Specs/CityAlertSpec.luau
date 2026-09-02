@@ -25,6 +25,24 @@
 -- DefaultCity kommt mit: GetCityConfig() gibt sie für jede unbekannte Stadt zurück
 -- ("return CityAlertConfig.Cities[cityName] or CityAlertConfig.DefaultCity"), sie ist
 -- also eine echte, erreichbare Konfiguration -- und unterliegt denselben Regeln.
+-- Die HÖCHSTE Stufe, die eine Stadt über alle Kapitel hinweg je erreichen kann.
+-- MaxAlertLevel allein genügt seit der kapitelabhängigen Eskalation nicht mehr: es nennt
+-- nur Kapitel I. Eine Stadt, die erst in Kapitel III Stufe 5 sieht, braucht die Schwelle
+-- und den Guardian trotzdem -- die Regeln prüfen deshalb gegen das Maximum, sonst winken
+-- sie eine Lücke durch, die erst im späteren Kapitel aufschlägt.
+local function maxLevelOf(city)
+	local highest = city.data.MaxAlertLevel or 0
+	local byChapter = city.data.MaxAlertLevelByChapter
+	if type(byChapter) == "table" then
+		for _, level in ipairs(byChapter) do
+			if type(level) == "number" and level > highest then
+				highest = level
+			end
+		end
+	end
+	return highest
+end
+
 local function citiesOf(ctx)
 	local config = ctx.config.CityAlert
 	local list = {}
@@ -68,7 +86,7 @@ return {
 			check = function(ctx)
 				local violations = {}
 				for _, city in ipairs(citiesOf(ctx)) do
-					if (city.data.MaxAlertLevel or 0) >= 2 then
+					if maxLevelOf(city) >= 2 then
 						for _, field in ipairs({ "FireEngineHP", "FireEngineCount", "FirefightingRate" }) do
 							if city.data[field] == nil then
 								table.insert(violations, city.name .. ": Stufe 2 erreichbar, aber " .. field .. " fehlt")
@@ -91,7 +109,7 @@ return {
 			check = function(ctx)
 				local violations = {}
 				for _, city in ipairs(citiesOf(ctx)) do
-					if (city.data.MaxAlertLevel or 0) >= 3 then
+					if maxLevelOf(city) >= 3 then
 						for _, field in ipairs({ "ShieldMaxHealth", "GeneratorMaxHealth" }) do
 							if city.data[field] == nil then
 								table.insert(violations, city.name .. ": Stufe 3 erreichbar, aber " .. field .. " fehlt")
@@ -121,7 +139,7 @@ return {
 			check = function(ctx)
 				local violations = {}
 				for _, city in ipairs(citiesOf(ctx)) do
-					if (city.data.MaxAlertLevel or 0) >= 4 then
+					if maxLevelOf(city) >= 4 then
 						for _, field in ipairs({ "TankHP", "MilitaryTankCount", "RocketLauncherHP", "HelicopterHP" }) do
 							if city.data[field] == nil then
 								table.insert(violations, city.name .. ": Stufe 4 erreichbar, aber " .. field .. " fehlt")
@@ -142,12 +160,14 @@ return {
 				.. "MUSS ihn haben -- sonst eskaliert sie in eine Stufe, in der nichts "
 				.. "passiert ausser einer Warnung im Log.",
 			-- Ehemals bekannte Abweichungen (LargeCity, MegaCity, DefaultCity) sind
-			-- behoben. Bewusst KEIN knownViolations mehr: der Eintrag wuerde einen
-			-- kuenftigen echten Verstoss dieser Staedte stillschweigend durchwinken.
+			-- behoben, ebenso die von Village und SmallTown, die mit der
+			-- kapitelabhaengigen Eskalation dazukamen. Bewusst KEIN knownViolations mehr:
+			-- der Eintrag wuerde einen kuenftigen echten Verstoss stillschweigend
+			-- durchwinken.
 			check = function(ctx)
 				local violations = {}
 				for _, city in ipairs(citiesOf(ctx)) do
-					if (city.data.MaxAlertLevel or 0) >= 5 then
+					if maxLevelOf(city) >= 5 then
 						for _, field in ipairs({ "GuardianHP", "GuardianShieldHP", "GuardianMoveSpeed" }) do
 							if city.data[field] == nil then
 								table.insert(violations, city.name .. ": Stufe 5 erreichbar, aber " .. field .. " fehlt")
@@ -210,7 +230,7 @@ return {
 					return { "CountTaggedByCity fehlt im Prüfer-Kontext -- Regel nicht auswertbar" }
 				end
 				for _, city in ipairs(citiesOf(ctx)) do
-					if (city.data.MaxAlertLevel or 0) >= 5 and city.data.GuardianHP then
+					if maxLevelOf(city) >= 5 and city.data.GuardianHP then
 						if (byCity[city.name] or 0) == 0 then
 							table.insert(
 								violations,
@@ -234,7 +254,7 @@ return {
 			check = function(ctx)
 				local violations = {}
 				for _, city in ipairs(citiesOf(ctx)) do
-					local maxLevel = city.data.MaxAlertLevel or 0
+					local maxLevel = maxLevelOf(city)
 					for level = 2, maxLevel do
 						if city.data["AlertThresholdLevel" .. level] == nil then
 							table.insert(
@@ -256,7 +276,7 @@ return {
 				local violations = {}
 				for _, city in ipairs(citiesOf(ctx)) do
 					local previous, previousLevel = nil, nil
-					for level = 2, (city.data.MaxAlertLevel or 0) do
+					for level = 2, maxLevelOf(city) do
 						local threshold = city.data["AlertThresholdLevel" .. level]
 						if threshold then
 							if previous and threshold <= previous then

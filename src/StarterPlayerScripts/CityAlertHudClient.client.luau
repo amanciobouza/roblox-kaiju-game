@@ -163,6 +163,7 @@ end
 
 local currentStarCount = 0
 local lastShownCityName = nil
+local lastShownMaxLevel = nil
 
 local lastShownLevel = nil
 
@@ -178,6 +179,7 @@ local function updateAlertHud()
 		end
 		currentStarCount = 0
 		lastShownCityName = nil
+		lastShownMaxLevel = nil
 		progressBackground.Visible = false
 		lastShownLevel = nil
 		return
@@ -201,15 +203,26 @@ local function updateAlertHud()
 	local starCount = math.max(level, 0) -- Level 0 = 0 Sterne, Level 1 = 1 Stern, Level 2 = 2 Sterne, usw. -- entspricht direkt der Levelzahl
 
 	local config = CityAlertConfig.GetCityConfig(cityName)
-	local maxLevel = math.clamp((config and config.MaxAlertLevel) or MAX_STARS, 0, MAX_STARS)
+	-- Die Hoechststufe kommt VOM SERVER, nicht mehr aus dem Config: sie haengt am hoechsten
+	-- Kapitel der Anwesenden (siehe CityAlertService, MaxAlertLevelByChapter), und im
+	-- Config steht nur der Kapitel-I-Grundwert. Der Rueckfall auf das Config greift, solange
+	-- der Wert noch nicht repliziert ist.
+	local maxLevelValue = cityAlertValues and cityAlertValues:FindFirstChild(cityName .. "MaxLevel")
+	local rawMaxLevel = (maxLevelValue and maxLevelValue.Value) or (config and config.MaxAlertLevel) or MAX_STARS
+	local maxLevel = math.clamp(rawMaxLevel, 0, MAX_STARS)
 
 	cityNameLabel.Text = CITY_DISPLAY_NAMES[cityName] or cityName
 
 	-- Beim Städtewechsel (unterschiedliches MaxAlertLevel) die gedimmten "Deckel"-Sterne
 	-- neu aufbauen: 1..maxLevel sichtbar (gedimmt, falls noch nicht aktiv), Rest
 	-- ausgeblendet -- zeigt sofort, wie viele Stufen diese Stadt überhaupt kennt.
-	if cityName ~= lastShownCityName then
+	-- Neu aufbauen beim Staedtewechsel UND wenn sich die Obergrenze derselben Stadt
+	-- aendert -- letzteres passiert, sobald ein Spieler eines hoeheren Kapitels die Stadt
+	-- betritt oder verlaesst. Ohne die zweite Bedingung blieben die gedimmten Sterne auf
+	-- dem Stand des Kapitels, in dem man die Stadt betreten hat.
+	if cityName ~= lastShownCityName or maxLevel ~= lastShownMaxLevel then
 		lastShownCityName = cityName
+		lastShownMaxLevel = maxLevel
 		for i = 1, MAX_STARS do
 			local star = starLabels[i]
 			if i <= maxLevel then
@@ -267,6 +280,11 @@ player:GetAttributeChangedSignal("CurrentZone"):Connect(updateAlertHud)
 
 -- Auf Änderungen JEDES Stadt-Level-Werts UND JEDES Stadt-Progress-Werts reagieren --
 -- Level-Wechsel sind selten (Sterne), Progress-Änderungen häufig (Balken).
+--
+-- Das Muster "Level$" erfasst auch "<Stadt>MaxLevel" (die kapitelabhängige Obergrenze).
+-- Das ist beabsichtigt und nötig: ohne dieses Abonnement bliebe die Sterne-Anzeige
+-- stehen, wenn ein Spieler eines höheren Kapitels die Stadt betritt. Wer das Muster
+-- ändert, muss den Wert ausdrücklich mit aufnehmen.
 for _, valueObject in ipairs(cityAlertValues:GetChildren()) do
 	if valueObject.Name:match("Level$") or valueObject.Name:match("Progress$") then
 		valueObject:GetPropertyChangedSignal("Value"):Connect(updateAlertHud)
