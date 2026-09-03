@@ -36,6 +36,44 @@ local Debris = game:GetService("Debris")
 local CityAlertConfig = require(ReplicatedStorage:WaitForChild("CityAlertConfig"))
 
 local GUARDIAN_PROTECT_TAG = "GuardianProtect"
+
+-- Wie viele Gebäude der Rückfall in einer noch nicht ausgestalteten Stadt schützt (siehe
+-- findProtectedBuildings). Bei rund 20 Sektionen je Stadt ist ein Viertel genug, damit
+-- der Guardian nicht an einer Ecke klebt, und wenig genug, dass es eine Auswahl bleibt.
+local FALLBACK_PROTECTED_COUNT = 5
+
+-- ===== Provokation =====
+-- Wer den Guardian trifft, wird sein Ziel -- unabhaengig davon, wo das geschuetzte
+-- Gebaeude steht. Ohne das konnte man ihn aus sicherer Entfernung beschiessen, waehrend
+-- er stur an seinem Posten stand: einer der Gruende, warum er passiv wirkte.
+--
+-- Die LEINE haelt ihn trotzdem am Gebaeude. Ohne sie waere er ein gewoehnlicher
+-- Verfolger, und die Stufe-5-Idee -- er verteidigt etwas, du musst an ihm vorbei -- ginge
+-- verloren. Gemessen wird vom Gebaeude, nicht vom Guardian: so kann er nie weiter
+-- abkommen, als die Leine lang ist, egal wie lange die Verfolgung dauert.
+local DEFAULT_GUARDIAN_LEASH_RADIUS = 256
+
+
+-- Wie lange ein Angriff auf ein Gebaeude nachwirkt. Jeder weitere Treffer setzt die Uhr
+-- zurueck -- der Guardian bleibt also, solange dort gekaempft wird.
+local BUILDING_ALERT_DURATION = 10
+
+-- Zustandswechsel melden -- und NUR die. Vorher gab die Update-Schleife bei jedem
+-- Durchlauf eine Zeile aus, mehrmals pro Sekunde und Stadt; im Output ging dadurch alles
+-- andere unter. Interessant ist ohnehin nur der Moment, in dem der Guardian etwas anderes
+-- tut als vorher.
+local function setGuardianState(guardian, cityName, newState, detail)
+	if guardian.state == newState then
+		return
+	end
+	guardian.state = newState
+	print(string.format(
+		"[Kaiju-Debug] Guardian %s: %s%s",
+		cityName,
+		newState,
+		detail and (" -- " .. detail) or ""
+	))
+end
 local RESPAWN_DELAY = 45 -- Sekunden, bis ein besiegter Guardian dieser Stadt wieder auftaucht
 
 -- Platzhalter-Sound-IDs -- bitte bei Gelegenheit durch echte ersetzen.
@@ -47,6 +85,14 @@ local DEFEAT_SOUND_ID = "" -- beim Niedergehen
 
 -- [cityName] = { model=, humanoid=, state=..., ... } -- nur EIN Guardian gleichzeitig pro Stadt.
 local activeGuardians = {}
+
+-- [model] = Animations-Schnittstelle aus GuardianRuntimeController.Attach. Schwache
+-- Schluessel: wird das Modell zerstoert, verschwindet der Eintrag von selbst.
+local guardianAnimation = setmetatable({}, { __mode = "k" })
+
+-- [model] = "WardenShepherd" / "MarshalRoadblock" / "AegisInterceptor". Entscheidet,
+-- welche Angriffsanimation gespielt wird.
+local guardianAssetName = setmetatable({}, { __mode = "k" })
 
 -- ===== Platzhalter-Modell (falls kein eigenes vorbereitet ist) =====
 local function buildFallbackGuardian()
@@ -234,14 +280,33 @@ local GUARDIAN_LADDER = {
 -- In Kapitel I steht der erste Guardian in City -- Position 3 der Staffel oben.
 local FIRST_GUARDIAN_CITY_IN_CHAPTER_1 = 3
 
+-- Ausserhalb der Groessenstaffel: die PrologueCity bekommt IMMER den Warden-I.
+--
+-- Der Prolog ist eine geskriptete Sequenz und der erste Guardian, den ein Spieler
+-- ueberhaupt sieht -- er soll die Einfuehrung sein und nicht davon abhaengen, welches
+-- Kapitel jemand gerade spielt. Ein Ronin, der den Prolog nochmal ansieht, trifft
+-- denselben Gegner wie beim ersten Mal.
+local FIXED_GUARDIAN_CITIES = {
+	PrologueCity = 1, -- Index in GUARDIAN_LADDER
+}
+
 local cityLadderIndex = {}
 for index, cityName in ipairs(CITY_SIZE_LADDER) do
 	cityLadderIndex[cityName] = index
 end
 
 local function getGuardianPlan(cityName)
+	if #GUARDIAN_LADDER == 0 then
+		return nil
+	end
+
+	local fixedIndex = FIXED_GUARDIAN_CITIES[cityName]
+	if fixedIndex then
+		return GUARDIAN_LADDER[math.min(fixedIndex, #GUARDIAN_LADDER)]
+	end
+
 	local cityIndex = cityLadderIndex[cityName]
-	if not cityIndex or #GUARDIAN_LADDER == 0 then
+	if not cityIndex then
 		return nil
 	end
 
@@ -262,7 +327,6 @@ local function getGuardianPlan(cityName)
 	return GUARDIAN_LADDER[math.min(rung, #GUARDIAN_LADDER)]
 end
 
-local WARDEN_GROUND_CLEARANCE = 0
 
 local function buildWardenGuardian(plan)
 	local workshop = ReplicatedStorage:FindFirstChild("TrenchbornAssetWorkshop")
@@ -283,6 +347,36 @@ local function buildWardenGuardian(plan)
 
 		local built = builder.Build(staging)
 		dressing.Apply(built) -- sucht "VisorSensor"/"Lens" -- MUSS vor dem Umbenennen laufen
+
+		-- FleetRig: baut aus der starren Geometrie ein Motor6D-Skelett mit Humanoid und
+		-- Animator. VOR den Umbenennungen weiter unten -- es sucht seine Quellteile ueber
+		-- feste Namen und wirft, wenn eines fehlt.
+		--
+		-- Danach ist das Modell physisch ein anderes: alle Teile sind unverankert und
+		-- kollisionsfrei an Steuerteile geschweisst, und model.PrimaryPart zeigt auf ein
+		-- NEU erzeugtes HumanoidRootPart. Die Kollision stellt der Block weiter unten
+		-- wieder her; die Sohlenhoehe wird nicht mehr von Hand gesetzt, sondern ueber
+		-- guardian.soleOffset aus der Bounding Box abgeleitet.
+		local rig = require(workshop:WaitForChild("GuardianFleetRig", 5))
+		rig.Apply(built)
+
+		-- Animations-Steuerung anhaengen. Attach() erwartet eine gameplayApi-Instanz mit
+		-- drei BindableEvents -- wir uebergeben bewusst einen leeren Platzhalter und
+		-- feuern nie darauf: die Workshop-Gameplay-Logik wuerde gegen die
+		-- Zustandsmaschine hier arbeiten. Genutzt wird nur api.PlayAnimation, damit
+		-- SCAN/POSITION/BLOCK/COUNTER die alleinige Autoritaet bleibt.
+		local controller = require(workshop:WaitForChild("GuardianRuntimeController", 5))
+		local stub = Instance.new("Folder")
+		stub.Name = "GuardianAnimationStubApi"
+		for _, eventName in ipairs({ "AbilityRequested", "DamageTaken", "StateChanged" }) do
+			local event = Instance.new("BindableEvent")
+			event.Name = eventName
+			event.Parent = stub
+		end
+		stub.Parent = built
+		guardianAnimation[built] = controller.Attach(built, stub)
+		guardianAssetName[built] = plan.asset
+
 		built.Parent = nil
 		staging:Destroy()
 		return built
@@ -293,18 +387,12 @@ local function buildWardenGuardian(plan)
 		return nil
 	end
 
-	-- Root auf Sohlenhöhe bringen (siehe Kommentar oben). Root ist ein eigenes,
-	-- unsichtbares Teil -- es allein zu verschieben verändert die Geometrie nicht.
-	local root = model.PrimaryPart
-	if root then
-		local boundsCFrame, boundsSize = model:GetBoundingBox()
-		local soleY = boundsCFrame.Position.Y - boundsSize.Y * 0.5
-		root.Position = Vector3.new(
-			root.Position.X,
-			soleY - WARDEN_GROUND_CLEARANCE,
-			root.Position.Z
-		)
-	end
+	-- Die frueher hier stehende Verschiebung des Roots auf Sohlenhoehe ist ENTFALLEN.
+	-- Sie funktionierte nur, solange der Root ein loses, unverankertes Einzelteil war --
+	-- ihn allein zu verschieben veraenderte die Geometrie nicht. Seit FleetRig laeuft, ist
+	-- er die Wurzel des Skeletts: ihn zu verschieben zieht das ganze Modell mit und
+	-- verbiegt die Pose. Die Bodenhaltung uebernimmt jetzt guardian.soleOffset, das weiter
+	-- unten aus der Bounding Box gegen die PrimaryPart-Position berechnet wird.
 
 	-- Der Workshop baut jedes Teil mit CanCollide = false -- als reines Anschauungsmodell
 	-- richtig, als Boss falsch: der Spieler läuft sonst mühelos durch den Warden hindurch.
@@ -330,10 +418,15 @@ local function buildWardenGuardian(plan)
 
 	-- ACHTUNG: "RightHand" ist beim Warden ein FOLDER. Der Dienst tweent .Position am
 	-- gefundenen Objekt -- ein Folder würde dort abstürzen. Deshalb die Handfläche darin.
-	local rightHand = model:FindFirstChild("RightHand", true)
-	local palm = rightHand and rightHand:FindFirstChild("Palm")
-	if palm then
+	-- Direkt nach der Handflaeche suchen statt ueber "RightHand". FleetRig legt ein
+	-- STEUERTEIL desselben Namens an -- eine Suche nach "RightHand" kann seit dem Rig
+	-- dieses Teil finden statt des urspruenglichen Ordners, und ein Part hat kein Kind
+	-- "Palm". Die Handflaeche selbst ist eindeutig benannt und vom Rig unberuehrt.
+	local palm = model:FindFirstChild("Palm", true)
+	if palm and palm:IsA("BasePart") then
 		palm.Name = "ImpactFist"
+	else
+		palm = nil
 	end
 
 	-- "ChestCore" heisst beim Warden bereits so -- der Repulsor-Puls findet es von selbst.
@@ -456,17 +549,91 @@ local function updateHealthBar(guardian)
 end
 
 -- ===== Visor: dunkel in Ruhe, hell sobald der Spieler als Bedrohung erkannt wurde =====
+-- Der Visor zeigt den Zustand, ist aber NIE aus.
+--
+-- Vorher gab es nur "rot" und fast schwarz (20,20,20). Auf Alarmstufe 5 sah ein
+-- patrouillierender Guardian damit aus, als waere er abgeschaltet -- gerade dann, wenn er
+-- am ehesten zu sehen ist. Ein ruhiges Blau liest sich als "wach, aber jagt nicht"; das
+-- Rot bleibt dem Moment vorbehalten, in dem er ein Ziel hat, und behaelt so seine Wirkung.
+local VISOR_PATROL_COLOR = Color3.fromRGB(60, 170, 220)
+local VISOR_ALERT_COLOR = Color3.fromRGB(255, 60, 50)
+
+local VISOR_DEFEATED_COLOR = Color3.fromRGB(18, 18, 20)
+
+-- Besiegt: Licht aus. Danach zuckt es noch ein paar Mal kurz nach -- eine Maschine, in
+-- der es aussetzt, bevor sie ganz stehen bleibt. Laeuft in dem Fenster von rund zwei
+-- Sekunden, das dem Umkippen bleibt, bevor das Modell entfernt wird.
+local VISOR_DEFEAT_FLICKERS = 3
+
+local function setVisorDefeated(guardian)
+	local visor = guardian.model and guardian.model:FindFirstChild("Visor", true)
+	if not visor then
+		return
+	end
+	guardian.visorMode = "Defeated"
+	visor.Color = VISOR_DEFEATED_COLOR
+
+	task.spawn(function()
+		for _ = 1, VISOR_DEFEAT_FLICKERS do
+			task.wait(math.random(15, 45) / 100)
+			-- Bei jedem Durchgang neu pruefen: das Modell wird zwei Sekunden nach der
+			-- Niederlage zerstoert, und dann darf hier nichts mehr angefasst werden.
+			if not visor.Parent or guardian.visorMode ~= "Defeated" then
+				return
+			end
+			visor.Color = VISOR_ALERT_COLOR
+			task.wait(0.06)
+			if visor.Parent then
+				visor.Color = VISOR_DEFEATED_COLOR
+			end
+		end
+	end)
+end
+
 local function setVisorActive(guardian, active)
+	-- Ein besiegter Guardian bleibt dunkel. Ohne diese Sperre koennte ein letzter
+	-- Update-Durchlauf ihn wieder anschalten, waehrend er schon umkippt.
+	if guardian.visorMode == "Defeated" then
+		return
+	end
+	local mode = active and "Alert" or "Patrol"
+	-- Nur bei einer AENDERUNG tweenen. Die Aufrufer rufen je Bild auf; ohne diese Sperre
+	-- entstuende sechzigmal pro Sekunde ein neuer 0.4-Sekunden-Tween auf dasselbe Teil,
+	-- die sich gegenseitig ueberschreiben und den Farbwechsel nie sauber ausspielen.
+	if guardian.visorMode == mode then
+		return
+	end
 	local visor = guardian.model:FindFirstChild("Visor", true)
 	if not visor then
 		return
 	end
-	local targetColor = active and Color3.fromRGB(255, 60, 50) or Color3.fromRGB(20, 20, 20)
-	TweenService:Create(visor, TweenInfo.new(0.4), { Color = targetColor }):Play()
+	guardian.visorMode = mode
+	TweenService:Create(visor, TweenInfo.new(0.4), {
+		Color = active and VISOR_ALERT_COLOR or VISOR_PATROL_COLOR,
+	}):Play()
 end
 
 -- ===== Geschützte Gebäude finden: getaggt, sonst das Gebäude mit der höchsten
 -- MaxHealth dieser Stadt. =====
+-- Ein bezugsfaehiges Teil eines geschuetzten Gebaeudes finden.
+--
+-- Frueher stand hier 'house.PrimaryPart or house:FindFirstChildWhichIsA("BasePart")'.
+-- Das hat zwei Luecken, und beide enden lautlos damit, dass der Guardian das Gebaeude
+-- ueberspringt und reglos stehen bleibt:
+--   * FindFirstChildWhichIsA sucht ohne zweites Argument nur DIREKTE Kinder. Ein
+--     Asset-Root, dessen Kinder Ordner sind, liefert nichts.
+--   * Ist der Tag an einem BasePart statt an einem Model gesetzt, gibt es gar kein Kind
+--     -- und '.PrimaryPart' auf einem Part ist kein gueltiger Zugriff.
+local function resolveHousePart(house)
+	if house:IsA("BasePart") then
+		return house
+	end
+	if house:IsA("Model") and house.PrimaryPart then
+		return house.PrimaryPart
+	end
+	return house:FindFirstChildWhichIsA("BasePart", true) -- rekursiv
+end
+
 local function findProtectedBuildings(cityName)
 	local tagged = {}
 	for _, house in ipairs(CollectionService:GetTagged(GUARDIAN_PROTECT_TAG)) do
@@ -484,22 +651,43 @@ local function findProtectedBuildings(cityName)
 		end
 	end
 	if #tagged > 0 then
-		return tagged
+		return tagged, false
 	end
 
-	-- Fallback: kein Gebäude getaggt -- nimm das mit der höchsten MaxHealth dieser Stadt.
-	local best, bestHealth = nil, 0
+	-- Rückfall: keine getaggten Gebäude in dieser Stadt -- nimm die GRÖSSTEN nach
+	-- MaxHealth.
+	--
+	-- Betrifft Städte, die noch nicht ausgestaltet sind: der GuardianProtectTagger vergibt
+	-- den Tag anhand von 'BuildingLevel' (L2/L3), und dieses Attribut tragen bisher nur
+	-- die Assets, die durch die TrenchbornInstallers gelaufen sind. LargeCity, MegaCity
+	-- und Village werden gerade erst mit typisierten Gebäuden bestückt.
+	--
+	-- Früher wählte dieser Zweig EIN einziges Gebäude. Das war der Hauptgrund, warum der
+	-- Guardian passiv wirkte: er verteidigte eine einzelne Ecke und blieb untätig, sobald
+	-- der Spieler irgendwo anders zerstörte. Mehrere Gebäude geben ihm überall in der
+	-- Stadt etwas zu tun.
+	--
+	-- BEWUSST dynamisch statt über Tags gelöst: in einer Stadt im Umbau würden gesetzte
+	-- Tags beim Ersetzen der Gebäude verschwinden. Dieser Zweig rechnet jedes Mal neu und
+	-- hört von selbst auf zu greifen, sobald die Stadt echte L2/L3-Gebäude hat.
+	local candidates = {}
 	if _G.HOUSE_TAG and _G.ResolveCityName then
 		for _, house in ipairs(CollectionService:GetTagged(_G.HOUSE_TAG)) do
 			if not house:GetAttribute("Destroyed") and _G.ResolveCityName(house) == cityName then
-				local maxHealth = house:GetAttribute("MaxHealth") or 0
-				if maxHealth > bestHealth then
-					best, bestHealth = house, maxHealth
-				end
+				table.insert(candidates, house)
 			end
 		end
 	end
-	return best and { best } or {}
+
+	table.sort(candidates, function(a, b)
+		return (a:GetAttribute("MaxHealth") or 0) > (b:GetAttribute("MaxHealth") or 0)
+	end)
+
+	local result = {}
+	for index = 1, math.min(FALLBACK_PROTECTED_COUNT, #candidates) do
+		table.insert(result, candidates[index])
+	end
+	return result, true
 end
 
 -- ===== Schaden-API =====
@@ -517,6 +705,23 @@ local function damageGuardian(cityName, amount, attackerPlayer)
 	-- Treffer kam") beschreibt das hier gemeinte Verhalten.
 	guardian.lastHitAt = os.clock()
 
+	-- Wer trifft, zieht die Aufmerksamkeit auf sich. Der Guardian jagt ihn danach, bis
+	-- dieser die Stadt verlassen hat -- ohne Frist und ohne Abstandsgrenze (siehe die
+	-- Bedrohungsauswahl in updateGuardian).
+	if attackerPlayer then
+		guardian.provokedBy = attackerPlayer
+		guardian.provokedAt = os.clock()
+	end
+
+	-- Sichtbare Reaktion auf den Treffer. Gedrosselt: bei schnellen Schlagfolgen wuerde
+	-- sonst je Treffer neu angesetzt und die Animation nie ueber ihre ersten Bilder
+	-- hinauskommen.
+	if guardian.animation and os.clock() - (guardian.lastDamageReactAt or 0) >= 0.6 then
+		guardian.lastDamageReactAt = os.clock()
+		guardian.animation.PlayAnimation("DamageReact")
+		guardian.loopAnimation = nil
+	end
+
 	if guardian.shield > 0 then
 		guardian.shield = math.max(guardian.shield - amount, 0)
 	else
@@ -526,7 +731,18 @@ local function damageGuardian(cityName, amount, attackerPlayer)
 
 	if guardian.hp <= 0 then
 		guardian.defeated = true
-		guardian.state = "Defeated"
+		setGuardianState(guardian, cityName, "Defeated")
+		setVisorDefeated(guardian)
+		if guardian.animation then
+			guardian.animation.PlayAnimation("Defeat")
+			-- Aufraeumen, kurz bevor das Modell entfernt wird: Destroy() loest die
+			-- Client-Skripte und das RemoteEvent auf, die Attach() angelegt hat.
+			task.delay(1.9, function()
+				pcall(function()
+					guardian.animation.Destroy()
+				end)
+			end)
+		end
 
 		-- Achievements: "Ersten Guardian besiegt".
 		-- Lebensstatistik. Im Mehrspielerbetrieb zaehlt der LETZTE Treffer: attackerPlayer
@@ -973,6 +1189,181 @@ local function groundedPosition(guardian, position)
 	return Vector3.new(position.X, result.Position.Y + (guardian.soleOffset or 0), position.Z)
 end
 
+-- ===== Verhalten des Guardians =====
+-- Fuenf Zustaende. Der Leitgedanke ist nicht "Schaden machen", sondern VERDRAENGEN: der
+-- Guardian will den Spieler aus der Stadt schieben, nicht ihn toeten.
+--
+--   Idle      steht und wartet -- am Patrouillenpunkt oder beim verteidigten Gebaeude
+--   Patrol    laeuft zu einem anderen Punkt der Stadt
+--   Defend    ein geschuetztes Gebaeude wird angegriffen: stellt sich dazwischen
+--   Engage    draengt einen Spieler weg (weil er getroffen wurde oder jemand zu nah kam)
+--   Return    kehrt zurueck, nachdem der Spieler weit genug weg ist
+--
+-- Die Patrouille ist Teil des Entwurfs und kein Beiwerk: nur wenn der Guardian sich
+-- zeitweise entfernt, hat der Spieler ein Zeitfenster, in dem er ein paar Haeuser
+-- zerstoeren kann. Ein Guardian, der immer am selben Fleck steht, macht die Stufe
+-- entweder trivial (man weicht ihm aus) oder unspielbar (man kommt nie vorbei).
+local ENGAGE_RADIUS = 90 -- ab hier faellt der Guardian einen Spieler von sich aus an
+local PUSH_OUT_DISTANCE = 220 -- so weit muss der Spieler weg sein, damit er ablaesst
+local PATROL_DWELL_MIN = 8 -- Verweildauer an einem Patrouillenpunkt
+local PATROL_DWELL_MAX = 18
+
+-- Einen neuen Patrouillenpunkt suchen: die Position eines zufaelligen Hauses DIESER
+-- Stadt. Bewusst ueber die Haeuser statt ueber die Stadtgrenzen -- ein Punkt aus dem
+-- Huellquader koennte im Wasser, im Fels oder auf unbebauter Flaeche liegen.
+local function pickPatrolPoint(cityName)
+	if not _G.HOUSE_TAG or not _G.ResolveCityName then
+		return nil
+	end
+	local candidates = {}
+	for _, house in ipairs(CollectionService:GetTagged(_G.HOUSE_TAG)) do
+		if not house:GetAttribute("Destroyed") and _G.ResolveCityName(house) == cityName then
+			local part = resolveHousePart(house)
+			if part then
+				table.insert(candidates, part.Position)
+			end
+		end
+	end
+	if #candidates == 0 then
+		return nil
+	end
+	return candidates[math.random(1, #candidates)]
+end
+
+-- ===== Animationen =====
+-- Die Angriffe heissen je Generation anders. Der Warden fuehrt den Schockstock und den
+-- Warnimpuls, der Marshal Pulskanone und Fangnetz, der Aegis die Ionenkanonen und die
+-- Raketensalve. Die Namen sind die Build-Funktionen der GuardianAnimationLibrary.
+local GUARDIAN_ATTACK_ANIMATIONS = {
+	WardenShepherd = { Fist = "ShockBaton", Pulse = "WarningPulse" },
+	MarshalRoadblock = { Fist = "PulseCannonFire", Pulse = "ContainmentNetLaunch" },
+	AegisInterceptor = { Fist = "TwinIonCannons", Pulse = "ShoulderMissileSalvo" },
+}
+
+-- Wie lange eine Angriffsanimation laufen darf, bevor Laufen/Stehen sie wieder ablosen.
+local ATTACK_ANIMATION_HOLD = 1.2
+
+-- Einmalige Animation (Angriff, Treffer, Niederlage). Sperrt die Dauerschleife kurz,
+-- sonst wuerde der naechste Bild-Durchlauf sofort wieder "Walk" oder "Idle" senden.
+local function playGuardianAction(guardian, name)
+	local api = guardian.animation
+	if not api or not name then
+		return
+	end
+	guardian.animationBusyUntil = os.clock() + ATTACK_ANIMATION_HOLD
+	guardian.loopAnimation = nil
+	api.PlayAnimation(name)
+end
+
+-- Dauerschleife (Walk, Idle, AlertIdle). Nur bei Wechsel senden -- die Aufrufer laufen je
+-- Bild, und jedes Senden geht als RemoteEvent an alle Clients.
+local function playGuardianLoop(guardian, name)
+	local api = guardian.animation
+	if not api then
+		return
+	end
+	if os.clock() < (guardian.animationBusyUntil or 0) then
+		return
+	end
+	if guardian.loopAnimation == name then
+		return
+	end
+	guardian.loopAnimation = name
+	api.PlayAnimation(name)
+end
+
+-- Einen Schritt in Richtung Ziel gehen. Gibt true zurueck, wenn er angekommen ist.
+-- Enthaelt die gesamte Fortbewegung: Bodenhaftung, Laufanimation, Blickrichtung.
+local function stepTowards(guardian, config, destination)
+	local rootPart = guardian.model.PrimaryPart
+	local currentPosition = rootPart.Position
+	local flat = (destination - currentPosition) * Vector3.new(1, 0, 1)
+	local horizontalDistance = flat.Magnitude
+
+	if horizontalDistance <= ARRIVAL_THRESHOLD then
+		return true
+	end
+
+	local direction = flat.Unit
+	local deltaTime = RunService.Heartbeat:Wait()
+	local step = direction * config.GuardianMoveSpeed * deltaTime
+	if step.Magnitude > horizontalDistance then
+		step = flat
+	end
+	local newPosition = groundedPosition(guardian, currentPosition + step)
+
+	if guardian.animation then
+		-- Mit Rig laeuft die Animation ueber Motor6D. Die prozedurale Pose UND das Wiegen
+		-- muessen dann unterbleiben: beide verstellen dieselben Teile bzw. die Hoehe und
+		-- wuerden gegen die Animation arbeiten.
+		playGuardianLoop(guardian, "Walk")
+	else
+		guardian.walkPhase = (guardian.walkPhase or 0) + deltaTime * WALK_CYCLE_SPEED * math.pi * 2
+		guardian.walkBlend = math.min((guardian.walkBlend or 0) + deltaTime * WALK_BLEND_PER_SECOND, 1)
+		-- Koerper wiegt im Schritttakt, zweimal pro Zyklus -- einmal je aufsetzendem Fuss.
+		local bob = math.abs(math.sin(guardian.walkPhase)) * WALK_BODY_BOB_STUDS * guardian.walkBlend
+		newPosition = newPosition + Vector3.new(0, bob, 0)
+	end
+
+	guardian.model:PivotTo(CFrame.lookAt(newPosition, newPosition + direction))
+	if not guardian.animation then
+		applyWalkPose(guardian)
+	end
+	return false
+end
+
+-- Stehen bleiben und einen Punkt anschauen.
+-- alert = true: er hat ein Ziel im Blick (AlertIdle), sonst die ruhige Pose.
+local function faceAndStand(guardian, lookAtPosition, alert)
+	local rootPart = guardian.model.PrimaryPart
+	local standPosition = groundedPosition(guardian, rootPart.Position)
+	local toLook = (lookAtPosition - standPosition) * Vector3.new(1, 0, 1)
+	if toLook.Magnitude > 0.1 then
+		guardian.model:PivotTo(CFrame.lookAt(standPosition, standPosition + toLook))
+	end
+	if guardian.animation then
+		playGuardianLoop(guardian, alert and "AlertIdle" or "Idle")
+	else
+		relaxWalkPose(guardian)
+	end
+end
+
+-- Angreifen, wenn in Reichweite. Beide Angriffe haben eine eigene Cooldown-Sperre, der
+-- Aufruf je Bild ist deshalb unbedenklich.
+local function attackIfInRange(guardian, cityName, config, target, targetPosition)
+	local distance = (targetPosition - guardian.model.PrimaryPart.Position).Magnitude
+	local animations = GUARDIAN_ATTACK_ANIMATIONS[guardian.assetName]
+	-- Die Animation wird nur gespielt, wenn der Angriff auch WIRKLICH ausgeloest hat --
+	-- beide Angriffsfunktionen haben eine eigene Cooldown-Sperre und tun sonst nichts.
+	-- Ohne diese Pruefung zuckte er je Bild, ohne zuzuschlagen.
+	if distance <= config.GuardianImpactFistRange then
+		local before = guardian.lastFistAt
+		fireImpactFist(guardian, target, config)
+		if guardian.lastFistAt ~= before then
+			playGuardianAction(guardian, animations and animations.Fist)
+		end
+	elseif distance <= config.GuardianRepulsorRadius * 1.3 then
+		local before = guardian.lastRepulsorAt
+		fireRepulsorPulse(guardian, cityName, config)
+		if guardian.lastRepulsorAt ~= before then
+			playGuardianAction(guardian, animations and animations.Pulse)
+		end
+	end
+end
+
+-- Lebender Spieler mit Wurzelteil, sonst nil.
+local function livingRoot(player)
+	if not player or not player.Character then
+		return nil
+	end
+	local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+	local root = player.Character:FindFirstChild("HumanoidRootPart")
+	if humanoid and humanoid.Health > 0 and root then
+		return root
+	end
+	return nil
+end
+
 local function updateGuardian(cityName, guardian, config)
 	if guardian.defeated or not guardian.model or not guardian.model.Parent then
 		return
@@ -988,119 +1379,216 @@ local function updateGuardian(cityName, guardian, config)
 		updateHealthBar(guardian)
 	end
 
-	local target = nil
-	for _, player in ipairs(Players:GetPlayers()) do
-		if player:GetAttribute("CurrentCityName") == cityName and player.Character then
-			local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-			if humanoid and humanoid.Health > 0 then
-				target = player
-				break
+	local now = os.clock()
+	local _, usesFallback = findProtectedBuildings(cityName)
+	guardian.usesFallbackBuildings = usesFallback
+
+	-- ===== 1. Wird ein geschuetztes Gebaeude angegriffen? =====
+	local defendBuilding, defendPart = nil, nil
+	if guardian.alertBuilding then
+		local fresh = now - (guardian.alertAt or 0) <= BUILDING_ALERT_DURATION
+		if fresh and guardian.alertBuilding.Parent and not guardian.alertBuilding:GetAttribute("Destroyed") then
+			defendPart = resolveHousePart(guardian.alertBuilding)
+			if defendPart then
+				defendBuilding = guardian.alertBuilding
 			end
+		end
+		if not defendBuilding then
+			guardian.alertBuilding = nil
+			guardian.alertPlayer = nil
 		end
 	end
 
-	if not target then
-		guardian.state = "Scan"
-		guardian.protectingBuilding = nil
-		setVisorActive(guardian, false)
-		setAegisShieldDeployed(guardian, false)
-		relaxWalkPose(guardian)
-		return
-	end
+	-- ===== 2. Wen bekaempft er? =====
+	-- Reihenfolge: wer IHN getroffen hat, dann der Angreifer eines Gebaeudes, dann wer ihm
+	-- zu nahe kommt.
+	--
+	-- Wer den Guardian angreift, hat VORRANG vor jedem Gebaeude: er laesst die Bewachung
+	-- fallen und geht auf den Angreifer. Ein Waechter, der sich schlagen laesst und dabei
+	-- brav vor seinem Haus stehen bleibt, ist keine Bedrohung.
+	local threat, threatRoot, hunting = nil, nil, false
 
-	local targetRoot = target.Character:FindFirstChild("HumanoidRootPart")
-	if not targetRoot then
-		return
-	end
-
-	-- Nächstes geschütztes Gebäude zum Spieler finden -- der Guardian positioniert sich
-	-- davor, sobald der Spieler in dessen Nähe kommt.
-	local buildings = findProtectedBuildings(cityName)
-	local nearestBuilding, nearestDistance = nil, math.huge
-	for _, house in ipairs(buildings) do
-		local housePart = house.PrimaryPart or house:FindFirstChildWhichIsA("BasePart")
-		if housePart then
-			local distance = (housePart.Position - targetRoot.Position).Magnitude
-			if distance < nearestDistance then
-				nearestBuilding, nearestDistance = house, distance
-			end
+	-- Die Jagd endet NICHT nach einer Frist und nicht nach Metern, sondern erst, wenn der
+	-- Spieler die Stadt verlassen hat. Frueher galt PUSH_OUT_DISTANCE ab dem Kampfbeginn --
+	-- wer wegrannte, hatte die 220 Studs nach wenigen Sekunden hinter sich und wurde
+	-- mitten in der Stadt in Ruhe gelassen.
+	--
+	-- Die Abbruchbedingung verlangt BEIDES: ausserhalb der Stadt UND weit weg. Nur auf
+	-- CurrentCityName zu hoeren waere zu scharf -- zwischen zwei Stadt-Huellquadern gibt es
+	-- Luecken, in denen kurzzeitig "None" steht, und der Guardian wuerde dort grundlos
+	-- abdrehen.
+	if guardian.provokedBy then
+		local root = livingRoot(guardian.provokedBy)
+		local stillHere = false
+		if root then
+			local inCity = guardian.provokedBy:GetAttribute("CurrentCityName") == cityName
+			local distanceFromGuardian = (root.Position - rootPart.Position).Magnitude
+			stillHere = inCity or distanceFromGuardian <= PUSH_OUT_DISTANCE
 		end
-	end
-
-	local SCAN_ALERT_RADIUS = 60 -- ab hier gilt der Spieler als Bedrohung für ein Gebäude
-
-	print("[Kaiju-Debug] Guardian '" .. cityName .. "' Update -- target:", target.Name, "nearestBuilding:", nearestBuilding and nearestBuilding.Name or "keins gefunden", "nearestDistance:", nearestDistance, "SCAN_ALERT_RADIUS:", SCAN_ALERT_RADIUS, "geschützte Gebäude insgesamt:", #buildings)
-
-	if nearestBuilding and nearestDistance <= SCAN_ALERT_RADIUS then
-		guardian.protectingBuilding = nearestBuilding
-		setVisorActive(guardian, true)
-
-		local housePart = nearestBuilding.PrimaryPart or nearestBuilding:FindFirstChildWhichIsA("BasePart")
-		local toPlayerDirection = (targetRoot.Position - housePart.Position)
-		toPlayerDirection = Vector3.new(toPlayerDirection.X, 0, toPlayerDirection.Z)
-		if toPlayerDirection.Magnitude < 0.1 then
-			toPlayerDirection = Vector3.new(0, 0, 1)
-		end
-		toPlayerDirection = toPlayerDirection.Unit
-		local blockPosition = housePart.Position + toPlayerDirection * config.GuardianProtectRadius
-
-		local currentPosition = rootPart.Position
-		local toBlockPosition = blockPosition - currentPosition
-		local horizontalDistance = Vector3.new(toBlockPosition.X, 0, toBlockPosition.Z).Magnitude
-
-		if horizontalDistance > ARRIVAL_THRESHOLD then
-			guardian.state = "Position"
-			setAegisShieldDeployed(guardian, false)
-			local direction = Vector3.new(toBlockPosition.X, 0, toBlockPosition.Z).Unit
-			local deltaTime = RunService.Heartbeat:Wait()
-			local step = direction * config.GuardianMoveSpeed * deltaTime
-			if step.Magnitude > horizontalDistance then
-				step = Vector3.new(toBlockPosition.X, 0, toBlockPosition.Z)
-			end
-			-- Auf Bodenhöhe setzen, statt auf der Spawn-Höhe weiterzuschweben.
-			local newPosition = groundedPosition(guardian, currentPosition + step)
-
-			-- Laufanimation: Phase weiterdrehen und einblenden.
-			guardian.walkPhase = (guardian.walkPhase or 0) + deltaTime * WALK_CYCLE_SPEED * math.pi * 2
-			guardian.walkBlend = math.min((guardian.walkBlend or 0) + deltaTime * WALK_BLEND_PER_SECOND, 1)
-
-			-- Körper wiegt im Schritttakt. Zweimal pro Zyklus -- einmal je aufsetzendem
-			-- Fuss -- deshalb der Betrag des Sinus.
-			local bob = math.abs(math.sin(guardian.walkPhase)) * WALK_BODY_BOB_STUDS * guardian.walkBlend
-			newPosition = newPosition + Vector3.new(0, bob, 0)
-
-			-- In LAUFRICHTUNG schauen. Vorher wurde "newPosition - toPlayerDirection"
-			-- anvisiert -- das ist die Richtung VOM Spieler WEG, der Guardian lief also
-			-- rückwärts bzw. seitlich auf den Spieler zu.
-			local facingCFrame = CFrame.lookAt(newPosition, newPosition + direction)
-			guardian.model:PivotTo(facingCFrame)
-			applyWalkPose(guardian)
+		if stillHere then
+			threat, threatRoot, hunting = guardian.provokedBy, root, true
 		else
-			-- Angekommen -- blockieren + ggf. kontern.
-			guardian.state = "Block"
-			setAegisShieldDeployed(guardian, true)
-			local standPosition = groundedPosition(guardian, currentPosition)
-			local facingCFrame = CFrame.lookAt(standPosition, standPosition + (targetRoot.Position - standPosition) * Vector3.new(1, 0, 1))
-			guardian.model:PivotTo(facingCFrame)
-			relaxWalkPose(guardian)
-
-			local distanceToPlayer = (targetRoot.Position - standPosition).Magnitude
-			if distanceToPlayer <= config.GuardianImpactFistRange then
-				guardian.state = "Counter"
-				fireImpactFist(guardian, target, config)
-			elseif distanceToPlayer <= config.GuardianRepulsorRadius * 1.3 then
-				fireRepulsorPulse(guardian, cityName, config)
-			end
+			guardian.provokedBy = nil
 		end
-	else
-		guardian.protectingBuilding = nil
-		guardian.state = "Scan"
-		setVisorActive(guardian, false)
-		setAegisShieldDeployed(guardian, false)
-		relaxWalkPose(guardian)
 	end
 
-	updateHealthBar(guardian)
+	if not threat and defendBuilding then
+		local root = livingRoot(guardian.alertPlayer)
+		if root then
+			threat, threatRoot = guardian.alertPlayer, root
+		end
+	end
+
+	if not threat then
+		local closest, closestDistance = nil, math.huge
+		for _, player in ipairs(Players:GetPlayers()) do
+			if player:GetAttribute("CurrentCityName") == cityName then
+				local root = livingRoot(player)
+				if root then
+					local distance = (root.Position - rootPart.Position).Magnitude
+					if distance < closestDistance then
+						closest, closestDistance = player, distance
+					end
+				end
+			end
+		end
+		if closest and closestDistance <= ENGAGE_RADIUS then
+			threat, threatRoot = closest, livingRoot(closest)
+		end
+	end
+
+	-- Waehrend der Jagd wird kein Gebaeude gedeckt -- er soll dem Angreifer nach, nicht
+	-- zwischen ihm und einem Haus kleben bleiben.
+	if hunting then
+		defendBuilding, defendPart = nil, nil
+	end
+
+	-- ===== 3. Der Anker: wovon aus gemessen wird =====
+	-- Beim Verteidigen das Gebaeude, sonst der letzte Patrouillenpunkt. Die Leine haengt
+	-- am ANKER, nicht am Guardian -- so kann er sich nie weiter als der Radius entfernen,
+	-- egal wie lange eine Verfolgung dauert und wohin der Spieler laeuft.
+	-- Ohne Gebaeude ist der Anker die Stelle, an der der Kampf BEGANN -- einmal beim
+	-- Auftauchen der Bedrohung festgehalten, nicht der zuletzt erreichte Patrouillenpunkt.
+	--
+	-- Genau daran scheiterte es vorher: waehrend einer Patrouille liegt patrolAnchor weit
+	-- hinter dem Guardian. Wer ihn unterwegs angriff, war vom alten Punkt aus sofort
+	-- weiter als PUSH_OUT_DISTANCE entfernt und galt als bereits verdraengt -- der
+	-- Guardian kehrte um, statt sich zu wehren. Im Stillstand fiel es nicht auf, weil
+	-- patrolAnchor dort seine eigene Position ist.
+	local anchorPosition
+	if defendPart then
+		anchorPosition = defendPart.Position
+		guardian.engageAnchor = nil
+	else
+		if not guardian.engageAnchor then
+			guardian.engageAnchor = rootPart.Position
+		end
+		anchorPosition = guardian.engageAnchor
+	end
+	local leashRadius = config.GuardianLeashRadius or DEFAULT_GUARDIAN_LEASH_RADIUS
+
+	-- ===== 4. Bedrohung: verdraengen =====
+	if threat then
+		local threatFromAnchor = (threatRoot.Position - anchorPosition) * Vector3.new(1, 0, 1)
+		local threatDistanceFromAnchor = threatFromAnchor.Magnitude
+
+		-- Die Jagd hat ihre eigene Abbruchbedingung oben (Stadt verlassen). Nur die
+		-- uebrigen Faelle -- Gebaeude decken, Naeherungsangriff -- enden nach Metern.
+		if not hunting and threatDistanceFromAnchor > PUSH_OUT_DISTANCE then
+			-- Weit genug verdraengt -- ablassen und zurueckkehren.
+			guardian.alertBuilding = nil
+			guardian.alertPlayer = nil
+			guardian.provokedBy = nil
+			guardian.engageAnchor = nil
+			guardian.returnTarget = anchorPosition
+			setGuardianState(guardian, cityName, "Return", "Spieler verdraengt")
+		else
+			setVisorActive(guardian, true)
+			guardian.protectingBuilding = defendBuilding
+
+			-- Ziel: zwischen Anker und Spieler stehen, dabei bis auf Schlagreichweite
+			-- heran. Das leistet beides zugleich -- er deckt das Gebaeude UND draengt.
+			local destination
+			if defendPart then
+				local reach = math.min(threatDistanceFromAnchor, leashRadius)
+				local stopShort = math.min(config.GuardianImpactFistRange * 0.8, reach)
+				local direction = threatDistanceFromAnchor > 0.1 and threatFromAnchor.Unit or rootPart.CFrame.LookVector
+				destination = anchorPosition + direction * math.max(reach - stopShort, 0)
+			else
+				-- Kein Gebaeude zu decken: direkt auf den Spieler zu, bis Schlagreichweite.
+				local toThreat = (threatRoot.Position - rootPart.Position) * Vector3.new(1, 0, 1)
+				local distance = toThreat.Magnitude
+				local direction = distance > 0.1 and toThreat.Unit or rootPart.CFrame.LookVector
+				destination = rootPart.Position + direction * math.max(distance - config.GuardianImpactFistRange * 0.8, 0)
+			end
+
+			local arrived = stepTowards(guardian, config, destination)
+			if arrived then
+				faceAndStand(guardian, threatRoot.Position, true)
+				setAegisShieldDeployed(guardian, defendBuilding ~= nil)
+				setGuardianState(guardian, cityName, defendBuilding and "Defend" or "Engage",
+					defendBuilding and ("deckt " .. defendBuilding.Name .. " gegen " .. threat.Name)
+						or ("draengt " .. threat.Name))
+			else
+				setAegisShieldDeployed(guardian, false)
+				setGuardianState(guardian, cityName, defendBuilding and "Defend" or "Engage",
+					defendBuilding and ("laeuft zu " .. defendBuilding.Name)
+						or ("verfolgt " .. threat.Name))
+			end
+			-- Auch im Laufen angreifen -- die Annaeherung war frueher eine tote Phase.
+			attackIfInRange(guardian, cityName, config, threat, threatRoot.Position)
+			return
+		end
+	end
+
+	guardian.engageAnchor = nil -- keine Bedrohung mehr: naechster Kampf setzt neu an
+
+	-- ===== 5. Rueckkehr =====
+	if guardian.returnTarget then
+		setVisorActive(guardian, false)
+		setAegisShieldDeployed(guardian, false)
+		if stepTowards(guardian, config, guardian.returnTarget) then
+			guardian.patrolAnchor = guardian.returnTarget
+			guardian.returnTarget = nil
+			guardian.patrolUntil = now + math.random(PATROL_DWELL_MIN, PATROL_DWELL_MAX)
+			setGuardianState(guardian, cityName, "Idle", "zurueck auf Posten")
+		end
+		return
+	end
+
+	-- ===== 6. Patrouille =====
+	setVisorActive(guardian, false)
+	setAegisShieldDeployed(guardian, false)
+	guardian.protectingBuilding = nil
+
+	if guardian.patrolTarget then
+		if stepTowards(guardian, config, guardian.patrolTarget) then
+			guardian.patrolAnchor = guardian.patrolTarget
+			guardian.patrolTarget = nil
+			guardian.patrolUntil = now + math.random(PATROL_DWELL_MIN, PATROL_DWELL_MAX)
+			setGuardianState(guardian, cityName, "Idle", "am Patrouillenpunkt")
+		end
+		return
+	end
+
+	if not guardian.patrolUntil then
+		guardian.patrolUntil = now + math.random(PATROL_DWELL_MIN, PATROL_DWELL_MAX)
+	end
+	if now >= guardian.patrolUntil then
+		local point = pickPatrolPoint(cityName)
+		if point then
+			guardian.patrolTarget = point
+			setGuardianState(guardian, cityName, "Patrol", "neuer Punkt")
+		else
+			-- Nichts gefunden (alles zerstoert?) -- spaeter erneut versuchen, statt es
+			-- jedes Bild zu wiederholen.
+			guardian.patrolUntil = now + PATROL_DWELL_MIN
+		end
+		return
+	end
+
+	faceAndStand(guardian, rootPart.Position + rootPart.CFrame.LookVector * 10)
+	setGuardianState(guardian, cityName, "Idle")
 end
 
 -- ===== Spawn-Zeremonie: Bodenplatten, Sirenen, Dampf, langsames Aufrichten, dann
@@ -1284,7 +1772,18 @@ _G.SpawnGuardianForCity = function(cityName)
 		lastFistAt = 0,
 		lastRepulsorAt = 0,
 		shieldDeployed = false,
+		-- Animations-Schnittstelle und Generation. Beide fehlen bei Guardians, die aus
+		-- ServerStorage geklont werden -- dort greift der prozedurale Rueckfall.
+		animation = guardianAnimation[model],
+		assetName = guardianAssetName[model],
 	}
+
+	-- Visor sofort auf die Patrouillenfarbe setzen, statt auf den ersten Durchlauf der
+	-- Update-Schleife zu warten. Der Workshop liefert das Teil in seiner Bau-Farbe aus --
+	-- ohne das erschiene der Guardian den ersten Moment mit totem Visor, ausgerechnet
+	-- waehrend der Auftritt laeuft und alle hinsehen.
+	setVisorActive(guardian, false)
+
 	-- Abstand des PrimaryPart zur Sohle merken. Die Modelle unterscheiden sich darin
 	-- erheblich (Platzhalter: Torso, rund 15 Studs über der Sohle -- Warden: Root genau
 	-- AUF der Sohle). Beim Laufen wird der Wert gebraucht, um den Guardian auf dem Boden
@@ -1320,6 +1819,35 @@ local function despawnGuardianForCity(cityName)
 	activeGuardians[cityName] = nil
 end
 _G.DespawnGuardianForCity = despawnGuardianForCity
+
+-- ===== Angegriffenes Gebäude melden =====
+-- Wird von HouseHandler.damageHouse bei JEDEM Treffer aufgerufen.
+--
+-- Ohne das reagierte der Guardian nur auf NÄHE: der Spieler musste nah genug an einem
+-- geschützten Gebäude stehen. Wer aus grösserer Entfernung zuschlug, blieb unbehelligt --
+-- in MegaCity gemessene 86 Studs reichten bereits. Ein Angriff auf ein Gebäude ist aber
+-- genau der Anlass, auf den ein Wächter reagieren soll, unabhängig von der Entfernung.
+_G.NotifyGuardianBuildingAttacked = function(house, attackerPlayer)
+	if not house or not _G.ResolveCityName then
+		return
+	end
+	local cityName = _G.ResolveCityName(house)
+	local guardian = cityName and activeGuardians[cityName]
+	if not guardian or guardian.defeated then
+		return
+	end
+
+	-- Nur geschützte Gebäude alarmieren ihn. In einer Stadt, die noch auf dem
+	-- MaxHealth-Rückfall läuft (siehe findProtectedBuildings), gibt es keine Tags --
+	-- dort zählt jedes Gebäude der Stadt, sonst bliebe er dort weiterhin untätig.
+	if not guardian.usesFallbackBuildings and not CollectionService:HasTag(house, GUARDIAN_PROTECT_TAG) then
+		return
+	end
+
+	guardian.alertBuilding = house
+	guardian.alertAt = os.clock()
+	guardian.alertPlayer = attackerPlayer
+end
 
 -- ===== Update-Schleife =====
 RunService.Heartbeat:Connect(function()
