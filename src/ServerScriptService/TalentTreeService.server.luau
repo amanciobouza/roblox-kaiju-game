@@ -103,6 +103,11 @@ end
 _G.GetTalentMeltdownAttackSpeedBonus = function(player)
 	return getKaijuEffectBonus(player, "MeltdownAttackSpeedBonus")
 end
+-- Wurde vom HeatHandler an drei Stellen gelesen, aber nirgends gesetzt -- die
+-- Abkuehlung lief dadurch immer mit Faktor 1.0, das Talent war wirkungslos.
+_G.GetTalentHeatCoolingBonus = function(player)
+	return getKaijuEffectBonus(player, "HeatCoolingBonus")
+end
 _G.GetTalentCooldownReduction = function(player)
 	return getKaijuEffectBonus(player, "CooldownReduction")
 end

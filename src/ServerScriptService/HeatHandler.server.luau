@@ -2,11 +2,19 @@
 -- FEATURE: Meltdown während Prolog gesperrt (max. Berserker-Modus)
 -- Ort in Studio: ServerScriptService
 -- Ersetzt das alte, kill-streak-basierte BerserkerHandler.lua komplett. Zentrales
--- "Überhitzung ist Rage"-System: jeder Angriff erzeugt Hitze, hohe Hitze gibt Schadens-/
--- Geschwindigkeitsboni, bei 85% kann der Spieler bewusst "Berserk" aktivieren (deutlich
+-- "Überhitzung ist Rage"-System: jeder AKTIVE Angriff erzeugt Hitze, hohe Hitze gibt
+-- Schadens-/Geschwindigkeitsboni, bei 85% schaltet "Berserk" AUTOMATISCH zu (deutlich
 -- stärkerer Bonus, aber Hitze steigt weiter), bei 100% "Meltdown" (automatische
--- Explosionen, die dem Spieler selbst schaden). Einzige Möglichkeit zum Abkühlen:
--- Energie absorbieren (siehe EnergyCollectionHandler.lua).
+-- Explosionen, die dem Spieler selbst schaden).
+--
+-- Abkühlung auf zwei Wegen: passiv über die Zeit (BERSERK_HEAT_DECAY_PER_SECOND, läuft
+-- immer) und durch Energie-Absorbieren (siehe EnergyCollectionHandler.lua). Der
+-- Kopfkommentar nannte früher das Absorbieren als EINZIGEN Weg und die Aktivierung als
+-- manuell -- beides stimmte nicht mehr mit dem Code überein.
+--
+-- Passiver Schaden -- Anrennen, über Dächer laufen -- erzeugt bewusst KEINE Hitze, auch
+-- nicht über den Einsturz von Sondergebäuden (siehe HouseHandler, isPassiveDamage).
+-- Berserk soll man sich erkämpfen, nicht durch Herumlaufen bekommen.
 --
 -- Andere Scripts fragen den aktuellen Zustand über die _G-Funktionen unten ab. Die
 -- Funktionsnamen (GetBerserkerDamageMultiplier / GetBerserkerCooldownMultiplier) wurden
@@ -21,10 +29,6 @@ local RunService = game:GetService("RunService")
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
 
 -- ===== RemoteEvents =====
-local ActivateBerserkEvent = Instance.new("RemoteEvent")
-ActivateBerserkEvent.Name = "ActivateBerserkEvent"
-ActivateBerserkEvent.Parent = ReplicatedStorage
-
 local MeltdownExplosionEvent = Instance.new("RemoteEvent")
 MeltdownExplosionEvent.Name = "MeltdownExplosionEvent"
 MeltdownExplosionEvent.Parent = ReplicatedStorage
@@ -407,18 +411,6 @@ _G.GetHeatSpeedMultiplier = function(player)
 	return 1.0
 end
 
--- ===== Kontrollierte Berserk-Aktivierung =====
-ActivateBerserkEvent.OnServerEvent:Connect(function(player)
-	if player:GetAttribute("BerserkActive") then
-		return -- schon aktiv
-	end
-	if getHeat(player) < BERSERK_AVAILABLE_AT then
-		return -- noch nicht heiß genug
-	end
-	player:SetAttribute("BerserkActive", true)
-	lastBerserkHitAt[player] = os.clock()
-end)
-
 -- ===== Haupt-Loop: Berserk-Timeout, Meltdown-Explosionen, passive Abkühlung während
 -- Meltdown =====
 RunService.Heartbeat:Connect(function(dt)
@@ -461,8 +453,9 @@ RunService.Heartbeat:Connect(function(dt)
 			else
 				-- Spital-Effekt: Heat sinkt langsamer -- Berserk hält dadurch länger an
 				-- (positiver Effekt, mehr Kontrolle über die eigene Hitze-Kurve). Talent
-				-- "Titan Regeneration" (Kaiju-Talentbaum) beschleunigt das Abklingen
-				-- zusätzlich, damit man schneller aus Berserk/Meltdown rauskommt.
+				-- "Meltdown Mastery" (Kaiju-Talentbaum, Zweiteffekt) beschleunigt das
+				-- Abklingen zusätzlich um 50%: schneller aus dem Meltdown heraus, dafür
+				-- endet Berserk auch früher (unter 40 Hitze).
 				local coolingBonus = 1 + ((_G.GetTalentHeatCoolingBonus and _G.GetTalentHeatCoolingBonus(player)) or 0)
 				setHeat(player, heat - BERSERK_HEAT_DECAY_PER_SECOND * getHospitalDecayMultiplier(player) * coolingBonus * dt)
 			end
@@ -502,8 +495,10 @@ RunService.Heartbeat:Connect(function(dt)
 				end
 			end
 
-			-- Talent "Titan Regeneration" (Kaiju-Talentbaum) beschleunigt auch das
-			-- Abklingen aus Meltdown.
+			-- Talent "Meltdown Mastery" (Kaiju-Talentbaum, Zweiteffekt) beschleunigt auch
+			-- das Abklingen aus Meltdown. Der Kommentar nannte hier frueher ein Talent
+			-- "Titan Regeneration", das es im Baum nie gab -- und die Funktion, die er
+			-- beschrieb, war ueberhaupt nicht gesetzt.
 			local meltdownCoolingBonus = 1 + ((_G.GetTalentHeatCoolingBonus and _G.GetTalentHeatCoolingBonus(player)) or 0)
 
 			-- WICHTIG: die sehr langsame MELTDOWN_HEAT_DECAY_PER_SECOND gilt nur, SOLANGE

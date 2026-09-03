@@ -110,6 +110,10 @@ local function buildFactionTree(definition)
 			prerequisites = { { id = branch.tier2.id, level = 1 } },
 			effectKey = branch.tier3.effectKey,
 			effectPerLevel = branch.tier3.effectPerLevel,
+			-- Zweiter Effekt-Slot, wie ihn Tier 1 schon hat. getKaijuEffectBonus summiert
+			-- effectKey UND tradeoffEffectKey, ein Knoten kann also zwei Wirkungen tragen.
+			tradeoffEffectKey = branch.tier3.secondaryEffectKey,
+			tradeoffEffectPerLevel = branch.tier3.secondaryEffectPerLevel,
 			researchSeconds = 1800, -- 30 Minuten
 			energyCost = 5000,
 			coinCost = 6000,
@@ -200,9 +204,17 @@ TalentTreeConfig.Kaiju = buildFactionTree({
 				id = "MeltdownMastery",
 				name = "Meltdown Mastery",
 				icon = "☄️",
-				description = "SYNERGIE: Meltdown gewährt zusätzlich +20% Angriffstempo, solange es aktiv ist.",
+				description = "SYNERGIE: Meltdown gewährt zusätzlich +20% Angriffstempo, solange es "
+					.. "aktiv ist. Zusätzlich kühlt deine Hitze 50% schneller ab -- du kommst schneller "
+					.. "aus dem Meltdown heraus, verlierst den Berserker-Zustand aber auch früher.",
 				effectKey = "MeltdownAttackSpeedBonus",
 				effectPerLevel = 0.20,
+				-- Zweischneidig, und das ist Absicht: die Abkühlrate wirkt auf BEIDE Enden.
+				-- Sie holt dich schneller aus dem Meltdown, laesst die Hitze aber auch eher
+				-- unter BERSERK_MIN_HEAT_TO_STAY (40) fallen, wo Berserk automatisch endet.
+				-- Ein reiner Zugewinn waere hier langweilig; so ist es eine Entscheidung.
+				secondaryEffectKey = "HeatCoolingBonus",
+				secondaryEffectPerLevel = 0.5,
 			},
 		},
 		{

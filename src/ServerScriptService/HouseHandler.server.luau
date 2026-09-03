@@ -1391,7 +1391,9 @@ local function requestHouseCollapse(house, originPosition, runFullSequence)
 	end
 end
 
-local function destroyHouse(house, destroyerPlayer, originPosition)
+-- isPassiveDamage: der Todesstoss kam NICHT aus einem Angriff, sondern aus dem blossen
+-- Gewicht der Figur -- Anrennen oder ueber das Dach laufen. Siehe onHouseTouched.
+local function destroyHouse(house, destroyerPlayer, originPosition, isPassiveDamage)
 	house:SetAttribute("Destroyed", true)
 	local isGroupSection = ParentGroupService.IsParentGroupHouse(house)
 	local parentGroup = ParentGroupService.GetGroup(house)
@@ -1434,7 +1436,12 @@ local function destroyHouse(house, destroyerPlayer, originPosition)
 	-- Heat-System: manche besondere Gebäude (Kirche, Wasserturm, Spital, ...) haben einen
 	-- eigenen Heat-Effekt beim Einsturz -- per Attribut "HeatEffect" am Model markiert
 	-- (siehe HeatHandler.lua, _G.ApplyBuildingHeatEffect für die möglichen Werte).
-	if destroyerPlayer and _G.ApplyBuildingHeatEffect then
+	--
+	-- NUR bei aktivem Schaden. Die Hitze treibt Richtung Berserk, und Berserk soll man
+	-- sich erkaempfen: wer durch die Stadt laeuft und im Vorbeigehen ein Hochhaus umstoesst
+	-- (+40 Hitze) oder eine Tankstelle (+25), hat dafuer nichts getan ausser gross zu sein.
+	-- Anrennen und Dachlaufen sind passive Schaeden durch das Gewicht der Figur.
+	if destroyerPlayer and not isPassiveDamage and _G.ApplyBuildingHeatEffect then
 		local heatEffect = house:GetAttribute("HeatEffect")
 		if heatEffect then
 			_G.ApplyBuildingHeatEffect(destroyerPlayer, heatEffect)
@@ -1651,7 +1658,7 @@ local function destroyHouse(house, destroyerPlayer, originPosition)
 end
 
 -- Wird von CombatHandler.lua aufgerufen, wenn ein Spieler ein Haus in Reichweite trifft.
-local function damageHouse(house, amount, attackerPlayer, originPosition)
+local function damageHouse(house, amount, attackerPlayer, originPosition, isPassiveDamage)
 	if house:GetAttribute("Destroyed") then
 		return
 	end
@@ -1707,6 +1714,14 @@ local function damageHouse(house, amount, attackerPlayer, originPosition)
 		_G.AwardSpecialEnergyForBuildingDamage(attackerPlayer, amount)
 	end
 
+	-- Guardian alarmieren: er soll zu einem angegriffenen Gebäude LAUFEN, statt darauf zu
+	-- warten, dass der Spieler in seinen Näherungsradius kommt. Bewusst hier bei jedem
+	-- Treffer und nicht erst bei der Zerstörung (wie
+	-- _G.RegisterDestroyedBuildingForHelicopter weiter unten) -- danach wäre es zu spät.
+	if _G.NotifyGuardianBuildingAttacked then
+		_G.NotifyGuardianBuildingAttacked(house, attackerPlayer)
+	end
+
 	-- Stufe-3-Cluster-Aktivierung: Barrikaden sollen NICHT alle gleichzeitig bei Level 3
 	-- erscheinen, sondern erst, sobald eines ihrer Flankengebäude (per ShieldClusterId-
 	-- Attribut markiert) unter 50% HP fällt -- macht das Eskalieren spannender/gestaffelt,
@@ -1746,7 +1761,7 @@ local function damageHouse(house, amount, attackerPlayer, originPosition)
 	end
 
 	if newHealth <= 0 then
-		destroyHouse(house, attackerPlayer, originPosition)
+		destroyHouse(house, attackerPlayer, originPosition, isPassiveDamage)
 	else
 		shakeHouse(house)
 	end
@@ -1963,6 +1978,10 @@ onHouseTouched = function(house, housePart, hit)
 	local isMoving = humanoid.MoveDirection.Magnitude > 0.1
 
 	local damage
+	-- Passiv = Schaden allein durch das Gewicht der Figur (Anrennen, ueber das Dach
+	-- laufen). Der Sprungangriff darunter laesst dies bewusst auf false: er ist eine
+	-- Handlung des Spielers und soll weiterhin auf die Hitze wirken.
+	local isPassiveDamage = false
 
 	-- Optionales Diagnose-Logging für einzelne problematische Assets:
 	-- Setze am Haus DebugTouchDamage=true, dann zeigt Output exakt, wie der Kontakt
@@ -2038,8 +2057,10 @@ onHouseTouched = function(house, housePart, hit)
 		return
 	elseif isOnRoof then
 		damage = baseDamage * ROOF_WALK_DAMAGE_RATIO
+		isPassiveDamage = true
 	else
 		damage = baseDamage * BUMP_DAMAGE_RATIO
+		isPassiveDamage = true
 	end
 
 	-- Erst JETZT den Cooldown verbrauchen, da wirklich Schaden entsteht.
@@ -2051,7 +2072,7 @@ onHouseTouched = function(house, housePart, hit)
 	-- Rückgabewert liefert.
 	local wasAliveBeforeHit = (tonumber(house:GetAttribute("Health")) or 0) > 0
 
-	damageHouse(house, damage, player)
+	damageHouse(house, damage, player, nil, isPassiveDamage)
 	ShowDamageEvent:FireClient(player, damage)
 
 	if isOnRoof and isJumping and wasAliveBeforeHit and house:GetAttribute("Destroyed") then

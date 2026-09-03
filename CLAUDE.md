@@ -305,11 +305,12 @@ git commit -am "Workshop-Submodul aktualisiert"
 
 Diese Punkte sind teils erschlossen und teils noch offen:
 
-- [ ] **Drei wirkungslose `_G`-Funktionen**: `GetTalentHeatCoolingBonus` (3 Lesestellen
-      in `HeatHandler` – das Hitze-Kühlungstalent hat dadurch **keine Wirkung**),
-      `StopArmGauntletSession` und `StopBodyCircuitSession` (je 2 Lesestellen in
-      `TrainingHandler`). Alle drei werden gelesen, aber **nirgends gesetzt**; die
-      Lesestellen sind nil-geprüft und laufen still ins Leere.
+- [ ] **Zwei wirkungslose `_G`-Funktionen**: `StopArmGauntletSession` und
+      `StopBodyCircuitSession` (je 2 Lesestellen in `TrainingHandler`). Beide werden
+      gelesen, aber **nirgends gesetzt**; die Lesestellen sind nil-geprüft und laufen
+      still ins Leere. (`GetTalentHeatCoolingBonus` war der dritte Fall und ist erledigt:
+      der Effekt hängt jetzt als Zweiteffekt an „Meltdown Mastery". Das dort im Kommentar
+      genannte Talent „Titan Regeneration" hat es im Baum nie gegeben.)
 - [ ] **Achievement-Vergabe für den Altbestand**: 30 der 41 Achievements hängen an
       `_G.IncrementAchievementCounter`, das von **keiner Stelle** aufgerufen wird – sie
       werden nie vergeben. Die 11 neuen laufen über `statKey` und die Lebensstatistik
