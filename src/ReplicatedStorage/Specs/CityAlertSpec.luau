@@ -213,13 +213,25 @@ return {
 		{
 			id = "alert.level5.has-protected-buildings",
 			intent = "Der Guardian stellt sich vor wichtige Gebäude, markiert per "
-				.. "'GuardianProtect'-Tag. JEDE Stadt mit Guardian braucht mindestens eines. "
-				.. "Ohne Markierung greift ein Rückfall, der EIN einziges Gebäude wählt (das "
-				.. "mit der höchsten MaxHealth) -- der Guardian bewacht dann eine Ecke der "
-				.. "Stadt statt sie zu verteidigen. Seit der Spawn-Punkt ersatzweise aus "
-				.. "diesem Gebäude abgeleitet wird (für Städte ohne 'GuardianSpawn'-Part), "
-				.. "entscheidet die Markierung zusätzlich darüber, WO der Guardian erscheint.",
+				.. "'GuardianProtect'-Tag. Den vergibt der GuardianProtectTagger automatisch "
+				.. "an alles mit BuildingLevel L2/L3 -- eine Stadt ohne Markierung hat also "
+				.. "keine typisierten Gebäude, ist mithin noch nicht ausgestaltet. Sie "
+				.. "SPIELT trotzdem: der Rückfall in findProtectedBuildings nimmt dann die "
+				.. "grössten Gebäude nach MaxHealth. Der bleibt aber eine Notlösung -- er "
+				.. "misst Wichtigkeit an Trefferpunkten statt an der Rolle im Stadtbild, "
+				.. "und der Spawn-Punkt wird für Städte ohne 'GuardianSpawn'-Part daraus "
+				.. "abgeleitet.",
 			needsWorkspace = true,
+			-- Village, LargeCity und MegaCity werden gerade erst mit typisierten Gebäuden
+			-- bestückt (Stand: die drei haben ZUSAMMEN 64 Sektionen, keine davon L2/L3 --
+			-- City allein hat 94, davon 62). Bis dahin tragen sie den Rückfall. Die drei
+			-- Einträge MÜSSEN weg, sobald die Städte fertig sind, sonst verschlucken sie
+			-- eine echte Lücke.
+			knownViolations = {
+				"Village: kein Gebäude",
+				"LargeCity: kein Gebäude",
+				"MegaCity: kein Gebäude",
+			},
 			-- Geprüft wird JE STADT. Die frühere Fassung fragte nur, ob IRGENDWO auf der
 			-- Welt etwas markiert ist -- das sagt nichts darüber, ob diese eine Stadt
 			-- versorgt ist, und hätte eine vergessene Stadt durchgewinkt.
@@ -234,7 +246,7 @@ return {
 						if (byCity[city.name] or 0) == 0 then
 							table.insert(
 								violations,
-								city.name .. ": kein Gebäude mit 'GuardianProtect' getaggt -- Guardian nutzt den Ein-Gebäude-Rückfall"
+								city.name .. ": kein Gebäude mit 'GuardianProtect' getaggt -- Stadt noch nicht mit L2/L3-Gebäuden bestückt, Guardian läuft auf dem MaxHealth-Rückfall"
 							)
 						end
 					end

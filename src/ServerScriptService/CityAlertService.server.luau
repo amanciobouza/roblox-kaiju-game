@@ -11,6 +11,7 @@
 -- CityAlertLevelChanged. Künftige Alert-Level 3+ brauchen NUR einen weiteren Eintrag in
 -- CityAlertConfig + einen weiteren Listener, OHNE dieses Script anzufassen.
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -317,7 +318,52 @@ local function computeCityBounds(cityName)
 		end
 	end
 	if not container then
-		return nil
+		-- Rueckfall: keine Stadt-Container-Instanz gefunden. Das trifft die PrologueCity --
+		-- resolveCityName akzeptiert das CityName-Attribut an JEDEM Vorfahren beliebiger
+		-- Klasse, die Suche oben verlangt dagegen ein Model oder Folder. Beide Wege liefen
+		-- dadurch auseinander: die Eskalation ordnete die Haeuser korrekt zu, waehrend die
+		-- Stadt keine Grenzen bekam -- und ohne Grenzen wird CurrentCityName dort nie
+		-- gesetzt, weshalb der Guardian dieser Stadt nie einen Spieler findet.
+		--
+		-- Die Grenzen kommen dann aus den Haeusern selbst, ueber dieselbe Aufloesung wie
+		-- die Eskalation. Bewusst nur als RUECKFALL: fuer Staedte mit Container bleibt die
+		-- bisherige Rechnung unveraendert, sonst wuerden sich dort die Grenzen aendern
+		-- (der Container enthaelt auch Strassen und Requisiten, die Haeuser nicht).
+		local houseTag = _G.HOUSE_TAG or "KaijuHouse"
+		local minHX, maxHX, minHZ, maxHZ = math.huge, -math.huge, math.huge, -math.huge
+		local foundHouse = false
+		for _, house in ipairs(CollectionService:GetTagged(houseTag)) do
+			if resolveCityName(house) == cityName then
+				local center, size
+				if house:IsA("BasePart") then
+					center, size = house.Position, house.Size
+				elseif house:IsA("Model") then
+					local boundsCFrame, boundsSize = house:GetBoundingBox()
+					center, size = boundsCFrame.Position, boundsSize
+				end
+				if center then
+					foundHouse = true
+					minHX = math.min(minHX, center.X - size.X * 0.5)
+					maxHX = math.max(maxHX, center.X + size.X * 0.5)
+					minHZ = math.min(minHZ, center.Z - size.Z * 0.5)
+					maxHZ = math.max(maxHZ, center.Z + size.Z * 0.5)
+				end
+			end
+		end
+		if not foundHouse then
+			return nil
+		end
+		local PADDING = 20
+		print(string.format(
+			"[Kaiju-Debug] Stadtgrenzen %s: X %.0f..%.0f | Z %.0f..%.0f (aus Haeusern, kein Container)",
+			cityName, minHX, maxHX, minHZ, maxHZ
+		))
+		return {
+			minX = minHX - PADDING,
+			maxX = maxHX + PADDING,
+			minZ = minHZ - PADDING,
+			maxZ = maxHZ + PADDING,
+		}
 	end
 
 	local minX, maxX, minZ, maxZ = math.huge, -math.huge, math.huge, -math.huge
@@ -356,6 +402,42 @@ local function getCurrentCityForPosition(position)
 	end
 	return "None"
 end
+
+-- Grenzen aller Staedte einmal aktiv berechnen, statt nur traege bei Bedarf.
+--
+-- Zwei Gruende. Erstens bricht getCurrentCityForPosition ab, sobald eine Stadt passt --
+-- die dahinter liegenden Staedte werden nie berechnet, solange ein Spieler in einer
+-- frueheren steht. Zweitens merkt sich der Zwischenspeicher einen Fehlschlag als 'false',
+-- und zwar dauerhaft: liefe die Berechnung, bevor HouseHandler seine KaijuHouse-Tags
+-- gesetzt hat, bliebe die betroffene Stadt fuer den Rest der Sitzung ohne Grenzen -- und
+-- ihr Guardian damit ohne Ziel, weil CurrentCityName dort nie gesetzt wird.
+--
+-- Deshalb hier mehrere Anlaeufe mit Abstand: was beim ersten Mal nicht da war, wird beim
+-- naechsten gefunden. Sobald eine Stadt Grenzen hat, wird sie nicht neu berechnet.
+local BOUNDS_WARMUP_ATTEMPTS = 3
+local BOUNDS_WARMUP_INTERVAL = 5
+
+task.spawn(function()
+	for attempt = 1, BOUNDS_WARMUP_ATTEMPTS do
+		task.wait(BOUNDS_WARMUP_INTERVAL)
+		local missing = {}
+		for _, cityName in ipairs(CityAlertConfig.CityOrder) do
+			if type(cityBounds[cityName]) ~= "table" then
+				cityBounds[cityName] = computeCityBounds(cityName) or false
+				if type(cityBounds[cityName]) ~= "table" then
+					table.insert(missing, cityName)
+				end
+			end
+		end
+		if #missing == 0 then
+			return
+		end
+		if attempt == BOUNDS_WARMUP_ATTEMPTS then
+			warn("[Kaiju-Debug] Ohne Stadtgrenzen (CurrentCityName wird dort nie gesetzt, "
+				.. "der Guardian dieser Stadt findet nie ein Ziel): " .. table.concat(missing, ", "))
+		end
+	end
+end)
 
 task.spawn(function()
 	while true do
