@@ -74,7 +74,6 @@ local function setGuardianState(guardian, cityName, newState, detail)
 		detail and (" -- " .. detail) or ""
 	))
 end
-local RESPAWN_DELAY = 45 -- Sekunden, bis ein besiegter Guardian dieser Stadt wieder auftaucht
 
 -- Platzhalter-Sound-IDs -- bitte bei Gelegenheit durch echte ersetzen.
 local DEPLOY_SOUND_ID = "rbxassetid://9081625499" -- Sirenen/Dampf beim Aufstehen
@@ -733,16 +732,6 @@ local function damageGuardian(cityName, amount, attackerPlayer)
 		guardian.defeated = true
 		setGuardianState(guardian, cityName, "Defeated")
 		setVisorDefeated(guardian)
-		if guardian.animation then
-			guardian.animation.PlayAnimation("Defeat")
-			-- Aufraeumen, kurz bevor das Modell entfernt wird: Destroy() loest die
-			-- Client-Skripte und das RemoteEvent auf, die Attach() angelegt hat.
-			task.delay(1.9, function()
-				pcall(function()
-					guardian.animation.Destroy()
-				end)
-			end)
-		end
 
 		-- Achievements: "Ersten Guardian besiegt".
 		-- Lebensstatistik. Im Mehrspielerbetrieb zaehlt der LETZTE Treffer: attackerPlayer
@@ -774,33 +763,33 @@ local function damageGuardian(cityName, amount, attackerPlayer)
 			end
 		end
 
-		-- Langsam umkippen, dann verschwinden.
-		local currentCFrame = guardian.model:GetPivot()
-		local fallCFrame = currentCFrame * CFrame.Angles(math.rad(80), 0, 0)
-		TweenService:Create(guardian.model.PrimaryPart, TweenInfo.new(1.2, Enum.EasingStyle.Quad), {}):Play()
-		local fallTween = TweenService:Create(guardian.humanoidRootAnchor or guardian.model.PrimaryPart, TweenInfo.new(1.2, Enum.EasingStyle.Quad), {})
-		fallTween:Play()
-		task.spawn(function()
-			pcall(function()
-				guardian.model:PivotTo(fallCFrame)
+		-- Der besiegte Guardian BLEIBT liegen, bis er ersetzt wird. Er verschwand
+		-- frueher nach zwei Sekunden -- das nahm dem Sieg seinen sichtbaren Beleg. Er ist
+		-- dabei harmlos: guardian.defeated laesst updateGuardian, damageGuardian und
+		-- handleGuardianTouch sofort zurueckkehren.
+		if guardian.animation then
+			-- Mit Rig uebernimmt die Defeat-Animation das Zusammenbrechen. Ein zusaetzliches
+			-- PivotTo wuerde dagegen arbeiten und die Pose verbiegen.
+			guardian.animation.PlayAnimation("Defeat")
+		else
+			-- Ohne Rig (ServerStorage-Platzhalter) bleibt das Umkippen von Hand.
+			local currentCFrame = guardian.model:GetPivot()
+			local fallCFrame = currentCFrame * CFrame.Angles(math.rad(80), 0, 0)
+			task.spawn(function()
+				pcall(function()
+					guardian.model:PivotTo(fallCFrame)
+				end)
 			end)
-		end)
+		end
 
-		task.delay(2, function()
-			if guardian.model and guardian.model.Parent then
-				guardian.model:Destroy()
-			end
-		end)
-
-		task.delay(RESPAWN_DELAY, function()
-			-- Nur respawnen, falls die Stadt noch/wieder auf Level 5 ist.
-			if _G.GetCityAlertLevel and _G.GetCityAlertLevel(cityName) == 5 then
-				activeGuardians[cityName] = nil
-				_G.SpawnGuardianForCity(cityName)
-			else
-				activeGuardians[cityName] = nil
-			end
-		end)
+		-- KEIN zeitgesteuerter Respawn. Der Guardian bleibt liegen, bis die Alarmstufe
+		-- unter 5 faellt -- und das passiert erst, wenn die Stadt gebrochen ist und die
+		-- freie Zerstoerungsphase abgelaufen ist (CITY BROKEN setzt 5 -> 0). Das Abraeumen
+		-- uebernimmt dann despawnGuardianForCity, das genau daran haengt.
+		--
+		-- Ein Respawn nach fester Zeit lief quer zu diesem Konzept: er haette einen
+		-- zweiten Guardian in eine Stadt gesetzt, deren Guardian-Aufgabe bereits erledigt
+		-- ist, und den Sieg damit wieder entwertet.
 	end
 end
 _G.DamageGuardian = damageGuardian
@@ -930,7 +919,11 @@ _G.GetGuardianModel = function(cityName)
 end
 
 -- ===== Waffensysteme =====
-local function fireImpactFist(guardian, target, config)
+-- cityName wird fuer die Statistik gebraucht ("HitBy.Guardian.<Stadt>"). Der Parameter
+-- FEHLTE: die Zeile griff auf eine nicht existierende globale Variable zu und warf beim
+-- Verketten. Aufgefallen ist das nie, weil der Nahangriff wegen zu knapp gemessener
+-- Reichweite ueberhaupt nicht ausloeste -- ein Fehler, der hinter einem anderen lag.
+local function fireImpactFist(guardian, cityName, target, config)
 	if os.clock() - (guardian.lastFistAt or 0) < config.GuardianImpactFistCooldown then
 		return
 	end
@@ -1013,7 +1006,12 @@ local function fireRepulsorPulse(guardian, cityName, config)
 			local targetRoot = player.Character:FindFirstChild("HumanoidRootPart")
 			local targetHumanoid = player.Character:FindFirstChildOfClass("Humanoid")
 			if targetRoot and targetHumanoid and targetHumanoid.Health > 0 then
-				local distance = (targetRoot.Position - origin).Magnitude
+				-- Waagerecht messen, wie beim Ausloeser: origin ist der ChestCore und liegt
+				-- weit ueber dem Boden -- dreidimensional gemessen zaehlte diese Hoehe voll
+				-- mit und der Impuls traf niemanden, obwohl er sichtbar feuerte. Der
+				-- Halbmesser des Spielers wird NICHT abgezogen (siehe attackIfInRange).
+				local flat = (targetRoot.Position - origin) * Vector3.new(1, 0, 1)
+				local distance = flat.Magnitude
 				if distance <= config.GuardianRepulsorRadius then
 					targetHumanoid:TakeDamage(config.GuardianRepulsorDamage)
 					-- Lebensstatistik: der Repulsor trifft alle Spieler im Radius -- hier
@@ -1240,6 +1238,52 @@ local GUARDIAN_ATTACK_ANIMATIONS = {
 	AegisInterceptor = { Fist = "TwinIonCannons", Pulse = "ShoulderMissileSalvo" },
 }
 
+-- Die Effekte liegen NEBEN den Animationen, in eigenen Modulen. Die Animation bewegt nur
+-- das Skelett; Licht, Funken und Schockwelle kommen aus WardenShepherdCombatVFX. Der
+-- generische GuardianRuntimeController ruft dieses Modul nicht auf -- er kennt nur die
+-- Marshal-Faehigkeiten -- und ohne den Aufruf hier schwingt der Guardian den Baton im
+-- Leeren und der Warnimpuls bleibt unsichtbar.
+local wardenVFX = nil
+local function getWardenVFX()
+	if wardenVFX ~= nil then
+		return wardenVFX or nil
+	end
+	local workshop = ReplicatedStorage:FindFirstChild("TrenchbornAssetWorkshop")
+	local module = workshop and workshop:FindFirstChild("WardenShepherdCombatVFX")
+	if not module then
+		wardenVFX = false
+		warn("[CityDefenderService] WardenShepherdCombatVFX nicht gefunden -- Angriffe bleiben ohne Effekt.")
+		return nil
+	end
+	local ok, loaded = pcall(require, module)
+	wardenVFX = ok and loaded or false
+	return wardenVFX or nil
+end
+
+-- Telegrafierdauer des Warnimpulses: rein visuell (wie lange das gruene Licht auflaedt),
+-- deshalb hier und nicht in CityAlertConfig -- dort stehen die Kampfwerte.
+local WARNING_PULSE_TELEGRAPH = 0.6
+
+local function playGuardianVFX(guardian, kind, config)
+	if guardian.assetName ~= "WardenShepherd" then
+		return -- Marshal und Aegis haben eigene Effekte, noch nicht verdrahtet
+	end
+	local vfx = getWardenVFX()
+	if not vfx then
+		return
+	end
+	pcall(function()
+		if kind == "Fist" then
+			vfx.ShockBaton(guardian.model)
+		else
+			vfx.WarningPulse(guardian.model, {
+				TelegraphDuration = WARNING_PULSE_TELEGRAPH,
+				Radius = config.GuardianRepulsorRadius,
+			})
+		end
+	end)
+end
+
 -- Wie lange eine Angriffsanimation laufen darf, bevor Laufen/Stehen sie wieder ablosen.
 local ATTACK_ANIMATION_HOLD = 1.2
 
@@ -1331,22 +1375,50 @@ end
 -- Angreifen, wenn in Reichweite. Beide Angriffe haben eine eigene Cooldown-Sperre, der
 -- Aufruf je Bild ist deshalb unbedenklich.
 local function attackIfInRange(guardian, cityName, config, target, targetPosition)
-	local distance = (targetPosition - guardian.model.PrimaryPart.Position).Magnitude
+	-- WAAGERECHT messen. Seit FleetRig laeuft, sitzt PrimaryPart auf Huefthoehe des
+	-- Skeletts statt auf der Sohle -- bei einer rund 42 Studs hohen Figur liegt ein
+	-- Spieler zu seinen Fuessen damit schon aus geometrischen Gruenden ueber 20 Studs
+	-- entfernt. Gegen GuardianImpactFistRange (14) gemessen konnte der Nahangriff
+	-- dadurch NIE ausloesen, egal wie dicht man stand.
+	local flat = (targetPosition - guardian.model.PrimaryPart.Position) * Vector3.new(1, 0, 1)
+	-- NUR sein eigener Halbmesser. Den des Spielers abzuziehen war ein Fehlgriff:
+	-- character:GetBoundingBox() liefert die volle Ausdehnung samt ausgestreckter
+	-- Gliedmassen -- beim skalierten Kaiju rund 142 Studs Breite, also Halbmesser 71.
+	-- Damit wurde die Luecke bei JEDEM Abstand auf 0 geklemmt, der Impuls war nicht mehr
+	-- erreichbar und der Nahangriff haette schon aus 89 Studs ausgeloest. Der Messwert
+	-- taugt nicht als Kollisionsradius.
+	local distance = math.max(flat.Magnitude - (guardian.bodyRadius or 0), 0)
+
 	local animations = GUARDIAN_ATTACK_ANIMATIONS[guardian.assetName]
 	-- Die Animation wird nur gespielt, wenn der Angriff auch WIRKLICH ausgeloest hat --
 	-- beide Angriffsfunktionen haben eine eigene Cooldown-Sperre und tun sonst nichts.
 	-- Ohne diese Pruefung zuckte er je Bild, ohne zuzuschlagen.
 	if distance <= config.GuardianImpactFistRange then
 		local before = guardian.lastFistAt
-		fireImpactFist(guardian, target, config)
+		fireImpactFist(guardian, cityName, target, config)
 		if guardian.lastFistAt ~= before then
-			playGuardianAction(guardian, animations and animations.Fist)
+			local name = animations and animations.Fist
+			playGuardianAction(guardian, name)
+			playGuardianVFX(guardian, "Fist", config)
+			-- Ausgabe nur bei einem TATSAECHLICHEN Treffer -- die Cooldowns (3s bzw. 6s)
+			-- halten das von selbst lesbar. Ohne sie war nicht zu unterscheiden, ob der
+			-- Guardian nicht angreift oder ob nur die Wirkung ausbleibt.
+			print(string.format(
+				"[Kaiju-Debug] Guardian %s greift an: %s (Nahkampf, %.0f Studs, Schaden %s)",
+				cityName, name or "ohne Animation", distance, tostring(config.GuardianImpactFistDamage)
+			))
 		end
 	elseif distance <= config.GuardianRepulsorRadius * 1.3 then
 		local before = guardian.lastRepulsorAt
 		fireRepulsorPulse(guardian, cityName, config)
 		if guardian.lastRepulsorAt ~= before then
-			playGuardianAction(guardian, animations and animations.Pulse)
+			local name = animations and animations.Pulse
+			playGuardianAction(guardian, name)
+			playGuardianVFX(guardian, "Pulse", config)
+			print(string.format(
+				"[Kaiju-Debug] Guardian %s greift an: %s (Flaeche, %.0f Studs, Schaden %s)",
+				cityName, name or "ohne Animation", distance, tostring(config.GuardianRepulsorDamage)
+			))
 		end
 	end
 end
@@ -1422,7 +1494,7 @@ local function updateGuardian(cityName, guardian, config)
 		local stillHere = false
 		if root then
 			local inCity = guardian.provokedBy:GetAttribute("CurrentCityName") == cityName
-			local distanceFromGuardian = (root.Position - rootPart.Position).Magnitude
+			local distanceFromGuardian = ((root.Position - rootPart.Position) * Vector3.new(1, 0, 1)).Magnitude
 			stillHere = inCity or distanceFromGuardian <= PUSH_OUT_DISTANCE
 		end
 		if stillHere then
@@ -1445,7 +1517,8 @@ local function updateGuardian(cityName, guardian, config)
 			if player:GetAttribute("CurrentCityName") == cityName then
 				local root = livingRoot(player)
 				if root then
-					local distance = (root.Position - rootPart.Position).Magnitude
+					local flat = (root.Position - rootPart.Position) * Vector3.new(1, 0, 1)
+					local distance = flat.Magnitude
 					if distance < closestDistance then
 						closest, closestDistance = player, distance
 					end
@@ -1508,10 +1581,19 @@ local function updateGuardian(cityName, guardian, config)
 
 			-- Ziel: zwischen Anker und Spieler stehen, dabei bis auf Schlagreichweite
 			-- heran. Das leistet beides zugleich -- er deckt das Gebaeude UND draengt.
+			-- Auf Armlaenge herangehen, gemessen ab der Koerperoberflaeche -- sonst
+			-- liefe er in den Spieler hinein und stemmte sich dauerhaft gegen dessen
+			-- Kollision.
+			-- Zielabstand fuer die Annaeherung: sein Halbmesser plus die halbe Armlaenge.
+			-- Vorher stand hier 0.8 -- gemessen kam er damit auf eine Luecke von 14 bis 15
+			-- Studs zum Stehen, also GENAU an der Schwelle von 14, und der Baton loeste mal
+			-- aus und mal nicht. Die Haelfte laesst spuerbaren Spielraum.
+			local strikeDistance = (guardian.bodyRadius or 0) + config.GuardianImpactFistRange * 0.5
+
 			local destination
 			if defendPart then
 				local reach = math.min(threatDistanceFromAnchor, leashRadius)
-				local stopShort = math.min(config.GuardianImpactFistRange * 0.8, reach)
+				local stopShort = math.min(strikeDistance, reach)
 				local direction = threatDistanceFromAnchor > 0.1 and threatFromAnchor.Unit or rootPart.CFrame.LookVector
 				destination = anchorPosition + direction * math.max(reach - stopShort, 0)
 			else
@@ -1519,7 +1601,7 @@ local function updateGuardian(cityName, guardian, config)
 				local toThreat = (threatRoot.Position - rootPart.Position) * Vector3.new(1, 0, 1)
 				local distance = toThreat.Magnitude
 				local direction = distance > 0.1 and toThreat.Unit or rootPart.CFrame.LookVector
-				destination = rootPart.Position + direction * math.max(distance - config.GuardianImpactFistRange * 0.8, 0)
+				destination = rootPart.Position + direction * math.max(distance - strikeDistance, 0)
 			end
 
 			local arrived = stepTowards(guardian, config, destination)
@@ -1794,6 +1876,15 @@ _G.SpawnGuardianForCity = function(cityName)
 	end)
 	if okBounds and boundsSize then
 		guardian.soleOffset = model.PrimaryPart.Position.Y - (boundsCFrame.Position.Y - boundsSize.Y * 0.5)
+
+		-- Waagerechter Halbmesser des Koerpers. Die Angriffsreichweiten im Config sind
+		-- ARMLAENGEN -- was der Guardian ueber seinen eigenen Koerper hinaus erreicht --
+		-- gemessen wird aber ab PrimaryPart, also ab seiner Mitte. Bei einer rund 26 Studs
+		-- breiten Figur liegen die 14 Studs des Nahangriffs damit INNERHALB seines Rumpfes:
+		-- die Kollision haelt den Spieler weiter draussen, als der Arm laut Config reicht,
+		-- und der Baton konnte nie ausloesen. Der Impuls (Radius 22) kam durch -- genau das
+		-- Bild, das im Spiel zu sehen war.
+		guardian.bodyRadius = math.max(boundsSize.X, boundsSize.Z) * 0.5
 	end
 
 	-- Ruhelage der Beine erfassen. MUSS nach dem PivotTo auf den Spawn-Punkt passieren --
@@ -1808,10 +1899,21 @@ _G.SpawnGuardianForCity = function(cityName)
 	playDeploySequence(cityName, spawnPosition)
 end
 
+-- Einziger Weg, auf dem ein Guardian das Spielfeld verlaesst: die Alarmstufe faellt unter
+-- 5. Nach einer Niederlage heisst das konkret, dass die Stadt gebrochen wurde und die
+-- freie Zerstoerungsphase vorbei ist -- bis dahin liegt er sichtbar da.
 local function despawnGuardianForCity(cityName)
 	local guardian = activeGuardians[cityName]
 	if not guardian then
 		return
+	end
+	-- Zuerst die Animations-Schnittstelle: ihr Destroy() entfernt die Client-Skripte aus
+	-- den PlayerGuis und das RemoteEvent aus ReplicatedStorage. Ohne das bliebe je
+	-- besiegtem Guardian ein totes Skript-Paar zurueck.
+	if guardian.animation then
+		pcall(function()
+			guardian.animation.Destroy()
+		end)
 	end
 	if guardian.model and guardian.model.Parent then
 		guardian.model:Destroy()
