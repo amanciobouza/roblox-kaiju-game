@@ -58,6 +58,16 @@ end
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "NavigationGui"
 screenGui.ResetOnSpawn = false
+-- AUSDRUECKLICH Sibling, nicht auf die Vorgabe verlassen: unter Global vergleicht Roblox
+-- den ZIndex ueber das GANZE ScreenGui hinweg. Das rote Laempchen an einem Leistenknopf
+-- (ZIndex 3) lag dadurch VOR einem geoeffneten Vollbild-Panel (ZIndex 1) -- man sah die
+-- Punkte durch den Hilfe-Bildschirm hindurch, waehrend die Knoepfe selbst dahinter blieben.
+--
+-- Unter Sibling zaehlt der ZIndex nur unter Geschwistern, und ein Kind liegt immer ueber
+-- seinem Eltern-Element. Ein Panel mit hoeherem ZIndex als die Leiste deckt damit ihren
+-- ganzen Teilbaum ab, ohne dass jedes einzelne Kind angehoben werden muesste.
+-- Drei andere Bildschirme im Projekt setzen es aus demselben Grund.
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 -- WICHTIG: hoher DisplayOrder sorgt dafür, dass das Hauptmenü über anderen HUD-Elementen
 -- liegt (z.B. dem Berserker-Bonus) -- unabhängig von der Skript-Ladereihenfolge.
 screenGui.DisplayOrder = 90
@@ -410,6 +420,8 @@ local function createPlaceholderPanel(key, title, message)
 	panel.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
 	panel.Visible = false
 	panel.Parent = screenGui
+	-- Ueber der Menueleiste: siehe ZIndexBehavior oben.
+	panel.ZIndex = 5
 	applyComicStyle(panel, 20, 5)
 	-- Auch der Platzhalter ist ein Vollbild-Panel und braucht das Polster.
 	TopInsetUtils.Bind(panel)
@@ -458,6 +470,8 @@ achievementsPanel.AnchorPoint = Vector2.new(0, 0)
 achievementsPanel.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
 achievementsPanel.Visible = false
 achievementsPanel.Parent = screenGui
+-- Ueber der Menueleiste: siehe ZIndexBehavior oben.
+achievementsPanel.ZIndex = 5
 applyComicStyle(achievementsPanel, 20, 5)
 
 -- Inhalt unter der Roblox-Systemleiste hervorholen. IgnoreGuiInset zieht die
@@ -805,6 +819,8 @@ helpPanel.AnchorPoint = Vector2.new(0, 0)
 helpPanel.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
 helpPanel.Visible = false
 helpPanel.Parent = screenGui
+-- Ueber der Menueleiste: siehe ZIndexBehavior oben.
+helpPanel.ZIndex = 5
 applyComicStyle(helpPanel, 20, 5)
 
 -- Inhalt unter der Roblox-Systemleiste hervorholen. IgnoreGuiInset zieht die

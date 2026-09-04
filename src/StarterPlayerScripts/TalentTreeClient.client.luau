@@ -130,7 +130,7 @@ coinsLabel.BackgroundTransparency = 1
 coinsLabel.Font = Enum.Font.FredokaOne
 coinsLabel.TextScaled = true
 coinsLabel.TextColor3 = Color3.fromRGB(255, 220, 80)
-coinsLabel.Text = "🪙 0"
+coinsLabel.Text = "💰 0"
 coinsLabel.Parent = resourceRow
 
 -- ===== Aktive Forschung: Fortschrittsbalken + Abbrechen-Button =====
@@ -268,8 +268,7 @@ local detailName = Instance.new("TextLabel")
 detailName.Size = UDim2.new(1, -84, 0, 30)
 detailName.Position = UDim2.new(0, 78, 0, 10)
 detailName.BackgroundTransparency = 1
-detailName.Font = Enum.Font.LuckiestGuy
-detailName.TextScaled = true
+UiTypography.Subhead(detailName, 18)
 detailName.TextXAlignment = Enum.TextXAlignment.Left
 detailName.TextColor3 = Color3.new(1, 1, 1)
 detailName.TextWrapped = true
@@ -281,8 +280,7 @@ local detailLevel = Instance.new("TextLabel")
 detailLevel.Size = UDim2.new(1, -84, 0, 20)
 detailLevel.Position = UDim2.new(0, 78, 0, 42)
 detailLevel.BackgroundTransparency = 1
-detailLevel.Font = Enum.Font.FredokaOne
-detailLevel.TextScaled = true
+UiTypography.Body(detailLevel, 14)
 detailLevel.TextXAlignment = Enum.TextXAlignment.Left
 detailLevel.TextColor3 = Color3.fromRGB(180, 180, 190)
 detailLevel.Text = ""
@@ -306,8 +304,7 @@ local detailStatsHeader = Instance.new("TextLabel")
 detailStatsHeader.Size = UDim2.new(1, -20, 0, 18)
 detailStatsHeader.Position = UDim2.new(0, 10, 0, 172)
 detailStatsHeader.BackgroundTransparency = 1
-detailStatsHeader.Font = Enum.Font.LuckiestGuy
-detailStatsHeader.TextScaled = true
+UiTypography.Subhead(detailStatsHeader, 14)
 detailStatsHeader.TextXAlignment = Enum.TextXAlignment.Left
 detailStatsHeader.TextColor3 = Color3.fromRGB(255, 210, 80)
 detailStatsHeader.Text = "STATS"
@@ -318,8 +315,7 @@ local detailStatPrimary = Instance.new("TextLabel")
 detailStatPrimary.Size = UDim2.new(1, -20, 0, 22)
 detailStatPrimary.Position = UDim2.new(0, 10, 0, 192)
 detailStatPrimary.BackgroundTransparency = 1
-detailStatPrimary.Font = Enum.Font.FredokaOne
-detailStatPrimary.TextScaled = true
+UiTypography.Body(detailStatPrimary, 14)
 detailStatPrimary.TextXAlignment = Enum.TextXAlignment.Left
 detailStatPrimary.TextColor3 = Color3.fromRGB(120, 220, 140)
 detailStatPrimary.Text = ""
@@ -330,8 +326,7 @@ local detailStatTradeoff = Instance.new("TextLabel")
 detailStatTradeoff.Size = UDim2.new(1, -20, 0, 22)
 detailStatTradeoff.Position = UDim2.new(0, 10, 0, 216)
 detailStatTradeoff.BackgroundTransparency = 1
-detailStatTradeoff.Font = Enum.Font.FredokaOne
-detailStatTradeoff.TextScaled = true
+UiTypography.Body(detailStatTradeoff, 14)
 detailStatTradeoff.TextXAlignment = Enum.TextXAlignment.Left
 detailStatTradeoff.TextColor3 = Color3.fromRGB(230, 140, 40)
 detailStatTradeoff.Text = ""
@@ -343,8 +338,7 @@ local detailCostHeader = Instance.new("TextLabel")
 detailCostHeader.Size = UDim2.new(1, -20, 0, 18)
 detailCostHeader.Position = UDim2.new(0, 10, 0, 250)
 detailCostHeader.BackgroundTransparency = 1
-detailCostHeader.Font = Enum.Font.LuckiestGuy
-detailCostHeader.TextScaled = true
+UiTypography.Subhead(detailCostHeader, 14)
 detailCostHeader.TextXAlignment = Enum.TextXAlignment.Left
 detailCostHeader.TextColor3 = Color3.fromRGB(255, 210, 80)
 detailCostHeader.Text = "COST"
@@ -355,8 +349,7 @@ local detailCostEnergy = Instance.new("TextLabel")
 detailCostEnergy.Size = UDim2.new(1, -20, 0, 24)
 detailCostEnergy.Position = UDim2.new(0, 10, 0, 270)
 detailCostEnergy.BackgroundTransparency = 1
-detailCostEnergy.Font = Enum.Font.FredokaOne
-detailCostEnergy.TextScaled = true
+UiTypography.Body(detailCostEnergy, 14)
 detailCostEnergy.TextXAlignment = Enum.TextXAlignment.Left
 detailCostEnergy.TextColor3 = Color3.new(1, 1, 1)
 detailCostEnergy.Text = ""
@@ -367,8 +360,7 @@ local detailCostCoins = Instance.new("TextLabel")
 detailCostCoins.Size = UDim2.new(1, -20, 0, 24)
 detailCostCoins.Position = UDim2.new(0, 10, 0, 296)
 detailCostCoins.BackgroundTransparency = 1
-detailCostCoins.Font = Enum.Font.FredokaOne
-detailCostCoins.TextScaled = true
+UiTypography.Body(detailCostCoins, 14)
 detailCostCoins.TextXAlignment = Enum.TextXAlignment.Left
 detailCostCoins.TextColor3 = Color3.fromRGB(255, 220, 80)
 detailCostCoins.Text = ""
@@ -379,8 +371,7 @@ local detailResearchTime = Instance.new("TextLabel")
 detailResearchTime.Size = UDim2.new(1, -20, 0, 24)
 detailResearchTime.Position = UDim2.new(0, 10, 0, 322)
 detailResearchTime.BackgroundTransparency = 1
-detailResearchTime.Font = Enum.Font.FredokaOne
-detailResearchTime.TextScaled = true
+UiTypography.Body(detailResearchTime, 14)
 detailResearchTime.TextXAlignment = Enum.TextXAlignment.Left
 detailResearchTime.TextColor3 = Color3.fromRGB(180, 180, 220)
 detailResearchTime.Text = ""
@@ -391,8 +382,7 @@ local detailPrereqLabel = Instance.new("TextLabel")
 detailPrereqLabel.Size = UDim2.new(1, -20, 0, 40)
 detailPrereqLabel.Position = UDim2.new(0, 10, 0, 352)
 detailPrereqLabel.BackgroundTransparency = 1
-detailPrereqLabel.Font = Enum.Font.FredokaOne
-detailPrereqLabel.TextScaled = true
+UiTypography.Body(detailPrereqLabel, 14)
 detailPrereqLabel.TextWrapped = true
 detailPrereqLabel.TextXAlignment = Enum.TextXAlignment.Left
 detailPrereqLabel.TextColor3 = Color3.fromRGB(230, 100, 100)
@@ -496,7 +486,7 @@ local function updateResourceDisplay()
 	for _, energyType in ipairs(TalentTreeConfig.EnergyOrder) do
 		resourceLabels[energyType].Text = ENERGY_ICONS[energyType] .. " " .. math.floor(talentState.energy[energyType] or 0)
 	end
-	coinsLabel.Text = "🪙 " .. math.floor(talentState.coins or 0)
+	coinsLabel.Text = "💰 " .. math.floor(talentState.coins or 0)
 end
 
 -- ===== Positions-Berechnung: Zweig-Reihenfolge wird DYNAMISCH aus den Knoten
@@ -699,7 +689,7 @@ local function selectTalent(talent, state, level)
 		detailCostEnergy.Text = ENERGY_ICONS[talent.energyType] .. " " .. cost.energyAmount
 		if cost.coinAmount > 0 then
 			detailCostCoins.Visible = true
-			detailCostCoins.Text = "🪙 " .. cost.coinAmount
+			detailCostCoins.Text = "💰 " .. cost.coinAmount
 		else
 			detailCostCoins.Visible = false
 		end

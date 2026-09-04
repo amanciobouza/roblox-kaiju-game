@@ -63,15 +63,20 @@ giftDescriptionsFolder.Parent = ReplicatedStorage
 -- Jeder Geschenktyp hat sein eigenes Symbol. CoinsBoost bekommt bewusst ein anderes als
 -- die einfache Münzgabe: sonst wären genau die beiden nicht zu unterscheiden, deren
 -- Unterschied zählt (sofort vs. zeitlich begrenzt).
+--
+-- ACHTUNG bei der Auswahl: die Münze U+1FA99 stammt aus Unicode 14 (2021) und wird von
+-- der Roblox-Schrift NICHT dargestellt -- die vier Münz-Geschenke standen dadurch ohne
+-- Symbol da, während alle anderen erschienen. Nur Zeichen verwenden, die alt genug sind;
+-- die hier benutzten stammen aus 2010 bis 2018.
 local function iconForGift(gift)
 	if gift.type == "Coins" then
-		return "🪙"
+		return "💰"
 	elseif gift.type == "XP" then
 		return "⭐"
 	elseif gift.type == "Evolution" then
 		return "🧬"
 	elseif gift.type == "CoinsBoost" then
-		return "💰"
+		return "📈"
 	elseif gift.type == "DamageBoost" then
 		return "💥"
 	elseif gift.type == "MegaBoost" then

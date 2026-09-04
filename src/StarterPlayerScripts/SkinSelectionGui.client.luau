@@ -178,7 +178,7 @@ coinsLabel.BackgroundColor3 = Color3.fromRGB(40, 35, 20)
 coinsLabel.TextColor3 = Color3.fromRGB(255, 205, 60)
 coinsLabel.Font = Enum.Font.FredokaOne
 coinsLabel.TextScaled = true
-coinsLabel.Text = "🪙 0"
+coinsLabel.Text = "💰 0"
 coinsLabel.Parent = screenGui
 applyComicStyle(coinsLabel, 8, 2)
 
@@ -1538,7 +1538,7 @@ local function updateCoinsLabel()
 	end
 	local leaderstats = player:FindFirstChild("leaderstats")
 	if leaderstats and leaderstats:FindFirstChild("Coins") then
-		coinsLabel.Text = "🪙 " .. NumberFormat.Format(leaderstats.Coins.Value)
+		coinsLabel.Text = "💰 " .. NumberFormat.Format(leaderstats.Coins.Value)
 	end
 end
 
@@ -1552,12 +1552,12 @@ local function animateCoinCount(fromValue, toValue)
 	connection = RunService.RenderStepped:Connect(function()
 		local alpha = math.clamp((os.clock() - startTime) / duration, 0, 1)
 		local current = math.floor(fromValue + (toValue - fromValue) * alpha)
-		coinsLabel.Text = "🪙 " .. NumberFormat.Format(current)
+		coinsLabel.Text = "💰 " .. NumberFormat.Format(current)
 
 		if alpha >= 1 then
 			connection:Disconnect()
 			isAnimatingCoins = false
-			coinsLabel.Text = "🪙 " .. NumberFormat.Format(toValue)
+			coinsLabel.Text = "💰 " .. NumberFormat.Format(toValue)
 		end
 	end)
 end
@@ -2074,7 +2074,7 @@ local function refreshDetail()
 		detailAction.BackgroundColor3 = Color3.fromRGB(160, 160, 160)
 		detailAction.AutoButtonColor = false
 	else
-		detailAction.Text = "🪙 Buy for " .. skin.Cost
+		detailAction.Text = "💰 Buy for " .. skin.Cost
 		detailAction.BackgroundColor3 = Color3.fromRGB(255, 180, 40)
 		detailAction.AutoButtonColor = true
 	end
@@ -2158,7 +2158,7 @@ local function refreshShop()
 				button.Text = "🔒 " .. skin.Name .. " - Level " .. skin.RequiredLevel .. " required"
 				button.BackgroundColor3 = Color3.fromRGB(120, 60, 60)
 			elseif canAfford then
-				button.Text = "🪙 " .. skin.Name .. " (" .. skin.Cost .. ")"
+				button.Text = "💰 " .. skin.Name .. " (" .. skin.Cost .. ")"
 				button.BackgroundColor3 = Color3.fromRGB(255, 180, 40)
 			else
 				button.Text = "🔒 " .. skin.Name .. " (" .. skin.Cost .. ")"
