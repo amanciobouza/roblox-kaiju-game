@@ -594,6 +594,15 @@ local function destroyCluster(cluster)
 	end
 end
 
+-- Vorwaertsdeklaration: sinkBarricadeAndVanish wird hier benutzt, aber erst rund 170
+-- Zeilen weiter unten definiert. Ohne diese Zeile loest der Name auf ein GLOBAL auf und
+-- ist nil -- der Aufruf im task.spawn unten warf dann "attempt to call a nil value", und
+-- weil er in einem eigenen Strang lief, blieb der Fehler leicht unbemerkt: die Barrikade
+-- verschwand einfach nicht.
+--
+-- Gefunden hat das tools/source-check.py (Regel source.forward-reference).
+local sinkBarricadeAndVanish
+
 -- Sauberer Despawn (Alert-Level sinkt wieder auf 2, keine Kampf-Zerstörung): Barrikade
 -- versinkt im Boden und verpufft, statt einzustürzen.
 local function despawnClusterCleanly(cluster)
@@ -769,7 +778,7 @@ end
 -- destroyCluster() weiter oben.
 local SINK_DURATION = 0.9
 
-local function sinkBarricadeAndVanish(barricadeModel)
+function sinkBarricadeAndVanish(barricadeModel)
 	local tweens = {}
 	for _, part in ipairs(barricadeModel:GetDescendants()) do
 		if part:IsA("BasePart") then

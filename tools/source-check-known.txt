@@ -65,7 +65,6 @@ source.client-getorcreate|src/StarterPlayerScripts/TalentTreeClient.client.luau:
 source.client-getorcreate|src/StarterPlayerScripts/TeleportHomeClient.client.luau:13 holt TeleportHomeEvent per GetOrCreate statt WaitForChild
 source.client-getorcreate|src/StarterPlayerScripts/TrainingClient.client.luau:13 holt TrainClickEvent per GetOrCreate statt WaitForChild
 source.client-getorcreate|src/StarterPlayerScripts/TrainingClient.client.luau:14 holt StopTrainingEvent per GetOrCreate statt WaitForChild
-source.forward-reference|src/ServerScriptService/BarricadeClusterService.server.luau:603 benutzt sinkBarricadeAndVanish, deklariert erst in Zeile 772 -- löst still auf nil auf
 source.g-read-without-write|_G.StopArmGauntletSession: 2 Lesestelle(n), keine Schreibstelle -- z.B. src/ServerScriptService/TrainingHandler.server.luau:719
 source.g-read-without-write|_G.StopBodyCircuitSession: 2 Lesestelle(n), keine Schreibstelle -- z.B. src/ServerScriptService/TrainingHandler.server.luau:729
 source.g-write-without-read|_G.AddHeat: gesetzt in src/ServerScriptService/HeatHandler.server.luau:180, aber nirgends aufgerufen
@@ -77,9 +76,9 @@ source.g-write-without-read|_G.EndShowdown: gesetzt in src/ServerScriptService/S
 source.g-write-without-read|_G.EscalationTriggered: gesetzt in src/ServerScriptService/EscalationService.server.luau:35, aber nirgends aufgerufen
 source.g-write-without-read|_G.FindBuildingsInRadius: gesetzt in src/ServerScriptService/EscalationService.server.luau:141, aber nirgends aufgerufen
 source.g-write-without-read|_G.FindNearestReactiveSpawnPoint: gesetzt in src/ServerScriptService/EscalationService.server.luau:104, aber nirgends aufgerufen
-source.g-write-without-read|_G.GetBarricadeClusterState: gesetzt in src/ServerScriptService/BarricadeClusterService.server.luau:1080, aber nirgends aufgerufen
+source.g-write-without-read|_G.GetBarricadeClusterState: gesetzt in src/ServerScriptService/BarricadeClusterService.server.luau:1089, aber nirgends aufgerufen
 source.g-write-without-read|_G.GetCityAlertProgress: gesetzt in src/ServerScriptService/CityAlertService.server.luau:568, aber nirgends aufgerufen
-source.g-write-without-read|_G.GetGeneratorSide: gesetzt in src/ServerScriptService/BarricadeClusterService.server.luau:1103, aber nirgends aufgerufen
+source.g-write-without-read|_G.GetGeneratorSide: gesetzt in src/ServerScriptService/BarricadeClusterService.server.luau:1112, aber nirgends aufgerufen
 source.g-write-without-read|_G.GetLastDamagePosition: gesetzt in src/ServerScriptService/EscalationService.server.luau:85, aber nirgends aufgerufen
 source.g-write-without-read|_G.GetLevelCap: gesetzt in src/ServerScriptService/PlayerSetup.server.luau:1509, aber nirgends aufgerufen
 source.g-write-without-read|_G.GetSpecialEnergyMax: gesetzt in src/ServerScriptService/SpecialEnergyHandler.server.luau:141, aber nirgends aufgerufen

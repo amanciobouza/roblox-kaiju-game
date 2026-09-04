@@ -301,8 +301,27 @@ RULES = [
 # ===== Rückstand ==================================================================
 
 
+# Zeilennummern beim VERGLEICHEN ausblenden, beim ANZEIGEN behalten.
+#
+# Ohne das galt jede bekannte Abweichung als neu, sobald irgendwo darueber Zeilen
+# eingefuegt wurden -- neun eingefuegte Zeilen liessen zwei unveraenderte Fundstellen
+# als Regression erscheinen. Eine Rueckstandsliste, die nach jeder Aenderung Fehlalarme
+# wirft, wird abgeschaltet.
+LINE_NUMBER = re.compile(r":\d+")
+
+
+def normalize(text):
+    return LINE_NUMBER.sub(":<n>", text)
+
+
 def load_known():
-    known = collections.defaultdict(list)
+    """Rueckgabe: {regel-id: Counter(normalisierter Text -> Anzahl)}.
+
+    Gezaehlt wird, nicht nur nachgeschlagen: sonst wuerde eine ZWEITE Fundstelle
+    derselben Art in derselben Datei durchrutschen, weil die erste schon bekannt ist.
+    Der Rueckstand darf nicht wachsen -- nur umziehen.
+    """
+    known = collections.defaultdict(collections.Counter)
     if not os.path.exists(KNOWN_FILE):
         return known
     with io.open(KNOWN_FILE, encoding="utf-8") as handle:
@@ -313,7 +332,7 @@ def load_known():
             if "|" not in line:
                 continue
             rule_id, text = line.split("|", 1)
-            known[rule_id.strip()].append(text.strip())
+            known[rule_id.strip()][normalize(text.strip())] += 1
     return known
 
 
@@ -352,8 +371,14 @@ def main():
     for rule in RULES:
         violations = rule["check"](files)
         results.append((rule["id"], violations))
+
+        # Je Regel abzaehlen: so viele Fundstellen einer Art, wie im Rueckstand stehen,
+        # gelten als bekannt -- jede weitere ist neu, auch wenn sie gleich aussieht.
+        budget = collections.Counter(known.get(rule["id"], {}))
         for text in violations:
-            if text in known.get(rule["id"], []):
+            key = normalize(text)
+            if budget[key] > 0:
+                budget[key] -= 1
                 known_count += 1
             else:
                 new_violations.append((rule["id"], text))
