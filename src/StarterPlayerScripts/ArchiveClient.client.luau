@@ -23,6 +23,9 @@ local Workspace = game:GetService("Workspace")
 
 local ArchiveConfig = require(ReplicatedStorage:WaitForChild("ArchiveConfig"))
 local ComicStyleUtils = require(ReplicatedStorage:WaitForChild("ComicStyleUtils"))
+local ModelPreviewUtils = require(ReplicatedStorage:WaitForChild("ModelPreviewUtils"))
+local UiTypography = require(ReplicatedStorage:WaitForChild("UiTypography"))
+local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
 
 local ArchiveRevealedEvent = ReplicatedStorage:WaitForChild("ArchiveRevealedEvent", 20)
 local ArchiveModelFunction = ReplicatedStorage:WaitForChild("ArchiveModelFunction", 20)
@@ -38,7 +41,9 @@ local HIDDEN_TINT = Color3.fromRGB(88, 92, 106)
 -- Bewusst kompakt: das Ziel ist, moeglichst ALLE Karten auf einen Blick zu sehen. Bei
 -- dieser Groesse passen auf einen ueblichen Bildschirm rund neun je Reihe, die 26
 -- Eintraege also in drei Reihen ohne Scrollen.
-local CARD_SIZE = UDim2.new(0, 116, 0, 152)
+-- Kartengroesse. Vorher 116x152 -- auf einem Vollbild-Raster wirkten die Figuren darin
+-- wie Briefmarken, und die Silhouette, die den Eintrag ausmacht, war kaum zu erkennen.
+local CARD_SIZE = UDim2.new(0, 168, 0, 216)
 
 -- ===== Grundgerüst =====
 
@@ -80,6 +85,11 @@ panel.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
 panel.Visible = false
 panel.Parent = gui
 ComicStyleUtils.Apply(panel, 0, 3)
+
+-- Inhalt unter der Roblox-Systemleiste hervorholen. IgnoreGuiInset zieht die
+-- Zeichenflaeche bewusst DARUNTER, damit oben kein Streifen mit Sicht auf die Welt bleibt --
+-- das gilt aber nur fuer den Hintergrund. Das Polster wird nachgezogen, siehe TopInsetUtils.
+TopInsetUtils.Bind(panel)
 
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(0, 260, 0, 40)
@@ -161,6 +171,11 @@ detail.Visible = false
 detail.Parent = gui
 ComicStyleUtils.Apply(detail, 0, 3)
 
+-- Inhalt unter der Roblox-Systemleiste hervorholen. IgnoreGuiInset zieht die
+-- Zeichenflaeche bewusst DARUNTER, damit oben kein Streifen mit Sicht auf die Welt bleibt --
+-- das gilt aber nur fuer den Hintergrund. Das Polster wird nachgezogen, siehe TopInsetUtils.
+TopInsetUtils.Bind(detail)
+
 local detailBack = Instance.new("TextButton")
 detailBack.Size = UDim2.new(0, 36, 0, 36)
 detailBack.Position = UDim2.new(0, 24, 0, 14)
@@ -194,8 +209,7 @@ local detailHint = Instance.new("TextLabel")
 detailHint.Size = UDim2.new(0.38, -32, 0, 28)
 detailHint.Position = UDim2.new(0, 24, 1, -70)
 detailHint.BackgroundTransparency = 1
-detailHint.Font = Enum.Font.Gotham
-detailHint.TextScaled = true
+UiTypography.Caption(detailHint, UiTypography.BodySize)
 detailHint.TextColor3 = Color3.fromRGB(170, 170, 180)
 detailHint.Text = ""
 detailHint.Parent = detail
@@ -214,6 +228,121 @@ local detailTextLayout = Instance.new("UIListLayout")
 detailTextLayout.SortOrder = Enum.SortOrder.LayoutOrder
 detailTextLayout.Padding = UDim.new(0, 8)
 detailTextLayout.Parent = detailText
+
+-- ===== Datenspalte rechts =====
+-- Der Steckbrief fuellte vorher die ganze Bildschirmbreite; die Zeilen waren so lang, dass
+-- das Auge beim Umbruch den Anfang der naechsten nicht mehr fand. Der Fliesstext bekommt
+-- deshalb eine Hoechstbreite -- und der frei werdende Streifen rechts traegt die Angaben
+-- zum Eintrag, statt leer zu bleiben.
+local detailData = Instance.new("Frame")
+detailData.Name = "DetailData"
+detailData.BackgroundColor3 = Color3.fromRGB(22, 22, 27)
+detailData.Visible = false
+detailData.Parent = detail
+ComicStyleUtils.Apply(detailData, 12, 2)
+
+local detailDataPadding = Instance.new("UIPadding")
+detailDataPadding.PaddingTop = UDim.new(0, 12)
+detailDataPadding.PaddingBottom = UDim.new(0, 12)
+detailDataPadding.PaddingLeft = UDim.new(0, 12)
+detailDataPadding.PaddingRight = UDim.new(0, 12)
+detailDataPadding.Parent = detailData
+
+local detailDataLayout = Instance.new("UIListLayout")
+detailDataLayout.SortOrder = Enum.SortOrder.LayoutOrder
+detailDataLayout.Padding = UDim.new(0, 4)
+detailDataLayout.Parent = detailData
+
+-- Erzeugt ein Wertepaar: kleine Ueberschrift, darunter der Wert.
+local function buildDataField(labelText, order)
+	local caption = Instance.new("TextLabel")
+	caption.Size = UDim2.new(1, 0, 0, 14)
+	caption.BackgroundTransparency = 1
+	UiTypography.Caption(caption, 11)
+	caption.TextXAlignment = Enum.TextXAlignment.Left
+	caption.TextColor3 = Color3.fromRGB(120, 120, 132)
+	caption.Text = string.upper(labelText)
+	caption.LayoutOrder = order
+	caption.Parent = detailData
+
+	local value = Instance.new("TextLabel")
+	value.Size = UDim2.new(1, 0, 0, 0)
+	value.AutomaticSize = Enum.AutomaticSize.Y
+	value.BackgroundTransparency = 1
+	UiTypography.Body(value, 15)
+	value.TextXAlignment = Enum.TextXAlignment.Left
+	value.TextYAlignment = Enum.TextYAlignment.Top
+	value.TextColor3 = Color3.fromRGB(230, 230, 240)
+	value.Text = ""
+	value.LayoutOrder = order + 1
+	value.Parent = detailData
+
+	-- Abstand zum naechsten Wertepaar, damit die Spalte nicht als ein Block wirkt.
+	local spacer = Instance.new("Frame")
+	spacer.Size = UDim2.new(1, 0, 0, 10)
+	spacer.BackgroundTransparency = 1
+	spacer.LayoutOrder = order + 2
+	spacer.Parent = detailData
+
+	return value
+end
+
+local detailDataCategory = buildDataField("Category", 10)
+local detailDataFound = buildDataField("Found at", 20)
+local detailDataProgress = buildDataField("Category progress", 30)
+
+-- ===== Aufteilung Modell / Text / Daten =====
+-- Der Block wird als Ganzes mittig gesetzt. Waechst der Bildschirm, wird das Modell
+-- groesser -- es ist die Belohnung fuers Entdecken --, waehrend die Textspalte ihre
+-- lesbare Breite behaelt.
+local DETAIL_GAP = 24
+local DETAIL_TEXT_MAX = 620
+local DETAIL_TEXT_MIN = 320
+local DETAIL_DATA_WIDTH = 250
+local DETAIL_DATA_FROM = 1180 -- schmaler: die Datenspalte entfaellt, statt alles zu quetschen
+local DETAIL_MODEL_MIN = 260
+local DETAIL_MODEL_MAX = 560
+
+local function layoutDetail()
+	local width = detail.AbsoluteSize.X
+	if width <= 0 then
+		return
+	end
+	local dataWidth = width >= DETAIL_DATA_FROM and DETAIL_DATA_WIDTH or 0
+	detailData.Visible = dataWidth > 0
+
+	local free = width - 2 * DETAIL_GAP - DETAIL_GAP
+	if dataWidth > 0 then
+		free -= dataWidth + DETAIL_GAP
+	end
+	local textWidth = math.clamp(free - DETAIL_MODEL_MIN, DETAIL_TEXT_MIN, DETAIL_TEXT_MAX)
+	local modelWidth = math.clamp(free - textWidth, DETAIL_MODEL_MIN, DETAIL_MODEL_MAX)
+
+	local total = modelWidth + DETAIL_GAP + textWidth
+	if dataWidth > 0 then
+		total += DETAIL_GAP + dataWidth
+	end
+	local x = math.max(DETAIL_GAP, math.floor((width - total) / 2))
+
+	detailViewportHolder.Position = UDim2.new(0, x, 0, 64)
+	detailViewportHolder.Size = UDim2.new(0, modelWidth, 1, -140)
+	detailHint.Position = UDim2.new(0, x, 1, -70)
+	detailHint.Size = UDim2.new(0, modelWidth, 0, 28)
+
+	x += modelWidth + DETAIL_GAP
+	detailText.Position = UDim2.new(0, x, 0, 64)
+	detailText.Size = UDim2.new(0, textWidth, 1, -88)
+
+	if dataWidth > 0 then
+		x += textWidth + DETAIL_GAP
+		detailData.Position = UDim2.new(0, x, 0, 64)
+		detailData.Size = UDim2.new(0, dataWidth, 0, 0)
+		detailData.AutomaticSize = Enum.AutomaticSize.Y
+	end
+end
+
+detail:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutDetail)
+layoutDetail()
 
 -- ===== Modelle beschaffen =====
 -- Ergebnisse werden gemerkt: je Eintrag einmal holen, egal wie oft das Archiv geöffnet
@@ -317,6 +446,12 @@ local function fillViewport(container, entry, silhouette)
 	if not model then
 		return nil
 	end
+	-- Schein des vorherigen Eintrags entfernen. Wird er vergessen, sammeln sich im
+	-- Steckbrief die Farben aller nacheinander angesehenen Eintraege uebereinander.
+	local previousGlow = container:FindFirstChild("PreviewGlow")
+	if previousGlow then
+		previousGlow:Destroy()
+	end
 	local viewport = Instance.new("ViewportFrame")
 	viewport.Size = UDim2.new(1, 0, 1, 0)
 	viewport.BackgroundTransparency = 1
@@ -328,28 +463,37 @@ local function fillViewport(container, entry, silhouette)
 	-- Flaeche sein, keine modellierte Form.
 	viewport.Ambient = silhouette and Color3.fromRGB(120, 124, 140) or Color3.fromRGB(140, 140, 150)
 	viewport.LightColor = silhouette and Color3.fromRGB(90, 94, 108) or Color3.fromRGB(255, 255, 255)
+	-- Ueber dem nachgebauten Schein, der gleich darunter eingehaengt wird.
+	viewport.ZIndex = 2
 	viewport.Parent = container
 
 	local preview = model:Clone()
 	if silhouette then
 		darkenModel(preview)
+	else
+		-- Nachgebautes Leuchten: ViewportFrames rendern weder Partikel noch Lichter noch
+		-- Bloom (siehe ModelPreviewUtils). Die Farbe kommt aus dem Modell selbst, damit
+		-- der Schein zum Eintrag passt statt geraten zu sein.
+		--
+		-- Bei Silhouetten bewusst NICHT: ein unentdeckter Eintrag soll ein Umriss bleiben.
+		-- Ein leuchtender Umriss verriete Farbe und Bauart, und genau das ist der Fund.
+		ModelPreviewUtils.AddGlow(container, ModelPreviewUtils.FindGlowColor(preview), 1)
 	end
 	preview.Parent = viewport
-	pcall(function()
-		preview:PivotTo(CFrame.new(0, 0, 0))
-	end)
 
-	local camera = Instance.new("Camera")
-	camera.Parent = viewport
-	viewport.CurrentCamera = camera
-
-	local ok, boundsCFrame, boundsSize = pcall(function()
-		return preview:GetBoundingBox()
+	-- Einpassen ueber ModelPreviewUtils: das Modell fuellt den Rahmen, statt mit einem
+	-- festen Faktor irgendwo darin zu stehen. Der alte Faktor 1.7 auf die groesste Kante
+	-- liess flache Modelle (Barrikade, Rakete) als Strich in viel Leere zurueck.
+	local camera
+	local fitted = pcall(function()
+		camera = ModelPreviewUtils.Fit(viewport, preview, container)
 	end)
-	if ok and boundsSize then
-		local distance = math.max(boundsSize.X, boundsSize.Y, boundsSize.Z) * 1.7
-		local center = boundsCFrame.Position
-		camera.CFrame = CFrame.new(center + Vector3.new(0, boundsSize.Y * 0.08, distance), center)
+	if not fitted then
+		-- Sicherheitsnetz: lieber eine grob gesetzte Kamera als gar keine.
+		camera = Instance.new("Camera")
+		camera.Parent = viewport
+		viewport.CurrentCamera = camera
+		camera.CFrame = CFrame.new(Vector3.new(0, 3, 15), Vector3.new(0, 3, 0))
 	end
 	return viewport, preview, camera
 end
@@ -372,6 +516,25 @@ local function openDetail(entry)
 	end
 	detailTitle.Text = entry.name
 	detailHint.Text = entry.hint or ""
+	local categoryInfo
+	for _, category in ipairs(ArchiveConfig.Categories) do
+		if category.key == entry.category then
+			categoryInfo = category
+		end
+	end
+	detailDataCategory.Text = categoryInfo and (categoryInfo.icon .. " " .. categoryInfo.label) or entry.category
+	detailDataFound.Text = entry.hint or "--"
+	-- Wie viel dieser Gruppe schon aufgedeckt ist. Das ist die einzige Angabe hier, die
+	-- nicht schon auf der Karte stand -- sie beantwortet "wie viel fehlt mir noch?".
+	local siblings = ArchiveConfig.ByCategory[entry.category] or {}
+	local revealedCount = 0
+	for _, sibling in ipairs(siblings) do
+		if isRevealed(sibling) then
+			revealedCount += 1
+		end
+	end
+	detailDataProgress.Text = string.format("%d of %d discovered", revealedCount, #siblings)
+	layoutDetail()
 	-- NUR den alten Viewport entfernen, nicht alle Kinder: ComicStyleUtils hat dem Rahmen
 	-- eine UICorner und eine UIStroke gegeben, und ClearAllChildren haette die mit
 	-- weggeraeumt -- ab dem zweiten Steckbrief waere der Rahmen unformatiert gewesen.
@@ -389,24 +552,10 @@ local function openDetail(entry)
 	local _, preview = fillViewport(detailViewportHolder, entry, false)
 	if preview then
 		-- Langsame Drehung: zeigt die Figur von allen Seiten, ohne dass es eine echte
-		-- Animation bräuchte (die hätten ohnehin nur die Guardians).
-		--
-		-- SCHRITTWEISE um den eigenen Pivot drehen, nicht auf eine absolute CFrame setzen.
-		-- Die absolute Fassung setzte das Modell je Bild auf den Ursprung -- steht der
-		-- Pivot nicht in der Modellmitte (beim Warden liegt er im Root), verschiebt das die
-		-- Figur aus dem Bild, statt sie zu drehen. Dasselbe Muster nutzt der
-		-- Fraktions-Bildschirm seit jeher.
-		task.spawn(function()
-			while preview.Parent do
-				local ok = pcall(function()
-					preview:PivotTo(preview:GetPivot() * CFrame.Angles(0, math.rad(0.5), 0))
-				end)
-				if not ok then
-					break
-				end
-				RunService.Heartbeat:Wait()
-			end
-		end)
+		-- Animation braeuchte. Seit fillViewport ueber ModelPreviewUtils einpasst, steht
+		-- das Modell mittig im Ursprung -- die Drehung dort dreht entsprechend um die
+		-- Mitte statt um den Pivot, der bei manchen Modellen weit daneben liegt.
+		ModelPreviewUtils.Spin(preview)
 	end
 
 	local sections = {
@@ -426,8 +575,7 @@ local function openDetail(entry)
 		local heading = Instance.new("TextLabel")
 		heading.Size = UDim2.new(1, -8, 0, 20)
 		heading.BackgroundTransparency = 1
-		heading.Font = Enum.Font.FredokaOne
-		heading.TextSize = 16
+		UiTypography.Subhead(heading)
 		heading.TextXAlignment = Enum.TextXAlignment.Left
 		heading.TextColor3 = Color3.fromRGB(255, 205, 90)
 		heading.Text = section.heading
@@ -439,9 +587,7 @@ local function openDetail(entry)
 		body.Size = UDim2.new(1, -8, 0, 0)
 		body.AutomaticSize = Enum.AutomaticSize.Y
 		body.BackgroundTransparency = 1
-		body.Font = Enum.Font.Gotham
-		body.TextSize = 14
-		body.TextWrapped = true
+		UiTypography.Body(body)
 		body.TextXAlignment = Enum.TextXAlignment.Left
 		body.TextYAlignment = Enum.TextYAlignment.Top
 		body.TextColor3 = Color3.fromRGB(220, 220, 230)
@@ -506,8 +652,8 @@ local function buildCard(parent, entry)
 	ComicStyleUtils.Apply(card, 10, 3)
 
 	local viewportHolder = Instance.new("Frame")
-	viewportHolder.Size = UDim2.new(1, -10, 0, 96)
-	viewportHolder.Position = UDim2.new(0, 5, 0, 5)
+	viewportHolder.Size = UDim2.new(1, -12, 0, 148)
+	viewportHolder.Position = UDim2.new(0, 6, 0, 6)
 	viewportHolder.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
 	viewportHolder.Parent = card
 	ComicStyleUtils.Apply(viewportHolder, 8, 2)
@@ -517,7 +663,7 @@ local function buildCard(parent, entry)
 	-- war.
 	local question = Instance.new("TextLabel")
 	question.AnchorPoint = Vector2.new(1, 1)
-	question.Size = UDim2.new(0, 30, 0, 30)
+	question.Size = UDim2.new(0, 38, 0, 38)
 	question.Position = UDim2.new(1, -4, 1, -2)
 	question.BackgroundTransparency = 1
 	question.Font = Enum.Font.FredokaOne
@@ -530,21 +676,19 @@ local function buildCard(parent, entry)
 	question.Parent = viewportHolder
 
 	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Size = UDim2.new(1, -10, 0, 22)
-	nameLabel.Position = UDim2.new(0, 5, 0, 104)
+	nameLabel.Size = UDim2.new(1, -12, 0, 26)
+	nameLabel.Position = UDim2.new(0, 6, 0, 158)
 	nameLabel.BackgroundTransparency = 1
-	nameLabel.Font = Enum.Font.FredokaOne
-	nameLabel.TextScaled = true
+	UiTypography.Subhead(nameLabel, 15)
 	nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	nameLabel.Text = "???"
 	nameLabel.Parent = card
 
 	local hintLabel = Instance.new("TextLabel")
-	hintLabel.Size = UDim2.new(1, -10, 0, 16)
-	hintLabel.Position = UDim2.new(0, 5, 0, 128)
+	hintLabel.Size = UDim2.new(1, -12, 0, 18)
+	hintLabel.Position = UDim2.new(0, 6, 0, 186)
 	hintLabel.BackgroundTransparency = 1
-	hintLabel.Font = Enum.Font.Gotham
-	hintLabel.TextScaled = true
+	UiTypography.Caption(hintLabel)
 	hintLabel.TextColor3 = Color3.fromRGB(160, 160, 172)
 	hintLabel.Text = ""
 	hintLabel.Parent = card

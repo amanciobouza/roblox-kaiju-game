@@ -59,10 +59,16 @@ ArchiveConfig.Categories = {
 -- Wie viele Skins je Fraktion vorgesehen sind, solange die echten Listen fehlen. Kaiju
 -- kommt NICHT aus dieser Tabelle -- dort gibt es bereits sechs echte Einträge, die unten
 -- aus SkinsConfig erzeugt werden.
-ArchiveConfig.PendingFactionSkins = {
-	{ faction = "Jaeger", count = 5, chapter = "Chapter II" },
-	{ faction = "Ronin", count = 5, chapter = "Chapter III" },
-}
+ArchiveConfig.PendingFactionSkins = {}
+for _, faction in ipairs(SkinsConfig.Factions) do
+	if (faction.PendingCount or 0) > 0 then
+		table.insert(ArchiveConfig.PendingFactionSkins, {
+			faction = faction.Key,
+			count = faction.PendingCount,
+			chapter = faction.Chapter,
+		})
+	end
+end
 
 ArchiveConfig.Entries = {
 	-- ===== Stufe 1 =====

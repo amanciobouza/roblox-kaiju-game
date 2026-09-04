@@ -56,27 +56,64 @@ end
 local giftDescriptionsFolder = Instance.new("Folder")
 giftDescriptionsFolder.Name = "GiftDescriptions"
 giftDescriptionsFolder.Parent = ReplicatedStorage
+-- Symbol und Text getrennt: die Karte zeigt das Symbol gross und den Text darunter.
+-- Vorher steckte das Symbol IM Text, und die Karte zeigte daneben ein festes Geschenkpaket
+-- -- zwölf Karten sahen dadurch gleich aus, obwohl sie Verschiedenes enthalten.
+--
+-- Jeder Geschenktyp hat sein eigenes Symbol. CoinsBoost bekommt bewusst ein anderes als
+-- die einfache Münzgabe: sonst wären genau die beiden nicht zu unterscheiden, deren
+-- Unterschied zählt (sofort vs. zeitlich begrenzt).
+local function iconForGift(gift)
+	if gift.type == "Coins" then
+		return "🪙"
+	elseif gift.type == "XP" then
+		return "⭐"
+	elseif gift.type == "Evolution" then
+		return "🧬"
+	elseif gift.type == "CoinsBoost" then
+		return "💰"
+	elseif gift.type == "DamageBoost" then
+		return "💥"
+	elseif gift.type == "MegaBoost" then
+		return "🎉"
+	end
+	return "🎁"
+end
+
+-- Text auf Englisch wie die übrige Oberfläche. Die deutschen Fassungen ("Evolution-Punkte",
+-- "Schaden", "Min.") waren die letzten deutschen Zeichenketten im sichtbaren Spiel.
 local function describeGift(gift)
 	if gift.type == "Coins" then
-		return "🪙 " .. gift.amount .. " Coins"
+		return gift.amount .. " Coins"
 	elseif gift.type == "XP" then
-		return "⭐ " .. gift.amount .. " XP"
+		return gift.amount .. " XP"
 	elseif gift.type == "Evolution" then
-		return "🧬 " .. gift.amount .. " Evolution-Punkte"
+		return gift.amount .. " Evolution Points"
 	elseif gift.type == "CoinsBoost" then
-		return "🪙 " .. gift.multiplier .. "x Coins (" .. math.floor(gift.duration / 60) .. " Min.)"
+		return gift.multiplier .. "x Coins for " .. math.floor(gift.duration / 60) .. " min"
 	elseif gift.type == "DamageBoost" then
-		return "💥 " .. gift.multiplier .. "x Schaden (" .. math.floor(gift.duration / 60) .. " Min.)"
+		return gift.multiplier .. "x Damage for " .. math.floor(gift.duration / 60) .. " min"
 	elseif gift.type == "MegaBoost" then
-		return "🎉 " .. gift.coinsMultiplier .. "x Coins + " .. gift.damageMultiplier .. "x Schaden (" .. math.floor(gift.duration / 60) .. " Min.)"
+		return gift.coinsMultiplier .. "x Coins + " .. gift.damageMultiplier
+			.. "x Damage for " .. math.floor(gift.duration / 60) .. " min"
 	end
 	return "?"
 end
+
+local giftIconsFolder = Instance.new("Folder")
+giftIconsFolder.Name = "GiftIcons"
+giftIconsFolder.Parent = ReplicatedStorage
+
 for n, gift in ipairs(GIFTS) do
 	local desc = Instance.new("StringValue")
 	desc.Name = "Gift" .. n
 	desc.Value = describeGift(gift)
 	desc.Parent = giftDescriptionsFolder
+
+	local icon = Instance.new("StringValue")
+	icon.Name = "Gift" .. n
+	icon.Value = iconForGift(gift)
+	icon.Parent = giftIconsFolder
 end
 
 -- Aktiviert die Belohnung von Geschenk n für den Spieler.

@@ -10,6 +10,8 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
 local ComicStyleUtils = require(ReplicatedStorage:WaitForChild("ComicStyleUtils"))
+local UiTypography = require(ReplicatedStorage:WaitForChild("UiTypography"))
+local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
 local applyComicStyle = ComicStyleUtils.Apply
 
 local player = Players.LocalPlayer
@@ -68,6 +70,11 @@ panel.BackgroundColor3 = Color3.fromRGB(20, 18, 28)
 panel.Visible = false
 panel.Parent = screenGui
 applyComicStyle(panel, 18, 4)
+
+-- Inhalt unter der Roblox-Systemleiste hervorholen. IgnoreGuiInset zieht die
+-- Zeichenflaeche bewusst DARUNTER, damit oben kein Streifen mit Sicht auf die Welt bleibt --
+-- das gilt aber nur fuer den Hintergrund. Das Polster wird nachgezogen, siehe TopInsetUtils.
+TopInsetUtils.Bind(panel)
 
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(0, 300, 0, 32)
@@ -190,6 +197,20 @@ treeScroll.ClipsDescendants = true
 treeScroll.Parent = panel
 applyComicStyle(treeScroll, 12, 2)
 
+-- Baum und Detailspalte teilen sich die Breite. Beide standen vorher auf festen Werten
+-- (960 und 268 Pixel ab Position 8 beziehungsweise 976). Auf einem Vollbild-Bildschirm
+-- blieb dadurch rechts ein Drittel der Flaeche leer, waehrend die Textspalte auf 268 Pixel
+-- eingeengt war -- der Text darin brach nach zwei, drei Woertern um.
+--
+-- Der Baum behaelt seine Hoechstbreite: er ist mit festen Koordinaten aufgebaut
+-- (CanvasSize 960x900), ihn zu dehnen wuerde nur Leerraum INNERHALB des Rollbereichs
+-- erzeugen. Der gewonnene Platz geht deshalb an die Detailspalte, und der ganze Block
+-- steht mittig.
+local TREE_MAX_WIDTH = 960
+local DETAIL_MIN_WIDTH = 300
+local DETAIL_MAX_WIDTH = 520
+local COLUMN_GAP = 8
+
 -- ===== Detail-Panel: zeigt das AUSGEWÄHLTE Talent -- Icon/Name, Beschreibung, Kosten,
 -- Forschungszeit, und einen "Vorher -> Nachher"-Wertevergleich. =====
 local detailPanel = Instance.new("Frame")
@@ -199,15 +220,37 @@ detailPanel.BackgroundColor3 = Color3.fromRGB(28, 25, 40)
 detailPanel.Parent = panel
 applyComicStyle(detailPanel, 12, 2)
 
+-- Beide Spalten neu setzen, sobald sich die Fensterbreite aendert.
+local function layoutColumns()
+	local width = panel.AbsoluteSize.X
+	if width <= 0 then
+		return
+	end
+	local detailWidth = math.clamp(
+		width - TREE_MAX_WIDTH - 3 * COLUMN_GAP,
+		DETAIL_MIN_WIDTH,
+		DETAIL_MAX_WIDTH
+	)
+	local treeWidth = math.min(TREE_MAX_WIDTH, width - detailWidth - 3 * COLUMN_GAP)
+	local total = treeWidth + COLUMN_GAP + detailWidth
+	local x = math.max(COLUMN_GAP, math.floor((width - total) / 2))
+
+	treeScroll.Position = UDim2.new(0, x, 0, 106)
+	treeScroll.Size = UDim2.new(0, treeWidth, 1, -110)
+	detailPanel.Position = UDim2.new(0, x + treeWidth + COLUMN_GAP, 0, 106)
+	detailPanel.Size = UDim2.new(0, detailWidth, 1, -110)
+end
+
+panel:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutColumns)
+layoutColumns()
+
 local detailEmpty = Instance.new("TextLabel")
 detailEmpty.Size = UDim2.new(1, -20, 0, 80)
 detailEmpty.Position = UDim2.new(0, 10, 0, 20)
 detailEmpty.BackgroundTransparency = 1
-detailEmpty.Font = Enum.Font.FredokaOne
-detailEmpty.TextScaled = true
-detailEmpty.TextWrapped = true
 detailEmpty.TextColor3 = Color3.fromRGB(140, 140, 150)
-detailEmpty.Text = "👆 Wähle ein Talent aus, um Details zu sehen."
+detailEmpty.Text = "👆 Pick a talent to see its details."
+UiTypography.Body(detailEmpty)
 detailEmpty.Parent = detailPanel
 
 local detailIcon = Instance.new("TextLabel")
@@ -250,9 +293,7 @@ local detailDescription = Instance.new("TextLabel")
 detailDescription.Size = UDim2.new(1, -20, 0, 90)
 detailDescription.Position = UDim2.new(0, 10, 0, 78)
 detailDescription.BackgroundTransparency = 1
-detailDescription.Font = Enum.Font.FredokaOne
-detailDescription.TextScaled = true
-detailDescription.TextWrapped = true
+UiTypography.Body(detailDescription)
 detailDescription.TextXAlignment = Enum.TextXAlignment.Left
 detailDescription.TextYAlignment = Enum.TextYAlignment.Top
 detailDescription.TextColor3 = Color3.fromRGB(210, 210, 220)

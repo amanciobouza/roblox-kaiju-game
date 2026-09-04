@@ -9,6 +9,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
 local ComicStyleUtils = require(ReplicatedStorage:WaitForChild("ComicStyleUtils"))
+local UiTypography = require(ReplicatedStorage:WaitForChild("UiTypography"))
+local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
 local applyComicStyle = ComicStyleUtils.Apply
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -19,6 +21,9 @@ local ClaimGiftEvent = RemoteEventUtils.GetOrCreate("ClaimGiftEvent")
 local giftCountValue = ReplicatedStorage:WaitForChild("GiftCount")
 local giftUnlockTimesFolder = ReplicatedStorage:WaitForChild("GiftUnlockTimes")
 local giftDescriptionsFolder = ReplicatedStorage:WaitForChild("GiftDescriptions")
+-- Symbole liegen seit der Trennung in einem eigenen Ordner. Fehlt er (aelterer Server),
+-- faellt die Karte auf das Geschenkpaket zurueck statt leer zu bleiben.
+local giftIconsFolder = ReplicatedStorage:WaitForChild("GiftIcons", 10)
 
 local function formatTime(seconds)
 	seconds = math.max(math.floor(seconds), 0)
@@ -46,6 +51,11 @@ panel.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
 panel.Visible = false
 panel.Parent = screenGui
 applyComicStyle(panel, 20, 5)
+
+-- Inhalt unter der Roblox-Systemleiste hervorholen. IgnoreGuiInset zieht die
+-- Zeichenflaeche bewusst DARUNTER, damit oben kein Streifen mit Sicht auf die Welt bleibt --
+-- das gilt aber nur fuer den Hintergrund. Das Polster wird nachgezogen, siehe TopInsetUtils.
+TopInsetUtils.Bind(panel)
 
 -- X-Schliessen-Button -- kehrt zum Hamburger-Menü zurück (dieses Panel hatte bisher
 -- keinen eigenen, war nur über den jetzt entfernten "← Back"-Button schliessbar).
@@ -90,7 +100,9 @@ grid.AutomaticCanvasSize = Enum.AutomaticSize.Y
 grid.Parent = panel
 
 local gridLayout = Instance.new("UIGridLayout")
-gridLayout.CellSize = UDim2.new(0, 135, 0, 110)
+-- Vorher 135x110. Auf einem Vollbild-Bildschirm standen zwoelf Briefmarken in einer
+-- Ecke; das Symbol war zu klein, um die Belohnung zu erkennen.
+gridLayout.CellSize = UDim2.new(0, 210, 0, 180)
 gridLayout.CellPadding = UDim2.new(0, 8, 0, 8)
 gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 gridLayout.Parent = grid
@@ -119,23 +131,24 @@ for n = 1, giftCountValue.Value do
 	numberLabel.Parent = cell
 
 	local iconLabel = Instance.new("TextLabel")
-	iconLabel.Size = UDim2.new(1, 0, 0, 40)
-	iconLabel.Position = UDim2.new(0, 0, 0, 22)
+	iconLabel.Size = UDim2.new(1, 0, 0, 76)
+	iconLabel.Position = UDim2.new(0, 0, 0, 26)
 	iconLabel.BackgroundTransparency = 1
 	iconLabel.Font = Enum.Font.LuckiestGuy
 	iconLabel.TextScaled = true
-	iconLabel.Text = "🎁"
+	-- Das Symbol der TATSAECHLICHEN Belohnung. Vorher stand hier bei allen zwoelf
+	-- Geschenken dasselbe Paket -- die Karte sagte damit nichts ueber ihren Inhalt.
+	local iconValue = giftIconsFolder and giftIconsFolder:FindFirstChild("Gift" .. n)
+	iconLabel.Text = iconValue and iconValue.Value or "🎁"
 	iconLabel.ZIndex = 2
 	iconLabel.Parent = cell
 
 	local descLabel = Instance.new("TextLabel")
-	descLabel.Size = UDim2.new(1, -6, 0, 32)
-	descLabel.Position = UDim2.new(0, 3, 0, 62)
+	descLabel.Size = UDim2.new(1, -16, 0, 52)
+	descLabel.Position = UDim2.new(0, 8, 0, 106)
 	descLabel.BackgroundTransparency = 1
-	descLabel.Font = Enum.Font.FredokaOne
-	descLabel.TextScaled = true
-	descLabel.TextWrapped = true
 	descLabel.TextColor3 = Color3.new(1, 1, 1)
+	UiTypography.Body(descLabel, 15)
 	local desc = giftDescriptionsFolder:FindFirstChild("Gift" .. n)
 	descLabel.Text = desc and desc.Value or ""
 	descLabel.ZIndex = 2

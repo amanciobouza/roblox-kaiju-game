@@ -1,7 +1,7 @@
 -- VERSION: 2026-08-26 #2
 -- FEATURE: Diagnose-Print mit Stack-Trace in setPanelVisible ergaenzt
 -- Ort in Studio: StarterPlayer > StarterPlayerScripts
--- Baut die 5 Buttons auf der linken Seite: Monster (Skins), Achievements (Platzhalter),
+-- Baut die 5 Buttons auf der linken Seite: Skins, Achievements (Platzhalter),
 -- Evolution (Skillbaum), Companion (Platzhalter, siehe Companion-Feature-Konzept), Geschenk (Zeit-Belohnungen).
 -- Immer nur EIN Panel gleichzeitig sichtbar -- Klick auf einen aktiven Button schließt ihn wieder.
 
@@ -11,6 +11,8 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ComicStyleUtils = require(ReplicatedStorage:WaitForChild("ComicStyleUtils"))
+local UiTypography = require(ReplicatedStorage:WaitForChild("UiTypography"))
+local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
 local applyComicStyle = ComicStyleUtils.Apply
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
 
@@ -18,6 +20,40 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 -- Comic-Style Hilfsfunktion jetzt über ComicStyleUtils (siehe oben)
+
+-- ===== Lesbare Spaltenbreite =====
+-- Seit die Menue-Bildschirme die ganze Flaeche nutzen, laufen Textzeilen ueber die volle
+-- Monitorbreite. Das liest sich schlecht: beim Zeilenwechsel findet das Auge den Anfang
+-- der naechsten Zeile nicht mehr. Statt den frei werdenden Rand leer zu lassen, wird er
+-- mit weiteren Spalten gefuellt -- kurze Zeilen UND mehr Inhalt auf einen Blick.
+local MIN_CARD_WIDTH = 460 -- darunter wird eine Achievement-Karte zu eng fuer Name + Balken
+local MAX_ACHIEVEMENT_COLUMNS = 3
+
+-- Breite des Behaelters ohne Rollbalken. AbsoluteSize enthaelt ihn mit; wer damit rechnet,
+-- bekommt eine Spalte zu viel und dann waagrechtes Rollen.
+local function usableWidth(container)
+	if container:IsA("ScrollingFrame") then
+		return container.AbsoluteWindowSize.X - container.ScrollBarThickness
+	end
+	return container.AbsoluteSize.X
+end
+
+-- Verteilt die Breite von `container` auf so viele Spalten, wie bei `minCardWidth`
+-- hineinpassen (hoechstens `maxColumns`), und setzt die Zellenbreite des Rasters.
+local function bindResponsiveGrid(container, grid, maxColumns, minCardWidth)
+	local function apply()
+		local width = usableWidth(container)
+		if width <= 0 then
+			return
+		end
+		local gap = grid.CellPadding.X.Offset
+		local columns = math.clamp(math.floor((width + gap) / (minCardWidth + gap)), 1, maxColumns)
+		local cellWidth = math.floor((width - (columns - 1) * gap) / columns)
+		grid.CellSize = UDim2.new(0, cellWidth, 0, grid.CellSize.Y.Offset)
+	end
+	container:GetPropertyChangedSignal("AbsoluteSize"):Connect(apply)
+	apply()
+end
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "NavigationGui"
@@ -67,7 +103,11 @@ railLayout.Parent = menuRail
 
 
 local NAV_BUTTONS = {
-	{ key = "Monster", icon = "🐲", label = "Monster", color = Color3.fromRGB(80, 200, 90) },
+	-- Beschriftung "Skins", Schluessel weiterhin "Monster": der Schluessel steht so im
+	-- Speicherstand (NavBadge_Monster) und in der Whitelist des NavBadgeService. Ihn
+	-- umzubenennen wuerde bei jedem Spieler das gemerkte Laempchen verwerfen -- fuer nichts,
+	-- denn sichtbar ist nur das Label.
+	{ key = "Monster", icon = "🐲", label = "Skins", color = Color3.fromRGB(80, 200, 90) },
 	{ key = "Achievements", icon = "🏆", label = "Achievements", color = Color3.fromRGB(255, 205, 30) },
 	{ key = "Talents", icon = "🌟", label = "Talents", color = Color3.fromRGB(60, 170, 220) },
 	{ key = "Pets", icon = "🐺", label = "Companion", color = Color3.fromRGB(255, 150, 90) },
@@ -371,6 +411,8 @@ local function createPlaceholderPanel(key, title, message)
 	panel.Visible = false
 	panel.Parent = screenGui
 	applyComicStyle(panel, 20, 5)
+	-- Auch der Platzhalter ist ein Vollbild-Panel und braucht das Polster.
+	TopInsetUtils.Bind(panel)
 
 	local titleLabel = Instance.new("TextLabel")
 	titleLabel.Size = UDim2.new(1, -16, 0, 44)
@@ -383,11 +425,15 @@ local function createPlaceholderPanel(key, title, message)
 	titleLabel.Parent = panel
 
 	local messageLabel = Instance.new("TextLabel")
+	-- Mittig und gedeckelt: ueber die volle Vollbildbreite waere es eine einzige lange Zeile.
+	messageLabel.AnchorPoint = Vector2.new(0.5, 0)
 	messageLabel.Size = UDim2.new(1, -32, 1, -70)
-	messageLabel.Position = UDim2.new(0, 16, 0, 60)
+	local messageWidthCap = Instance.new("UISizeConstraint")
+	messageWidthCap.MaxSize = Vector2.new(620, math.huge)
+	messageWidthCap.Parent = messageLabel
+	messageLabel.Position = UDim2.new(0.5, 0, 0, 60)
 	messageLabel.BackgroundTransparency = 1
-	messageLabel.Font = Enum.Font.FredokaOne
-	messageLabel.TextScaled = true
+	UiTypography.Body(messageLabel)
 	messageLabel.TextWrapped = true
 	messageLabel.TextColor3 = Color3.fromRGB(165, 165, 180)
 	messageLabel.Text = message
@@ -413,6 +459,11 @@ achievementsPanel.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
 achievementsPanel.Visible = false
 achievementsPanel.Parent = screenGui
 applyComicStyle(achievementsPanel, 20, 5)
+
+-- Inhalt unter der Roblox-Systemleiste hervorholen. IgnoreGuiInset zieht die
+-- Zeichenflaeche bewusst DARUNTER, damit oben kein Streifen mit Sicht auf die Welt bleibt --
+-- das gilt aber nur fuer den Hintergrund. Das Polster wird nachgezogen, siehe TopInsetUtils.
+TopInsetUtils.Bind(achievementsPanel)
 panels["Achievements"] = achievementsPanel
 
 local achievementsTitleLabel = Instance.new("TextLabel")
@@ -461,6 +512,9 @@ local achievementRows = {}
 
 local layoutOrder = 0
 local lastCategory = nil
+-- Karten der laufenden Kategorie. Die Ueberschrift bleibt eine volle Zeile, die Karten
+-- darunter stehen im Raster -- sonst waere jede Karte so breit wie der Bildschirm.
+local currentCategoryGrid = nil
 for _, achievement in ipairs(AchievementsConfig.List) do
 	if achievement.category ~= lastCategory then
 		lastCategory = achievement.category
@@ -476,15 +530,32 @@ for _, achievement in ipairs(AchievementsConfig.List) do
 		categoryHeader.Text = lastCategory
 		categoryHeader.LayoutOrder = layoutOrder
 		categoryHeader.Parent = achievementsScroll
+
+		layoutOrder += 1
+		local categoryFrame = Instance.new("Frame")
+		categoryFrame.Name = lastCategory .. "Grid"
+		categoryFrame.Size = UDim2.new(1, 0, 0, 0)
+		categoryFrame.AutomaticSize = Enum.AutomaticSize.Y
+		categoryFrame.BackgroundTransparency = 1
+		categoryFrame.LayoutOrder = layoutOrder
+		categoryFrame.Parent = achievementsScroll
+
+		currentCategoryGrid = Instance.new("UIGridLayout")
+		currentCategoryGrid.CellSize = UDim2.new(0, MIN_CARD_WIDTH, 0, 52)
+		currentCategoryGrid.CellPadding = UDim2.new(0, 8, 0, 8)
+		currentCategoryGrid.SortOrder = Enum.SortOrder.LayoutOrder
+		currentCategoryGrid.Parent = categoryFrame
+		bindResponsiveGrid(achievementsScroll, currentCategoryGrid, MAX_ACHIEVEMENT_COLUMNS, MIN_CARD_WIDTH)
 	end
 
 	layoutOrder += 1
 	local row = Instance.new("Frame")
 	row.Name = achievement.id .. "Row"
-	row.Size = UDim2.new(1, 0, 0, 52)
+	-- Groesse setzt das Raster; der Wert hier ist nur der Ausgangszustand.
+	row.Size = UDim2.new(0, MIN_CARD_WIDTH, 0, 52)
 	row.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
 	row.LayoutOrder = layoutOrder
-	row.Parent = achievementsScroll
+	row.Parent = currentCategoryGrid.Parent
 	applyComicStyle(row, 10, 2)
 
 	local iconLabel = Instance.new("TextLabel")
@@ -498,22 +569,20 @@ for _, achievement in ipairs(AchievementsConfig.List) do
 
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.Name = "NameLabel"
-	nameLabel.Size = UDim2.new(1, -56, 0, 20)
+	nameLabel.Size = UDim2.new(1, -158, 0, 20)
 	nameLabel.Position = UDim2.new(0, 52, 0, 4)
 	nameLabel.BackgroundTransparency = 1
-	nameLabel.Font = Enum.Font.FredokaOne
-	nameLabel.TextScaled = true
+	UiTypography.Subhead(nameLabel, 16)
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 	nameLabel.TextColor3 = Color3.fromRGB(235, 235, 245)
 	nameLabel.Text = achievement.name
 	nameLabel.Parent = row
 
 	local descLabel = Instance.new("TextLabel")
-	descLabel.Size = UDim2.new(1, -56, 0, 16)
+	descLabel.Size = UDim2.new(1, -158, 0, 16)
 	descLabel.Position = UDim2.new(0, 52, 0, 24)
 	descLabel.BackgroundTransparency = 1
-	descLabel.Font = Enum.Font.FredokaOne
-	descLabel.TextScaled = true
+	UiTypography.Body(descLabel, 14)
 	descLabel.TextXAlignment = Enum.TextXAlignment.Left
 	descLabel.TextColor3 = Color3.fromRGB(165, 165, 180)
 	descLabel.Text = achievement.description
@@ -737,6 +806,11 @@ helpPanel.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
 helpPanel.Visible = false
 helpPanel.Parent = screenGui
 applyComicStyle(helpPanel, 20, 5)
+
+-- Inhalt unter der Roblox-Systemleiste hervorholen. IgnoreGuiInset zieht die
+-- Zeichenflaeche bewusst DARUNTER, damit oben kein Streifen mit Sicht auf die Welt bleibt --
+-- das gilt aber nur fuer den Hintergrund. Das Polster wird nachgezogen, siehe TopInsetUtils.
+TopInsetUtils.Bind(helpPanel)
 panels["Help"] = helpPanel
 
 local helpTitleLabel = Instance.new("TextLabel")
@@ -779,6 +853,52 @@ local helpListLayout = Instance.new("UIListLayout")
 helpListLayout.Padding = UDim.new(0, 14)
 helpListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 helpListLayout.Parent = helpScroll
+
+-- ===== Zwei Spalten fuer die Hilfe =====
+-- Die Abschnitte sind unterschiedlich hoch (verschieden viele Stichpunkte), deshalb kein
+-- Raster: ein Raster erzwingt gleiche Zellenhoehe und wuerde die langen Abschnitte
+-- abschneiden. Zwei Spalten mit je eigener Liste wachsen unabhaengig voneinander.
+helpListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+local HELP_COLUMN_GAP = 16
+local HELP_MAX_SINGLE_WIDTH = 760 -- eine Spalte darf nicht bildschirmbreit werden
+local HELP_TWO_COLUMN_FROM = 1160 -- ab hier passen zwei lesbare Spalten nebeneinander
+
+local helpColumnRow = Instance.new("Frame")
+helpColumnRow.Name = "HelpColumns"
+helpColumnRow.Size = UDim2.new(1, 0, 0, 0)
+helpColumnRow.AutomaticSize = Enum.AutomaticSize.Y
+helpColumnRow.BackgroundTransparency = 1
+helpColumnRow.Parent = helpScroll
+
+local helpColumnRowLayout = Instance.new("UIListLayout")
+helpColumnRowLayout.FillDirection = Enum.FillDirection.Horizontal
+helpColumnRowLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+helpColumnRowLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+helpColumnRowLayout.Padding = UDim.new(0, HELP_COLUMN_GAP)
+helpColumnRowLayout.SortOrder = Enum.SortOrder.LayoutOrder
+helpColumnRowLayout.Parent = helpColumnRow
+
+local helpColumns = {}
+for columnIndex = 1, 2 do
+	local column = Instance.new("Frame")
+	column.Name = "HelpColumn" .. columnIndex
+	column.Size = UDim2.new(0, HELP_MAX_SINGLE_WIDTH, 0, 0)
+	column.AutomaticSize = Enum.AutomaticSize.Y
+	column.BackgroundTransparency = 1
+	column.LayoutOrder = columnIndex
+	column.Parent = helpColumnRow
+
+	local columnLayout = Instance.new("UIListLayout")
+	columnLayout.Padding = UDim.new(0, 14)
+	columnLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	columnLayout.Parent = column
+
+	helpColumns[columnIndex] = column
+end
+
+-- In Aufbaureihenfolge, damit beim Umverteilen die Reihenfolge erhalten bleibt.
+local helpSectionOrder = {}
 
 -- [sectionId] = Frame -- fürs direkte Anspringen von einem Kontext-Hilfe-Button aus.
 local helpSectionFrames = {}
@@ -879,7 +999,8 @@ for index, section in ipairs(HelpConfig.Sections) do
 	sectionFrame.Size = UDim2.new(1, 0, 0, 0)
 	sectionFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
 	sectionFrame.LayoutOrder = index
-	sectionFrame.Parent = helpScroll
+	sectionFrame.Parent = helpColumns[1]
+	helpSectionOrder[index] = sectionFrame
 	applyComicStyle(sectionFrame, 12, 2)
 	helpSectionFrames[section.id] = sectionFrame
 
@@ -909,9 +1030,7 @@ for index, section in ipairs(HelpConfig.Sections) do
 	local sectionSummary = Instance.new("TextLabel")
 	sectionSummary.Size = UDim2.new(1, 0, 0, 32)
 	sectionSummary.BackgroundTransparency = 1
-	sectionSummary.Font = Enum.Font.FredokaOne
-	sectionSummary.TextWrapped = true
-	sectionSummary.TextScaled = true
+	UiTypography.Body(sectionSummary)
 	sectionSummary.TextXAlignment = Enum.TextXAlignment.Left
 	sectionSummary.TextColor3 = Color3.fromRGB(165, 165, 180)
 	sectionSummary.Text = section.summary
@@ -925,9 +1044,7 @@ for index, section in ipairs(HelpConfig.Sections) do
 		local pointLabel = Instance.new("TextLabel")
 		pointLabel.Size = UDim2.new(1, 0, 0, 20)
 		pointLabel.BackgroundTransparency = 1
-		pointLabel.Font = Enum.Font.FredokaOne
-		pointLabel.TextWrapped = true
-		pointLabel.TextScaled = true
+		UiTypography.Body(pointLabel)
 		pointLabel.TextXAlignment = Enum.TextXAlignment.Left
 		pointLabel.TextColor3 = Color3.fromRGB(235, 235, 245)
 		pointLabel.Text = "• " .. pointText
@@ -935,6 +1052,38 @@ for index, section in ipairs(HelpConfig.Sections) do
 		pointLabel.Parent = sectionFrame
 	end
 end
+
+-- Verteilt die Abschnitte auf eine oder zwei Spalten, je nach Bildschirmbreite. Bei zwei
+-- Spalten abwechselnd -- so liest sich die Reihenfolge zeilenweise von links nach rechts,
+-- wie man es von einer Seite erwartet.
+local helpColumnCount = 0
+local function layoutHelpColumns()
+	local width = usableWidth(helpScroll)
+	if width <= 0 then
+		return
+	end
+	local columns = width >= HELP_TWO_COLUMN_FROM and 2 or 1
+	local columnWidth
+	if columns == 2 then
+		columnWidth = math.floor((width - HELP_COLUMN_GAP) / 2)
+	else
+		columnWidth = math.min(width, HELP_MAX_SINGLE_WIDTH)
+	end
+	helpColumns[1].Size = UDim2.new(0, columnWidth, 0, 0)
+	helpColumns[2].Size = UDim2.new(0, columnWidth, 0, 0)
+	helpColumns[2].Visible = columns == 2
+
+	if columns == helpColumnCount then
+		return -- nur die Breite hat sich geaendert, das Umhaengen waere umsonst
+	end
+	helpColumnCount = columns
+	for index, sectionFrame in ipairs(helpSectionOrder) do
+		sectionFrame.Parent = helpColumns[columns == 2 and ((index - 1) % 2) + 1 or 1]
+	end
+end
+
+helpScroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutHelpColumns)
+layoutHelpColumns()
 
 -- Öffnet die Hilfeseite und springt optional direkt zu einem Abschnitt (z.B. vom
 -- Trainingspanel-Hilfe-Button aus). sectionId ist optional -- ohne Angabe öffnet sich

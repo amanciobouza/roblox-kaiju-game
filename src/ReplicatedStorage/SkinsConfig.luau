@@ -24,9 +24,44 @@
 
 local SkinsConfig = {}
 
+-- ===== Die drei Fraktionen =====
+-- Die Skinliste unten enthält bislang NUR Kaiju-Stufen. Jaeger und Ronin sind trotzdem
+-- hier aufgeführt: der Auswahl-Bildschirm zeigt ihre Plätze als gesperrte Fragezeichen,
+-- damit die Lücke sichtbar ist statt verschwiegen. Das Archiv hält es genauso.
+--
+-- PendingCount ist die Zahl vorgesehener Skins, solange die echten Einträge fehlen. Sobald
+-- eine Fraktion echte Skins bekommt, verschwindet das Feld -- die Liste ist dann die
+-- Wahrheit. Diese Zahl liest AUCH das Archiv (ArchiveConfig.PendingFactionSkins), damit es
+-- nicht zwei Quellen gibt, die auseinanderlaufen können.
+SkinsConfig.Factions = {
+	{
+		Key = "Kaiju",
+		Label = "Kaiju",
+		Icon = "🦖",
+		Chapter = "Chapter I",
+	},
+	{
+		Key = "Jaeger",
+		Label = "Jaeger",
+		Icon = "🤖",
+		Chapter = "Chapter II",
+		PendingCount = 5,
+		UnlockHint = "The faction itself unlocks by defeating the MegaCity Guardian as Kaiju.",
+	},
+	{
+		Key = "Ronin",
+		Label = "Ronin",
+		Icon = "🐯",
+		Chapter = "Chapter III",
+		PendingCount = 5,
+		UnlockHint = "The faction itself unlocks by defeating the MegaCity Guardian as Jaeger.",
+	},
+}
+
 SkinsConfig.Skins = {
 	{
 		Id = 0,
+		Faction = "Kaiju",
 		Name = "Baby Kaiju",
 		Role = "Where every Kaiju starts. Free, and the only form below level 10.",
 		Strength = "None to speak of. It has the lowest health, the slowest pace and the shortest jump of the six -- every later stage is strictly better.",
@@ -39,6 +74,7 @@ SkinsConfig.Skins = {
 	},
 	{
 		Id = 1,
+		Faction = "Kaiju",
 		Name = "Young Kaiju",
 		Role = "The first real step up, from level 10.",
 		Strength = "Twice the health of the starting form and a third more speed. Twice as tall, which roughly doubles how high a jump attack reaches.",
@@ -51,6 +87,7 @@ SkinsConfig.Skins = {
 	},
 	{
 		Id = 2,
+		Faction = "Kaiju",
 		Name = "Adult Kaiju",
 		Role = "The middle of the line, from level 20.",
 		Strength = "400 health and a stride half again as long as the Baby form's. Tall enough that walking through a street damages what stands along it.",
@@ -63,6 +100,7 @@ SkinsConfig.Skins = {
 	},
 	{
 		Id = 3,
+		Faction = "Kaiju",
 		Name = "Elder Kaiju",
 		Role = "The last form before the two titans, from level 30.",
 		Strength = "800 health, and a jump that carries about four times as high as the starting form's -- enough to come down on most rooftops from above.",
@@ -75,6 +113,7 @@ SkinsConfig.Skins = {
 	},
 	{
 		Id = 4,
+		Faction = "Kaiju",
 		Name = "Atomic Titan",
 		Role = "The first of the two end forms, from level 40.",
 		Strength = "1600 health and more than two and a half times the starting speed. At this size, buildings take damage from being brushed past.",
@@ -87,6 +126,7 @@ SkinsConfig.Skins = {
 	},
 	{
 		Id = 5,
+		Faction = "Kaiju",
 		Name = "Radiant Apex",
 		Role = "The final form, from level 50. Nothing follows it.",
 		Strength = "3200 health -- thirty-two times the Baby form -- the longest stride and the highest jump in the game. Little in a city can stop it directly.",
@@ -98,6 +138,17 @@ SkinsConfig.Skins = {
 		AttackAnimationId = "",
 	},
 }
+
+-- Alle Skins einer Fraktion, in Listenreihenfolge. Leer, solange es keine gibt.
+function SkinsConfig.GetSkinsByFaction(factionKey)
+	local result = {}
+	for _, skin in ipairs(SkinsConfig.Skins) do
+		if (skin.Faction or "Kaiju") == factionKey then
+			table.insert(result, skin)
+		end
+	end
+	return result
+end
 
 function SkinsConfig.GetSkinById(id)
 	for _, skin in ipairs(SkinsConfig.Skins) do

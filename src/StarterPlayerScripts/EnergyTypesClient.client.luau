@@ -11,6 +11,10 @@ local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
 local ComicStyleUtils = require(ReplicatedStorage:WaitForChild("ComicStyleUtils"))
+local ModelPreviewUtils = require(ReplicatedStorage:WaitForChild("ModelPreviewUtils"))
+local UiTypography = require(ReplicatedStorage:WaitForChild("UiTypography"))
+local SkinsConfig = require(ReplicatedStorage:WaitForChild("SkinsConfig"))
+local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
 local applyComicStyle = ComicStyleUtils.Apply
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -273,6 +277,11 @@ factionPanel.ClipsDescendants = true
 factionPanel.Parent = factionGui
 applyComicStyle(factionPanel, 20, 5)
 
+-- Inhalt unter der Roblox-Systemleiste hervorholen. IgnoreGuiInset zieht die
+-- Zeichenflaeche bewusst DARUNTER, damit oben kein Streifen mit Sicht auf die Welt bleibt --
+-- das gilt aber nur fuer den Hintergrund. Das Polster wird nachgezogen, siehe TopInsetUtils.
+TopInsetUtils.Bind(factionPanel)
+
 -- Dramatischer Verlaufs-Hintergrund (dunkles Violett -> fast Schwarz) statt einer
 -- einfarbigen Fläche -- macht die Szene sofort "epischer".
 local backgroundGradient = Instance.new("UIGradient")
@@ -318,13 +327,22 @@ local FACTIONS = {
 	-- dem Kaiju-Moveset. Es gibt keine verzögerte Eskalation, keine bessere
 	-- Meltdown-Kontrolle und keine Combos. Beide Karten sind ohnehin verschlossen und
 	-- nennen ihre Freischaltbedingung -- der Text sagt, worauf man hinarbeitet.
-	{ key = "Kaiju", modelName = "KaijuR15", emoji = "🦖", label = "KAIJU", subtitle = "POWER", color = Color3.fromRGB(90, 220, 110), desc = "Raw destructive power",
+	{ key = "Kaiju", emoji = "🦖", label = "KAIJU", subtitle = "POWER", color = Color3.fromRGB(90, 220, 110), desc = "Raw destructive power",
 		strength = "Heavy, untargeted damage. Heats up fast and slips into meltdown sooner than the others." },
-	{ key = "Jaeger", modelName = "JaegerR15", emoji = "🤖", label = "JAEGER", subtitle = "CONTROL", color = Color3.fromRGB(80, 170, 255), desc = "Master the battlefield",
+	{ key = "Jaeger", emoji = "🤖", label = "JAEGER", subtitle = "CONTROL", color = Color3.fromRGB(80, 170, 255), desc = "Master the battlefield",
 		strength = "Control. Slows the city's escalation, holds meltdown at bay, and takes single targets apart instead of flattening everything." },
-	{ key = "Ronin", modelName = "RoninR15", emoji = "🐯", label = "RONIN", subtitle = "PURPOSE", color = Color3.fromRGB(255, 150, 60), desc = "Strike with precision",
+	{ key = "Ronin", emoji = "🐯", label = "RONIN", subtitle = "PURPOSE", color = Color3.fromRGB(255, 150, 60), desc = "Strike with precision",
 		strength = "Flow. Chains attacks into combos and lives off keeping the rhythm unbroken." },
 }
+
+-- ===== Kartenbreite =====
+-- Die Karten standen auf festen 270 Pixeln. Seit der Bildschirm die ganze Flaeche nutzt,
+-- draengen sich drei schmale Karten in der Mitte, waehrend links und rechts Platz frei
+-- bleibt. Sie teilen sich jetzt die Zeile -- mit einer Obergrenze, damit sie auf sehr
+-- breiten Bildschirmen nicht auseinanderlaufen.
+local CARD_GAP = 14
+local CARD_MIN_WIDTH = 270
+local CARD_MAX_WIDTH = 460
 
 local cardRow = Instance.new("Frame")
 cardRow.Size = UDim2.new(1, -32, 1, -70)
@@ -336,87 +354,45 @@ cardRow.Parent = factionPanel
 local cardRowLayout = Instance.new("UIListLayout")
 cardRowLayout.FillDirection = Enum.FillDirection.Horizontal
 cardRowLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-cardRowLayout.Padding = UDim.new(0, 14)
+cardRowLayout.Padding = UDim.new(0, CARD_GAP)
 cardRowLayout.SortOrder = Enum.SortOrder.LayoutOrder
 cardRowLayout.Parent = cardRow
 
 local avatarPack = Workspace:FindFirstChild("R15AvatarPack")
 
--- Dreht das geklonte Vorschau-Modell in einem Viewport dauerhaft langsam um sich selbst
--- ("Turntable"-Effekt) -- macht aus einer starren Pose eine lebendige Präsentation.
-local function startTurntable(viewportModel)
-	task.spawn(function()
-		while viewportModel.Parent do
-			local ok = pcall(function()
-				viewportModel:PivotTo(viewportModel:GetPivot() * CFrame.Angles(0, math.rad(0.6), 0))
-			end)
-			if not ok then
-				break
-			end
-			RunService.Heartbeat:Wait()
-		end
-	end)
-end
-
-local function buildViewport(container, modelName)
-	local viewport = Instance.new("ViewportFrame")
-	viewport.Size = UDim2.new(1, 0, 1, 0)
-	viewport.BackgroundTransparency = 1
-	viewport.ZIndex = 71
-	-- WICHTIG: ViewportFrames übernehmen NICHT automatisch die normale
-	-- Workspace-Beleuchtung -- ohne explizite Werte hier rendern sie komplett schwarz.
-	viewport.Ambient = Color3.fromRGB(140, 140, 150)
-	viewport.LightColor = Color3.fromRGB(255, 255, 255)
-	viewport.Parent = container
-	print("[Kaiju-Debug] ViewportFrame erstellt für", modelName)
-
-	local template = avatarPack and avatarPack:FindFirstChild(modelName)
-	if not template then
-		local missingLabel = Instance.new("TextLabel")
-		missingLabel.Size = UDim2.new(1, 0, 1, 0)
-		missingLabel.BackgroundTransparency = 1
-		missingLabel.Font = Enum.Font.FredokaOne
-		missingLabel.TextScaled = true
-		missingLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-		missingLabel.Text = "?"
-		missingLabel.Parent = viewport
+-- Zeigt den ERSTEN Skin der Fraktion -- nicht ein eigenes Fraktionsmodell. Der Bildschirm
+-- soll zeigen, womit man in dieser Fraktion tatsaechlich anfaengt.
+--
+-- Bewusst OHNE Drehung: hier stehen drei Karten nebeneinander, und drei gleichzeitig
+-- kreisende Figuren ziehen den Blick staendig hin und her. Im Steckbrief der Skinauswahl,
+-- wo eine Figur allein steht, dreht sie sich weiterhin.
+--
+-- Fraktionen ohne Skins (Jaeger, Ronin) zeigen ein Fragezeichen -- so wie ihre Plaetze in
+-- der Skinauswahl und im Archiv.
+local function buildViewport(container, factionKey)
+	local skins = SkinsConfig.GetSkinsByFaction(factionKey)
+	local firstSkin = skins[1]
+	local template = avatarPack and avatarPack:FindFirstChildWhichIsA("Model")
+	if not firstSkin or not template then
+		ModelPreviewUtils.ShowPlaceholder(container, 71)
+		print(string.format("[Kaiju-Debug] Fraktionsvorschau %s -- kein Skin oder kein Avatar-Vorlage, Fragezeichen gezeigt.", factionKey))
 		return
 	end
 
-	local previewModel = template:Clone()
-	previewModel.Parent = viewport
-	print("[Kaiju-Debug]", modelName, "-- Klon hat", #previewModel:GetChildren(), "direkte Kinder,", #previewModel:GetDescendants(), "Nachfahren insgesamt, PrimaryPart:", previewModel.PrimaryPart)
-
-	-- WICHTIG: Modell zuerst zu einer BEKANNTEN Position verschieben (Ursprung) --
-	-- sonst behält der Klon seine ursprüngliche Position irgendwo im Workspace, während
-	-- die Kamera bei (0,0,0) startet und das Modell dadurch nie ins Bild bekommt.
-	local pivotOk = pcall(function()
-		previewModel:PivotTo(CFrame.new(0, 0, 0))
+	local viewport = ModelPreviewUtils.CreateViewport(container, 71)
+	local ok = pcall(function()
+		local previewModel = template:Clone()
+		previewModel:ScaleTo(firstSkin.Scale or 1)
+		previewModel.Parent = viewport
+		ModelPreviewUtils.Fit(viewport, previewModel, container)
 	end)
-
-	local camera = Instance.new("Camera")
-	camera.Parent = viewport
-	viewport.CurrentCamera = camera
-
-	-- Kamera so positionieren, dass das ganze Modell mittig ins Bild passt (aus der
-	-- tatsächlichen Bounding-Box berechnet, unabhängig von der Modellgrösse).
-	local ok, cframe, size = pcall(function()
-		return previewModel:GetBoundingBox()
-	end)
-	if ok then
-		local distance = math.max(size.X, size.Y, size.Z) * 1.6
-		local center = cframe.Position
-		camera.CFrame = CFrame.new(center + Vector3.new(0, size.Y * 0.05, distance), center)
-		print("[Kaiju-Debug] Viewport für", modelName, "-- pivotOk:", pivotOk, "size:", size, "distance:", distance)
-	else
-		-- Sicherheits-Fallback, falls GetBoundingBox() aus irgendeinem Grund scheitert --
-		-- Kamera schaut trotzdem in Richtung des (bekannten) Ursprungs, statt komplett
-		-- ins Leere.
-		camera.CFrame = CFrame.new(Vector3.new(0, 3, 15), Vector3.new(0, 3, 0))
-		print("[Kaiju-Debug] Viewport für", modelName, "-- GetBoundingBox fehlgeschlagen, pivotOk:", pivotOk)
+	if not ok then
+		viewport:Destroy()
+		ModelPreviewUtils.ShowPlaceholder(container, 71)
+		print(string.format("[Kaiju-Debug] Fraktionsvorschau %s -- Aufbau fehlgeschlagen.", factionKey))
+		return
 	end
-
-	startTurntable(previewModel)
+	print(string.format("[Kaiju-Debug] Fraktionsvorschau %s zeigt \"%s\".", factionKey, firstSkin.Name))
 end
 
 local factionCards = {} -- [key] = { card, descLabel, progressContainer, levelLabel/Fill, energyLabel/Fill, milestoneLabel/Fill, selectButton }
@@ -424,7 +400,7 @@ local factionCards = {} -- [key] = { card, descLabel, progressContainer, levelLa
 for index, faction in ipairs(FACTIONS) do
 	local card = Instance.new("Frame")
 	card.Name = faction.key .. "Card"
-	card.Size = UDim2.new(0, 270, 1, 0)
+	card.Size = UDim2.new(0, CARD_MIN_WIDTH, 1, 0)
 	card.LayoutOrder = index
 	card.BackgroundColor3 = Color3.fromRGB(20, 18, 30)
 	card.ZIndex = 71
@@ -437,31 +413,25 @@ for index, faction in ipairs(FACTIONS) do
 		cardStroke.Thickness = 3
 	end
 
-	-- Farbiger Glow-Schein hinter dem Charakter, passend zur Fraktions-Farbe.
-	local glow = Instance.new("Frame")
-	glow.Size = UDim2.new(0.85, 0, 0.85, 0)
-	glow.AnchorPoint = Vector2.new(0.5, 0.5)
-	glow.Position = UDim2.new(0.5, 0, 0.36, 0)
-	glow.BackgroundColor3 = faction.color
-	glow.BackgroundTransparency = 0.82
-	glow.ZIndex = 70
-	glow.Parent = card
-	local glowCorner = Instance.new("UICorner")
-	glowCorner.CornerRadius = UDim.new(1, 0)
-	glowCorner.Parent = glow
+	-- Der Schein sass frueher als EIN Kreis auf der Karte, mit fester Position und harter
+	-- Kante. Jetzt liegt er im Vorschaufeld, mittig hinter der Figur, und faellt ueber
+	-- mehrere Kreise nach aussen ab -- siehe ModelPreviewUtils.
+	-- Er ersetzt kein echtes Leuchten: ViewportFrames rendern weder Lichter noch Partikel
+	-- noch Bloom. Er ist der Ersatz dafuer.
 
 	-- 3D-Vorschau (rotierendes Modell)
 	local viewportContainer = Instance.new("Frame")
-	viewportContainer.Size = UDim2.new(1, -16, 0, 210)
+	viewportContainer.Size = UDim2.new(1, -16, 0, 320)
 	viewportContainer.Position = UDim2.new(0, 8, 0, 8)
 	viewportContainer.BackgroundTransparency = 1
 	viewportContainer.ZIndex = 71
 	viewportContainer.Parent = card
-	buildViewport(viewportContainer, faction.modelName)
+	ModelPreviewUtils.AddGlow(viewportContainer, faction.color, 70)
+	buildViewport(viewportContainer, faction.key)
 
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.Size = UDim2.new(1, -8, 0, 30)
-	nameLabel.Position = UDim2.new(0, 4, 0, 222)
+	nameLabel.Position = UDim2.new(0, 4, 0, 332)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.Font = Enum.Font.LuckiestGuy
 	nameLabel.TextScaled = true
@@ -471,23 +441,21 @@ for index, faction in ipairs(FACTIONS) do
 	nameLabel.Parent = card
 
 	local subtitleLabel = Instance.new("TextLabel")
-	subtitleLabel.Size = UDim2.new(1, -8, 0, 16)
-	subtitleLabel.Position = UDim2.new(0, 4, 0, 252)
+	subtitleLabel.Size = UDim2.new(1, -16, 0, 20)
+	subtitleLabel.Position = UDim2.new(0, 8, 0, 366)
 	subtitleLabel.BackgroundTransparency = 1
-	subtitleLabel.Font = Enum.Font.FredokaOne
-	subtitleLabel.TextScaled = true
+	UiTypography.Body(subtitleLabel, 14)
+	subtitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 	subtitleLabel.TextColor3 = Color3.fromRGB(210, 210, 220)
 	subtitleLabel.Text = faction.subtitle .. " -- " .. faction.desc
 
 	-- Die Stärke darunter: die Antwort auf die Frage, die man vor einem verschlossenen
 	-- Schloss stellt -- warum sollte ich das wollen?
 	local strengthLabel = Instance.new("TextLabel")
-	strengthLabel.Size = UDim2.new(1, -24, 0, 56)
+	strengthLabel.Size = UDim2.new(1, -24, 0, 84)
 	strengthLabel.Position = UDim2.new(0, 12, 0, subtitleLabel.Position.Y.Offset + 26)
 	strengthLabel.BackgroundTransparency = 1
-	strengthLabel.Font = Enum.Font.Gotham
-	strengthLabel.TextSize = 13
-	strengthLabel.TextWrapped = true
+	UiTypography.Body(strengthLabel)
 	strengthLabel.TextXAlignment = Enum.TextXAlignment.Left
 	strengthLabel.TextYAlignment = Enum.TextYAlignment.Top
 	strengthLabel.TextColor3 = Color3.fromRGB(200, 205, 220)
@@ -500,7 +468,7 @@ for index, faction in ipairs(FACTIONS) do
 	-- Fortschritts-Container: nur für gesperrte Fraktionen sichtbar/befüllt.
 	local progressContainer = Instance.new("Frame")
 	progressContainer.Size = UDim2.new(1, -16, 0, 108)
-	progressContainer.Position = UDim2.new(0, 8, 0, 272)
+	progressContainer.Position = UDim2.new(0, 8, 0, 480)
 	progressContainer.BackgroundTransparency = 1
 	progressContainer.ZIndex = 71
 	progressContainer.Visible = (faction.key ~= "Kaiju")
@@ -584,6 +552,27 @@ for index, faction in ipairs(FACTIONS) do
 		color = faction.color,
 	}
 end
+
+-- Die drei Karten teilen sich die Zeile. Neu berechnet, sobald sich die Fensterbreite
+-- aendert -- ein fester Wert waere auf dem einen Bildschirm zu schmal und auf dem
+-- anderen zu breit.
+local function layoutFactionCards()
+	local width = cardRow.AbsoluteSize.X
+	if width <= 0 then
+		return
+	end
+	local cardWidth = math.clamp(
+		math.floor((width - 2 * CARD_GAP) / 3),
+		CARD_MIN_WIDTH,
+		CARD_MAX_WIDTH
+	)
+	for _, refs in pairs(factionCards) do
+		refs.card.Size = UDim2.new(0, cardWidth, 1, 0)
+	end
+end
+
+cardRow:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutFactionCards)
+layoutFactionCards()
 
 -- ===== Fortschritt vom Server abrufen und in die Karten eintragen =====
 local ENERGY_ICONS_FOR_PROGRESS = {

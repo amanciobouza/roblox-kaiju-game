@@ -9,6 +9,9 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
 local ComicStyleUtils = require(ReplicatedStorage:WaitForChild("ComicStyleUtils"))
+local ModelPreviewUtils = require(ReplicatedStorage:WaitForChild("ModelPreviewUtils"))
+local UiTypography = require(ReplicatedStorage:WaitForChild("UiTypography"))
+local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
 local applyComicStyle = ComicStyleUtils.Apply
 local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
@@ -916,6 +919,11 @@ ForceCloseShopEvent.OnClientEvent:Connect(function()
 end)
 applyComicStyle(shopFrame, 20, 5)
 
+-- Inhalt unter der Roblox-Systemleiste hervorholen. IgnoreGuiInset zieht die
+-- Zeichenflaeche bewusst DARUNTER, damit oben kein Streifen mit Sicht auf die Welt bleibt --
+-- das gilt aber nur fuer den Hintergrund. Das Polster wird nachgezogen, siehe TopInsetUtils.
+TopInsetUtils.Bind(shopFrame)
+
 -- X-Schliessen-Button -- kehrt zum Hamburger-Menü zurück (dieses Panel hatte bisher
 -- keinen eigenen, war nur über den jetzt entfernten "← Back"-Button schliessbar).
 local shopCloseButton = Instance.new("TextButton")
@@ -946,7 +954,7 @@ shopTitle.BackgroundTransparency = 1
 shopTitle.TextColor3 = Color3.fromRGB(235, 235, 245)
 shopTitle.Font = Enum.Font.LuckiestGuy
 shopTitle.TextScaled = true
-shopTitle.Text = "🦖 Skin Shop"
+shopTitle.Text = "☯️ Skins"
 shopTitle.Parent = shopFrame
 
 -- Liste links, Steckbrief rechts. Die Liste braucht wenig -- sechs Eintraege mit Name und
@@ -966,6 +974,9 @@ shopScroll.Parent = shopFrame
 
 local shopLayout = Instance.new("UIListLayout")
 shopLayout.Padding = UDim.new(0, 8)
+-- Ausdruecklich nach LayoutOrder: seit die Liste nach Fraktionen gruppiert ist, haengt die
+-- Reihenfolge an den vergebenen Nummern und nicht mehr an der Erzeugungsreihenfolge.
+shopLayout.SortOrder = Enum.SortOrder.LayoutOrder
 shopLayout.Parent = shopScroll
 
 -- ===== Steckbrief =====
@@ -977,6 +988,8 @@ local detailFrame = Instance.new("Frame")
 detailFrame.Name = "SkinDetail"
 detailFrame.Size = UDim2.new(1 - LIST_WIDTH, -24, 1, -60)
 detailFrame.Position = UDim2.new(LIST_WIDTH, 4, 0, 54)
+
+local SKIN_TEXT_MAX_WIDTH = 620 -- lesbare Zeilenlaenge, unabhaengig von der Bildschirmbreite
 detailFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
 detailFrame.Parent = shopFrame
 applyComicStyle(detailFrame, 14, 3)
@@ -1000,6 +1013,12 @@ detailName.TextColor3 = Color3.fromRGB(235, 235, 245)
 detailName.Text = ""
 detailName.Parent = detailFrame
 
+-- Hoechstbreite der Textspalte. Ohne sie laeuft der Steckbrief auf einem breiten
+-- Bildschirm ueber die halbe Monitorbreite -- so lange Zeilen liest niemand gern.
+local detailNameWidthCap = Instance.new("UISizeConstraint")
+detailNameWidthCap.MaxSize = Vector2.new(SKIN_TEXT_MAX_WIDTH, math.huge)
+detailNameWidthCap.Parent = detailName
+
 local detailRole = Instance.new("TextLabel")
 detailRole.Size = UDim2.new(0.58, -32, 0, 44)
 detailRole.Position = UDim2.new(0.42, 0, 0, 58)
@@ -1013,18 +1032,28 @@ detailRole.TextColor3 = Color3.fromRGB(165, 165, 180)
 detailRole.Text = ""
 detailRole.Parent = detailFrame
 
+-- Hoechstbreite der Textspalte. Ohne sie laeuft der Steckbrief auf einem breiten
+-- Bildschirm ueber die halbe Monitorbreite -- so lange Zeilen liest niemand gern.
+local detailRoleWidthCap = Instance.new("UISizeConstraint")
+detailRoleWidthCap.MaxSize = Vector2.new(SKIN_TEXT_MAX_WIDTH, math.huge)
+detailRoleWidthCap.Parent = detailRole
+
 local detailStrength = Instance.new("TextLabel")
 detailStrength.Size = UDim2.new(0.58, -32, 0, 90)
 detailStrength.Position = UDim2.new(0.42, 0, 0, 106)
 detailStrength.BackgroundTransparency = 1
-detailStrength.Font = Enum.Font.Gotham
-detailStrength.TextSize = 14
-detailStrength.TextWrapped = true
+UiTypography.Body(detailStrength)
 detailStrength.TextXAlignment = Enum.TextXAlignment.Left
 detailStrength.TextYAlignment = Enum.TextYAlignment.Top
 detailStrength.TextColor3 = Color3.fromRGB(235, 235, 245)
 detailStrength.Text = ""
 detailStrength.Parent = detailFrame
+
+-- Hoechstbreite der Textspalte. Ohne sie laeuft der Steckbrief auf einem breiten
+-- Bildschirm ueber die halbe Monitorbreite -- so lange Zeilen liest niemand gern.
+local detailStrengthWidthCap = Instance.new("UISizeConstraint")
+detailStrengthWidthCap.MaxSize = Vector2.new(SKIN_TEXT_MAX_WIDTH, math.huge)
+detailStrengthWidthCap.Parent = detailStrength
 
 -- Level-Freischaltung: der staerkste Kaufgrund im Spiel und bis heute nirgends genannt.
 -- Jeder GEKAUFTE Skin hebt die Obergrenze um 10 (PlayerSetup.getLevelCap).
@@ -1032,12 +1061,17 @@ local detailBonus = Instance.new("TextLabel")
 detailBonus.Size = UDim2.new(0.58, -32, 0, 26)
 detailBonus.Position = UDim2.new(0.42, 0, 0, 200)
 detailBonus.BackgroundColor3 = Color3.fromRGB(255, 236, 180)
-detailBonus.Font = Enum.Font.FredokaOne
-detailBonus.TextSize = 15
+UiTypography.Body(detailBonus, 15)
 detailBonus.TextColor3 = Color3.fromRGB(120, 80, 20)
 detailBonus.Text = ""
 detailBonus.Visible = false
 detailBonus.Parent = detailFrame
+
+-- Hoechstbreite der Textspalte. Ohne sie laeuft der Steckbrief auf einem breiten
+-- Bildschirm ueber die halbe Monitorbreite -- so lange Zeilen liest niemand gern.
+local detailBonusWidthCap = Instance.new("UISizeConstraint")
+detailBonusWidthCap.MaxSize = Vector2.new(SKIN_TEXT_MAX_WIDTH, math.huge)
+detailBonusWidthCap.Parent = detailBonus
 applyComicStyle(detailBonus, 8, 2)
 
 -- Drei Balken: Leben, Tempo, Groesse. "Damage" fehlt bewusst -- das Feld gab es zwar, es
@@ -1091,7 +1125,7 @@ for index, def in ipairs(STAT_DEFS) do
 	delta.Text = ""
 	delta.Parent = row
 
-	statRows[def.key] = { fill = fill, delta = delta }
+	statRows[def.key] = { fill = fill, delta = delta, row = row }
 end
 
 local detailAction = Instance.new("TextButton")
@@ -1853,28 +1887,26 @@ function updateLevelBar()
 	end
 end
 
--- Vorschau des Skins. FESTE Kameradistanz fuer alle sechs -- ein formatfuellender Rahmen
--- wuerde die Groesse wegnormieren, und die ist heute der EINZIGE sichtbare Unterschied:
--- SkinsConfig tauscht kein Mesh, alle sechs sind derselbe Avatar in sechs Groessen. Sobald
--- es echte Modelle gibt, zeigt dieselbe Kamera Form UND Groesse.
-local PREVIEW_CAMERA_DISTANCE = 90
-
+-- Vorschau des Skins. Rahmen, Einpassen und Drehen macht ModelPreviewUtils -- dort steht
+-- auch, warum die Figur erst mittig ausgerichtet werden muss.
+--
+-- ===== Warum nicht mehr die feste Kameradistanz =====
+-- Frueher stand die Kamera fuer alle sechs Stufen gleich weit weg. Das war Absicht: alle
+-- sechs sind derselbe Avatar in sechs Groessen (SkinsConfig tauscht kein Mesh), und die
+-- feste Kamera machte diesen Unterschied sichtbar. Der Preis war, dass der Baby Kaiju als
+-- Punkt in einem leeren Rahmen stand -- ein Steckbrief, der nichts zeigt. Die Groesse geht
+-- nicht verloren: der Scale-Balken im Steckbrief nennt sie als Zahl UND als Vergleich zum
+-- getragenen Skin.
 local function buildSkinPreview(container, skin, revealed)
 	for _, child in ipairs(container:GetChildren()) do
-		if child:IsA("ViewportFrame") or child:IsA("TextLabel") then
+		if child:IsA("ViewportFrame") or child:IsA("TextLabel") or child.Name == "PreviewGlow" then
 			child:Destroy()
 		end
 	end
 
+	-- Auch fuer Platzhalter aufgerufen, dann ist `skin` nil -- dieser Zweig braucht ihn nicht.
 	if not revealed then
-		local locked = Instance.new("TextLabel")
-		locked.Size = UDim2.new(1, 0, 1, 0)
-		locked.BackgroundTransparency = 1
-		locked.Font = Enum.Font.LuckiestGuy
-		locked.TextScaled = true
-		locked.TextColor3 = Color3.fromRGB(170, 160, 145)
-		locked.Text = "?"
-		locked.Parent = container
+		ModelPreviewUtils.ShowPlaceholder(container)
 		return
 	end
 
@@ -1884,42 +1916,43 @@ local function buildSkinPreview(container, skin, revealed)
 		local missing = Instance.new("TextLabel")
 		missing.Size = UDim2.new(1, 0, 1, 0)
 		missing.BackgroundTransparency = 1
-		missing.Font = Enum.Font.Gotham
-		missing.TextScaled = true
 		missing.TextColor3 = Color3.fromRGB(170, 160, 145)
 		missing.Text = "no preview"
 		missing.Parent = container
+		UiTypography.Body(missing)
 		return
 	end
 
-	local viewport = Instance.new("ViewportFrame")
-	viewport.Size = UDim2.new(1, 0, 1, 0)
-	viewport.BackgroundTransparency = 1
-	-- ViewportFrames uebernehmen NICHT die Workspace-Beleuchtung -- ohne diese Werte
-	-- rendern sie komplett schwarz.
-	viewport.Ambient = Color3.fromRGB(150, 148, 140)
-	viewport.LightColor = Color3.fromRGB(255, 255, 255)
-	viewport.Parent = container
+	local viewport = ModelPreviewUtils.CreateViewport(container, 2)
 
+	local preview
 	local ok = pcall(function()
 		local model = template:Clone()
 		model:ScaleTo(skin.Scale or 1)
 		model.Parent = viewport
-		model:PivotTo(CFrame.new(0, 0, 0))
-
-		local camera = Instance.new("Camera")
-		camera.Parent = viewport
-		viewport.CurrentCamera = camera
-		-- Immer derselbe Abstand, unabhaengig von der Modellgroesse.
-		camera.CFrame = CFrame.new(Vector3.new(0, 6, PREVIEW_CAMERA_DISTANCE), Vector3.new(0, 6, 0))
+		ModelPreviewUtils.Fit(viewport, model, container)
+		-- Nachgebautes Leuchten aus den Neon-Teilen des Modells. Bei den heutigen
+		-- Kaiju-Stufen -- schlichte Avatare ohne Neon -- findet sich keine Farbe, und es
+		-- erscheint bewusst kein Schein. Erst echte Modelle bringen einen mit.
+		ModelPreviewUtils.AddGlow(container, ModelPreviewUtils.FindGlowColor(model), 1)
+		preview = model
 	end)
 	if not ok then
 		viewport:Destroy()
+		return
 	end
+
+	ModelPreviewUtils.Spin(preview)
 end
 
 -- Welcher Skin steht gerade im Steckbrief. Beim Oeffnen der getragene.
 local selectedSkinId = nil
+
+-- Ist statt eines echten Skins ein Platzhalter gewaehlt, steht er hier:
+-- { faction = <Eintrag aus SkinsConfig.Factions>, index = <Nummer innerhalb der Fraktion> }.
+-- Jaeger und Ronin haben noch keine Skins; ihre Plaetze sind trotzdem sichtbar, damit der
+-- Bildschirm die Luecke zeigt statt sie zu verschweigen -- so haelt es das Archiv auch.
+local selectedPending = nil
 
 -- Hoechstwerte ueber alle Skins -- die Balken zeigen jeden Wert im Verhaeltnis zum
 -- staerksten. Einmal berechnet, die Liste aendert sich zur Laufzeit nicht.
@@ -1957,6 +1990,29 @@ local function refreshDetail()
 	if not unlockedFolder or not leaderstats or not equippedValue then
 		return
 	end
+	if selectedPending then
+		local faction = selectedPending.faction
+		detailName.Text = string.format("%s %s %d", faction.Icon, faction.Label, selectedPending.index)
+		detailRole.Text = "Not built yet."
+		detailStrength.Text = string.format(
+			"%s skins arrive with %s. %s",
+			faction.Label, faction.Chapter, faction.UnlockHint or "")
+		detailBonus.Visible = false
+		-- Balken ausblenden statt auf null setzen: leere Balken haetten "dieser Skin hat
+		-- keine Kraft" behauptet, richtig ist "es gibt ihn noch nicht".
+		for _, row in pairs(statRows) do
+			row.row.Visible = false
+		end
+		buildSkinPreview(detailViewport, nil, false)
+		detailAction.Text = "🔒 " .. faction.Chapter
+		detailAction.BackgroundColor3 = Color3.fromRGB(120, 120, 132)
+		detailAction.AutoButtonColor = false
+		return
+	end
+	for _, row in pairs(statRows) do
+		row.row.Visible = true
+	end
+
 	if selectedSkinId == nil then
 		selectedSkinId = equippedValue.Value
 	end
@@ -2025,6 +2081,9 @@ local function refreshDetail()
 end
 
 detailAction.MouseButton1Click:Connect(function()
+	if selectedPending then
+		return -- ein Platzhalter ist nicht kaufbar
+	end
 	local skin = SkinsConfig.GetSkinById(selectedSkinId)
 	local unlockedFolder = player:FindFirstChild("UnlockedSkins")
 	if not skin or not unlockedFolder then
@@ -2040,8 +2099,10 @@ detailAction.MouseButton1Click:Connect(function()
 end)
 
 local function refreshShop()
+	-- AUCH die Ueberschriften wegraeumen, nicht nur die Knoepfe: sie kamen mit der
+	-- Gruppierung nach Fraktion dazu und wuerden sich sonst bei jedem Auffrischen doppeln.
 	for _, child in ipairs(shopScroll:GetChildren()) do
-		if child:IsA("TextButton") then
+		if child:IsA("TextButton") or child:IsA("TextLabel") then
 			child:Destroy()
 		end
 	end
@@ -2050,42 +2111,88 @@ local function refreshShop()
 	local leaderstats = player:WaitForChild("leaderstats")
 	local equippedSkin = player:WaitForChild("EquippedSkin")
 
-	for _, skin in ipairs(SkinsConfig.Skins) do
-		local isUnlocked = unlockedFolder:FindFirstChild("Skin_" .. skin.Id) ~= nil
-		local isEquipped = equippedSkin.Value == skin.Id
-		local meetsLevel = leaderstats.Level.Value >= skin.RequiredLevel
-		local canAfford = leaderstats.Coins.Value >= skin.Cost
-
-		local button = Instance.new("TextButton")
-		button.Size = UDim2.new(1, -4, 0, 52)
-		button.Font = Enum.Font.FredokaOne
-		button.TextScaled = true
-		button.TextColor3 = Color3.new(1, 1, 1)
-		button.Parent = shopScroll
-		applyComicStyle(button, 14, 3)
-
-		if isEquipped then
-			button.Text = "✅ " .. skin.Name
-			button.BackgroundColor3 = Color3.fromRGB(80, 200, 90)
-		elseif isUnlocked then
-			button.Text = "👕 Wear " .. skin.Name
-			button.BackgroundColor3 = Color3.fromRGB(70, 150, 235)
-		elseif not meetsLevel then
-			button.Text = "🔒 " .. skin.Name .. " - Level " .. skin.RequiredLevel .. " required"
-			button.BackgroundColor3 = Color3.fromRGB(120, 60, 60)
-		elseif canAfford then
-			button.Text = "🪙 " .. skin.Name .. " (" .. skin.Cost .. ")"
-			button.BackgroundColor3 = Color3.fromRGB(255, 180, 40)
-		else
-			button.Text = "🔒 " .. skin.Name .. " (" .. skin.Cost .. ")"
-			button.BackgroundColor3 = Color3.fromRGB(160, 160, 160)
+	local order = 0
+	for _, faction in ipairs(SkinsConfig.Factions) do
+		local skins = SkinsConfig.GetSkinsByFaction(faction.Key)
+		local pendingCount = faction.PendingCount or 0
+		if #skins == 0 and pendingCount == 0 then
+			continue -- eine Fraktion ohne Skins und ohne vorgesehene Plaetze zeigt nichts
 		end
 
-		-- Ein Klick WAEHLT nur aus. Gekauft und angelegt wird im Steckbrief.
-		button.MouseButton1Click:Connect(function()
-			selectedSkinId = skin.Id
-			refreshDetail()
-		end)
+		order += 1
+		local header = Instance.new("TextLabel")
+		header.Name = faction.Key .. "Header"
+		header.Size = UDim2.new(1, -4, 0, 26)
+		header.BackgroundTransparency = 1
+		header.Font = Enum.Font.LuckiestGuy
+		header.TextScaled = true
+		header.TextXAlignment = Enum.TextXAlignment.Left
+		header.TextColor3 = Color3.fromRGB(255, 205, 90)
+		header.Text = faction.Icon .. " " .. faction.Label
+		header.LayoutOrder = order
+		header.Parent = shopScroll
+
+		for _, skin in ipairs(skins) do
+			local isUnlocked = unlockedFolder:FindFirstChild("Skin_" .. skin.Id) ~= nil
+			local isEquipped = equippedSkin.Value == skin.Id
+			local meetsLevel = leaderstats.Level.Value >= skin.RequiredLevel
+			local canAfford = leaderstats.Coins.Value >= skin.Cost
+
+			order += 1
+			local button = Instance.new("TextButton")
+			button.Size = UDim2.new(1, -4, 0, 52)
+			button.Font = Enum.Font.FredokaOne
+			button.TextScaled = true
+			button.TextColor3 = Color3.new(1, 1, 1)
+			button.LayoutOrder = order
+			button.Parent = shopScroll
+			applyComicStyle(button, 14, 3)
+
+			if isEquipped then
+				button.Text = "✅ " .. skin.Name
+				button.BackgroundColor3 = Color3.fromRGB(80, 200, 90)
+			elseif isUnlocked then
+				button.Text = "👕 Wear " .. skin.Name
+				button.BackgroundColor3 = Color3.fromRGB(70, 150, 235)
+			elseif not meetsLevel then
+				button.Text = "🔒 " .. skin.Name .. " - Level " .. skin.RequiredLevel .. " required"
+				button.BackgroundColor3 = Color3.fromRGB(120, 60, 60)
+			elseif canAfford then
+				button.Text = "🪙 " .. skin.Name .. " (" .. skin.Cost .. ")"
+				button.BackgroundColor3 = Color3.fromRGB(255, 180, 40)
+			else
+				button.Text = "🔒 " .. skin.Name .. " (" .. skin.Cost .. ")"
+				button.BackgroundColor3 = Color3.fromRGB(160, 160, 160)
+			end
+
+			-- Ein Klick WAEHLT nur aus. Gekauft und angelegt wird im Steckbrief.
+			button.MouseButton1Click:Connect(function()
+				selectedPending = nil
+				selectedSkinId = skin.Id
+				refreshDetail()
+			end)
+		end
+
+		-- Vorgesehene, aber noch nicht gebaute Plaetze. Anwaehlbar, damit der Steckbrief
+		-- erklaeren kann, woran es haengt -- kaufbar sind sie nicht.
+		for index = 1, pendingCount do
+			order += 1
+			local button = Instance.new("TextButton")
+			button.Size = UDim2.new(1, -4, 0, 52)
+			button.Font = Enum.Font.FredokaOne
+			button.TextScaled = true
+			button.TextColor3 = Color3.fromRGB(200, 200, 210)
+			button.BackgroundColor3 = Color3.fromRGB(52, 52, 62)
+			button.Text = string.format("? %s %d - %s", faction.Label, index, faction.Chapter)
+			button.LayoutOrder = order
+			button.Parent = shopScroll
+			applyComicStyle(button, 14, 3)
+
+			button.MouseButton1Click:Connect(function()
+				selectedPending = { faction = faction, index = index }
+				refreshDetail()
+			end)
+		end
 	end
 
 	refreshDetail()
@@ -2128,6 +2235,9 @@ shopFrame:GetPropertyChangedSignal("Visible"):Connect(function()
 		if equippedValue then
 			selectedSkinId = equippedValue.Value
 		end
+		-- Beim Oeffnen immer beim getragenen Skin beginnen. Ohne das haette ein zuletzt
+		-- angeklickter Platzhalter die naechste Sitzung des Bildschirms eroeffnet.
+		selectedPending = nil
 		refreshShop()
 	end
 end)
