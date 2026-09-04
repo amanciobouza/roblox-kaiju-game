@@ -365,16 +365,38 @@ local function buildWardenGuardian(plan)
 		-- Zustandsmaschine hier arbeiten. Genutzt wird nur api.PlayAnimation, damit
 		-- SCAN/POSITION/BLOCK/COUNTER die alleinige Autoritaet bleibt.
 		local controller = require(workshop:WaitForChild("GuardianRuntimeController", 5))
-		local stub = Instance.new("Folder")
-		stub.Name = "GuardianAnimationStubApi"
+
+		-- Der Ordner heisst "Gameplay", weil die Reactions-Module des Workshops genau
+		-- danach suchen (model:WaitForChild("Gameplay")). Er bleibt trotzdem ein
+		-- Platzhalter: die drei Ereignisse darin feuern wir SELBST, und die Gameplay-Logik
+		-- des Workshops wird nicht angehaengt -- sie brauechte eine zweite
+		-- Zustandsmaschine neben der hier.
+		local gameplay = Instance.new("Folder")
+		gameplay.Name = "Gameplay"
 		for _, eventName in ipairs({ "AbilityRequested", "DamageTaken", "StateChanged" }) do
 			local event = Instance.new("BindableEvent")
 			event.Name = eventName
-			event.Parent = stub
+			event.Parent = gameplay
 		end
-		stub.Parent = built
-		guardianAnimation[built] = controller.Attach(built, stub)
+		gameplay.Parent = built
+
+		guardianAnimation[built] = controller.Attach(built, gameplay)
 		guardianAssetName[built] = plan.asset
+
+		-- Der Aegis bringt seine Effekte nicht als aufrufbares Modul mit, sondern als
+		-- Reaktionen auf AbilityRequested -- Ionenstrahlen, Raketensalve, Schildfeld.
+		-- Warden und Marshal brauchen das nicht, ihre Effekte rufen wir direkt auf.
+		if plan.asset == "AegisInterceptor" then
+			local reactions = workshop:FindFirstChild("AegisInterceptorReactions")
+			if reactions then
+				local okReactions, err = pcall(function()
+					require(reactions).Attach(built)
+				end)
+				if not okReactions then
+					warn("[CityDefenderService] AegisInterceptorReactions nicht angehaengt: " .. tostring(err))
+				end
+			end
+		end
 
 		built.Parent = nil
 		staging:Destroy()
@@ -745,6 +767,23 @@ local function damageGuardian(cityName, amount, attackerPlayer)
 			-- der letzte Schlag, nicht die Beteiligung.
 			if cityName == "MegaCity" then
 				_G.RecordStat(attackerPlayer, "ChaptersCompleted")
+
+				-- Mit WELCHER Fraktion -- bis hierher wurde das nirgends festgehalten, und
+				-- ohne diese Angabe ist die Freischaltung von Jaeger und Ronin nicht
+				-- auswertbar: Jaeger verlangt diesen Sieg mit Kaiju, Ronin mit Jaeger.
+				-- Daran haengen ausserdem die vier Completed-Achievements, die bis heute
+				-- als 'dormant' markiert waren.
+				local faction = attackerPlayer:GetAttribute("Faction") or "Kaiju"
+				local factionKey = "ChaptersCompleted." .. faction
+				local previous = attackerPlayer:GetAttribute("Stat_" .. factionKey) or 0
+				_G.RecordStat(attackerPlayer, factionKey)
+
+				-- Wie viele VERSCHIEDENE Fraktionen es geschafft haben. Nur beim ersten Mal
+				-- je Fraktion hochzaehlen, sonst wuerde dreimal Kaiju wie alle drei
+				-- Fraktionen aussehen -- daran haengt "Meister aller Klingen".
+				if previous == 0 then
+					_G.RecordStat(attackerPlayer, "ChaptersCompletedFactions")
+				end
 			end
 		end
 
@@ -1038,7 +1077,50 @@ local function fireRepulsorPulse(guardian, cityName, config)
 end
 
 -- ===== Aegis Shield sichtbar aus-/einfahren =====
+local workshopModuleCache = {}
+
+local function requireWorkshopModule(name)
+	local cached = workshopModuleCache[name]
+	if cached ~= nil then
+		return cached or nil
+	end
+	local workshop = ReplicatedStorage:FindFirstChild("TrenchbornAssetWorkshop")
+	local module = workshop and workshop:FindFirstChild(name)
+	if not module then
+		workshopModuleCache[name] = false
+		warn("[CityDefenderService] Workshop-Modul '" .. name .. "' nicht gefunden -- Effekte bleiben aus.")
+		return nil
+	end
+	local ok, loaded = pcall(require, module)
+	if not ok then
+		workshopModuleCache[name] = false
+		warn("[CityDefenderService] Workshop-Modul '" .. name .. "' laedt nicht: " .. tostring(loaded))
+		return nil
+	end
+	workshopModuleCache[name] = loaded
+	return loaded
+end
+
 local function setAegisShieldDeployed(guardian, deployed)
+	-- Der Aegis-III traegt sein Schildfeld nicht als Teil im Modell, sondern als REAKTION
+	-- auf AbilityRequested (drei schwebende Panels vor dem Rumpf). Das muss VOR der
+	-- Pruefung darunter passieren: "AegisShieldPanel" existiert bei ihm gar nicht, die
+	-- Funktion kaeme sonst nie weiter. Nur beim Ausfahren gefeuert -- das Feld raeumt sich
+	-- nach seiner eigenen Duration selbst ab.
+	if deployed and guardian.assetName == "AegisInterceptor" and not guardian.aegisFieldUp then
+		guardian.aegisFieldUp = true
+		local gameplay = guardian.model:FindFirstChild("Gameplay")
+		local requested = gameplay and gameplay:FindFirstChild("AbilityRequested")
+		local values = requireWorkshopModule("AegisInterceptorGameplayConfig")
+		if requested and values then
+			pcall(function()
+				requested:Fire("DirectionalAegis", nil, values.DirectionalAegis)
+			end)
+		end
+	elseif not deployed then
+		guardian.aegisFieldUp = false
+	end
+
 	local shieldPanel = guardian.model:FindFirstChild("AegisShieldPanel", true)
 	if not shieldPanel then
 		return
@@ -1239,49 +1321,89 @@ local GUARDIAN_ATTACK_ANIMATIONS = {
 }
 
 -- Die Effekte liegen NEBEN den Animationen, in eigenen Modulen. Die Animation bewegt nur
--- das Skelett; Licht, Funken und Schockwelle kommen aus WardenShepherdCombatVFX. Der
--- generische GuardianRuntimeController ruft dieses Modul nicht auf -- er kennt nur die
--- Marshal-Faehigkeiten -- und ohne den Aufruf hier schwingt der Guardian den Baton im
--- Leeren und der Warnimpuls bleibt unsichtbar.
-local wardenVFX = nil
-local function getWardenVFX()
-	if wardenVFX ~= nil then
-		return wardenVFX or nil
-	end
-	local workshop = ReplicatedStorage:FindFirstChild("TrenchbornAssetWorkshop")
-	local module = workshop and workshop:FindFirstChild("WardenShepherdCombatVFX")
-	if not module then
-		wardenVFX = false
-		warn("[CityDefenderService] WardenShepherdCombatVFX nicht gefunden -- Angriffe bleiben ohne Effekt.")
-		return nil
-	end
-	local ok, loaded = pcall(require, module)
-	wardenVFX = ok and loaded or false
-	return wardenVFX or nil
-end
-
+-- das Skelett; Licht, Funken, Ionenstrahlen und Raketenspuren kommen von dort.
+--
+-- Die drei Generationen sind unterschiedlich angebunden, und das ist keine Willkuer des
+-- Workshops, sondern folgt seiner Bauweise:
+--
+--   Warden   WardenShepherdCombatVFX -- direkt aufrufbar, ShockBaton(model) /
+--            WarningPulse(model, config)
+--   Marshal  GuardianCombatVFX -- direkt aufrufbar, Pulse / ContainmentNet mit
+--            (model, target, ability). Genau die beiden ruft auch der generische
+--            RuntimeController auf; wir rufen sie selbst, damit die Zustandsmaschine hier
+--            die Autoritaet behaelt und der Controller nicht mit eigenen Idle-Umschaltungen
+--            dazwischenfaehrt.
+--   Aegis    AegisInterceptorReactions -- EREIGNISGESTEUERT. Das Modul haengt sich an
+--            einen Ordner "Gameplay" im Modell und hoert dort auf AbilityRequested. Ein
+--            Direktaufruf ist nicht vorgesehen; deshalb heisst unser Platzhalter-Ordner
+--            "Gameplay" und wir feuern das Ereignis.
+--
+-- Die Sicht-Werte (Telegrafierdauer, Flugzeit, Raketenzahl, Splash-Radius) kommen aus den
+-- GameplayConfigs des Workshops -- sie gehoeren zur Optik. Die KAMPFWERTE bleiben in
+-- CityAlertConfig; keine Zahl steht an zwei Orten.
 -- Telegrafierdauer des Warnimpulses: rein visuell (wie lange das gruene Licht auflaedt),
 -- deshalb hier und nicht in CityAlertConfig -- dort stehen die Kampfwerte.
 local WARNING_PULSE_TELEGRAPH = 0.6
 
-local function playGuardianVFX(guardian, kind, config)
-	if guardian.assetName ~= "WardenShepherd" then
-		return -- Marshal und Aegis haben eigene Effekte, noch nicht verdrahtet
-	end
-	local vfx = getWardenVFX()
-	if not vfx then
+-- kind ist "Fist" (Nahangriff) oder "Pulse" (Flaechenangriff) -- die beiden Rollen, die
+-- die Zustandsmaschine kennt. Welche Faehigkeit das je Generation ist, steht hier.
+local function playGuardianVFX(guardian, kind, config, target)
+	local asset = guardian.assetName
+	if not asset then
 		return
 	end
-	pcall(function()
-		if kind == "Fist" then
-			vfx.ShockBaton(guardian.model)
-		else
-			vfx.WarningPulse(guardian.model, {
-				TelegraphDuration = WARNING_PULSE_TELEGRAPH,
-				Radius = config.GuardianRepulsorRadius,
-			})
+
+	if asset == "WardenShepherd" then
+		local vfx = requireWorkshopModule("WardenShepherdCombatVFX")
+		if not vfx then
+			return
 		end
-	end)
+		pcall(function()
+			if kind == "Fist" then
+				vfx.ShockBaton(guardian.model)
+			else
+				vfx.WarningPulse(guardian.model, {
+					TelegraphDuration = WARNING_PULSE_TELEGRAPH,
+					Radius = config.GuardianRepulsorRadius,
+				})
+			end
+		end)
+		return
+	end
+
+	if asset == "MarshalRoadblock" then
+		local vfx = requireWorkshopModule("GuardianCombatVFX")
+		local values = requireWorkshopModule("MarshalRoadblockGameplayConfig")
+		if not vfx or not values or not target then
+			return
+		end
+		pcall(function()
+			if kind == "Fist" then
+				vfx.Pulse(guardian.model, target.Character, values.PulseCannon)
+			else
+				vfx.ContainmentNet(guardian.model, target.Character, values.ContainmentNet)
+			end
+		end)
+		return
+	end
+
+	if asset == "AegisInterceptor" then
+		-- Der Ereignisweg: AegisInterceptorReactions haengt am Ordner "Gameplay" und
+		-- reagiert auf AbilityRequested. Angehaengt wird es beim Bau (siehe unten).
+		local gameplay = guardian.model:FindFirstChild("Gameplay")
+		local requested = gameplay and gameplay:FindFirstChild("AbilityRequested")
+		local values = requireWorkshopModule("AegisInterceptorGameplayConfig")
+		if not requested or not values or not target then
+			return
+		end
+		pcall(function()
+			if kind == "Fist" then
+				requested:Fire("TwinIonCannons", target.Character, values.TwinIonCannons)
+			else
+				requested:Fire("ShoulderMissiles", target.Character, values.ShoulderMissiles)
+			end
+		end)
+	end
 end
 
 -- Wie lange eine Angriffsanimation laufen darf, bevor Laufen/Stehen sie wieder ablosen.
@@ -1399,7 +1521,7 @@ local function attackIfInRange(guardian, cityName, config, target, targetPositio
 		if guardian.lastFistAt ~= before then
 			local name = animations and animations.Fist
 			playGuardianAction(guardian, name)
-			playGuardianVFX(guardian, "Fist", config)
+			playGuardianVFX(guardian, "Fist", config, target)
 			-- Ausgabe nur bei einem TATSAECHLICHEN Treffer -- die Cooldowns (3s bzw. 6s)
 			-- halten das von selbst lesbar. Ohne sie war nicht zu unterscheiden, ob der
 			-- Guardian nicht angreift oder ob nur die Wirkung ausbleibt.
@@ -1414,7 +1536,7 @@ local function attackIfInRange(guardian, cityName, config, target, targetPositio
 		if guardian.lastRepulsorAt ~= before then
 			local name = animations and animations.Pulse
 			playGuardianAction(guardian, name)
-			playGuardianVFX(guardian, "Pulse", config)
+			playGuardianVFX(guardian, "Pulse", config, target)
 			print(string.format(
 				"[Kaiju-Debug] Guardian %s greift an: %s (Flaeche, %.0f Studs, Schaden %s)",
 				cityName, name or "ohne Animation", distance, tostring(config.GuardianRepulsorDamage)

@@ -90,14 +90,20 @@ AchievementsConfig.List = {
 	{ id = "EnergyMaster", category = "Spezialangriffe", icon = "⚡", name = "Energiemeister", description = "10'000 Special Energy insgesamt gesammelt", type = "counter", threshold = 10000 },
 
 	-- ===== 7. Charaktere (Trenchborn) =====
+	-- Die vier "durchgespielt"-Eintraege waren bis hierher 'dormant': ihre Bedingung war
+	-- nicht auswertbar, weil nirgends festgehalten wurde, MIT WELCHER Fraktion jemand den
+	-- MegaCity-Guardian besiegt hat. Seit CityDefenderService das je Fraktion mitzaehlt,
+	-- haengen sie ueber statKey an der Lebensstatistik wie alle neueren Achievements.
+	-- ChaptersCompletedFactions zaehlt dabei VERSCHIEDENE Fraktionen, nicht Siege --
+	-- dreimal mit Kaiju ergibt weiterhin 1.
 	{ id = "KaijuAwakens", category = "Charaktere", icon = "🦖", name = "Kaiju erwacht", description = "Kaiju zum ersten Mal gespielt", type = "flag" },
-	{ id = "KaijuCompleted", category = "Charaktere", icon = "🏆", name = "Kaiju durchgespielt", description = "Mit Kaiju den Guardian in Megacity besiegt", type = "flag", dormant = true },
+	{ id = "KaijuCompleted", category = "Charaktere", icon = "🏆", name = "Kaiju durchgespielt", description = "Mit Kaiju den Guardian in Megacity besiegt", type = "counter", threshold = 1, statKey = "ChaptersCompleted.Kaiju" },
 	{ id = "JaegerUnlocked", category = "Charaktere", icon = "🤖", name = "Jaeger freigeschaltet", description = "Jaeger zum ersten Mal freigeschaltet", type = "flag" },
-	{ id = "JaegerCompleted", category = "Charaktere", icon = "🏆", name = "Jaeger durchgespielt", description = "Mit Jaeger den Guardian in Megacity besiegt", type = "flag", dormant = true },
+	{ id = "JaegerCompleted", category = "Charaktere", icon = "🏆", name = "Jaeger durchgespielt", description = "Mit Jaeger den Guardian in Megacity besiegt", type = "counter", threshold = 1, statKey = "ChaptersCompleted.Jaeger" },
 	{ id = "RoninUnlocked", category = "Charaktere", icon = "🐯", name = "Ronin freigeschaltet", description = "Ronin zum ersten Mal freigeschaltet", type = "flag" },
-	{ id = "RoninCompleted", category = "Charaktere", icon = "🏆", name = "Ronin durchgespielt", description = "Mit Ronin den Guardian in Megacity besiegt", type = "flag", dormant = true },
+	{ id = "RoninCompleted", category = "Charaktere", icon = "🏆", name = "Ronin durchgespielt", description = "Mit Ronin den Guardian in Megacity besiegt", type = "counter", threshold = 1, statKey = "ChaptersCompleted.Ronin" },
 	{ id = "Trinity", category = "Charaktere", icon = "☯️", name = "Trinität", description = "Alle drei Fraktionen freigeschaltet", type = "flag" },
-	{ id = "MasterOfAllBlades", category = "Charaktere", icon = "👑", name = "Meister aller Klingen", description = "Mit allen drei Fraktionen den Megacity-Guardian besiegt", type = "flag", dormant = true },
+	{ id = "MasterOfAllBlades", category = "Charaktere", icon = "👑", name = "Meister aller Klingen", description = "Mit allen drei Fraktionen den Megacity-Guardian besiegt", type = "counter", threshold = 3, statKey = "ChaptersCompletedFactions" },
 }
 
 -- Schneller Zugriff per ID.

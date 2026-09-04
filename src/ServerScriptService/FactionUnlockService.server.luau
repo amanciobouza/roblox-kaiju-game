@@ -2,8 +2,12 @@
 -- Ort in Studio: ServerScriptService
 --
 -- Prüft die Freischalt-Bedingungen für Jaeger/Ronin (Kaiju ist von Anfang an frei) und
--- liefert dem Client den aktuellen Fortschritt fürs Fraktions-Panel. Kombination aus drei
--- Kriterien pro Fraktion: Level-Schwelle + Energie-Meisterschaft (lifetime) + Meilenstein.
+-- liefert dem Client die Bedingung fürs Fraktions-Panel.
+--
+-- Eine Fraktion wird freigeschaltet, indem man das VORHERIGE Kapitel abschliesst: Jaeger
+-- durch den Sieg über den MegaCity-Guardian mit Kaiju, Ronin durch denselben Sieg mit
+-- Jaeger. Ronin ist damit vorerst unerreichbar, solange Jaeger kein eigenes Moveset hat --
+-- das ist bewusst so und keine Luecke.
 --
 -- WICHTIG: Blockiert NICHT die eigentliche Fraktions-AUSWAHL selbst (das bleibt weiterhin
 -- über SelectFactionEvent in EnergyTypesHandler.lua möglich -- Spieler dürfen ihre
@@ -12,35 +16,29 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+-- Die Kapitel bauen aufeinander auf: eine Fraktion verdient man sich, indem man die
+-- vorherige zu Ende spielt. Genau ein Ereignis entscheidet, kein Sammeln.
+--
+-- Vorher standen hier drei UND-verknuepfte Kriterien je Fraktion -- Level-Schwelle,
+-- Lifetime-Energie einer Sorte und ein Meilenstein-Zaehler. Die hatten mit den Kapiteln
+-- nichts zu tun: beide Fraktionen waren unabhaengig voneinander freischaltbar, beide
+-- Meilensteine waren Kaiju-Aktionen, und der Guardian kam ueberhaupt nicht vor. Faktisch
+-- war es Grinding. Ein zweiter Weg bleibt bewusst NICHT bestehen -- er wuerde genau das
+-- aushebeln, was die Regel aussagt.
 local FACTION_REQUIREMENTS = {
 	Jaeger = {
-		level = 20,
-		energyType = "Electric",
-		energyAmount = 500,
-		milestoneAttribute = "FireEnginesDestroyed",
-		milestoneTarget = 1,
-		milestoneLabel = "Feuerwehrauto zerstört (beweist: Alert Level 2 erlebt)",
+		requiredFaction = "Kaiju",
+		label = "Defeat the MegaCity Guardian as Kaiju",
 	},
 	Ronin = {
-		level = 30,
-		energyType = "Spirit",
-		energyAmount = 300,
-		milestoneAttribute = "JumpKills",
-		milestoneTarget = 30,
-		milestoneLabel = "Gebäude per Sprungangriff zerstört",
+		requiredFaction = "Jaeger",
+		label = "Defeat the MegaCity Guardian as Jaeger",
 	},
 }
 
-local ENERGY_ATTRIBUTE_NAME = {
-	Heat = "EnergyHeat",
-	Chemical = "EnergyChemical",
-	Electric = "EnergyElectric",
-	Radiation = "EnergyRadiation",
-	Spirit = "EnergySpirit",
-}
-
--- Gibt für eine Fraktion zurück: ist sie freigeschaltet (bool), plus einen Fortschritts-
--- Tisch mit den drei Einzelkriterien (für die Anzeige im Fraktions-Panel).
+-- Gibt für eine Fraktion zurück: ist sie freigeschaltet (bool), plus die Bedingung für die
+-- Anzeige im Fraktions-Panel. Das ist jetzt EIN Kriterium statt dreier -- ein einzelnes
+-- Ereignis hat keinen Fortschritt, den man als Balken zeigen koennte.
 local function getFactionUnlockStatus(player, factionName)
 	if factionName == "Kaiju" then
 		return true, nil -- von Anfang an frei, kein Fortschritt nötig
@@ -51,25 +49,19 @@ local function getFactionUnlockStatus(player, factionName)
 		return false, nil
 	end
 
-	local leaderstats = player:FindFirstChild("leaderstats")
-	local currentLevel = (leaderstats and leaderstats:FindFirstChild("Level") and leaderstats.Level.Value) or 0
+	-- Gezaehlt wird in CityDefenderService beim toedlichen Treffer am MegaCity-Guardian,
+	-- und zwar je Fraktion. Im Mehrspielerbetrieb zaehlt ausdruecklich nur der LETZTE
+	-- Schlag, nicht die Beteiligung -- dieselbe Regel wie bei den Kapiteln.
+	local completions = player:GetAttribute("Stat_ChaptersCompleted." .. requirements.requiredFaction) or 0
+	local done = completions >= 1
 
-	local lifetimeAttributeName = "Lifetime" .. ENERGY_ATTRIBUTE_NAME[requirements.energyType]
-	local currentEnergy = player:GetAttribute(lifetimeAttributeName) or 0
-
-	local currentMilestone = player:GetAttribute(requirements.milestoneAttribute) or 0
-
-	local levelDone = currentLevel >= requirements.level
-	local energyDone = currentEnergy >= requirements.energyAmount
-	local milestoneDone = currentMilestone >= requirements.milestoneTarget
-
-	local progress = {
-		level = { current = currentLevel, target = requirements.level, done = levelDone },
-		energy = { energyType = requirements.energyType, current = math.floor(currentEnergy), target = requirements.energyAmount, done = energyDone },
-		milestone = { current = currentMilestone, target = requirements.milestoneTarget, done = milestoneDone, label = requirements.milestoneLabel },
+	return done, {
+		condition = {
+			label = requirements.label,
+			requiredFaction = requirements.requiredFaction,
+			done = done,
+		},
 	}
-
-	return levelDone and energyDone and milestoneDone, progress
 end
 _G.GetFactionUnlockStatus = getFactionUnlockStatus
 

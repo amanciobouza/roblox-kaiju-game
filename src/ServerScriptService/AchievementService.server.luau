@@ -336,17 +336,36 @@ Players.PlayerAdded:Connect(function(player)
 	-- ===== Hooks: Charaktere (Kaiju ist aktuell Standard-/einzige spielbare Fraktion) =====
 	unlockAchievement(player, "KaijuAwakens")
 
+	-- Diese drei sind die EINZIGEN Achievements im Spiel, die auch wieder ZURUECKGENOMMEN
+	-- werden. Grund: die Freischaltbedingung fuer Jaeger und Ronin wurde auf die
+	-- Kapitel-Regel umgestellt (MegaCity-Guardian mit der vorherigen Fraktion besiegt).
+	-- Wer sie nach der alten Regel -- Level, Energie, Meilenstein -- erhalten hat, erfuellt
+	-- sie nicht mehr.
+	--
+	-- Ueberall sonst gilt: einmal verdient, bleibt verdient. Ein Achievement ist eine
+	-- Aufzeichnung dessen, was jemand getan hat. Hier haengt es aber unmittelbar an einem
+	-- RECHT, das an eine Bedingung gebunden ist -- und ein Titel "freigeschaltet" fuer
+	-- etwas, das man nicht mehr hat, waere schlicht falsch. Das Spiel ist in geschlossener
+	-- Alpha, ein Rueckbau also vertretbar; unter Spielern draussen waere er es nicht.
+	local function setFactionAchievement(achievementId, shouldHave)
+		if shouldHave then
+			unlockAchievement(player, achievementId)
+		elseif isUnlocked(player, achievementId) then
+			player:SetAttribute("Achievement_" .. achievementId, nil)
+			print(string.format(
+				"[Kaiju-Debug] Achievement '%s' fuer %s zurueckgenommen -- Bedingung nicht mehr erfuellt.",
+				achievementId, player.Name
+			))
+		end
+	end
+
 	local function checkFactionUnlocks()
 		if _G.GetFactionUnlockStatus then
-			if _G.GetFactionUnlockStatus(player, "Jaeger") then
-				unlockAchievement(player, "JaegerUnlocked")
-			end
-			if _G.GetFactionUnlockStatus(player, "Ronin") then
-				unlockAchievement(player, "RoninUnlocked")
-			end
-			if isUnlocked(player, "JaegerUnlocked") and isUnlocked(player, "RoninUnlocked") then
-				unlockAchievement(player, "Trinity")
-			end
+			local jaeger = _G.GetFactionUnlockStatus(player, "Jaeger") == true
+			local ronin = _G.GetFactionUnlockStatus(player, "Ronin") == true
+			setFactionAchievement("JaegerUnlocked", jaeger)
+			setFactionAchievement("RoninUnlocked", ronin)
+			setFactionAchievement("Trinity", jaeger and ronin)
 		end
 	end
 	task.spawn(function()

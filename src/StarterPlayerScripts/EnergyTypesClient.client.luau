@@ -245,16 +245,32 @@ end)
 -- ===== Fraktions-Panel: episches Auswahl-Erlebnis mit rotierenden 3D-Vorschauen =====
 -- Wird über den zentralen Menü-Button geöffnet (siehe NavigationClient.lua).
 
+-- EIGENES ScreenGui fuer das Panel. Vorher lag es in EnergyTypesGui -- zusammen mit
+-- dem Ereignis-Banner und dem Countdown, also ohne DisplayOrder auf 0 und damit gleichauf mit dem uebrigen HUD.
+-- Ein Vollbild-Panel auf derselben Ebene wie das HUD laesst dieses durchscheinen.
+--
+-- Getrennt statt die DisplayOrder des ganzen Guis anzuheben: das haette das HUD gleich
+-- mit nach vorne geholt, also genau das Gegenteil bewirkt.
+local factionGui = Instance.new("ScreenGui")
+factionGui.Name = "FactionGui"
+factionGui.ResetOnSpawn = false
+factionGui.DisplayOrder = 100
+factionGui.IgnoreGuiInset = true
+factionGui.Parent = player:WaitForChild("PlayerGui")
+
 local factionPanel = Instance.new("Frame")
 factionPanel.Name = "FactionPanel"
-factionPanel.Size = UDim2.new(0, 900, 0, 580)
-factionPanel.AnchorPoint = Vector2.new(0.5, 0.5)
-factionPanel.Position = UDim2.new(0.5, 0, 0.5, 0)
+-- Vollbild: alle Menü-Bildschirme nutzen die ganze Fläche.
+-- IgnoreGuiInset am ScreenGui gehört dazu -- ohne das beginnt jedes ScreenGui UNTERHALB
+-- der Roblox-Systemleiste, und oben bliebe ein Streifen mit Sicht auf die Welt stehen.
+factionPanel.Size = UDim2.new(1, 0, 1, 0)
+factionPanel.Position = UDim2.new(0, 0, 0, 0)
+factionPanel.AnchorPoint = Vector2.new(0, 0)
 factionPanel.BackgroundColor3 = Color3.fromRGB(8, 6, 16)
 factionPanel.Visible = false
 factionPanel.ZIndex = 70
 factionPanel.ClipsDescendants = true
-factionPanel.Parent = screenGui
+factionPanel.Parent = factionGui
 applyComicStyle(factionPanel, 20, 5)
 
 -- Dramatischer Verlaufs-Hintergrund (dunkles Violett -> fast Schwarz) statt einer
@@ -294,9 +310,20 @@ factionTitle.ZIndex = 71
 factionTitle.Parent = factionPanel
 
 local FACTIONS = {
-	{ key = "Kaiju", modelName = "KaijuR15", emoji = "🦖", label = "KAIJU", subtitle = "POWER", color = Color3.fromRGB(90, 220, 110), desc = "Raw destructive power" },
-	{ key = "Jaeger", modelName = "JaegerR15", emoji = "🤖", label = "JAEGER", subtitle = "CONTROL", color = Color3.fromRGB(80, 170, 255), desc = "Master the battlefield" },
-	{ key = "Ronin", modelName = "RoninR15", emoji = "🐯", label = "RONIN", subtitle = "PURPOSE", color = Color3.fromRGB(255, 150, 60), desc = "Strike with precision" },
+	-- "strength" beschreibt, wofür die Figur STEHT -- bewusst hier und nicht im
+	-- Skin-Steckbrief. Der ist die Grundlage einer Kaufentscheidung und darf nur zusagen,
+	-- was das Spiel einlöst; eine Fraktionskarte beschreibt Charakter.
+	--
+	-- Für Jaeger und Ronin ist das ABSICHT, noch nicht Mechanik: beide laufen bis heute mit
+	-- dem Kaiju-Moveset. Es gibt keine verzögerte Eskalation, keine bessere
+	-- Meltdown-Kontrolle und keine Combos. Beide Karten sind ohnehin verschlossen und
+	-- nennen ihre Freischaltbedingung -- der Text sagt, worauf man hinarbeitet.
+	{ key = "Kaiju", modelName = "KaijuR15", emoji = "🦖", label = "KAIJU", subtitle = "POWER", color = Color3.fromRGB(90, 220, 110), desc = "Raw destructive power",
+		strength = "Heavy, untargeted damage. Heats up fast and slips into meltdown sooner than the others." },
+	{ key = "Jaeger", modelName = "JaegerR15", emoji = "🤖", label = "JAEGER", subtitle = "CONTROL", color = Color3.fromRGB(80, 170, 255), desc = "Master the battlefield",
+		strength = "Control. Slows the city's escalation, holds meltdown at bay, and takes single targets apart instead of flattening everything." },
+	{ key = "Ronin", modelName = "RoninR15", emoji = "🐯", label = "RONIN", subtitle = "PURPOSE", color = Color3.fromRGB(255, 150, 60), desc = "Strike with precision",
+		strength = "Flow. Chains attacks into combos and lives off keeping the rhythm unbroken." },
 }
 
 local cardRow = Instance.new("Frame")
@@ -451,6 +478,22 @@ for index, faction in ipairs(FACTIONS) do
 	subtitleLabel.TextScaled = true
 	subtitleLabel.TextColor3 = Color3.fromRGB(210, 210, 220)
 	subtitleLabel.Text = faction.subtitle .. " -- " .. faction.desc
+
+	-- Die Stärke darunter: die Antwort auf die Frage, die man vor einem verschlossenen
+	-- Schloss stellt -- warum sollte ich das wollen?
+	local strengthLabel = Instance.new("TextLabel")
+	strengthLabel.Size = UDim2.new(1, -24, 0, 56)
+	strengthLabel.Position = UDim2.new(0, 12, 0, subtitleLabel.Position.Y.Offset + 26)
+	strengthLabel.BackgroundTransparency = 1
+	strengthLabel.Font = Enum.Font.Gotham
+	strengthLabel.TextSize = 13
+	strengthLabel.TextWrapped = true
+	strengthLabel.TextXAlignment = Enum.TextXAlignment.Left
+	strengthLabel.TextYAlignment = Enum.TextYAlignment.Top
+	strengthLabel.TextColor3 = Color3.fromRGB(200, 205, 220)
+	strengthLabel.Text = faction.strength or ""
+	strengthLabel.ZIndex = 71
+	strengthLabel.Parent = card
 	subtitleLabel.ZIndex = 71
 	subtitleLabel.Parent = card
 
@@ -572,18 +615,25 @@ local function refreshFactionProgress()
 				refs.selectButton.Text = "🔒 LOCKED"
 				refs.selectButton.BackgroundColor3 = Color3.fromRGB(60, 58, 68)
 
-				refs.levelLabel.Text = "⭐ Level " .. p.level.current .. "/" .. p.level.target
-				refs.levelFill.Size = UDim2.new(math.clamp(p.level.current / p.level.target, 0, 1), 0, 1, 0)
-				refs.levelFill.BackgroundColor3 = p.level.done and Color3.fromRGB(120, 220, 140) or Color3.fromRGB(220, 180, 80)
+				-- EINE Bedingung statt dreier Balken. Die Freischaltung haengt seit der
+				-- Kapitel-Umstellung an einem einzelnen Ereignis -- dem Sieg ueber den
+				-- MegaCity-Guardian mit der vorherigen Fraktion -- und ein Ereignis hat
+				-- keinen Fortschritt, den ein Balken zeigen koennte. Ein Balken, der immer
+				-- auf 0% oder 100% steht, taeuscht Fortschritt vor, wo es keinen gibt.
+				--
+				-- Die beiden unteren Zeilen des Fortschrittsblocks werden nicht mehr
+				-- gebraucht; sie bleiben leer stehen, statt sie zu entfernen -- der Aufbau
+				-- der Karte liegt weit oben in dieser Datei und gehoert nicht zu dieser
+				-- Aenderung.
+				refs.levelLabel.Text = (p.condition.done and "✅  " or "🔒  ") .. p.condition.label
+				refs.levelFill.Size = UDim2.new(p.condition.done and 1 or 0, 0, 1, 0)
+				refs.levelFill.BackgroundColor3 = p.condition.done and Color3.fromRGB(120, 220, 140) or Color3.fromRGB(220, 180, 80)
 
-				local energyIcon = ENERGY_ICONS_FOR_PROGRESS[p.energy.energyType] or ""
-				refs.energyLabel.Text = energyIcon .. " " .. p.energy.current .. "/" .. p.energy.target
-				refs.energyFill.Size = UDim2.new(math.clamp(p.energy.current / p.energy.target, 0, 1), 0, 1, 0)
-				refs.energyFill.BackgroundColor3 = p.energy.done and Color3.fromRGB(120, 220, 140) or Color3.fromRGB(220, 180, 80)
+				refs.energyLabel.Text = ""
+				refs.energyFill.Size = UDim2.new(0, 0, 1, 0)
 
-				refs.milestoneLabel.Text = "🎯 " .. p.milestone.current .. "/" .. p.milestone.target
-				refs.milestoneFill.Size = UDim2.new(math.clamp(p.milestone.current / p.milestone.target, 0, 1), 0, 1, 0)
-				refs.milestoneFill.BackgroundColor3 = p.milestone.done and Color3.fromRGB(120, 220, 140) or Color3.fromRGB(220, 180, 80)
+				refs.milestoneLabel.Text = ""
+				refs.milestoneFill.Size = UDim2.new(0, 0, 1, 0)
 			end
 		end
 	end
