@@ -40,7 +40,7 @@ AchievementsConfig.List = {
 	{ id = "Noticed", category = "Alert-Eskalation", icon = "🚨", name = "Bemerkt", description = "Zum ersten Mal Alert-Level 1 ausgelöst", type = "flag" },
 	{ id = "EmergencyDefeated", category = "Alert-Eskalation", icon = "🚒", name = "Notfall", description = "Erste Feuerwehr besiegt (Level 2)", type = "flag" },
 	{ id = "BreakthroughAchieved", category = "Alert-Eskalation", icon = "🚧", name = "Durchbruch", description = "Erste Barrikade durchbrochen (Level 3)", type = "flag" },
-	{ id = "WarZone", category = "Alert-Eskalation", icon = "🪖", name = "Kriegsgebiet", description = "Erste Militär-Einheit besiegt (Level 4)", type = "flag" },
+	{ id = "WarZone", category = "Alert-Eskalation", icon = "🎖️", name = "Kriegsgebiet", description = "Erste Militär-Einheit besiegt (Level 4)", type = "flag" },
 	{ id = "GuardianSlayer", category = "Alert-Eskalation", icon = "🤖", name = "Guardian-Bezwinger", description = "Ersten Guardian besiegt (Level 5)", type = "flag" },
 	{ id = "SerialOffender", category = "Alert-Eskalation", icon = "🔁", name = "Serientäter", description = "Level 5 in 3 verschiedenen Städten erreicht", type = "counter", threshold = 3 },
 

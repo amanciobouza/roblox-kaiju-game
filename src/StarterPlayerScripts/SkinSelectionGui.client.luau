@@ -808,7 +808,7 @@ local advanceXPBar
 local STAT_BAR_CONFIG = {
 	{ key = "ArmPower", label = "💪 Arm", color = Color3.fromRGB(220, 90, 220), effect = "Base Damage" },
 	{ key = "LegPower", label = "🦵 Bein", color = Color3.fromRGB(255, 150, 60), effect = "Bonus Damage" },
-	{ key = "BodyPower", label = "🫀 Körper", color = Color3.fromRGB(90, 220, 130), effect = "Energy Efficiency" },
+	{ key = "BodyPower", label = "💓 Körper", color = Color3.fromRGB(90, 220, 130), effect = "Energy Efficiency" },
 }
 
 for index, config in ipairs(STAT_BAR_CONFIG) do
@@ -1143,7 +1143,7 @@ applyComicStyle(detailAction, 12, 3)
 local STAT_DISPLAY_NAMES = {
 	Leg = "🦵 Bein",
 	Arm = "💪 Arm",
-	Body = "🫀 Körper",
+	Body = "💓 Körper",
 }
 
 local trainingFrame = Instance.new("Frame")

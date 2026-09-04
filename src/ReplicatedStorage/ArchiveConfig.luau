@@ -51,7 +51,7 @@ ArchiveConfig.Categories = {
 	{ key = "Level1", label = "Level 1 — Surveillance", icon = "🚁" },
 	{ key = "Level2", label = "Level 2 — Fire Brigade", icon = "🚒" },
 	{ key = "Level3", label = "Level 3 — Barricades", icon = "🚧" },
-	{ key = "Level4", label = "Level 4 — Military", icon = "🪖" },
+	{ key = "Level4", label = "Level 4 — Military", icon = "🎖️" },
 	{ key = "Guardians", label = "Guardians", icon = "🤖" },
 	{ key = "Figures", label = "Characters", icon = "☯️" },
 }

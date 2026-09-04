@@ -45,7 +45,7 @@ local TASK_DEFINITIONS = {
 	end, getCounts = function(cityName)
 		return (_G.GetBarricadeCounts and _G.GetBarricadeCounts(cityName)) or nil
 	end },
-	{ level = 4, id = "Military", icon = "🪖", label = "Military eliminated", isComplete = function(cityName)
+	{ level = 4, id = "Military", icon = "🎖️", label = "Military eliminated", isComplete = function(cityName)
 		-- Nur als erledigt werten, wenn tatsächlich mindestens eine Einheit in diesem
 		-- Zyklus gespawnt wurde (analog zur Barrikaden-Prüfung) -- verhindert, dass der
 		-- Task fälschlich als erledigt gilt, falls das Spawnen selbst fehlschlägt.

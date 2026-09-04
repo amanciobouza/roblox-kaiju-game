@@ -928,7 +928,7 @@ local function buildDiagram(diagramType, parent)
 	diagramFrame.Parent = parent
 
 	if diagramType == "training" then
-		local labels = { { "💪", Color3.fromRGB(220, 90, 220) }, { "🦵", Color3.fromRGB(255, 150, 60) }, { "🫀", Color3.fromRGB(90, 220, 130) } }
+		local labels = { { "💪", Color3.fromRGB(220, 90, 220) }, { "🦵", Color3.fromRGB(255, 150, 60) }, { "💓", Color3.fromRGB(90, 220, 130) } }
 		for i, entry in ipairs(labels) do
 			local bar = Instance.new("Frame")
 			bar.Size = UDim2.new(0, 100, 0, 14)

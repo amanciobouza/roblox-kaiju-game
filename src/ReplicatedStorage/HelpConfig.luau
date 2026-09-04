@@ -26,7 +26,7 @@ HelpConfig.Sections = {
 		points = {
 			"💪 Arm -> Base Damage: increases your regular punch damage.",
 			"🦵 Leg -> Bonus Damage: increases jump/trample damage, and also boosts your Special Attack bonus damage.",
-			"🫀 Body -> Energy Efficiency: bigger absorb radius and more energy per absorb.",
+			"💓 Body -> Energy Efficiency: bigger absorb radius and more energy per absorb.",
 			"Each stat has a cap that grows with your player level.",
 		},
 		diagramType = "training",

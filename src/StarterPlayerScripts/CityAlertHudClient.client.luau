@@ -299,7 +299,7 @@ updateAlertHud() -- initialer Zustand beim Start
 local TASK_LIST = {
 	{ id = "Emergency", icon = "🚒", label = "Emergency Response eliminated" },
 	{ id = "Defense", icon = "🛡️", label = "Defense Barricades eliminated" },
-	{ id = "Military", icon = "🪖", label = "Military eliminated" },
+	{ id = "Military", icon = "🎖️", label = "Military eliminated" },
 	{ id = "Titan", icon = "🤖", label = "Guardian eliminated" },
 }
 
