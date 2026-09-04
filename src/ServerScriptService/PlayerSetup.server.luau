@@ -1021,6 +1021,30 @@ Players.PlayerAdded:Connect(function(player)
 		end)
 	end
 
+	-- Archiv (siehe ArchiveService.lua) -- welchen Figuren der Spieler schon begegnet ist.
+	-- Dasselbe defensive Muster wie darüber, aus demselben Grund.
+	if _G.LoadArchiveSaveData then
+		_G.LoadArchiveSaveData(player, data.Archive)
+	else
+		task.defer(function()
+			if _G.LoadArchiveSaveData then
+				_G.LoadArchiveSaveData(player, data.Archive)
+			end
+		end)
+	end
+
+	-- Menü-Lämpchen (siehe NavBadgeService.lua) -- an welchen Punkten etwas Ungesehenes
+	-- wartet. Gleiches defensives Muster.
+	if _G.LoadNavBadgeSaveData then
+		_G.LoadNavBadgeSaveData(player, data.NavBadges)
+	else
+		task.defer(function()
+			if _G.LoadNavBadgeSaveData then
+				_G.LoadNavBadgeSaveData(player, data.NavBadges)
+			end
+		end)
+	end
+
 	player.CharacterAdded:Connect(function(character)
 		local finalCharacter = applyFactionModel(player, character)
 		if finalCharacter == character then
@@ -1134,6 +1158,11 @@ local function buildPlayerSaveData(player)
 		-- Lebenslange Statistiken (siehe StatsService.lua) -- flache Schlüssel-Wert-Paare,
 		-- ein neuer Wert braucht deshalb keine Schema-Änderung.
 		Stats = _G.GetStatsSaveData and _G.GetStatsSaveData(player) or nil,
+		-- Archiv: Liste der aufgedeckten Eintrags-Ids. Bewusst die Ids und nicht die
+		-- Namen -- ein Eintrag darf umbenannt werden, ohne dass Fortschritt verlorengeht.
+		Archive = _G.GetArchiveSaveData and _G.GetArchiveSaveData(player) or nil,
+		-- Menü-Lämpchen: Liste der Punkte, an denen etwas Ungesehenes wartet.
+		NavBadges = _G.GetNavBadgeSaveData and _G.GetNavBadgeSaveData(player) or nil,
 	}
 end
 

@@ -47,6 +47,7 @@ local function formatDuration(seconds)
 end
 
 local screenGui = Instance.new("ScreenGui")
+screenGui.IgnoreGuiInset = true
 screenGui.Name = "TalentTreeGui"
 screenGui.ResetOnSpawn = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -57,9 +58,12 @@ screenGui.Parent = playerGui
 
 local panel = Instance.new("Frame")
 panel.Name = "TalentTreePanel"
-panel.Size = UDim2.new(0, 1260, 0, 640)
-panel.AnchorPoint = Vector2.new(0.5, 0.5)
-panel.Position = UDim2.new(0.5, 0, 0.5, 0)
+-- Vollbild: alle Menü-Bildschirme nutzen die ganze Fläche.
+-- IgnoreGuiInset am ScreenGui gehört dazu -- ohne das beginnt jedes ScreenGui UNTERHALB
+-- der Roblox-Systemleiste, und oben bliebe ein Streifen mit Sicht auf die Welt stehen.
+panel.Size = UDim2.new(1, 0, 1, 0)
+panel.Position = UDim2.new(0, 0, 0, 0)
+panel.AnchorPoint = Vector2.new(0, 0)
 panel.BackgroundColor3 = Color3.fromRGB(20, 18, 28)
 panel.Visible = false
 panel.Parent = screenGui
@@ -781,7 +785,24 @@ local function buildNode(talent, position, isActiveFaction)
 		selectTalent(talent, state, level)
 	end)
 
-	nodeRefs[talent.id] = { button = button, levelLabel = levelLabel, infoLabel = infoLabel, position = position }
+	-- "NEU"-Fahne: zeigt beim Oeffnen, WELCHE Forschung fertig geworden ist. Der Baum hat
+	-- dreizehn Knoten je Fraktion -- ohne Markierung muesste man sie absuchen.
+	local newFlag = Instance.new("TextLabel")
+	newFlag.Name = "NewFlag"
+	newFlag.AnchorPoint = Vector2.new(0.5, 0)
+	newFlag.Size = UDim2.new(0, 44, 0, 18)
+	newFlag.Position = UDim2.new(0.5, 0, 0, -8)
+	newFlag.BackgroundColor3 = Color3.fromRGB(235, 45, 45)
+	newFlag.Font = Enum.Font.FredokaOne
+	newFlag.TextScaled = true
+	newFlag.TextColor3 = Color3.fromRGB(255, 255, 255)
+	newFlag.Text = "NEW"
+	newFlag.ZIndex = 64
+	newFlag.Visible = (_G.GetNavBadgeItems and _G.GetNavBadgeItems("Talents")[talent.id]) == true
+	newFlag.Parent = button
+	applyComicStyle(newFlag, 6, 2)
+
+	nodeRefs[talent.id] = { button = button, levelLabel = levelLabel, infoLabel = infoLabel, position = position, newFlag = newFlag }
 end
 
 local function renderTree(factionName)
@@ -997,6 +1018,12 @@ StartResearchEvent.OnClientEvent:Connect(function(factionName, talentId, complet
 end)
 
 ResearchCompleteEvent.OnClientEvent:Connect(function(factionName, talentId, newLevel)
+	-- Laempchen am Menuepunkt: eine fertige Forschung ist ein einmaliges Ereignis und
+	-- damit ein echter Hinweis -- anders als "genug Energie fuer einen Knoten", das mit
+	-- der Energie staendig an- und ausginge.
+	if _G.SetNavBadge and not talentTreePanel.Visible then
+		_G.SetNavBadge("Talents", true, talentId)
+	end
 	if not talentState.levels[factionName] then
 		talentState.levels[factionName] = {}
 	end

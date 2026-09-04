@@ -6,7 +6,7 @@
 -- Immer nur EIN Panel gleichzeitig sichtbar -- Klick auf einen aktiven Button schließt ihn wieder.
 
 local Players = game:GetService("Players")
-local GuiService = game:GetService("GuiService")
+local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -25,146 +25,46 @@ screenGui.ResetOnSpawn = false
 -- WICHTIG: hoher DisplayOrder sorgt dafür, dass das Hauptmenü über anderen HUD-Elementen
 -- liegt (z.B. dem Berserker-Bonus) -- unabhängig von der Skript-Ladereihenfolge.
 screenGui.DisplayOrder = 90
+screenGui.IgnoreGuiInset = true
 screenGui.Parent = playerGui
 
--- ===== Einzelner Menü-Button links (ersetzt die vorher permanent sichtbare 5er-Leiste) =====
--- Hamburger-Icon aus 3 echten Balken gebaut (nicht als Unicode-Zeichen "☰") -- das
--- garantiert, dass es immer sichtbar ist, unabhängig davon ob die Schriftart dieses
--- Zeichen unterstützt. Plus "Menü"-Beschriftung darunter, damit sofort klar ist, dass es
--- sich um einen Button handelt.
-local menuToggleButton = Instance.new("TextButton")
-menuToggleButton.Name = "MenuToggleButton"
-menuToggleButton.Size = UDim2.new(0, 52, 0, 48)
-menuToggleButton.Position = UDim2.new(0, 16, 0, 24)
-menuToggleButton.BackgroundColor3 = Color3.fromRGB(100, 90, 220)
-menuToggleButton.AutoButtonColor = true
-menuToggleButton.Text = ""
-menuToggleButton.Parent = screenGui
-applyComicStyle(menuToggleButton, 16, 4)
+-- ===== Menüleiste unten links =====
+-- Ersetzt den früheren Hamburger-Knopf samt zentriertem Overlay. Die Punkte kleben jetzt
+-- dauerhaft am Rand: ein Knopf, der eine ohnehin schmale Leiste versteckt, spart kaum
+-- Fläche und kostet einen Handgriff.
+--
+-- Nur Symbole, keine Beschriftung -- die Symbole sind eingeführt und unterscheidbar, und
+-- eine Beschriftung beim Darüberfahren würde ausgerechnet auf dem Handy versagen, wo der
+-- Platz knapp ist.
+local RAIL_ICON_SIZE = 44
+local RAIL_PADDING = 8
 
-local hamburgerIconFrame = Instance.new("Frame")
-hamburgerIconFrame.Name = "HamburgerIcon"
-hamburgerIconFrame.Size = UDim2.new(0, 24, 0, 16)
-hamburgerIconFrame.AnchorPoint = Vector2.new(0.5, 0)
-hamburgerIconFrame.Position = UDim2.new(0.5, 0, 0, 6)
-hamburgerIconFrame.BackgroundTransparency = 1
-hamburgerIconFrame.Parent = menuToggleButton
+-- Auf Touch-Geräten sitzt Robloxs EIGENER Steuerknüppel unten links, und der Daumen
+-- wandert beim Laufen darüber hinaus. Die Leiste beginnt dort deutlich höher. Lieber
+-- etwas zu hoch als ein Knopf, den man beim Laufen versehentlich trifft -- der Fehler
+-- geht damit in die harmlose Richtung.
+--
+-- Um kleine Bildschirme muss sich das hier NICHT kümmern: ResponsiveHudScale hängt an
+-- jedes ScreenGui eine UIScale (Referenz 1280x720, Minimum 0.55). Eigenes Verkleinern
+-- würde doppelt skalieren.
+local RAIL_BOTTOM_MARGIN = UserInputService.TouchEnabled and 300 or 24
 
-for i = 0, 2 do
-	local bar = Instance.new("Frame")
-	bar.Name = "Bar" .. i
-	bar.Size = UDim2.new(1, 0, 0, 3)
-	bar.Position = UDim2.new(0, 0, 0, i * 6)
-	bar.BackgroundColor3 = Color3.new(1, 1, 1)
-	bar.BorderSizePixel = 0
-	bar.Parent = hamburgerIconFrame
-	local barCorner = Instance.new("UICorner")
-	barCorner.CornerRadius = UDim.new(1, 0)
-	barCorner.Parent = bar
-end
+local menuRail = Instance.new("Frame")
+menuRail.Name = "MenuRail"
+menuRail.AnchorPoint = Vector2.new(0, 1)
+menuRail.Position = UDim2.new(0, 16, 1, -RAIL_BOTTOM_MARGIN)
+menuRail.Size = UDim2.new(0, RAIL_ICON_SIZE, 0, 0)
+menuRail.AutomaticSize = Enum.AutomaticSize.Y
+menuRail.BackgroundTransparency = 1
+menuRail.Parent = screenGui
 
-local menuToggleLabel = Instance.new("TextLabel")
-menuToggleLabel.Size = UDim2.new(1, 0, 0, 13)
-menuToggleLabel.Position = UDim2.new(0, 0, 1, -15)
-menuToggleLabel.BackgroundTransparency = 1
-menuToggleLabel.Font = Enum.Font.FredokaOne
-menuToggleLabel.TextScaled = true
-menuToggleLabel.TextColor3 = Color3.new(1, 1, 1)
-menuToggleLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
-menuToggleLabel.TextStrokeTransparency = 0.4
-menuToggleLabel.Text = "Menu"
-menuToggleLabel.Parent = menuToggleButton
+local railLayout = Instance.new("UIListLayout")
+railLayout.FillDirection = Enum.FillDirection.Vertical
+railLayout.SortOrder = Enum.SortOrder.LayoutOrder
+railLayout.Padding = UDim.new(0, RAIL_PADDING)
+railLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+railLayout.Parent = menuRail
 
--- ===== Grosses, zentriertes Overlay mit den 5 Menü-Buttons =====
-local menuOverlay = Instance.new("Frame")
-menuOverlay.Name = "MenuOverlay"
-menuOverlay.Size = UDim2.new(0, 540, 0, 420)
-menuOverlay.AnchorPoint = Vector2.new(0.5, 0.5)
-menuOverlay.Position = UDim2.new(0.5, 0, 0.5, 0)
-menuOverlay.BackgroundColor3 = Color3.fromRGB(35, 32, 45)
-menuOverlay.Visible = false
-menuOverlay.ZIndex = 80
-menuOverlay.Parent = screenGui
-applyComicStyle(menuOverlay, 22, 5)
-
--- Abgedunkelter Hintergrund hinter dem Overlay -- Klick darauf schliesst das Menü ebenfalls
--- WICHTIG: Roblox reserviert oben automatisch einen Streifen für die eigene Menüleiste
--- (Chat/Einstellungen-Icons) und schiebt GUI-Inhalte standardmässig darunter -- ohne
--- Anpassung bliebe dieser Streifen beim Verdunkeln hell. GuiService:GetGuiInset() liefert
--- die genaue Höhe dieses Streifens; der Backdrop wird exakt um diesen Betrag nach oben
--- erweitert (NUR der Backdrop, nicht das ganze ScreenGui -- sonst würden auch Hamburger-
--- Button & Co. mitverschoben).
-local topInset = GuiService:GetGuiInset().Y
-local menuBackdrop = Instance.new("TextButton")
-menuBackdrop.Name = "MenuBackdrop"
-menuBackdrop.Size = UDim2.new(1, 0, 1, topInset)
-menuBackdrop.Position = UDim2.new(0, 0, 0, -topInset)
-menuBackdrop.BackgroundColor3 = Color3.new(0, 0, 0)
-menuBackdrop.BackgroundTransparency = 0.5
-menuBackdrop.AutoButtonColor = false
-menuBackdrop.Text = ""
-menuBackdrop.Visible = false
-menuBackdrop.ZIndex = 79
-menuBackdrop.Parent = screenGui
-
-local menuTitle = Instance.new("TextLabel")
-menuTitle.Size = UDim2.new(1, -70, 0, 40)
-menuTitle.Position = UDim2.new(0, 16, 0, 14)
-menuTitle.BackgroundTransparency = 1
-menuTitle.Font = Enum.Font.LuckiestGuy
-menuTitle.TextScaled = true
-menuTitle.TextXAlignment = Enum.TextXAlignment.Left
-menuTitle.TextColor3 = Color3.new(1, 1, 1)
-menuTitle.Text = "Menu"
-menuTitle.ZIndex = 81
-menuTitle.Parent = menuOverlay
-
-local menuCloseButton = Instance.new("TextButton")
-menuCloseButton.Name = "MenuCloseButton"
-menuCloseButton.Size = UDim2.new(0, 44, 0, 44)
-menuCloseButton.AnchorPoint = Vector2.new(1, 0)
-menuCloseButton.Position = UDim2.new(1, -14, 0, 14)
-menuCloseButton.BackgroundColor3 = Color3.fromRGB(220, 70, 70)
-menuCloseButton.Font = Enum.Font.FredokaOne
-menuCloseButton.TextScaled = true
-menuCloseButton.TextColor3 = Color3.new(1, 1, 1)
-menuCloseButton.Text = "X"
-menuCloseButton.ZIndex = 81
-menuCloseButton.Parent = menuOverlay
-applyComicStyle(menuCloseButton, 10, 3)
-
-local menuButtonsRow = Instance.new("Frame")
-menuButtonsRow.Name = "MenuButtonsRow"
-menuButtonsRow.Size = UDim2.new(1, -32, 1, -80)
-menuButtonsRow.Position = UDim2.new(0, 16, 0, 68)
-menuButtonsRow.BackgroundTransparency = 1
-menuButtonsRow.ZIndex = 81
-menuButtonsRow.Parent = menuOverlay
-
-local menuButtonsLayout = Instance.new("UIGridLayout")
-menuButtonsLayout.CellSize = UDim2.new(0, 150, 0, 150)
-menuButtonsLayout.CellPadding = UDim2.new(0, 14, 0, 14)
-menuButtonsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-menuButtonsLayout.SortOrder = Enum.SortOrder.LayoutOrder
-menuButtonsLayout.Parent = menuButtonsRow
-
-local isMenuOpen = false
-
-local function setMenuOpen(open)
-	isMenuOpen = open
-	menuOverlay.Visible = open
-	menuBackdrop.Visible = open
-end
-
-menuToggleButton.MouseButton1Click:Connect(function()
-	setMenuOpen(not isMenuOpen)
-end)
-menuCloseButton.MouseButton1Click:Connect(function()
-	setMenuOpen(false)
-end)
-menuBackdrop.MouseButton1Click:Connect(function()
-	setMenuOpen(false)
-end)
 
 local NAV_BUTTONS = {
 	{ key = "Monster", icon = "🐲", label = "Monster", color = Color3.fromRGB(80, 200, 90) },
@@ -173,6 +73,7 @@ local NAV_BUTTONS = {
 	{ key = "Pets", icon = "🐺", label = "Companion", color = Color3.fromRGB(255, 150, 90) },
 	{ key = "Gifts", icon = "🎁", label = "Gift", color = Color3.fromRGB(230, 80, 130) },
 	{ key = "Faction", icon = "🦖", label = "Faction", color = Color3.fromRGB(90, 80, 200) },
+	{ key = "Archive", icon = "📔", label = "Archive", color = Color3.fromRGB(180, 140, 80) },
 	{ key = "Help", icon = "❓", label = "Help", color = Color3.fromRGB(120, 130, 140) },
 }
 
@@ -186,10 +87,6 @@ local activePanelKey = nil
 local function setPanelVisible(key, visible)
 	local panel = panels[key]
 	if panel then
-		if visible then
-			print("[Kaiju-Debug] NavigationClient: Panel '" .. tostring(key) .. "' wird SICHTBAR gemacht -- tick=" .. tostring(os.clock()))
-			print(debug.traceback("[Kaiju-Debug] Aufruf-Stack:"))
-		end
 		panel.Visible = visible
 	end
 end
@@ -210,65 +107,267 @@ local function togglePanel(key)
 	closeActivePanel()
 	setPanelVisible(key, true)
 	activePanelKey = key
+
+	-- Ein Blick genuegt: das Laempchen ist mit dem Oeffnen quittiert. Ausnahme sind die
+	-- Geschenke -- was ABHOLBAR ist, soll leuchten, bis es abgeholt wurde; sonst oeffnet
+	-- man, wird abgelenkt, und das Geschenk liegt weiter da.
+	if key ~= "Gifts" and _G.SetNavBadge then
+		_G.SetNavBadge(key, false)
+	end
+end
+
+-- Kurzes Aufleuchten des Rahmens in der Farbe des Punktes -- zeigt beim Schliessen, wo
+-- man herkam. Bewusst ein Farbpuls und kein Groessenpuls: in einer engen Leiste wuerde ein
+-- wachsender Knopf seine Nachbarn verschieben. Dieselbe Bewegungssprache nutzen bereits
+-- die Geschenke (playReadyGlow) und die Alarmsterne.
+local function flashNavButton(key)
+	local button = navButtons[key]
+	local stroke = button and button:FindFirstChildOfClass("UIStroke")
+	if not stroke then
+		return
+	end
+	local original = stroke.Color
+	stroke.Color = Color3.fromRGB(255, 255, 255)
+	TweenService:Create(stroke, TweenInfo.new(0.5), { Color = original }):Play()
 end
 
 -- Geteilte Funktion, die JEDES Panel bei seinem eigenen "X"-Schliessen-Button aufrufen
 -- kann, um zum Menü zurückzukehren -- ersetzt den früheren separaten "← Back"-Button.
 -- Panels rufen dies zusätzlich zu ihrem eigenen "panel.Visible = false" auf.
+-- HINWEIS ZUM NAMEN: es gibt kein Menü mehr, zu dem zurückgekehrt werden könnte -- die
+-- Funktion schliesst das Panel und gibt frei ins Spiel. Der Name bleibt trotzdem, weil ihn
+-- fünf andere Dateien aufrufen (Archiv, Geschenke, Fraktion, Talente, Skin-Shop); sie
+-- umzubenennen hiesse, fünf Systeme anzufassen, um einen Namen zu verbessern.
 _G.NavReturnToMenu = function()
+	local closingKey = activePanelKey
 	closeActivePanel()
-	setMenuOpen(true)
+	if closingKey then
+		flashNavButton(closingKey)
+	end
 end
 
+-- Kurzer Hinweis ohne Panel -- fuer Punkte, hinter denen noch nichts steht.
+local activeNavNotice = nil
+local function showNavNotice(text)
+	if activeNavNotice then
+		activeNavNotice:Destroy()
+	end
+	local notice = Instance.new("TextLabel")
+	notice.AnchorPoint = Vector2.new(0, 1)
+	notice.Size = UDim2.new(0, 260, 0, 40)
+	notice.Position = UDim2.new(0, 16 + RAIL_ICON_SIZE + 12, 1, -RAIL_BOTTOM_MARGIN)
+	notice.BackgroundColor3 = Color3.fromRGB(58, 58, 66)
+	notice.Font = Enum.Font.FredokaOne
+	notice.TextScaled = true
+	notice.TextColor3 = Color3.fromRGB(230, 230, 240)
+	notice.Text = text
+	notice.Parent = screenGui
+	applyComicStyle(notice, 10, 3)
+	activeNavNotice = notice
+	task.delay(2, function()
+		if notice.Parent then
+			notice:Destroy()
+		end
+		if activeNavNotice == notice then
+			activeNavNotice = nil
+		end
+	end)
+end
+
+-- Punkte ohne eigenes System. Companion ist bis heute ein leerer Platzhalter -- kein
+-- einziger Treffer im ganzen Projekt ausserhalb dieser Datei. Er bleibt sichtbar, aber
+-- ausgegraut: ein Knopf, der auf Druck gar nichts tut, wirkt kaputt, deshalb sagt er kurz,
+-- woran es liegt.
+local UNBUILT_KEYS = { Pets = true }
+
+local navBadges = {}
+
 for index, config in ipairs(NAV_BUTTONS) do
+	local unbuilt = UNBUILT_KEYS[config.key] == true
+
 	local button = Instance.new("TextButton")
 	button.Name = config.key .. "NavButton"
-	button.LayoutOrder = index
-	button.BackgroundColor3 = config.color
-	button.AutoButtonColor = true
+	-- UMGEKEHRTE Reihenfolge: die Leiste waechst nach oben, der erste Punkt soll aber
+	-- unten sitzen. Dort ist der Abstand zum Bildschirmrand fest -- er bleibt an
+	-- derselben Stelle, egal wie viele Punkte es gibt.
+	button.LayoutOrder = #NAV_BUTTONS - index + 1
+	button.Size = UDim2.new(0, RAIL_ICON_SIZE, 0, RAIL_ICON_SIZE)
+	button.BackgroundColor3 = unbuilt and Color3.fromRGB(58, 58, 66) or config.color
+	button.AutoButtonColor = not unbuilt
 	button.Text = ""
-	button.ZIndex = 81
-	button.Parent = menuButtonsRow
-	applyComicStyle(button, 16, 4)
+	button.Parent = menuRail
+	applyComicStyle(button, 12, 3)
 
 	local icon = Instance.new("TextLabel")
-	icon.Size = UDim2.new(1, 0, 0.6, 0)
+	icon.Size = UDim2.new(1, -8, 1, -8)
+	icon.Position = UDim2.new(0, 4, 0, 4)
 	icon.BackgroundTransparency = 1
 	icon.Font = Enum.Font.LuckiestGuy
 	icon.TextScaled = true
 	icon.Text = config.icon
-	icon.ZIndex = 81
+	icon.TextTransparency = unbuilt and 0.55 or 0
 	icon.Parent = button
 
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1, 0, 0.35, 0)
-	label.Position = UDim2.new(0, 0, 0.62, 0)
-	label.BackgroundTransparency = 1
-	label.Font = Enum.Font.FredokaOne
-	label.TextScaled = true
-	label.TextColor3 = Color3.new(1, 1, 1)
-	label.TextStrokeColor3 = Color3.new(0, 0, 0)
-	label.TextStrokeTransparency = 0.4
-	label.Text = config.label
-	label.ZIndex = 81
-	label.Parent = button
+	-- Das Laempchen: klein, in der oberen rechten Ecke, standardmaessig aus.
+	local badge = Instance.new("Frame")
+	badge.Name = "Badge"
+	badge.AnchorPoint = Vector2.new(1, 0)
+	badge.Size = UDim2.new(0, 12, 0, 12)
+	badge.Position = UDim2.new(1, 1, 0, -1)
+	badge.BackgroundColor3 = Color3.fromRGB(235, 45, 45)
+	badge.BorderSizePixel = 0
+	badge.Visible = false
+	badge.ZIndex = 3
+	badge.Parent = button
+	local badgeCorner = Instance.new("UICorner")
+	badgeCorner.CornerRadius = UDim.new(1, 0)
+	badgeCorner.Parent = badge
+	navBadges[config.key] = badge
 
 	button.MouseButton1Click:Connect(function()
+		if unbuilt then
+			showNavNotice(config.label .. " — coming soon")
+			return
+		end
 		togglePanel(config.key)
-		setMenuOpen(false) -- Menü-Overlay schliesst sich, sobald ein Unterbereich geöffnet wird
 	end)
 
 	navButtons[config.key] = button
 end
 
+-- ===== Lämpchen =====
+-- Andere Client-Skripte melden hierüber, dass bei ihrem Punkt etwas wartet -- so muss
+-- diese Datei nicht jedes fremde System kennen.
+--
+-- Bewusst NICHT an Geld oder Energie gekoppelt: ein Lämpchen, das mit dem Kontostand an-
+-- und ausgeht, ist kein Hinweis mehr, sondern Flackern, und nach dem dritten Mal sieht
+-- niemand mehr hin. Es steht für einmalige Ereignisse -- etwas aufgedeckt, freigeschaltet,
+-- fertig erforscht, abholbar.
+-- BEWUSST WaitForChild statt RemoteEventUtils.GetOrCreate. Dessen Hilfsfunktion legt das
+-- Ereignis notfalls SELBST an -- serverseitig genau richtig, clientseitig eine Falle: der
+-- Client erzeugt dann eine rein LOKALE Kopie, und FireServer darauf verpufft lautlos. Die
+-- Laempchen wuerden nie gespeichert, ohne jede Fehlermeldung.
+--
+-- Mit Timeout, damit ein fehlender Dienst nicht das ganze Skript aufhaengt. Ohne den
+-- Server funktionieren die Laempchen weiterhin -- nur eben nur fuer diese Sitzung.
+local NavBadgeEvent = ReplicatedStorage:WaitForChild("NavBadgeEvent", 20)
+if not NavBadgeEvent then
+	warn("[NavigationClient] NavBadgeEvent nicht gefunden -- Menue-Laempchen ueberleben "
+		.. "den Neustart nicht. Laeuft NavBadgeService?")
+end
+local NAV_BADGE_PREFIX = "NavBadge_"
+
+-- Nur die Anzeige setzen, ohne den Server zu benachrichtigen. Wird sowohl von
+-- _G.SetNavBadge als auch vom Attribut-Horcher benutzt -- letzterer darf NICHT
+-- zurueckmelden, sonst liefe die Meldung im Kreis.
+local function applyBadge(key, on)
+	local badge = navBadges[key]
+	if badge then
+		badge.Visible = on == true
+	end
+end
+
+-- [key] = { [itemId] = true } -- WELCHE Eintraege ungesehen sind. Das Laempchen sagt nur,
+-- DASS etwas neu ist; die Panels fragen hier nach, um es auch zu zeigen.
+local navBadgeItems = {}
+
+_G.SetNavBadge = function(key, on, itemId)
+	if navBadges[key] == nil then
+		return
+	end
+	applyBadge(key, on)
+	if on then
+		if itemId then
+			navBadgeItems[key] = navBadgeItems[key] or {}
+			navBadgeItems[key][itemId] = true
+		end
+	else
+		navBadgeItems[key] = nil
+	end
+	if NavBadgeEvent then
+		NavBadgeEvent:FireServer(key, on == true, itemId)
+	end
+end
+
+-- Von den Panels beim Oeffnen abgefragt, um die neuen Eintraege hervorzuheben. Gibt eine
+-- Menge zurueck; ein leeres Ergebnis heisst "nichts Einzelnes bekannt", nicht "nichts neu"
+-- -- bei den Geschenken etwa leuchtet das Laempchen ohne Einzelangabe.
+_G.GetNavBadgeItems = function(key)
+	return navBadgeItems[key] or {}
+end
+
+_G.HasNavBadge = function(key)
+	local badge = navBadges[key]
+	return badge ~= nil and badge.Visible
+end
+
+-- Wiederherstellen aus dem Speicherstand. Der Server setzt die Attribute erst, wenn er den
+-- Speicherstand geladen hat -- das ist nach dem Aufbau dieser Leiste. Deshalb nicht einmal
+-- abfragen, sondern auf Aenderungen horchen: dann ist es gleichgueltig, was zuerst fertig
+-- ist.
+local NAV_ITEMS_PREFIX = "NavBadgeItems_"
+
+for key in pairs(navBadges) do
+	local attributeName = NAV_BADGE_PREFIX .. key
+	local itemsAttributeName = NAV_ITEMS_PREFIX .. key
+	local function sync()
+		applyBadge(key, player:GetAttribute(attributeName) == true)
+		-- Die Einzeleintraege ebenfalls wiederherstellen, sonst wuesste das Panel nach
+		-- einem Neustart zwar, DASS etwas neu ist, aber nicht mehr was.
+		local packed = player:GetAttribute(itemsAttributeName)
+		if type(packed) == "string" and packed ~= "" then
+			local set = {}
+			for id in string.gmatch(packed, "[^,]+") do
+				set[id] = true
+			end
+			navBadgeItems[key] = set
+		end
+	end
+	player:GetAttributeChangedSignal(attributeName):Connect(sync)
+	player:GetAttributeChangedSignal(itemsAttributeName):Connect(sync)
+	sync()
+end
+
+-- ===== Monster: ein Skin wird durch das LEVEL erreichbar =====
+-- Bewusst nicht an Geld gekoppelt. Ob man sich etwas leisten kann, aendert sich mit jedem
+-- Kauf und jeder Zerstoerung -- ein Laempchen, das damit an- und ausgeht, ist Flackern.
+-- Das Level dagegen steigt einmal und bleibt.
+task.spawn(function()
+	local leaderstats = player:WaitForChild("leaderstats", 30)
+	local levelValue = leaderstats and leaderstats:WaitForChild("Level", 10)
+	if not levelValue then
+		return
+	end
+	local SkinsConfig = require(ReplicatedStorage:WaitForChild("SkinsConfig"))
+	local lastLevel = levelValue.Value
+
+	levelValue.Changed:Connect(function(newLevel)
+		if newLevel <= lastLevel then
+			lastLevel = newLevel
+			return
+		end
+		-- Nur Skins, die durch DIESEN Aufstieg neu erreichbar wurden.
+		for _, skin in ipairs(SkinsConfig.Skins) do
+			local required = skin.RequiredLevel or 0
+			if required > lastLevel and required <= newLevel then
+				if activePanelKey ~= "Monster" then
+					_G.SetNavBadge("Monster", true)
+				end
+				break
+			end
+		end
+		lastLevel = newLevel
+	end)
+end)
+
 -- ===== Platzhalter-Panel-Baukasten (für Achievements & Haustiere) =====
 local function createPlaceholderPanel(key, title, message)
 	local panel = Instance.new("Frame")
 	panel.Name = key .. "Panel"
-	panel.Size = UDim2.new(0, 340, 0, 260)
-	panel.Position = UDim2.new(0.5, 0, 0.5, 0)
-	panel.AnchorPoint = Vector2.new(0.5, 0.5)
-	panel.BackgroundColor3 = Color3.fromRGB(250, 245, 230)
+	panel.Size = UDim2.new(1, 0, 1, 0)
+	panel.Position = UDim2.new(0, 0, 0, 0)
+	panel.AnchorPoint = Vector2.new(0, 0)
+	panel.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
 	panel.Visible = false
 	panel.Parent = screenGui
 	applyComicStyle(panel, 20, 5)
@@ -279,7 +378,7 @@ local function createPlaceholderPanel(key, title, message)
 	titleLabel.BackgroundTransparency = 1
 	titleLabel.Font = Enum.Font.LuckiestGuy
 	titleLabel.TextScaled = true
-	titleLabel.TextColor3 = Color3.fromRGB(60, 40, 20)
+	titleLabel.TextColor3 = Color3.fromRGB(235, 235, 245)
 	titleLabel.Text = title
 	titleLabel.Parent = panel
 
@@ -290,7 +389,7 @@ local function createPlaceholderPanel(key, title, message)
 	messageLabel.Font = Enum.Font.FredokaOne
 	messageLabel.TextScaled = true
 	messageLabel.TextWrapped = true
-	messageLabel.TextColor3 = Color3.fromRGB(90, 80, 70)
+	messageLabel.TextColor3 = Color3.fromRGB(165, 165, 180)
 	messageLabel.Text = message
 	messageLabel.Parent = panel
 
@@ -306,10 +405,11 @@ local achievementUnlockedEvent = RemoteEventUtils.GetOrCreate("AchievementUnlock
 
 local achievementsPanel = Instance.new("Frame")
 achievementsPanel.Name = "AchievementsPanel"
-achievementsPanel.Size = UDim2.new(0, 480, 0, 460)
-achievementsPanel.Position = UDim2.new(0.5, 0, 0.5, 0)
-achievementsPanel.AnchorPoint = Vector2.new(0.5, 0.5)
-achievementsPanel.BackgroundColor3 = Color3.fromRGB(250, 245, 230)
+-- Vollbild: alle Menü-Bildschirme nutzen die ganze Fläche.
+achievementsPanel.Size = UDim2.new(1, 0, 1, 0)
+achievementsPanel.Position = UDim2.new(0, 0, 0, 0)
+achievementsPanel.AnchorPoint = Vector2.new(0, 0)
+achievementsPanel.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
 achievementsPanel.Visible = false
 achievementsPanel.Parent = screenGui
 applyComicStyle(achievementsPanel, 20, 5)
@@ -321,7 +421,7 @@ achievementsTitleLabel.Position = UDim2.new(0, 8, 0, 10)
 achievementsTitleLabel.BackgroundTransparency = 1
 achievementsTitleLabel.Font = Enum.Font.LuckiestGuy
 achievementsTitleLabel.TextScaled = true
-achievementsTitleLabel.TextColor3 = Color3.fromRGB(60, 40, 20)
+achievementsTitleLabel.TextColor3 = Color3.fromRGB(235, 235, 245)
 achievementsTitleLabel.Text = "🏆 Erfolge"
 achievementsTitleLabel.Parent = achievementsPanel
 
@@ -372,7 +472,7 @@ for _, achievement in ipairs(AchievementsConfig.List) do
 		categoryHeader.Font = Enum.Font.LuckiestGuy
 		categoryHeader.TextScaled = true
 		categoryHeader.TextXAlignment = Enum.TextXAlignment.Left
-		categoryHeader.TextColor3 = Color3.fromRGB(150, 100, 40)
+		categoryHeader.TextColor3 = Color3.fromRGB(255, 205, 90)
 		categoryHeader.Text = lastCategory
 		categoryHeader.LayoutOrder = layoutOrder
 		categoryHeader.Parent = achievementsScroll
@@ -382,7 +482,7 @@ for _, achievement in ipairs(AchievementsConfig.List) do
 	local row = Instance.new("Frame")
 	row.Name = achievement.id .. "Row"
 	row.Size = UDim2.new(1, 0, 0, 52)
-	row.BackgroundColor3 = Color3.fromRGB(255, 253, 245)
+	row.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
 	row.LayoutOrder = layoutOrder
 	row.Parent = achievementsScroll
 	applyComicStyle(row, 10, 2)
@@ -404,7 +504,7 @@ for _, achievement in ipairs(AchievementsConfig.List) do
 	nameLabel.Font = Enum.Font.FredokaOne
 	nameLabel.TextScaled = true
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-	nameLabel.TextColor3 = Color3.fromRGB(60, 40, 20)
+	nameLabel.TextColor3 = Color3.fromRGB(235, 235, 245)
 	nameLabel.Text = achievement.name
 	nameLabel.Parent = row
 
@@ -415,7 +515,7 @@ for _, achievement in ipairs(AchievementsConfig.List) do
 	descLabel.Font = Enum.Font.FredokaOne
 	descLabel.TextScaled = true
 	descLabel.TextXAlignment = Enum.TextXAlignment.Left
-	descLabel.TextColor3 = Color3.fromRGB(120, 110, 95)
+	descLabel.TextColor3 = Color3.fromRGB(165, 165, 180)
 	descLabel.Text = achievement.description
 	descLabel.Parent = row
 
@@ -440,17 +540,35 @@ for _, achievement in ipairs(AchievementsConfig.List) do
 		progressLabel.BackgroundTransparency = 1
 		progressLabel.Font = Enum.Font.FredokaOne
 		progressLabel.TextScaled = true
-		progressLabel.TextColor3 = Color3.fromRGB(120, 110, 95)
+		progressLabel.TextColor3 = Color3.fromRGB(165, 165, 180)
 		progressLabel.Text = "0/" .. achievement.threshold
 		progressLabel.Parent = row
 		progressBarFrame = track
 	end
+
+	-- "NEU"-Fahne: zeigt beim Oeffnen, WELCHES Achievement das Laempchen ausgeloest hat.
+	-- Bei einundvierzig Zeilen waere der Grund sonst nicht zu finden.
+	local newFlag = Instance.new("TextLabel")
+	newFlag.Name = "NewFlag"
+	newFlag.AnchorPoint = Vector2.new(1, 0.5)
+	newFlag.Size = UDim2.new(0, 42, 0, 18)
+	newFlag.Position = UDim2.new(1, -8, 0.5, 0)
+	newFlag.BackgroundColor3 = Color3.fromRGB(235, 45, 45)
+	newFlag.Font = Enum.Font.FredokaOne
+	newFlag.TextScaled = true
+	newFlag.TextColor3 = Color3.fromRGB(255, 255, 255)
+	newFlag.Text = "NEW"
+	newFlag.Visible = false
+	newFlag.ZIndex = 4
+	newFlag.Parent = row
+	applyComicStyle(newFlag, 6, 2)
 
 	achievementRows[achievement.id] = {
 		row = row,
 		nameLabel = nameLabel,
 		progressFill = progressFill,
 		progressLabel = progressLabel,
+		newFlag = newFlag,
 		achievement = achievement,
 	}
 end
@@ -461,21 +579,25 @@ RunService.Heartbeat:Connect(function()
 	if not achievementsPanel.Visible then
 		return
 	end
+	-- Welche Achievements seit dem letzten Oeffnen dazugekommen sind. Kommt aus der
+	-- Menueleiste, die es ueber den Neustart hinweg mitfuehrt.
+	local fresh = _G.GetNavBadgeItems and _G.GetNavBadgeItems("Achievements") or {}
 	for achievementId, rowInfo in pairs(achievementRows) do
 		local achievement = rowInfo.achievement
 		local unlocked = player:GetAttribute("Achievement_" .. achievementId) == true
+		rowInfo.newFlag.Visible = fresh[achievementId] == true
 
 		if achievement.dormant and not unlocked then
-			rowInfo.row.BackgroundColor3 = Color3.fromRGB(235, 230, 220)
+			rowInfo.row.BackgroundColor3 = Color3.fromRGB(34, 34, 40)
 			rowInfo.nameLabel.Text = achievement.name .. "  🔒 Kommt später"
-			rowInfo.nameLabel.TextColor3 = Color3.fromRGB(150, 145, 135)
+			rowInfo.nameLabel.TextColor3 = Color3.fromRGB(130, 130, 145)
 		elseif unlocked then
-			rowInfo.row.BackgroundColor3 = Color3.fromRGB(255, 250, 210)
-			rowInfo.nameLabel.TextColor3 = Color3.fromRGB(40, 130, 40)
+			rowInfo.row.BackgroundColor3 = Color3.fromRGB(56, 50, 28)
+			rowInfo.nameLabel.TextColor3 = Color3.fromRGB(120, 220, 130)
 			rowInfo.nameLabel.Text = "✅ " .. achievement.name
 		else
-			rowInfo.row.BackgroundColor3 = Color3.fromRGB(255, 253, 245)
-			rowInfo.nameLabel.TextColor3 = Color3.fromRGB(60, 40, 20)
+			rowInfo.row.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+			rowInfo.nameLabel.TextColor3 = Color3.fromRGB(235, 235, 245)
 			rowInfo.nameLabel.Text = achievement.name
 		end
 
@@ -517,12 +639,25 @@ toastText.BackgroundTransparency = 1
 toastText.Font = Enum.Font.FredokaOne
 toastText.TextScaled = true
 toastText.TextXAlignment = Enum.TextXAlignment.Left
-toastText.TextColor3 = Color3.fromRGB(60, 40, 20)
+toastText.TextColor3 = Color3.fromRGB(235, 235, 245)
 toastText.ZIndex = 51
 toastText.Parent = achievementToast
 
 local toastShowing = false
 achievementUnlockedEvent.OnClientEvent:Connect(function(achievementId)
+	-- Laempchen am Menuepunkt. Nicht setzen, waehrend das Panel offen ist -- wer gerade
+	-- hinsieht, braucht keinen Hinweis darauf, hinzusehen.
+	if activePanelKey ~= "Achievements" and _G.SetNavBadge then
+		_G.SetNavBadge("Achievements", true, achievementId)
+	end
+	-- Fraktions-Achievements sind zugleich das einzige Signal fuer eine neu
+	-- freigeschaltete Fraktion: einen eigenen Freischalt-Push gibt es nicht, der
+	-- AchievementService pollt dafuer.
+	if achievementId == "JaegerUnlocked" or achievementId == "RoninUnlocked" then
+		if activePanelKey ~= "Faction" and _G.SetNavBadge then
+			_G.SetNavBadge("Faction", true)
+		end
+	end
 	local achievement = AchievementsConfig.ById[achievementId]
 	if not achievement then
 		return
@@ -552,9 +687,11 @@ end)
 
 -- ===== Anbindung an bestehende/andere Panels =====
 -- Monster-Panel = der schon vorhandene Skin-Shop (aus SkinSelectionGui.lua)
+-- Liegt seit dem Vollbild-Umbau in einem EIGENEN ScreenGui, nicht mehr in GameHud: dort
+-- teilte es sich die Ebene mit dem HUD, das dadurch durchschien.
 task.spawn(function()
-	local gameHud = playerGui:WaitForChild("GameHud")
-	local shopFrame = gameHud:WaitForChild("ShopFrame")
+	local shopGui = playerGui:WaitForChild("SkinShopGui")
+	local shopFrame = shopGui:WaitForChild("ShopFrame")
 	panels["Monster"] = shopFrame
 end)
 
@@ -565,10 +702,11 @@ task.spawn(function()
 	panels["Gifts"] = giftPanel
 end)
 
--- Fraktions-Panel (aus EnergyTypesClient.lua)
+-- Fraktions-Panel (aus EnergyTypesClient.lua) -- ebenfalls in ein eigenes ScreenGui
+-- umgezogen, es lag zuvor neben dem Ereignis-Banner und dem Countdown.
 task.spawn(function()
-	local energyTypesGui = playerGui:WaitForChild("EnergyTypesGui")
-	local factionPanel = energyTypesGui:WaitForChild("FactionPanel")
+	local factionGui = playerGui:WaitForChild("FactionGui")
+	local factionPanel = factionGui:WaitForChild("FactionPanel")
 	panels["Faction"] = factionPanel
 end)
 
@@ -579,15 +717,23 @@ task.spawn(function()
 	panels["Talents"] = talentTreePanel
 end)
 
+-- Archiv-Panel (aus ArchiveClient.lua)
+task.spawn(function()
+	local archiveGui = playerGui:WaitForChild("ArchiveGui")
+	local archivePanel = archiveGui:WaitForChild("ArchivePanel")
+	panels["Archive"] = archivePanel
+end)
+
 -- ===== Hilfeseite =====
 local HelpConfig = require(ReplicatedStorage:WaitForChild("HelpConfig"))
 
 local helpPanel = Instance.new("Frame")
 helpPanel.Name = "HelpPanel"
-helpPanel.Size = UDim2.new(0, 500, 0, 480)
-helpPanel.Position = UDim2.new(0.5, 0, 0.5, 0)
-helpPanel.AnchorPoint = Vector2.new(0.5, 0.5)
-helpPanel.BackgroundColor3 = Color3.fromRGB(250, 245, 230)
+-- Vollbild: alle Menü-Bildschirme nutzen die ganze Fläche.
+helpPanel.Size = UDim2.new(1, 0, 1, 0)
+helpPanel.Position = UDim2.new(0, 0, 0, 0)
+helpPanel.AnchorPoint = Vector2.new(0, 0)
+helpPanel.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
 helpPanel.Visible = false
 helpPanel.Parent = screenGui
 applyComicStyle(helpPanel, 20, 5)
@@ -599,7 +745,7 @@ helpTitleLabel.Position = UDim2.new(0, 8, 0, 10)
 helpTitleLabel.BackgroundTransparency = 1
 helpTitleLabel.Font = Enum.Font.LuckiestGuy
 helpTitleLabel.TextScaled = true
-helpTitleLabel.TextColor3 = Color3.fromRGB(60, 40, 20)
+helpTitleLabel.TextColor3 = Color3.fromRGB(235, 235, 245)
 helpTitleLabel.Text = "❓ Help"
 helpTitleLabel.Parent = helpPanel
 
@@ -679,7 +825,7 @@ local function buildDiagram(diagramType, parent)
 		local track = Instance.new("Frame")
 		track.Size = UDim2.new(1, 0, 0, 20)
 		track.Position = UDim2.new(0, 0, 0, 16)
-		track.BackgroundColor3 = Color3.fromRGB(230, 225, 210)
+		track.BackgroundColor3 = Color3.fromRGB(58, 58, 68)
 		track.Parent = diagramFrame
 		applyComicStyle(track, 8, 1)
 		local gradient = Instance.new("UIGradient")
@@ -704,7 +850,7 @@ local function buildDiagram(diagramType, parent)
 		ringInner.Size = UDim2.new(0, 34, 0, 34)
 		ringInner.AnchorPoint = Vector2.new(0.5, 0.5)
 		ringInner.Position = UDim2.new(0.5, 0, 0.5, 0)
-		ringInner.BackgroundColor3 = Color3.fromRGB(250, 245, 230)
+		ringInner.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
 		ringInner.Parent = ring
 		local ringInnerCorner = Instance.new("UICorner")
 		ringInnerCorner.CornerRadius = UDim.new(0.5, 0)
@@ -731,7 +877,7 @@ for index, section in ipairs(HelpConfig.Sections) do
 	sectionFrame.Name = section.id .. "Section"
 	sectionFrame.AutomaticSize = Enum.AutomaticSize.Y
 	sectionFrame.Size = UDim2.new(1, 0, 0, 0)
-	sectionFrame.BackgroundColor3 = Color3.fromRGB(255, 253, 245)
+	sectionFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
 	sectionFrame.LayoutOrder = index
 	sectionFrame.Parent = helpScroll
 	applyComicStyle(sectionFrame, 12, 2)
@@ -755,7 +901,7 @@ for index, section in ipairs(HelpConfig.Sections) do
 	sectionTitle.Font = Enum.Font.LuckiestGuy
 	sectionTitle.TextScaled = true
 	sectionTitle.TextXAlignment = Enum.TextXAlignment.Left
-	sectionTitle.TextColor3 = Color3.fromRGB(60, 40, 20)
+	sectionTitle.TextColor3 = Color3.fromRGB(235, 235, 245)
 	sectionTitle.Text = section.icon .. " " .. section.title
 	sectionTitle.LayoutOrder = 1
 	sectionTitle.Parent = sectionFrame
@@ -767,7 +913,7 @@ for index, section in ipairs(HelpConfig.Sections) do
 	sectionSummary.TextWrapped = true
 	sectionSummary.TextScaled = true
 	sectionSummary.TextXAlignment = Enum.TextXAlignment.Left
-	sectionSummary.TextColor3 = Color3.fromRGB(90, 80, 65)
+	sectionSummary.TextColor3 = Color3.fromRGB(165, 165, 180)
 	sectionSummary.Text = section.summary
 	sectionSummary.LayoutOrder = 2
 	sectionSummary.Parent = sectionFrame
@@ -783,7 +929,7 @@ for index, section in ipairs(HelpConfig.Sections) do
 		pointLabel.TextWrapped = true
 		pointLabel.TextScaled = true
 		pointLabel.TextXAlignment = Enum.TextXAlignment.Left
-		pointLabel.TextColor3 = Color3.fromRGB(60, 40, 20)
+		pointLabel.TextColor3 = Color3.fromRGB(235, 235, 245)
 		pointLabel.Text = "• " .. pointText
 		pointLabel.LayoutOrder = 3 + pointIndex
 		pointLabel.Parent = sectionFrame
@@ -804,7 +950,9 @@ _G.OpenHelpPanel = function(sectionId)
 	end
 end
 
+-- Wird im ganzen Projekt von NIEMANDEM aufgerufen -- nur definiert. Bleibt als Notausgang
+-- stehen (etwa fuer eine Kinosequenz, die alles schliessen muss), aber ohne das Overlay,
+-- das es frueher mitschloss.
 _G.CloseNavPanels = function()
 	closeActivePanel()
-	setMenuOpen(false)
 end
