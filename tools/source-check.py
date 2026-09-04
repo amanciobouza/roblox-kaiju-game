@@ -276,7 +276,66 @@ def rule_waitforchild_timeout(files):
     return violations
 
 
+def rule_remote_without_creator(files):
+    """Ein RemoteEvent wird im Repo gesucht, aber von keinem Repo-Skript angelegt.
+
+    Dann existiert es nur, weil es in Studio von Hand angelegt wurde oder von einem
+    Skript stammt, das im Modell liegt und nicht versioniert ist. Das ist nicht
+    grundsaetzlich falsch -- aber es ist eine unsichtbare Abhaengigkeit: geht das Objekt
+    im Place verloren, faellt es nur im Spiel auf, und der Quelltext gibt keinen Hinweis
+    darauf, wo es herkommen soll.
+
+    CLAUDE.md haelt dazu fest: RemoteEvents werden zur Laufzeit ueber GetOrCreate
+    angelegt, die .model.json-Dateien sind die versionierten Gegenstuecke. Diese Regel
+    prueft genau das.
+
+    Wer so eine Abhaengigkeit bewusst eingeht, holt das Objekt mit Zeitgrenze und prueft
+    auf nil -- so macht es SanctuaryLiftRider mit LiftReleasePlayerEvent.
+    """
+    created = set()
+    referenced = collections.defaultdict(list)
+
+    for path in files:
+        for number, raw in read_lines_with_strings(path):
+            line = strip_comment(raw)
+            # Angelegt: per Hilfsfunktion oder durch Benennen einer neuen Instanz.
+            for match in re.finditer(
+                r'(?:RemoteEventUtils\.GetOrCreate|getOrCreateRemoteEvent)\(\s*"(\w+)"', line):
+                created.add(match.group(1))
+            for match in re.finditer(r'\.Name\s*=\s*"(\w+)"', line):
+                created.add(match.group(1))
+            # Gesucht: nur Namen, die nach einem Remote aussehen -- sonst faenge die Regel
+            # jeden Ordner und jedes Wertobjekt mit ein.
+            for match in re.finditer(
+                r'(?:WaitForChild|FindFirstChild)\(\s*"(\w+(?:Event|Function|Remote))"', line):
+                referenced[match.group(1)].append((path, number))
+
+    # Versionierte Gegenstuecke zaehlen als angelegt: sie liegen im Repo und kommen mit
+    # dem Place mit.
+    for root, _dirs, names in os.walk(SRC):
+        for name in names:
+            if name.endswith(".model.json"):
+                created.add(name.split(".")[0])
+
+    violations = []
+    for name in sorted(set(referenced) - created):
+        path, number = referenced[name][0]
+        violations.append(
+            "%s: gesucht in %s:%d, aber von keinem Repo-Skript angelegt und ohne "
+            ".model.json -- existiert nur in Studio" % (name, path, number))
+    return violations
+
+
 RULES = [
+    {
+        "id": "source.remote-without-creator",
+        "intent": "Jedes RemoteEvent, auf das der Quelltext sich verlaesst, wird auch im "
+                  "Repo angelegt -- per GetOrCreate oder als .model.json. Sonst haengt "
+                  "der Code an einem Objekt, das nur im Place existiert: geht es verloren, "
+                  "faellt das erst im Spiel auf, und der Quelltext sagt nicht, woher es "
+                  "kommen sollte.",
+        "check": rule_remote_without_creator,
+    },
     {
         "id": "source.g-read-without-write",
         "intent": "Jede _G-Funktion, die gelesen wird, ist auch irgendwo gesetzt. "

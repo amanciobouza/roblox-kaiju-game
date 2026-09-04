@@ -36,6 +36,7 @@ source.g-write-without-read|_G.RevealArchiveEntry: gesetzt in src/ServerScriptSe
 source.g-write-without-read|_G.STAT_CAP_PER_LEVEL: gesetzt in src/ServerScriptService/PlayerSetup.server.luau:1510, aber nirgends aufgerufen
 source.g-write-without-read|_G.SetArchiveRevealAll: gesetzt in src/ServerScriptService/ArchiveService.server.luau:154, aber nirgends aufgerufen
 source.g-write-without-read|_G.UnlockAchievement: gesetzt in src/ServerScriptService/AchievementService.server.luau:42, aber nirgends aufgerufen
+source.remote-without-creator|LiftReleasePlayerEvent: gesucht in src/StarterPlayerScripts/SanctuaryLiftRider.client.luau:41, aber von keinem Repo-Skript angelegt und ohne .model.json -- existiert nur in Studio
 source.waitforchild-timeout|src/ServerScriptService/CityBrokenService.server.luau:26 WaitForChild("CityAlertValues") ohne Zeitgrenze
 source.waitforchild-timeout|src/ServerScriptService/PlayerSetup.server.luau:457 WaitForChild("Humanoid") ohne Zeitgrenze
 source.waitforchild-timeout|src/ServerScriptService/TrainingHandler.server.luau:571 WaitForChild("leaderstats") ohne Zeitgrenze
