@@ -86,8 +86,9 @@ backdrop.Parent = screenGui
 
 local panel = Instance.new("Frame")
 panel.Name = "DebugPanel"
--- Letzter Summand: Zeile für den Spec-Prüfer-Knopf.
-panel.Size = UDim2.new(0, 340, 0, 340 + 60 + 90 + 50 + 50 + 50 + 50)
+-- Vorletzter Summand: Zeile für den Spec-Prüfer-Knopf.
+-- Letzter Summand: drei Zeilen für den Showdown.
+panel.Size = UDim2.new(0, 340, 0, 340 + 60 + 90 + 50 + 50 + 50 + 50 + 150)
 panel.AnchorPoint = Vector2.new(0.5, 0.5)
 panel.Position = UDim2.new(0.5, 0, 0.5, 0)
 panel.BackgroundColor3 = Color3.fromRGB(35, 32, 45)
@@ -785,3 +786,82 @@ end)
 
 player:GetAttributeChangedSignal("DebugMode"):Connect(updateCheckboxVisual)
 updateCheckboxVisual()
+
+-- ===== Showdown =====
+-- Ein Showdown, den man nur durch echtes Kaempfen ausloesen kann, ist muehsam zu pruefen
+-- -- besonders die Shots, die hoechstens alle sechs Sekunden kommen. Der wichtigste
+-- Schalter ist deshalb "Shot ausloesen": ohne ihn muesste man fuer jede Korrektur an
+-- einer Kamerafahrt einen echten Kampf provozieren und sechs Sekunden warten.
+--
+-- ACHTUNG: das Debug-Panel ist waehrend eines Showdowns ausgeblendet (so gewuenscht).
+-- Der Shot laesst sich dort mit F8 ausloesen -- siehe ShowdownClient.
+-- waitForRemote wie bei allen anderen Debug-Ereignissen: GetOrCreate wuerde auf dem
+-- Client eine LOKALE Kopie anlegen, falls das Ereignis des Servers noch nicht repliziert
+-- ist -- FireServer ginge dann ins Leere, ohne Fehlermeldung.
+local DebugShowdownEvent = waitForRemote("DebugShowdownEvent")
+
+local SHOWDOWN_ROW_Y = 656
+
+local function makeShowdownButton(name, text, xScale, xOffset, widthScale, widthOffset, rowOffset, color)
+	local button = Instance.new("TextButton")
+	button.Name = name
+	button.Size = UDim2.new(widthScale, widthOffset, 0, 40)
+	button.Position = UDim2.new(xScale, xOffset, 0, SHOWDOWN_ROW_Y + rowOffset)
+	button.BackgroundColor3 = color
+	button.Font = Enum.Font.FredokaOne
+	button.TextScaled = true
+	button.TextColor3 = Color3.new(1, 1, 1)
+	button.Text = text
+	button.Parent = panel
+	applyComicStyle(button, 10, 2)
+	return button
+end
+
+local forceShowdownButton = makeShowdownButton(
+	"ForceShowdownButton", "⚔️ Showdown erzwingen", 0, 16, 1, -32, 0, Color3.fromRGB(150, 70, 70))
+forceShowdownButton.MouseButton1Click:Connect(function()
+	if DebugShowdownEvent then
+		DebugShowdownEvent:FireServer("Force")
+	end
+end)
+
+-- Die Shot-Namen stehen in der Config; hier nur die Reihenfolge zum Durchblaettern.
+local SHOWDOWN_SHOT_NAMES = { "FocusLaser", "AreaAttack", "WarningPulse", "ContainmentNet", "ShoulderMissiles" }
+local shotIndex = 1
+
+local shotPickButton = makeShowdownButton(
+	"ShowdownShotPickButton", "🎬 " .. SHOWDOWN_SHOT_NAMES[1], 0, 16, 0.6, -20, 50, Color3.fromRGB(80, 80, 120))
+shotPickButton.MouseButton1Click:Connect(function()
+	shotIndex = shotIndex % #SHOWDOWN_SHOT_NAMES + 1
+	shotPickButton.Text = "🎬 " .. SHOWDOWN_SHOT_NAMES[shotIndex]
+end)
+
+local shotFireButton = makeShowdownButton(
+	"ShowdownShotFireButton", "▶ Shot", 0.6, 4, 0.4, -20, 50, Color3.fromRGB(70, 130, 90))
+shotFireButton.MouseButton1Click:Connect(function()
+	if DebugShowdownEvent then
+		DebugShowdownEvent:FireServer("Shot", SHOWDOWN_SHOT_NAMES[shotIndex])
+	end
+end)
+
+local showdownEndButton = makeShowdownButton(
+	"ShowdownEndButton", "⏹ Showdown beenden", 0, 16, 0.6, -20, 100, Color3.fromRGB(90, 90, 140))
+showdownEndButton.MouseButton1Click:Connect(function()
+	if DebugShowdownEvent then
+		DebugShowdownEvent:FireServer("End")
+	end
+end)
+
+local shortDurationEnabled = false
+local shortDurationButton = makeShowdownButton(
+	"ShowdownShortDurationButton", "⏱️ 3s: OFF", 0.6, 4, 0.4, -20, 100, Color3.fromRGB(90, 90, 140))
+shortDurationButton.MouseButton1Click:Connect(function()
+	shortDurationEnabled = not shortDurationEnabled
+	if DebugShowdownEvent then
+		DebugShowdownEvent:FireServer("ShortDuration", shortDurationEnabled)
+	end
+	shortDurationButton.Text = shortDurationEnabled and "⏱️ 3s: ON" or "⏱️ 3s: OFF"
+	shortDurationButton.BackgroundColor3 = shortDurationEnabled
+		and Color3.fromRGB(60, 90, 140)
+		or Color3.fromRGB(90, 90, 140)
+end)

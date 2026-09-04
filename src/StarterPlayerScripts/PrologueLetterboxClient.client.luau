@@ -11,39 +11,31 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
+local LetterboxUtils = require(ReplicatedStorage:WaitForChild("LetterboxUtils"))
 local SetPrologueLetterboxEvent = RemoteEventUtils.GetOrCreate("SetPrologueLetterboxEvent")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
-local BAR_HEIGHT_FRACTION = 0.09 -- Anteil der Bildschirmhöhe pro Balken (oben/unten je gleich)
-local FADE_DURATION = 0.6
-
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "PrologueLetterboxGui"
-screenGui.ResetOnSpawn = false
-screenGui.IgnoreGuiInset = true
-screenGui.DisplayOrder = 40 -- unter der Warteschlangen-Anzeige (50), über dem normalen HUD
-screenGui.Parent = playerGui
-
-local function createBar(name, anchorTop)
-	local bar = Instance.new("Frame")
-	bar.Name = name
-	bar.Size = UDim2.new(1, 0, BAR_HEIGHT_FRACTION, 0)
-	bar.Position = anchorTop and UDim2.new(0, 0, 0, 0) or UDim2.new(0, 0, 1, 0)
-	bar.AnchorPoint = anchorTop and Vector2.new(0, 0) or Vector2.new(0, 1)
-	bar.BackgroundColor3 = Color3.new(0, 0, 0)
-	bar.BackgroundTransparency = 1 -- startet unsichtbar, wird erst bei "The Fall" eingeblendet
-	bar.BorderSizePixel = 0
-	bar.ZIndex = 5
-	bar.Parent = screenGui
-	return bar
-end
-
-local topBar = createBar("TopBar", true)
-local bottomBar = createBar("BottomBar", false)
+-- Die Balken selbst kommen aus LetterboxUtils. Sie lagen frueher hier, ein zweites Mal in
+-- der Trainingskamera und mit dem Showdown waeren es drei geworden -- jedes Mal mit
+-- anderer Hoehe, anderer Blende und anderem DisplayOrder.
+--
+-- Die Werte bleiben unveraendert: 9 % Balkenhoehe, 0,6 s Blende, und "fade" -- die Balken
+-- stehen in voller Hoehe und werden durchsichtig ein- und ausgeblendet. Das Aussehen des
+-- Prologs ist abgenommen und aendert sich hier nicht.
+--
+-- Das HUD-Ausblenden bleibt DAGEGEN hier: es ist prologspezifisch. Der Showdown blendet
+-- bewusst fast nichts aus, weil dort weitergekaempft wird.
+local letterbox = LetterboxUtils.Create(playerGui, "PrologueLetterboxGui", {
+	heightFraction = 0.09,
+	fadeDuration = 0.6,
+	style = "fade",
+	easingStyle = Enum.EasingStyle.Sine,
+	easingDirection = Enum.EasingDirection.InOut,
+	displayOrder = 40, -- unter der Warteschlangen-Anzeige (50), ueber dem normalen HUD
+})
 
 -- Andere HUD-ScreenGuis (nicht Health-bezogen), die komplett aus-/eingeblendet werden --
 -- siehe die jeweiligen LocalScripts für die genauen Namen.
@@ -60,23 +52,8 @@ local OTHER_HUD_GUI_NAMES = {
 -- XP-Bar zusammen) -- nur diese beiden werden versteckt, "HealthFrame" bleibt sichtbar.
 local STATUS_CLUSTER_HIDE_NAMES = { "LevelLabel", "BarBackground" }
 
-local activeTweens = {}
 local function setVisible(visible)
-	for _, tween in ipairs(activeTweens) do
-		tween:Cancel()
-	end
-	activeTweens = {}
-
-	local targetTransparency = visible and 0 or 1
-	for _, bar in ipairs({ topBar, bottomBar }) do
-		local tween = TweenService:Create(
-			bar,
-			TweenInfo.new(FADE_DURATION, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-			{ BackgroundTransparency = targetTransparency }
-		)
-		tween:Play()
-		table.insert(activeTweens, tween)
-	end
+	letterbox.SetVisible(visible)
 
 	local hudShouldBeVisible = not visible
 

@@ -34,6 +34,7 @@ local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 
 local CityAlertConfig = require(ReplicatedStorage:WaitForChild("CityAlertConfig"))
+local ShowdownConfig = require(ReplicatedStorage:WaitForChild("ShowdownConfig"))
 
 local GUARDIAN_PROTECT_TAG = "GuardianProtect"
 
@@ -429,7 +430,7 @@ local function buildWardenGuardian(plan)
 	end
 
 	-- Namens-Brücke: der Dienst sucht feste Teilenamen (setVisorActive, fireImpactFist,
-	-- fireRepulsorPulse, setAegisShieldDeployed). Der Warden bringt eigene Namen mit.
+	-- beginRepulsorPulse, setAegisShieldDeployed). Der Warden bringt eigene Namen mit.
 	-- Was nicht zugeordnet wird, ist überall nil-geprüft und schaltet nur die jeweilige
 	-- Optik ab -- keine Fehler.
 	local visor = model:FindFirstChild("VisorSensor", true)
@@ -732,6 +733,11 @@ local function damageGuardian(cityName, amount, attackerPlayer)
 	if attackerPlayer then
 		guardian.provokedBy = attackerPlayer
 		guardian.provokedAt = os.clock()
+		-- Showdown: eine der beiden Haelften der Ausloesebedingung. Erst wenn AUCH der
+		-- Guardian den Spieler getroffen hat, wird daraus ein Kampf (ShowdownService).
+		if _G.NotifyShowdownDamage then
+			_G.NotifyShowdownDamage("PlayerToGuardian", attackerPlayer, cityName)
+		end
 	end
 
 	-- Sichtbare Reaktion auf den Treffer. Gedrosselt: bei schnellen Schlagfolgen wuerde
@@ -754,6 +760,13 @@ local function damageGuardian(cityName, amount, attackerPlayer)
 		guardian.defeated = true
 		setGuardianState(guardian, cityName, "Defeated")
 		setVisorDefeated(guardian)
+
+		-- Der Showdown endet mit einem eigenen Shot auf den fallenden Guardian -- er ist
+		-- der Hoehepunkt der gesamten Alarmstufen-Eskalation und bekommt deshalb einen
+		-- anderen Abgang als Weglaufen oder Aufgeben.
+		if _G.EndShowdownsForCity then
+			_G.EndShowdownsForCity(cityName, "Guardian besiegt")
+		end
 
 		-- Achievements: "Ersten Guardian besiegt".
 		-- Lebensstatistik. Im Mehrspielerbetrieb zaehlt der LETZTE Treffer: attackerPlayer
@@ -998,6 +1011,10 @@ local function fireImpactFist(guardian, cityName, target, config)
 	local targetRoot = target.Character and target.Character:FindFirstChild("HumanoidRootPart")
 	if targetHumanoid and targetRoot and targetHumanoid.Health > 0 then
 		targetHumanoid:TakeDamage(config.GuardianImpactFistDamage)
+		-- Die zweite Haelfte der Showdown-Bedingung.
+		if _G.NotifyShowdownDamage then
+			_G.NotifyShowdownDamage("GuardianToPlayer", target, cityName)
+		end
 		if _G.RecordStat then
 			_G.RecordStat(target, "HitBy.Guardian")
 			_G.RecordStat(target, "HitBy.Guardian." .. cityName)
@@ -1016,9 +1033,23 @@ local function fireImpactFist(guardian, cityName, target, config)
 	end
 end
 
-local function fireRepulsorPulse(guardian, cityName, config)
+-- ===== Flaechenangriff in zwei Schritten =====
+-- Der Angriff war frueher EIN Block: Schaden sofort, Effekt hinterher. Die
+-- Telegraph-Zeiten in den Workshop-Konfigurationen (0.55 bis 1.35 Sekunden) liefen dem
+-- Schaden also hinterher und warnten vor nichts -- eine dokumentierte Absicht, die nie
+-- eingeloest wurde.
+--
+-- Jetzt: beginRepulsorPulse belegt den Cooldown und startet Ton und Effekt, danach
+-- wartet der Aufrufer die Ansatzphase ab und ruft applyRepulsorPulse. Erst dann trifft
+-- es. Das ist die Voraussetzung dafuer, dass die Showdown-Kamera den Angriff ZEIGEN
+-- kann statt ihn nur zu bestaetigen -- und es macht den Guardian fair, weil man ihm
+-- erstmals ausweichen kann.
+--
+-- Der Nahkampf (fireImpactFist) bleibt bewusst sofort: ein Schlag aus 14 Studs SOLL
+-- schnell sein, sonst wird der Guardian im Nahbereich zahnlos.
+local function beginRepulsorPulse(guardian, cityName, config)
 	if os.clock() - (guardian.lastRepulsorAt or 0) < config.GuardianRepulsorCooldown then
-		return
+		return nil
 	end
 	guardian.lastRepulsorAt = os.clock()
 
@@ -1040,6 +1071,14 @@ local function fireRepulsorPulse(guardian, cityName, config)
 	end
 	Debris:AddItem(repulsorSound, 3)
 
+	return origin
+end
+
+-- Teilt den Schaden aus. Wird erst NACH der Ansatzphase gerufen (siehe oben).
+local function applyRepulsorPulse(guardian, cityName, config, origin)
+	if guardian.defeated then
+		return -- waehrend der Ansatzphase gefallen: der Impuls verpufft
+	end
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player:GetAttribute("CurrentCityName") == cityName and player.Character then
 			local targetRoot = player.Character:FindFirstChild("HumanoidRootPart")
@@ -1053,6 +1092,9 @@ local function fireRepulsorPulse(guardian, cityName, config)
 				local distance = flat.Magnitude
 				if distance <= config.GuardianRepulsorRadius then
 					targetHumanoid:TakeDamage(config.GuardianRepulsorDamage)
+					if _G.NotifyShowdownDamage then
+						_G.NotifyShowdownDamage("GuardianToPlayer", player, cityName)
+					end
 					-- Lebensstatistik: der Repulsor trifft alle Spieler im Radius -- hier
 					-- ist "player" die Schleifenvariable, also das getroffene Ziel.
 					if _G.RecordStat then
@@ -1285,6 +1327,16 @@ end
 -- entweder trivial (man weicht ihm aus) oder unspielbar (man kommt nie vorbei).
 local ENGAGE_RADIUS = 90 -- ab hier faellt der Guardian einen Spieler von sich aus an
 local PUSH_OUT_DISTANCE = 220 -- so weit muss der Spieler weg sein, damit er ablaesst
+
+-- Ab dieser Entfernung bricht der Guardian ab und kehrt zurueck. Wird auch vom
+-- ShowdownService gebraucht: reisst die Leine, endet der Showdown, sonst saesse der
+-- Spieler im Filmstreifen und schaute einem Riesen beim Weggehen zu.
+--
+-- MUSS unter der Konstanten stehen: weiter oben haette PUSH_OUT_DISTANCE auf ein nicht
+-- existierendes Global aufgeloest, und die Funktion haette still nil geliefert.
+_G.GetGuardianLeashRadius = function()
+	return PUSH_OUT_DISTANCE
+end
 local PATROL_DWELL_MIN = 8 -- Verweildauer an einem Patrouillenpunkt
 local PATROL_DWELL_MAX = 18
 
@@ -1314,6 +1366,15 @@ end
 -- Die Angriffe heissen je Generation anders. Der Warden fuehrt den Schockstock und den
 -- Warnimpuls, der Marshal Pulskanone und Fangnetz, der Aegis die Ionenkanonen und die
 -- Raketensalve. Die Namen sind die Build-Funktionen der GuardianAnimationLibrary.
+-- Welcher Showdown-Shot zum Flaechenangriff welcher Generation gehoert, und wie lange
+-- dessen Ansatzphase dauert. Die Zeiten stehen in ShowdownConfig, damit Kamera und
+-- Schaden garantiert denselben Wert benutzen -- eine Spec-Regel prueft das.
+local SHOWDOWN_PULSE_SHOT = {
+	WardenShepherd = "WarningPulse",
+	MarshalRoadblock = "ContainmentNet",
+	AegisInterceptor = "ShoulderMissiles",
+}
+
 local GUARDIAN_ATTACK_ANIMATIONS = {
 	WardenShepherd = { Fist = "ShockBaton", Pulse = "WarningPulse" },
 	MarshalRoadblock = { Fist = "PulseCannonFire", Pulse = "ContainmentNetLaunch" },
@@ -1400,7 +1461,12 @@ local function playGuardianVFX(guardian, kind, config, target)
 			if kind == "Fist" then
 				requested:Fire("TwinIonCannons", target.Character, values.TwinIonCannons)
 			else
-				requested:Fire("ShoulderMissiles", target.Character, values.ShoulderMissiles)
+				-- Kopie mit ueberschriebener LockDuration: die Workshop-Vorgabe von 2.0s
+				-- waere so lang, dass man aus dem Wirkradius spazieren kann. Kopie und
+				-- nicht Zuweisung -- die Konfiguration des Workshops gehoert dem Workshop.
+				local missiles = table.clone(values.ShoulderMissiles)
+				missiles.LockDuration = ShowdownConfig.GuardianTelegraph.AegisInterceptor
+				requested:Fire("ShoulderMissiles", target.Character, missiles)
 			end
 		end)
 	end
@@ -1531,16 +1597,32 @@ local function attackIfInRange(guardian, cityName, config, target, targetPositio
 			))
 		end
 	elseif distance <= config.GuardianRepulsorRadius * 1.3 then
-		local before = guardian.lastRepulsorAt
-		fireRepulsorPulse(guardian, cityName, config)
-		if guardian.lastRepulsorAt ~= before then
+		local origin = beginRepulsorPulse(guardian, cityName, config)
+		if origin then
 			local name = animations and animations.Pulse
 			playGuardianAction(guardian, name)
 			playGuardianVFX(guardian, "Pulse", config, target)
+
+			-- Die Ansatzphase: hier hat der Showdown seinen Aufhaenger. Der Shot laeuft
+			-- genau so lange, wie es dauert, bis der Schaden eintritt -- die Kamera faehrt
+			-- also im Moment des Einschlags zurueck.
+			local telegraph = ShowdownConfig.GuardianTelegraph[guardian.assetName] or 0
+			if _G.NotifyShowdownAttack and SHOWDOWN_PULSE_SHOT[guardian.assetName] then
+				_G.NotifyShowdownAttack(SHOWDOWN_PULSE_SHOT[guardian.assetName], target, cityName)
+			end
+
 			print(string.format(
-				"[Kaiju-Debug] Guardian %s greift an: %s (Flaeche, %.0f Studs, Schaden %s)",
-				cityName, name or "ohne Animation", distance, tostring(config.GuardianRepulsorDamage)
+				"[Kaiju-Debug] Guardian %s setzt an: %s (Flaeche, %.0f Studs, Ansatz %.2fs, Schaden %s)",
+				cityName, name or "ohne Animation", distance, telegraph, tostring(config.GuardianRepulsorDamage)
 			))
+
+			if telegraph > 0 then
+				task.delay(telegraph, function()
+					applyRepulsorPulse(guardian, cityName, config, origin)
+				end)
+			else
+				applyRepulsorPulse(guardian, cityName, config, origin)
+			end
 		end
 	end
 end

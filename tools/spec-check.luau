@@ -26,6 +26,7 @@ local WORKSHOP = "../packages/trenchborn-asset-workshop/src/ReplicatedStorage/Tr
 local specs = {
 	require("../src/ReplicatedStorage/Specs/CityAlertSpec"),
 	require("../src/ReplicatedStorage/Specs/PlayerDataSpec"),
+	require("../src/ReplicatedStorage/Specs/ShowdownSpec"),
 	require(WORKSHOP .. "WorkshopAssetSpec"),
 }
 
@@ -34,6 +35,7 @@ local ctx = {
 		CityAlert = require("../src/ReplicatedStorage/CityAlertConfig"),
 		TalentTree = require("../src/ReplicatedStorage/TalentTreeConfig"),
 		Achievements = require("../src/ReplicatedStorage/AchievementsConfig"),
+		Showdown = require("../src/ReplicatedStorage/ShowdownConfig"),
 		-- Die Asset-Spezifikationen sind für die Regeln DATEN, keine Specs -- deshalb
 		-- stehen sie hier im config-Teil, nicht in der Spec-Liste oben.
 		WorkshopAssets = {

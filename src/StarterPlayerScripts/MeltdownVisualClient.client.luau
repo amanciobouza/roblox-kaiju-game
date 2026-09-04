@@ -43,6 +43,14 @@ local function playFovPulse()
 	if not currentCamera then
 		return
 	end
+	-- Waehrend eines Showdowns nicht: der Puls veraendert die Brennweite und unterlaeuft
+	-- damit jede Bildkomposition der Kampfkamera. Und weil der Spieler dort oft im
+	-- Berserker-Zustand ist -- er macht ja gerade viel Schaden --, waere das nicht die
+	-- Ausnahme, sondern der Normalfall. Die Bildschirm-Ruckler bleiben dagegen aktiv:
+	-- ein kurzer Stoss vertraegt sich mit jeder Kamera, eine wandernde Brennweite nicht.
+	if player:GetAttribute("ShowdownActive") == true then
+		return
+	end
 	local baseFov = currentCamera.FieldOfView
 
 	local step1 = TweenService:Create(currentCamera, TweenInfo.new(FOV_PULSE_STEP_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {

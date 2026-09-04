@@ -511,6 +511,12 @@ FocusAttackEvent.OnServerEvent:Connect(function(player)
 	player:SetAttribute("FocusCharging", true)
 	FocusChargeEvent:FireClient(player)
 
+	-- Showdown: die Aufladung ist der Aufhaenger fuer die Kamera. Sie faehrt waehrend der
+	-- zwei Sekunden am Strahl entlang zum Ziel -- deshalb hier und nicht beim Einschlag.
+	if _G.NotifyShowdownAttack then
+		_G.NotifyShowdownAttack("FocusLaser", player, player:GetAttribute("CurrentCityName"))
+	end
+
 	-- Heat-System: Fokus erzeugt deutlich Hitze -- jetzt AUCH während des Bein-Trainings,
 	-- damit der Spieler dort dieselbe Heat-Balance wie im echten Kampf üben kann.
 	if _G.AddFocusHeat then
@@ -730,6 +736,11 @@ AreaAttackEvent.OnServerEvent:Connect(function(player)
 	local radius = getAreaAttackRadius(player)
 	local chargePosition = rootPart.Position
 	AreaAttackEffectEvent:FireAllClients(player, chargePosition, AREA_CHARGE_TIME, radius)
+
+	-- Gleiche Ueberlegung wie beim Fokus: waehrend die Ladung waechst, nicht beim Knall.
+	if _G.NotifyShowdownAttack then
+		_G.NotifyShowdownAttack("AreaAttack", player, player:GetAttribute("CurrentCityName"))
+	end
 
 	task.delay(AREA_CHARGE_TIME, function()
 		if not character.Parent then

@@ -12,6 +12,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
+local CameraSessionUtils = require(ReplicatedStorage:WaitForChild("CameraSessionUtils"))
 local SimplePrologueFallCameraEvent = RemoteEventUtils.GetOrCreate("SimplePrologueFallCameraEvent")
 local TrenchOrbitCameraEvent = RemoteEventUtils.GetOrCreate("TrenchOrbitCameraEvent")
 local RestorePrologueCameraEvent = RemoteEventUtils.GetOrCreate("RestorePrologueCameraEvent")
@@ -28,13 +29,19 @@ local camera = workspace.CurrentCamera
 -- zwischen zwei Positionen). JEDE Kamera-Schleife in dieser Datei erhöht diesen Zähler
 -- bei ihrem Start, merkt sich ihre eigene ID, und prüft vor jedem Frame, ob sie noch die
 -- AKTUELLE ist -- falls nicht (eine neuere Sequenz hat übernommen), bricht sie sofort ab.
-local activeCameraSessionId = 0
+--
+-- Der Zaehler liegt seit dem Showdown in CameraSessionUtils, nicht mehr dateilokal hier:
+-- die Trainingskamera kannte ihn nicht, und eine dritte Kamera haette ihn ebenso wenig
+-- gekannt. Zwei Zaehler, die einander nicht kennen, sind aber genau der Fall, den die
+-- Regel verhindern soll -- beide halten ihre ID fuer aktuell und laufen gegeneinander.
+--
+-- Die beiden Huellen bleiben stehen, damit die vierzehn Aufrufstellen unten unveraendert
+-- lesen wie bisher.
 local function startNewCameraSession()
-	activeCameraSessionId += 1
-	return activeCameraSessionId
+	return CameraSessionUtils.Start("Prolog")
 end
 local function isCameraSessionCurrent(sessionId)
-	return activeCameraSessionId == sessionId
+	return CameraSessionUtils.IsCurrent(sessionId)
 end
 
 -- Mindesthöhe über der Wasseroberfläche -- muss zwischen SnapCameraToSeaEvent (Landung
