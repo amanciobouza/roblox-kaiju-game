@@ -52,6 +52,25 @@ local CinematicCompleteEvent = RemoteEventUtils.GetOrCreate("CinematicCompleteEv
 
 local PrologueOrchestrator = {}
 
+-- ===== Vorwaertsdeklaration der Warteschlangen-Zustaende =====
+-- Diese vier Namen werden in triggerTheFall (rund 400 Zeilen weiter unten) benutzt,
+-- ihre eigentliche Definition steht aber erst ab Zeile 1300. In Lua loest ein Name, dessen
+-- `local` noch nicht deklariert ist, still auf ein GLOBAL auf -- der Wert ist nil.
+--
+-- Die Folge war ein echter Fehler und kein Schoenheitsproblem:
+--   * `prologueOccupiedBy = nil` am Ende eines Durchlaufs schrieb eine GLOBALE Variable,
+--     waehrend die lokale weiter auf dem Spieler stand. Der Platz wurde nie frei.
+--   * `resetPrologueCity()` und `tryStartNextInQueue()` riefen nil auf.
+--   * `startPrologueInternal()` in tryStartNextInQueue ebenso.
+-- Im Einzelspielerbetrieb faellt davon nichts auf. Sobald zwei Leute gleichzeitig spielen,
+-- haengt der zweite dauerhaft in der Warteschlange fest.
+--
+-- Gefunden hat das tools/source-check.py (Regel source.forward-reference).
+local prologueOccupiedBy = nil -- Player, der gerade PrologueCity durchlaeuft (oder nil)
+local resetPrologueCity
+local tryStartNextInQueue
+local startPrologueInternal
+
 local PROLOGUE_CITY_NAME = "PrologueCity"
 
 -- ===== Power-Fantasy-Stats (Phase 2) =====
@@ -1257,7 +1276,7 @@ end
 -- Spieler zerstörten Häuser (die "PrologueStartRuin"-Baseline-Ruinen bleiben bewusst
 -- zerstört, das ist ihr dauerhafter Ausgangszustand), entfernt einen evtl. noch aktiven
 -- Guardian und setzt den Alert-Level zurück.
-local function resetPrologueCity()
+function resetPrologueCity()
 	print("[PrologueOrchestrator] Setze " .. PROLOGUE_CITY_NAME .. " für den nächsten Spieler zurück...")
 
 	local houseTag = _G.HOUSE_TAG or "KaijuHouse"
@@ -1310,7 +1329,7 @@ end
 -- eingereiht, aber hinter bereits wartenden anderen Erstspielern (fair untereinander). =====
 local PrologueQueueStatusEvent = RemoteEventUtils.GetOrCreate("PrologueQueueStatusEvent")
 
-local prologueOccupiedBy = nil -- Player, der gerade PrologueCity durchläuft (oder nil)
+-- prologueOccupiedBy steht weiter oben (Vorwaertsdeklaration).
 local prologueQueue = {} -- Liste von { player = Player, isFirstTime = bool }, in Warte-Reihenfolge
 
 -- Schickt allen aktuell Wartenden ihre (ggf. neue) Position -- wird bei jeder Änderung
@@ -1324,7 +1343,7 @@ local function broadcastQueuePositions()
 	end
 end
 
-local function tryStartNextInQueue()
+function tryStartNextInQueue()
 	if prologueOccupiedBy then
 		return -- noch belegt
 	end
@@ -1368,7 +1387,7 @@ local function destroyStartingRuins()
 	print("[PrologueOrchestrator] " .. count .. " Häuser als vorab zerstörte Kulisse markiert.")
 end
 
-local function startPrologueInternal(player)
+function startPrologueInternal(player)
 	-- WICHTIG: verhindert überlappende Durchläufe (z.B. durch Mehrfachklick auf den
 	-- Debug-Button, siehe DebugStartPrologueEvent) -- ohne diese Sperre würden mehrere
 	-- gleichzeitig laufende driveEscalationByTime-Schleifen + watchEscalation-Listener

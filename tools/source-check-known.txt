@@ -66,10 +66,6 @@ source.client-getorcreate|src/StarterPlayerScripts/TeleportHomeClient.client.lua
 source.client-getorcreate|src/StarterPlayerScripts/TrainingClient.client.luau:13 holt TrainClickEvent per GetOrCreate statt WaitForChild
 source.client-getorcreate|src/StarterPlayerScripts/TrainingClient.client.luau:14 holt StopTrainingEvent per GetOrCreate statt WaitForChild
 source.forward-reference|src/ServerScriptService/BarricadeClusterService.server.luau:603 benutzt sinkBarricadeAndVanish, deklariert erst in Zeile 772 -- löst still auf nil auf
-source.forward-reference|src/ServerScriptService/PrologueOrchestrator.server.luau:1344 benutzt startPrologueInternal, deklariert erst in Zeile 1371 -- löst still auf nil auf
-source.forward-reference|src/ServerScriptService/PrologueOrchestrator.server.luau:894 benutzt resetPrologueCity, deklariert erst in Zeile 1260 -- löst still auf nil auf
-source.forward-reference|src/ServerScriptService/PrologueOrchestrator.server.luau:895 benutzt prologueOccupiedBy, deklariert erst in Zeile 1313 -- löst still auf nil auf
-source.forward-reference|src/ServerScriptService/PrologueOrchestrator.server.luau:896 benutzt tryStartNextInQueue, deklariert erst in Zeile 1327 -- löst still auf nil auf
 source.g-read-without-write|_G.StopArmGauntletSession: 2 Lesestelle(n), keine Schreibstelle -- z.B. src/ServerScriptService/TrainingHandler.server.luau:719
 source.g-read-without-write|_G.StopBodyCircuitSession: 2 Lesestelle(n), keine Schreibstelle -- z.B. src/ServerScriptService/TrainingHandler.server.luau:729
 source.g-write-without-read|_G.AddHeat: gesetzt in src/ServerScriptService/HeatHandler.server.luau:180, aber nirgends aufgerufen
