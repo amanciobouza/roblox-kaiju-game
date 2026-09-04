@@ -5,9 +5,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python tools/spec_check_hook.py",
+            "command": "python tools/checks_hook.py",
             "timeout": 90,
-            "statusMessage": "Spec-Prüfung läuft…"
+            "statusMessage": "Prüfungen laufen…"
           }
         ]
       }

@@ -1,0 +1,292 @@
+# Bekannter Rueckstand des Quelltext-Pruefers.
+#
+# Diese Abweichungen laufen bewusst durch -- nur ein NEUER Verstoss haelt den
+# Stop-Hook an. Die Liste ist zugleich die Aufgabenliste: wer eine Zeile hier
+# erledigt, loescht sie.
+#
+# Neu erzeugen mit: python tools/source-check.py --accept
+# Format: <regel-id>|<verstosstext>
+
+source.client-getorcreate|src/StarterPlayerScripts/AttackClient.client.luau:15 holt AttackEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/AttackClient.client.luau:17 holt TrainClickEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/BerserkerAuraClient.client.luau:38 holt ShowDamageEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/DamagePopupClient.client.luau:14 holt ShowDamageEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/EnergyAbsorbClient.client.luau:14 holt EnergyAbsorbEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/EnergyTypesClient.client.luau:24 holt SelectFactionEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/EnergyTypesClient.client.luau:26 holt WorldEventChangedEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/EnergyTypesClient.client.luau:27 holt WorldEventPreRollEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/EnergyTypesClient.client.luau:28 holt EnergyGainedEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/GiftClient.client.luau:20 holt ClaimGiftEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/MutationClient.client.luau:14 holt MutationTriggeredEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/NavigationClient.client.luau:450 holt AchievementUnlockedEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/PrologueCinematicClient.client.luau:16 holt SimplePrologueFallCameraEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/PrologueCinematicClient.client.luau:17 holt TrenchOrbitCameraEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/PrologueCinematicClient.client.luau:18 holt RestorePrologueCameraEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/PrologueCinematicClient.client.luau:19 holt PlayIntroCinematicEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/PrologueCinematicClient.client.luau:20 holt CinematicCompleteEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/PrologueCinematicClient.client.luau:533 holt SnapCameraToSeaEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/PrologueLetterboxClient.client.luau:16 holt SetPrologueLetterboxEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/PrologueQueueClient.client.luau:13 holt PrologueQueueStatusEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/PrologueTutorialClient.client.luau:16 holt ShowTutorialChecklistEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/PrologueTutorialClient.client.luau:17 holt UpdateTutorialChecklistEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/PrologueTutorialClient.client.luau:18 holt HideTutorialChecklistEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/RadiusDebugClient.client.luau:20 holt AreaAttackEffectEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/SkinSelectionGui.client.luau:307 holt MeltdownExplosionEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/SkinSelectionGui.client.luau:48 holt PurchaseSkinEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/SkinSelectionGui.client.luau:52 holt EquipSkinEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/SkinSelectionGui.client.luau:53 holt CoinsEarnedEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/SkinSelectionGui.client.luau:54 holt EnergyAbsorbEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/SkinSelectionGui.client.luau:55 holt StopTrainingEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/SkinSelectionGui.client.luau:56 holt TrainPointEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/SkinSelectionGui.client.luau:916 holt ForceCloseShopEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/SpecialAttackClient.client.luau:36 holt AttackEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/SpecialAttackClient.client.luau:38 holt PlayerJumpedEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/SpecialAttackClient.client.luau:41 holt FocusAttackEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/SpecialAttackClient.client.luau:42 holt SimulatePrologueActionEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/SpecialAttackClient.client.luau:43 holt FocusChargeEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/SpecialAttackClient.client.luau:44 holt AreaAttackEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/SpecialAttackClient.client.luau:45 holt FocusAttackEffectEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/SpecialAttackClient.client.luau:46 holt AreaAttackEffectEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/SprintClient.client.luau:16 holt SetSprintingEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/StoryBeatClient.client.luau:13 holt PlayStoryBeatEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/StoryBeatClient.client.luau:14 holt StoryBeatCompleteEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/StoryBeatClient.client.luau:15 holt PlayBackgroundMusicEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/StoryBeatClient.client.luau:16 holt StopBackgroundMusicEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/StoryBeatClient.client.luau:17 holt PlaySirenSoundEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/StoryBeatClient.client.luau:18 holt StopSirenSoundEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/StoryBeatClient.client.luau:19 holt SetSirenVolumeEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/StoryBeatClient.client.luau:20 holt FadeOutAllSoundEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/StoryBeatClient.client.luau:21 holt ResumeNormalMusicEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/StoryBeatClient.client.luau:22 holt FadeMusicToNormalVolumeEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/StoryBeatClient.client.luau:23 holt PauseNormalMusicEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/TalentTreeClient.client.luau:21 holt StartResearchEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/TalentTreeClient.client.luau:22 holt CancelResearchEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/TalentTreeClient.client.luau:23 holt ResearchCompleteEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/TeleportHomeClient.client.luau:13 holt TeleportHomeEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/TrainingClient.client.luau:13 holt TrainClickEvent per GetOrCreate statt WaitForChild
+source.client-getorcreate|src/StarterPlayerScripts/TrainingClient.client.luau:14 holt StopTrainingEvent per GetOrCreate statt WaitForChild
+source.forward-reference|src/ServerScriptService/BarricadeClusterService.server.luau:603 benutzt sinkBarricadeAndVanish, deklariert erst in Zeile 772 -- löst still auf nil auf
+source.forward-reference|src/ServerScriptService/PrologueOrchestrator.server.luau:1344 benutzt startPrologueInternal, deklariert erst in Zeile 1371 -- löst still auf nil auf
+source.forward-reference|src/ServerScriptService/PrologueOrchestrator.server.luau:894 benutzt resetPrologueCity, deklariert erst in Zeile 1260 -- löst still auf nil auf
+source.forward-reference|src/ServerScriptService/PrologueOrchestrator.server.luau:895 benutzt prologueOccupiedBy, deklariert erst in Zeile 1313 -- löst still auf nil auf
+source.forward-reference|src/ServerScriptService/PrologueOrchestrator.server.luau:896 benutzt tryStartNextInQueue, deklariert erst in Zeile 1327 -- löst still auf nil auf
+source.g-read-without-write|_G.StopArmGauntletSession: 2 Lesestelle(n), keine Schreibstelle -- z.B. src/ServerScriptService/TrainingHandler.server.luau:719
+source.g-read-without-write|_G.StopBodyCircuitSession: 2 Lesestelle(n), keine Schreibstelle -- z.B. src/ServerScriptService/TrainingHandler.server.luau:729
+source.g-write-without-read|_G.AddHeat: gesetzt in src/ServerScriptService/HeatHandler.server.luau:180, aber nirgends aufgerufen
+source.g-write-without-read|_G.AwardSpecialEnergyForPunchHit: gesetzt in src/ServerScriptService/SpecialEnergyHandler.server.luau:94, aber nirgends aufgerufen
+source.g-write-without-read|_G.CheckEscalationStep: gesetzt in src/ServerScriptService/EscalationService.server.luau:58, aber nirgends aufgerufen
+source.g-write-without-read|_G.CloseNavPanels: gesetzt in src/StarterPlayerScripts/NavigationClient.client.luau:1105, aber nirgends aufgerufen
+source.g-write-without-read|_G.EVO_MAX_LEVEL: gesetzt in src/ServerScriptService/PlayerSetup.server.luau:1512, aber nirgends aufgerufen
+source.g-write-without-read|_G.EndShowdown: gesetzt in src/ServerScriptService/ShowdownService.server.luau:243, aber nirgends aufgerufen
+source.g-write-without-read|_G.EscalationTriggered: gesetzt in src/ServerScriptService/EscalationService.server.luau:35, aber nirgends aufgerufen
+source.g-write-without-read|_G.FindBuildingsInRadius: gesetzt in src/ServerScriptService/EscalationService.server.luau:141, aber nirgends aufgerufen
+source.g-write-without-read|_G.FindNearestReactiveSpawnPoint: gesetzt in src/ServerScriptService/EscalationService.server.luau:104, aber nirgends aufgerufen
+source.g-write-without-read|_G.GetBarricadeClusterState: gesetzt in src/ServerScriptService/BarricadeClusterService.server.luau:1080, aber nirgends aufgerufen
+source.g-write-without-read|_G.GetCityAlertProgress: gesetzt in src/ServerScriptService/CityAlertService.server.luau:568, aber nirgends aufgerufen
+source.g-write-without-read|_G.GetGeneratorSide: gesetzt in src/ServerScriptService/BarricadeClusterService.server.luau:1103, aber nirgends aufgerufen
+source.g-write-without-read|_G.GetLastDamagePosition: gesetzt in src/ServerScriptService/EscalationService.server.luau:85, aber nirgends aufgerufen
+source.g-write-without-read|_G.GetLevelCap: gesetzt in src/ServerScriptService/PlayerSetup.server.luau:1509, aber nirgends aufgerufen
+source.g-write-without-read|_G.GetSpecialEnergyMax: gesetzt in src/ServerScriptService/SpecialEnergyHandler.server.luau:141, aber nirgends aufgerufen
+source.g-write-without-read|_G.GetStats: gesetzt in src/ServerScriptService/StatsService.server.luau:144, aber nirgends aufgerufen
+source.g-write-without-read|_G.GetTalentLevel: gesetzt in src/ServerScriptService/TalentTreeService.server.luau:60, aber nirgends aufgerufen
+source.g-write-without-read|_G.HasAnyBarricadeEverActivated: gesetzt in src/ServerScriptService/BarricadeClusterService.server.luau:197, aber nirgends aufgerufen
+source.g-write-without-read|_G.HasNavBadge: gesetzt in src/StarterPlayerScripts/NavigationClient.client.luau:339, aber nirgends aufgerufen
+source.g-write-without-read|_G.IncrementAchievementCounter: gesetzt in src/ServerScriptService/AchievementService.server.luau:85, aber nirgends aufgerufen
+source.g-write-without-read|_G.IsArchiveEntryRevealed: gesetzt in src/ServerScriptService/ArchiveService.server.luau:117, aber nirgends aufgerufen
+source.g-write-without-read|_G.IsShowdownActive: gesetzt in src/ServerScriptService/ShowdownService.server.luau:239, aber nirgends aufgerufen
+source.g-write-without-read|_G.OpenHelpPanel: gesetzt in src/StarterPlayerScripts/NavigationClient.client.luau:1091, aber nirgends aufgerufen
+source.g-write-without-read|_G.RevealArchiveEntry: gesetzt in src/ServerScriptService/ArchiveService.server.luau:113, aber nirgends aufgerufen
+source.g-write-without-read|_G.STAT_CAP_PER_LEVEL: gesetzt in src/ServerScriptService/PlayerSetup.server.luau:1510, aber nirgends aufgerufen
+source.g-write-without-read|_G.SetArchiveRevealAll: gesetzt in src/ServerScriptService/ArchiveService.server.luau:154, aber nirgends aufgerufen
+source.g-write-without-read|_G.UnlockAchievement: gesetzt in src/ServerScriptService/AchievementService.server.luau:42, aber nirgends aufgerufen
+source.waitforchild-timeout|src/ReplicatedFirst/LoadingScreen.client.luau:124 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/ReplicatedFirst/LoadingScreen.client.luau:33 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/ReplicatedStorage/ArchiveConfig.luau:44 WaitForChild("SkinsConfig") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/AchievementService.server.luau:19 WaitForChild("AchievementsConfig") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/ArchiveService.server.luau:24 WaitForChild("ArchiveConfig") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/ArchiveService.server.luau:25 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/BarricadeClusterService.server.luau:43 WaitForChild("CityAlertConfig") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/CityAlertService.server.luau:20 WaitForChild("CityAlertConfig") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/CityBrokenService.server.luau:25 WaitForChild("CityAlertConfig") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/CityBrokenService.server.luau:26 WaitForChild("CityAlertValues") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/CityDefenderService.server.luau:36 WaitForChild("CityAlertConfig") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/CityDefenderService.server.luau:37 WaitForChild("ShowdownConfig") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/CombatHandler.server.luau:9 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/FireEngineController.server.luau:18 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/FireEngineController.server.luau:25 WaitForChild("CityAlertConfig") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/FireEngineController.server.luau:28 WaitForChild("GroundVehicleSeparation") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/GiftHandler.server.luau:9 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/HeatHandler.server.luau:29 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/MilitaryService.server.luau:29 WaitForChild("CityAlertConfig") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/MilitaryService.server.luau:33 WaitForChild("GroundVehicleSeparation") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/NavBadgeService.server.luau:18 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/PlayerSetup.server.luau:11 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/PlayerSetup.server.luau:16 WaitForChild("SkinsConfig") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/PlayerSetup.server.luau:22 WaitForChild("PrologueConfig") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/PlayerSetup.server.luau:457 WaitForChild("Humanoid") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/PrologueOrchestrator.server.luau:32 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/PrologueOrchestrator.server.luau:33 WaitForChild("SkinsConfig") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/PrologueOrchestrator.server.luau:34 WaitForChild("StoryBeatService") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/PrologueOrchestrator.server.luau:35 WaitForChild("PrologueReinforcementService") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/ShowdownService.server.luau:26 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/ShowdownService.server.luau:27 WaitForChild("ShowdownConfig") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/StoryBeatService.luau:35 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/TalentTreeService.server.luau:14 WaitForChild("TalentTreeConfig") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/TrainingHandler.server.luau:10 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/TrainingHandler.server.luau:571 WaitForChild("leaderstats") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/TrainingHandler.server.luau:575 WaitForChild("Level") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/TrenchbornPortalController.server.luau:5 WaitForChild("TrenchbornPortals") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/ArchiveClient.client.luau:24 WaitForChild("ArchiveConfig") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/ArchiveClient.client.luau:25 WaitForChild("ComicStyleUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/ArchiveClient.client.luau:26 WaitForChild("ModelPreviewUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/ArchiveClient.client.luau:27 WaitForChild("UiTypography") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/ArchiveClient.client.luau:28 WaitForChild("TopInsetUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/ArchiveClient.client.luau:34 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/AttackClient.client.luau:16 WaitForChild("AttackCooldown") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/AttackClient.client.luau:9 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/BackgroundMusicClient.client.luau:67 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/BerserkerAuraClient.client.luau:34 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/BodyTrainingControlClient.client.luau:20 WaitForChild("PlayerModule") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/BodyTrainingControlClient.client.luau:20 WaitForChild("PlayerScripts") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/BodyTrainingControlClient.client.luau:92 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/CityAlertAnnouncementClient.client.luau:26 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/CityAlertHudClient.client.luau:17 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/DamagePopupClient.client.luau:15 WaitForChild("NumberFormat") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/DamagePopupClient.client.luau:9 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/DebugPanelClient.client.luau:14 WaitForChild("ComicStyleUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/DebugPanelClient.client.luau:61 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/EnergyAbsorbClient.client.luau:10 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/EnergyAbsorbInputClient.client.luau:14 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/EnergyAbsorbInputClient.client.luau:16 WaitForChild("SetAbsorbingEvent") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/EnergyTypesClient.client.luau:12 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/EnergyTypesClient.client.luau:13 WaitForChild("ComicStyleUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/EnergyTypesClient.client.luau:14 WaitForChild("ModelPreviewUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/EnergyTypesClient.client.luau:15 WaitForChild("UiTypography") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/EnergyTypesClient.client.luau:16 WaitForChild("SkinsConfig") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/EnergyTypesClient.client.luau:17 WaitForChild("TopInsetUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/EnergyTypesClient.client.luau:25 WaitForChild("GetFactionProgressFunction") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/EnergyTypesClient.client.luau:263 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/EnergyTypesClient.client.luau:33 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/EnergyTypesClient.client.luau:70 WaitForChild("NextWorldEventRollTime") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/GiftClient.client.luau:10 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/GiftClient.client.luau:11 WaitForChild("ComicStyleUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/GiftClient.client.luau:12 WaitForChild("UiTypography") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/GiftClient.client.luau:13 WaitForChild("TopInsetUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/GiftClient.client.luau:21 WaitForChild("GiftCount") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/GiftClient.client.luau:22 WaitForChild("GiftUnlockTimes") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/GiftClient.client.luau:23 WaitForChild("GiftDescriptions") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/GiftClient.client.luau:42 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/KanagawaBoneDebug.client.luau:1 WaitForChild("Portals") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/KanagawaBoneDebug.client.luau:10 WaitForChild(waveName) ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/KanagawaBoneDebug.client.luau:2 WaitForChild("Portal_1") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/KanagawaPortalWaveController.client.luau:3 WaitForChild("Portals") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/MutationClient.client.luau:10 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/MutationClient.client.luau:19 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:13 WaitForChild("ComicStyleUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:14 WaitForChild("UiTypography") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:15 WaitForChild("TopInsetUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:17 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:20 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:381 WaitForChild("SkinsConfig") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:449 WaitForChild("AchievementsConfig") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:762 WaitForChild("SkinShopGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:763 WaitForChild("ShopFrame") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:769 WaitForChild("GiftGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:770 WaitForChild("GiftPanel") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:777 WaitForChild("FactionGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:778 WaitForChild("FactionPanel") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:784 WaitForChild("TalentTreeGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:785 WaitForChild("TalentTreePanel") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:791 WaitForChild("ArchiveGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:792 WaitForChild("ArchivePanel") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:797 WaitForChild("HelpConfig") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/PlayerNameTagClient.client.luau:10 WaitForChild("NumberFormat") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/PlayerNameTagClient.client.luau:29 WaitForChild("Head") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/PrologueCinematicClient.client.luau:14 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/PrologueCinematicClient.client.luau:15 WaitForChild("CameraSessionUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/PrologueLetterboxClient.client.luau:14 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/PrologueLetterboxClient.client.luau:15 WaitForChild("LetterboxUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/PrologueLetterboxClient.client.luau:19 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/PrologueQueueClient.client.luau:12 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/PrologueQueueClient.client.luau:16 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/PrologueTutorialClient.client.luau:14 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/PrologueTutorialClient.client.luau:21 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/RadiusDebugClient.client.luau:17 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/ResponsiveHudScale.client.luau:16 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SanctuaryLiftRider.client.luau:125 WaitForChild("Humanoid") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SanctuaryLiftRider.client.luau:128 WaitForChild("HumanoidRootPart") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/ShowdownClient.client.luau:34 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/ShowdownClient.client.luau:36 WaitForChild("ShowdownConfig") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/ShowdownClient.client.luau:37 WaitForChild("CameraSessionUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/ShowdownClient.client.luau:38 WaitForChild("LetterboxUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/ShowdownClient.client.luau:39 WaitForChild("ComicStyleUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/ShowdownClient.client.luau:40 WaitForChild("UiTypography") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/ShowdownClient.client.luau:81 WaitForChild("PlayerModule") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/ShowdownClient.client.luau:81 WaitForChild("PlayerScripts") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:10 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:11 WaitForChild("ComicStyleUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:12 WaitForChild("ModelPreviewUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:13 WaitForChild("UiTypography") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:14 WaitForChild("TopInsetUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:168 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2110 WaitForChild("UnlockedSkins") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2111 WaitForChild("leaderstats") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2112 WaitForChild("EquippedSkin") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:22 WaitForChild("NumberFormat") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2204 WaitForChild("leaderstats") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2205 WaitForChild("Coins") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2205 WaitForChild("leaderstats") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2206 WaitForChild("Level") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2206 WaitForChild("leaderstats") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2207 WaitForChild("XP") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2208 WaitForChild("XPNeeded") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2209 WaitForChild("LegPower") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2210 WaitForChild("ArmPower") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2211 WaitForChild("BodyPower") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2212 WaitForChild("UnlockedSkins") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2213 WaitForChild("EquippedSkin") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2219 WaitForChild("Coins") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2219 WaitForChild("leaderstats") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2223 WaitForChild("leaderstats") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2246 WaitForChild("leaderstats") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2247 WaitForChild("Level") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2248 WaitForChild("XP") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2249 WaitForChild("XPNeeded") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2250 WaitForChild("LegPower") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2251 WaitForChild("ArmPower") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2252 WaitForChild("BodyPower") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2254 WaitForChild("UnlockedSkins") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2255 WaitForChild("EquippedSkin") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:47 WaitForChild("SkinsConfig") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:57 WaitForChild("StatCapPerLevel") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:58 WaitForChild("BoostDuration") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:899 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SpecialAttackClient.client.luau:11 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SpecialAttackClient.client.luau:12 WaitForChild("ComicStyleUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SpecialAttackClient.client.luau:214 WaitForChild("Humanoid") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SpecialAttackClient.client.luau:37 WaitForChild("AttackCooldown") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SpecialAttackClient.client.luau:39 WaitForChild("JumpAttackCooldown") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SpecialAttackClient.client.luau:47 WaitForChild("FocusAttackCooldown") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SpecialAttackClient.client.luau:48 WaitForChild("AreaAttackCooldown") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SpecialAttackClient.client.luau:49 WaitForChild("FocusEnergyCost") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SpecialAttackClient.client.luau:50 WaitForChild("AreaEnergyCost") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SpecialAttackClient.client.luau:86 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SprintClient.client.luau:15 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/StoryBeatClient.client.luau:12 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/StoryBeatClient.client.luau:26 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/TalentTreeClient.client.luau:11 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/TalentTreeClient.client.luau:12 WaitForChild("ComicStyleUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/TalentTreeClient.client.luau:13 WaitForChild("UiTypography") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/TalentTreeClient.client.luau:14 WaitForChild("TopInsetUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/TalentTreeClient.client.luau:18 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/TalentTreeClient.client.luau:20 WaitForChild("TalentTreeConfig") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/TalentTreeClient.client.luau:24 WaitForChild("GetTalentStateFunction") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/TeleportHomeClient.client.luau:18 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/TeleportHomeClient.client.luau:8 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/TeleportHomeClient.client.luau:9 WaitForChild("ComicStyleUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/TrainingCameraClient.client.luau:416 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/TrainingCameraClient.client.luau:90 WaitForChild("PlayerGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/TrainingClient.client.luau:9 WaitForChild("RemoteEventUtils") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/TrenchbornPortalEffects.client.luau:15 WaitForChild("TrenchbornPortalRemote") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/TrenchbornPortalEffects.client.luau:16 WaitForChild("TrenchbornPortals") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/TrenchbornPortalEffects.client.luau:51 WaitForChild("PlayerGui") ohne Zeitgrenze

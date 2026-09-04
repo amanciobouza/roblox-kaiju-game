@@ -15,3 +15,6 @@ build/
 # verwaltet über skills-lock.json. Neu einrichten mit:
 #   cmd //c "mklink /J .claude\skills\<name> .agents\skills\<name>"
 .claude/skills/
+
+# Python-Zwischenstände der Prüfer in tools/
+__pycache__/

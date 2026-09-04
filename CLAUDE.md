@@ -72,8 +72,11 @@ src/ReplicatedStorage/Specs/
 ├── SpecRunner.luau      Regel-Ausführung + Ausgabeformat (von beiden Prüfern geteilt)
 └── <System>Spec.luau    je ein Modul pro System
 tools/
-├── spec-check.luau      kopfloser Prüfer (ohne Roblox)
-└── spec_check_hook.py   Stop-Hook-Wrapper
+├── spec-check.luau      kopfloser Spec-Prüfer (ohne Roblox)
+├── source-check.py      Quelltext-Prüfer (was der Spec-Prüfer nicht sehen kann)
+├── source-check-known.txt   erfasster Rückstand des Quelltext-Prüfers
+├── build_stamp.py       erzeugt ReplicatedStorage/BuildStamp.luau
+└── checks_hook.py       Stop-Hook-Wrapper für beide Prüfer + Stempel
 ```
 
 **Aufbau einer Regel**: `id`, `intent` (die Absicht, nicht die Mechanik),
@@ -105,6 +108,30 @@ Zwei Einschränkungen: Luau hat **kein `io`-Modul**, der kopflose Prüfer kann a
 keine Verzeichnisse durchsuchen (die Spec-Liste in `tools/spec-check.luau` ist von
 Hand geführt) und keine Quelltexte lesen. Und Regeln über gebaute Modelle sind
 zwangsläufig `needsRuntime` – die laufen nur in Studio.
+
+### Quelltext-Prüfer
+
+Genau die erste Einschränkung schliesst `tools/source-check.py` – in Python, also ohne
+die `io`-Grenze. Er prüft Muster, die im Quelltext stehen und nirgends sonst:
+`_G`-Funktionen ohne Gegenstück, Namen, die vor ihrer `local`-Deklaration benutzt werden,
+`GetOrCreate` auf dem Client, `WaitForChild` ohne Zeitgrenze.
+
+Gleiche Mechanik wie beim Spec-Prüfer: der Rückstand steht in
+`tools/source-check-known.txt` und läuft bewusst durch, nur **neue** Verstösse halten den
+Stop-Hook an. Diese Datei ist zugleich die Aufgabenliste – wer eine Zeile erledigt,
+löscht sie. Neuen Stand erfassen mit `python tools/source-check.py --accept`.
+
+Er hat beim ersten Lauf zwei Punkte gefunden, die weiter unten von Hand als offene Fragen
+standen (`IncrementAchievementCounter`, die beiden wirkungslosen Trainings-Funktionen)
+sowie fünf echte Vorwärtsreferenzen.
+
+### Stand-Stempel
+
+`src/ReplicatedStorage/BuildStamp.luau` ist **erzeugt** (`tools/build_stamp.py`, läuft im
+Stop-Hook mit) und enthält einen Fingerabdruck über alle `.luau`-Dateien. Der Server gibt
+ihn beim Start aus. Weicht die Ausgabe in Studio von dem Wert im Repo ab, hat Rojo nicht
+synchronisiert und Studio läuft auf einem alten Stand – ein Fall, der schon einmal zwei
+Runden Fehlersuche gekostet hat.
 
 ---
 

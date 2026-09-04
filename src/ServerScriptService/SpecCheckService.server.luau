@@ -232,4 +232,17 @@ task.spawn(function()
 	runCheck(false)
 end)
 
+-- Fingerabdruck des Quelltextes. Weicht er von dem ab, was im Repo steht, laeuft Studio
+-- auf einem alten Stand -- genau der Fall, der schon einmal zwei Runden Fehlersuche
+-- gekostet hat, weil eine Aenderung scheinbar wirkungslos blieb.
+local buildStamp = ReplicatedStorage:FindFirstChild("BuildStamp")
+if buildStamp then
+	local ok, stamp = pcall(require, buildStamp)
+	if ok and type(stamp) == "table" then
+		print(string.format("%s Stand %s (%d Dateien)", PREFIX, tostring(stamp.Hash), stamp.FileCount or 0))
+	end
+else
+	warn(PREFIX .. " BuildStamp fehlt -- 'python tools/build_stamp.py' laeuft im Stop-Hook mit.")
+end
+
 print(PREFIX .. " SpecCheckService bereit -- erste Prüfung in " .. STARTUP_DELAY_SECONDS .. "s.")
