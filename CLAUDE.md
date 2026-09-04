@@ -335,7 +335,12 @@ Diese Punkte sind teils erschlossen und teils noch offen:
 - [ ] **Zwei wirkungslose `_G`-Funktionen**: `StopArmGauntletSession` und
       `StopBodyCircuitSession` (je 2 Lesestellen in `TrainingHandler`). Beide werden
       gelesen, aber **nirgends gesetzt**; die Lesestellen sind nil-geprüft und laufen
-      still ins Leere. (`GetTalentHeatCoolingBonus` war der dritte Fall und ist erledigt:
+      still ins Leere. **Wo die Setzer hingehören, ist inzwischen klar**: beide Stationen
+      (`TitanImpactGauntlet`, `TitanAssimilationCircuit`) werden von eigenen Skripten
+      *im Modell in Studio* gesteuert, die nicht im Repo liegen. Dort müssten die
+      Funktionen entstehen. Solange sie fehlen, bleibt die Station laut dem Kommentar an
+      der Lesestelle nach "Training verlassen" **besetzt hängen** und lässt sich nicht
+      neu starten -- das wäre im Spiel zu prüfen. (`GetTalentHeatCoolingBonus` war der dritte Fall und ist erledigt:
       der Effekt hängt jetzt als Zweiteffekt an „Meltdown Mastery". Das dort im Kommentar
       genannte Talent „Titan Regeneration" hat es im Baum nie gegeben.)
 - [ ] **Achievement-Vergabe für den Altbestand**: 30 der 41 Achievements hängen an

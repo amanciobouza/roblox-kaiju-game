@@ -10,6 +10,13 @@ aber keinen Quelltext lesen: Luau hat kein io-Modul, das steht so in CLAUDE.md. 
 liegt aber die häufigste Fehlerklasse dieses Projekts -- eine Absicht ist im Code
 angelegt, aber nirgends angeschlossen, und niemand merkt es, weil nichts abstürzt.
 
+Eine Regel wurde wieder ENTFERNT: source.client-getorcreate meldete 58 Aufrufstellen, an
+denen der Client RemoteEvents über GetOrCreate holte -- was eine lokale, wirkungslose
+Kopie erzeugen konnte. Behoben wurde das nicht an den 58 Stellen, sondern in
+RemoteEventUtils selbst: auf dem Client wird jetzt gewartet statt erzeugt. Damit hat die
+Regel keinen Gegenstand mehr. Eine Regel, die nur noch Erledigtes zählt, macht den
+Rückstand unleserlich.
+
 Belege aus dem Bestand, die dieser Prüfer beim ersten Lauf gefunden hat:
   * _G.IncrementAchievementCounter wird geschrieben, aber nie aufgerufen -- daran hängen
     30 Achievements, die nie vergeben werden.
@@ -224,39 +231,48 @@ def rule_forward_reference(files):
     return violations
 
 
-def rule_client_getorcreate(files):
-    """RemoteEvents auf dem Client über GetOrCreate zu holen.
-
-    GetOrCreate legt eine LOKALE Kopie an, wenn das Ereignis des Servers noch nicht
-    repliziert ist. FireServer darauf verlässt den Client nie -- ohne Fehlermeldung.
-    Das richtige Muster steht im Debug-Panel: waitForRemote mit Zeitgrenze und Warnung.
-    """
-    violations = []
-    for path in files:
-        if not path.endswith(".client.luau"):
-            continue
-        for number, raw in read_lines_with_strings(path):
-            line = strip_comment(raw)
-            match = re.search(r"(?:RemoteEventUtils\.GetOrCreate|getOrCreateRemoteEvent)\(\s*\"(\w+)\"", line)
-            if match:
-                violations.append("%s:%d holt %s per GetOrCreate statt WaitForChild"
-                                  % (path, number, match.group(1)))
-    return violations
-
-
 def rule_waitforchild_timeout(files):
     """WaitForChild ohne zweites Argument wartet unbegrenzt.
 
     Existiert das Objekt nie, hängt das Skript stumm -- kein Fehler, kein Hinweis. Steht
     so in CLAUDE.md unter "Bekannte Fallstricke".
+
+    ===== Nicht jedes WaitForChild kann hängen =====
+    Von 191 Fundstellen des ersten Laufs betrafen ueber siebzig ModuleScripts aus
+    ReplicatedStorage -- RemoteEventUtils, ComicStyleUtils, die Config-Module. Die liefert
+    Rojo mit dem Place aus, sie existieren ab dem ersten Bild und werden von keinem Skript
+    zur Laufzeit erzeugt. Dort eine Zeitgrenze zu setzen waere nicht nur Zierrat, sondern
+    schaedlich: fehlt das Modul wirklich, verwandelt die Zeitgrenze ein klares Haengen in
+    einen spaeteren Absturz an unklarer Stelle.
+
+    Erkannt werden sie an den DATEIEN, nicht an einer gepflegten Liste: wer im Repo unter
+    src/ReplicatedStorage liegt, ist beim Start da. Wird ein Modul geloescht, meldet sich
+    die Regel von selbst wieder.
+
+    Uebrig bleibt, was ein anderes Skript zur Laufzeit erzeugt -- leaderstats und seine
+    Kinder, die Spieler-Ordner -- und genau das kann tatsaechlich stumm haengen.
     """
+    # Namen aller Skripte und Module, die Rojo aus dem Repo mitliefert -- gleich in
+    # welchem Dienst. Auch ein Modul unter ServerScriptService ist beim Start da.
+    shipped = set()
+    for path in files:
+        shipped.add(os.path.basename(path).split(".")[0])
+
     violations = []
     for path in files:
         for number, raw in read_lines_with_strings(path):
             line = strip_comment(raw)
             for match in re.finditer(r"WaitForChild\(\s*(\"[\w\s]+\"|\w+)\s*\)", line):
+                argument = match.group(1)
+                name = argument.strip('"')
+                if name in shipped:
+                    continue
+                # PlayerGui liefert die Engine mit dem Spieler-Objekt; das ist die
+                # kanonische Schreibweise in jedem Roblox-Client und kann nicht haengen.
+                if name == "PlayerGui":
+                    continue
                 violations.append("%s:%d WaitForChild(%s) ohne Zeitgrenze"
-                                  % (path, number, match.group(1)))
+                                  % (path, number, argument))
     return violations
 
 
@@ -281,13 +297,6 @@ RULES = [
                   "einen Namen still auf ein nicht existierendes Global auf: der Wert ist "
                   "nil, es gibt keine Fehlermeldung, der Zweig tut nichts.",
         "check": rule_forward_reference,
-    },
-    {
-        "id": "source.client-getorcreate",
-        "intent": "Der Client holt RemoteEvents mit WaitForChild und Zeitgrenze, nicht mit "
-                  "GetOrCreate. GetOrCreate legt sonst eine lokale Kopie an, und FireServer "
-                  "darauf verlaesst den Client nie.",
-        "check": rule_client_getorcreate,
     },
     {
         "id": "source.waitforchild-timeout",
