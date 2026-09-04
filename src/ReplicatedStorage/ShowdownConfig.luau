@@ -119,6 +119,23 @@ ShowdownConfig.Shots = {
 		duration = 1.4,
 		originPart = "LauncherFace",
 	},
+	GroundSlam = {
+		source = "Guardian",
+		-- Von unten schräg hoch: ein Koloss, der den Boden schlägt, wirkt aus der
+		-- Froschperspektive am grössten. Kein originPart -- der Schlag geht vom ganzen
+		-- Körper aus, nicht von einer Mündung; die Kamera setzt am Wurzelteil an.
+		style = "LaunchLow",
+		duration = 1.02,
+	},
+	ApexLanceBeam = {
+		source = "Guardian",
+		-- Dicht an den Emitter. Eine Fahrt AM Strahl entlang waere schöner, aber die
+		-- gibt es bisher nur für den Fokus-Laser des Spielers -- sie ist im Client an
+		-- dessen Kopf gebunden. Nachrüstbar, wenn der Shot es wert ist.
+		style = "MuzzleClose",
+		duration = 1.18,
+		originPart = "LanceEmitterCore",
+	},
 }
 
 -- ===== Ansatzphase der Guardian-Flächenangriffe =====
@@ -138,10 +155,16 @@ ShowdownConfig.Shots = {
 --                   die sichtbare Wirkung bestimmt.
 --   Aegis   1.40 -- überschreibt die LockDuration (2.0) der Workshop-Konfiguration. Zwei
 --                   Sekunden wären so lang, dass man aus dem Wirkradius spazieren kann.
+--   Bastion   1.02 -- ImpactDelay des GroundSlam aus BastionColossusGameplayConfig
+--   Sovereign 1.18 -- TelegraphDuration des ApexLanceBeam aus SovereignApexGameplayConfig
+-- Diese beiden stehen so in den Workshop-Konfigurationen und mussten nicht erfunden
+-- werden -- anders als beim Marshal, wo Code und Konfiguration auseinanderliefen.
 ShowdownConfig.GuardianTelegraph = {
 	WardenShepherd = 0.6,
 	MarshalRoadblock = 1.35,
 	AegisInterceptor = 1.4,
+	BastionColossus = 1.02,
+	SovereignApex = 1.18,
 }
 
 -- ===== Filmstreifen =====

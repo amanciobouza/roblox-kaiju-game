@@ -18,6 +18,8 @@ local SHOT_TO_ASSET = {
 	WarningPulse = "WardenShepherd",
 	ContainmentNet = "MarshalRoadblock",
 	ShoulderMissiles = "AegisInterceptor",
+	GroundSlam = "BastionColossus",
+	ApexLanceBeam = "SovereignApex",
 }
 
 return {

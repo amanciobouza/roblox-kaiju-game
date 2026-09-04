@@ -271,10 +271,26 @@ end
 -- seinen Guardian aus ServerStorage).
 local CITY_SIZE_LADDER = { "Village", "SmallTown", "City", "LargeCity", "MegaCity" }
 
+-- Welche Generation ihren eigenen Runtime-Controller mitbringt. Wer hier fehlt, bekommt
+-- den generischen GuardianRuntimeController.
+-- Woher die Kennwerte einer Faehigkeit kommen. Nur fuer Generationen, deren Effekte ueber
+-- AbilityRequested laufen.
+local ASSET_ABILITY_CONFIG = {
+	BastionColossus = "BastionColossusGameplayConfig",
+	SovereignApex = "SovereignApexGameplayConfig",
+}
+
+local ASSET_RUNTIME_CONTROLLER = {
+	BastionColossus = "BastionColossusRuntimeController",
+	SovereignApex = "SovereignApexRuntimeController",
+}
+
 local GUARDIAN_LADDER = {
 	{ asset = "WardenShepherd", label = "Warden-I Shepherd" },
 	{ asset = "MarshalRoadblock", label = "Marshal-II Roadblock" },
 	{ asset = "AegisInterceptor", label = "Aegis-III Interceptor" },
+	{ asset = "BastionColossus", label = "Bastion-IV Colossus" },
+	{ asset = "SovereignApex", label = "Sovereign-V Apex" },
 }
 
 -- In Kapitel I steht der erste Guardian in City -- Position 3 der Staffel oben.
@@ -321,9 +337,15 @@ local function getGuardianPlan(cityName)
 		return nil -- Stadt liegt in diesem Kapitel noch unterhalb der Guardian-Kette
 	end
 
-	-- Generation 4 und 5 gibt es als Asset noch nicht. Bis dahin bekommen die oberen
-	-- Staedte die hoechste vorhandene -- besser ein zu schwacher Guardian als gar keiner,
-	-- und der Platzhalter waere die schlechtere Alternative.
+	-- Seit es alle fuenf Generationen gibt, geht die Rechnung auf: fuenf Staedte, fuenf
+	-- Stufen, und in Kapitel 3 -- wenn der Warden in Village beginnt -- werden alle fuenf
+	-- gebraucht. Die Klemmung greift damit nicht mehr; sie bleibt als Netz stehen, falls
+	-- die Leiter je wieder kuerzer wird als die Staedteliste.
+	--
+	-- Zur Erinnerung, was daraus folgt (FIRST_GUARDIAN_CITY_IN_CHAPTER_1 = City):
+	--   Kapitel 1: City=I, LargeCity=II, MegaCity=III  (Village/SmallTown ohne Guardian)
+	--   Kapitel 2: SmallTown=I ... MegaCity=IV
+	--   Kapitel 3: Village=I ... MegaCity=V
 	return GUARDIAN_LADDER[math.min(rung, #GUARDIAN_LADDER)]
 end
 
@@ -365,7 +387,14 @@ local function buildWardenGuardian(plan)
 		-- feuern nie darauf: die Workshop-Gameplay-Logik wuerde gegen die
 		-- Zustandsmaschine hier arbeiten. Genutzt wird nur api.PlayAnimation, damit
 		-- SCAN/POSITION/BLOCK/COUNTER die alleinige Autoritaet bleibt.
-		local controller = require(workshop:WaitForChild("GuardianRuntimeController", 5))
+		-- Bastion und Sovereign bringen EIGENE Runtime-Controller mit, die ihre
+		-- Animationsnamen und ihre Faehigkeiten kennen. Der generische kennt beides nicht.
+		--
+		-- Warden, Marshal und Aegis bleiben bewusst auf dem generischen Controller, obwohl
+		-- es fuer zwei davon inzwischen auch eigene gaebe: ihr Weg laeuft heute, und ihn
+		-- umzustellen waere eine Aenderung an Funktionierendem ohne Anlass.
+		local controllerName = ASSET_RUNTIME_CONTROLLER[plan.asset] or "GuardianRuntimeController"
+		local controller = require(workshop:WaitForChild(controllerName, 5))
 
 		-- Der Ordner heisst "Gameplay", weil die Reactions-Module des Workshops genau
 		-- danach suchen (model:WaitForChild("Gameplay")). Er bleibt trotzdem ein
@@ -1373,12 +1402,20 @@ local SHOWDOWN_PULSE_SHOT = {
 	WardenShepherd = "WarningPulse",
 	MarshalRoadblock = "ContainmentNet",
 	AegisInterceptor = "ShoulderMissiles",
+	BastionColossus = "GroundSlam",
+	SovereignApex = "ApexLanceBeam",
 }
 
 local GUARDIAN_ATTACK_ANIMATIONS = {
 	WardenShepherd = { Fist = "ShockBaton", Pulse = "WarningPulse" },
 	MarshalRoadblock = { Fist = "PulseCannonFire", Pulse = "ContainmentNetLaunch" },
 	AegisInterceptor = { Fist = "TwinIonCannons", Pulse = "ShoulderMissileSalvo" },
+	-- Die beiden neuen Generationen belegen dieselben zwei Plaetze: ein naher Angriff und
+	-- ein Flaechenangriff. Ausgewaehlt nach Reichweite und Ansatzzeit aus ihren
+	-- GameplayConfigs -- der Flaechenangriff braucht eine Ansatzphase, die die Kamera
+	-- zeigen kann (siehe ShowdownConfig.GuardianTelegraph).
+	BastionColossus = { Fist = "RightSiegeFist", Pulse = "GroundSlam" },
+	SovereignApex = { Fist = "ApexLanceThrust", Pulse = "ApexLanceBeam" },
 }
 
 -- Die Effekte liegen NEBEN den Animationen, in eigenen Modulen. Die Animation bewegt nur
@@ -1444,6 +1481,26 @@ local function playGuardianVFX(guardian, kind, config, target)
 			else
 				vfx.ContainmentNet(guardian.model, target.Character, values.ContainmentNet)
 			end
+		end)
+		return
+	end
+
+	-- Bastion und Sovereign gehen denselben Weg wie der Aegis: ihre Effekte haengen als
+	-- Reaktion am BindableEvent AbilityRequested, das ihr Runtime-Controller anlegt.
+	-- Der Name der Faehigkeit ist derselbe wie der der Animation (siehe
+	-- GUARDIAN_ATTACK_ANIMATIONS) -- deshalb genuegt hier eine Tabelle statt zweier Zweige.
+	local abilityConfigModule = ASSET_ABILITY_CONFIG[asset]
+	if abilityConfigModule then
+		local gameplay = guardian.model:FindFirstChild("Gameplay")
+		local requested = gameplay and gameplay:FindFirstChild("AbilityRequested")
+		local values = requireWorkshopModule(abilityConfigModule)
+		local animations = GUARDIAN_ATTACK_ANIMATIONS[asset]
+		local abilityName = animations and (kind == "Fist" and animations.Fist or animations.Pulse)
+		if not requested or not values or not abilityName or not target then
+			return
+		end
+		pcall(function()
+			requested:Fire(abilityName, target.Character, values[abilityName])
 		end)
 		return
 	end
