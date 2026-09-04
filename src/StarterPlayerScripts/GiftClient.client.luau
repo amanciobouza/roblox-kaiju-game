@@ -28,16 +28,21 @@ local function formatTime(seconds)
 end
 
 local screenGui = Instance.new("ScreenGui")
+screenGui.IgnoreGuiInset = true
+-- In diesem Gui liegt NUR das Geschenk-Panel, kein HUD -- hier genuegt es, die Ebene
+-- anzuheben, statt ein zweites ScreenGui anzulegen.
+screenGui.DisplayOrder = 100
 screenGui.Name = "GiftGui"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
 local panel = Instance.new("Frame")
 panel.Name = "GiftPanel"
-panel.Size = UDim2.new(0, 460, 0, 480)
-panel.Position = UDim2.new(0.5, 0, 0.5, 0)
-panel.AnchorPoint = Vector2.new(0.5, 0.5)
-panel.BackgroundColor3 = Color3.fromRGB(250, 245, 230)
+-- Vollbild: alle Menü-Bildschirme nutzen die ganze Fläche.
+panel.Size = UDim2.new(1, 0, 1, 0)
+panel.Position = UDim2.new(0, 0, 0, 0)
+panel.AnchorPoint = Vector2.new(0, 0)
+panel.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
 panel.Visible = false
 panel.Parent = screenGui
 applyComicStyle(panel, 20, 5)
@@ -70,7 +75,7 @@ titleLabel.Position = UDim2.new(0, 8, 0, 8)
 titleLabel.BackgroundTransparency = 1
 titleLabel.Font = Enum.Font.LuckiestGuy
 titleLabel.TextScaled = true
-titleLabel.TextColor3 = Color3.fromRGB(60, 40, 20)
+titleLabel.TextColor3 = Color3.fromRGB(235, 235, 245)
 titleLabel.Text = "🎁 Time Gifts"
 titleLabel.Parent = panel
 
@@ -193,6 +198,7 @@ RunService.Heartbeat:Connect(function()
 	end
 
 	local elapsed = Workspace:GetServerTimeNow() - sessionStart
+	local anyClaimable = false
 
 	for n = 1, giftCountValue.Value do
 		local ui = giftCells[n]
@@ -218,6 +224,20 @@ RunService.Heartbeat:Connect(function()
 			end
 
 			wasReady[n] = ready
+			if ready and not claimed then
+				anyClaimable = true
+			end
 		end
+	end
+
+	-- Das Geschenk-Laempchen geht NICHT beim Oeffnen aus, sondern erst beim Abholen --
+	-- sonst oeffnet man, wird abgelenkt, und das Geschenk liegt weiter da. Deshalb wird es
+	-- hier bei jedem Durchlauf neu gesetzt statt nur beim Uebergang.
+	--
+	-- Gesammelt ueber ALLE Geschenke: die Auswertung innerhalb der Schleife haette das
+	-- Laempchen vom LETZTEN Eintrag abhaengig gemacht -- ist Geschenk 1 abholbar und
+	-- Geschenk 3 nicht, waere es aus geblieben.
+	if _G.SetNavBadge then
+		_G.SetNavBadge("Gifts", anyClaimable)
 	end
 end)
