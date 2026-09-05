@@ -141,6 +141,30 @@ _G.LoadStatsSaveData = function(player, saveData)
 end
 
 -- Liefert alle Statistiken als Tabelle -- für Anzeige/Debug.
+-- Loescht die gesamte Lebensstatistik. Gerufen vom Debug-Reset.
+--
+-- Ohne diesen Schritt hielt das Zuruecksetzen der Achievements nicht: die elf
+-- statKey-gebundenen leitet ReevaluateStatAchievements beim naechsten Beitritt aus
+-- genau diesen Zahlen wieder her. Wer Achievements zuruecksetzen will, muss die
+-- Statistik mitnehmen -- sonst sind sie nach einem Rejoin wieder da.
+--
+-- Hier haengen auch die Kapitel (ChaptersCompleted) und damit die
+-- Fraktions-Freischaltung; nach diesem Aufruf sind Jaeger und Ronin wieder zu.
+_G.ResetPlayerStats = function(player)
+	local removed = 0
+	for name in pairs(player:GetAttributes()) do
+		if string.sub(name, 1, #STAT_ATTRIBUTE_PREFIX) == STAT_ATTRIBUTE_PREFIX then
+			player:SetAttribute(name, nil)
+			removed += 1
+		end
+	end
+	-- Die Spielzeitmarke neu setzen, sonst wird die Zeit seit dem letzten Verbuchen
+	-- gleich wieder gutgeschrieben und die Statistik startet nicht bei null.
+	playtimeMarks[player] = os.clock()
+	print(string.format("[Kaiju-Debug] Lebensstatistik von %s geloescht -- %d Werte.", player.Name, removed))
+	return removed
+end
+
 _G.GetStats = function(player)
 	return _G.GetStatsSaveData(player)
 end

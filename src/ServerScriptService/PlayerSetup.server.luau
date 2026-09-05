@@ -7,8 +7,10 @@
 -- sowie die Evolution-Skillwerte (Speed/Money/Damage/Training/Cooldown/Luck).
 
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
+local CityAlertConfig = require(ReplicatedStorage:WaitForChild("CityAlertConfig"))
 local DataStoreService = game:GetService("DataStoreService")
 local Workspace = game:GetService("Workspace")
 local StarterPlayer = game:GetService("StarterPlayer")
@@ -1377,8 +1379,69 @@ local ResetPlayerDataEvent = Instance.new("RemoteEvent")
 ResetPlayerDataEvent.Name = "ResetPlayerDataEvent"
 ResetPlayerDataEvent.Parent = ReplicatedStorage
 
-ResetPlayerDataEvent.OnServerEvent:Connect(function(player)
+-- ===== Wer darf zuruecksetzen =====
+-- In Studio uneingeschraenkt. Auf einem echten Server nur diese beiden -- der Knopf
+-- loescht Speicherstaende unwiderruflich, und bis heute nahm dieses Ereignis JEDEN
+-- Client an, ohne jede Pruefung.
+--
+-- An der UserId statt am Namen: Roblox-Namen sind aenderbar, die Zahl nicht. Wo die Zahl
+-- noch fehlt, greift der Name als Rueckfall, und die fehlende wird beim Beitritt ins
+-- Protokoll geschrieben -- dann kann sie hier nachgetragen werden.
+local RESET_ALLOWED_USER_IDS = {
+	[5149983570] = "YellAshow",
+}
+local RESET_ALLOWED_NAMES = {
+	cPOEt78 = true, -- UserId noch nachzutragen, siehe Ausgabe beim Beitritt
+}
+
+local function mayResetData(player)
+	if RunService:IsStudio() then
+		return true
+	end
+	if RESET_ALLOWED_USER_IDS[player.UserId] then
+		return true
+	end
+	return RESET_ALLOWED_NAMES[player.Name] == true
+end
+
+Players.PlayerAdded:Connect(function(player)
+	-- Als Attribut, nicht ueber _G: der Client kann Server-Globals nicht lesen, aber ein
+	-- Attribut am Spieler repliziert an genau diesen Client. Das Debug-Panel blendet den
+	-- Knopf danach aus -- ein sichtbarer Knopf, der nichts tut, sieht aus wie ein Fehler.
+	player:SetAttribute("MayResetData", mayResetData(player) or nil)
+
+	-- Die fehlende UserId sichtbar machen, damit sie oben eingetragen werden kann.
+	if RESET_ALLOWED_NAMES[player.Name] and not RESET_ALLOWED_USER_IDS[player.UserId] then
+		print(string.format(
+			"[Kaiju-Debug] Reset-Berechtigung: %s hat die UserId %d -- bitte in "
+			.. "RESET_ALLOWED_USER_IDS eintragen.", player.Name, player.UserId))
+	end
+end)
+
+-- `resetPrologue` kommt vom zweiten Knopf: dann wird zusaetzlich das Prolog-Kennzeichen
+-- geloescht, und der Prolog laeuft beim anschliessenden Neuladen des Charakters wieder.
+ResetPlayerDataEvent.OnServerEvent:Connect(function(player, resetPrologue)
 	print("[Kaiju-Debug] ResetPlayerDataEvent empfangen von:", player.Name, "um", os.clock())
+
+	if not mayResetData(player) then
+		warn("[Kaiju] Reset von " .. player.Name .. " abgelehnt -- keine Berechtigung.")
+		return
+	end
+
+	-- Waehrend des Prologs gesperrt: der fuehrt eigene Kamerafahrten und einen eigenen
+	-- Ablauf, und ein Reset mittendrin waere ohnehin sinnlos.
+	if player:GetAttribute("IsInPrologue") == true then
+		ResetPlayerDataEvent:FireClient(player, false, "Nicht waehrend des Prologs")
+		print("[Kaiju-Debug] Reset abgelehnt -- Spieler ist im Prolog.")
+		return
+	end
+
+	-- Einen laufenden Showdown geordnet beenden, sonst bliebe die Kamera uebernommen
+	-- und die Steuerung umgestellt, waehrend der Charakter unter ihr neu geladen wird.
+	if _G.EndShowdown then
+		_G.EndShowdown(player, "Reset")
+	end
+
 	local leaderstats = player:FindFirstChild("leaderstats")
 	if not leaderstats then
 		return
@@ -1492,6 +1555,48 @@ ResetPlayerDataEvent.OnServerEvent:Connect(function(player)
 		applySkinToCharacter(player, player.Character, 0)
 	end
 
+	-- ===== Was der Reset bisher NICHT anfasste =====
+
+	-- Lebensstatistik. Muss VOR den Achievements laufen: die elf statKey-gebundenen
+	-- leitet ReevaluateStatAchievements aus genau diesen Zahlen wieder her -- bleiben sie
+	-- stehen, sind die Achievements nach dem naechsten Beitritt wieder da.
+	-- Hier haengen auch die Kapitel und damit die Fraktions-Freischaltung.
+	if _G.ResetPlayerStats then
+		_G.ResetPlayerStats(player)
+	end
+
+	-- Archiv. NACH dem Skin-Reset weiter unten waere zu spaet gedacht: das Zuruecksetzen
+	-- auf Skin 0 deckt dessen Archiv-Eintrag ueber das SkinId-Attribut sofort wieder auf.
+	-- Das ist aber richtig so -- ein frisch angelegter Spieler hat diesen einen Eintrag
+	-- ebenfalls, weil er den Startskin traegt. Genau dieser Zustand ist das Ziel.
+	if _G.SetArchiveRevealAll then
+		_G.SetArchiveRevealAll(player, false)
+	end
+
+	-- Menue-Laempchen. Sie verweisen auf "neue" Eintraege, die es jetzt nicht mehr gibt.
+	if _G.ResetPlayerNavBadges then
+		_G.ResetPlayerNavBadges(player)
+	end
+
+	-- Sitzungszustand. Hitze und Berserker verschwinden zwar mit dem neuen Charakter, die
+	-- Verstaerkungen aber nicht -- die haengen am Spieler. Ein Reset, nach dem noch acht
+	-- Minuten doppelter Schaden laufen, verfaelscht genau die Messungen, fuer die man
+	-- zurueckgesetzt hat.
+	for _, name in ipairs({
+		"Heat", "BerserkActive", "MutationActive", "MutationType",
+		"CoinsBoostMultiplier", "DamageBoostMultiplier", "BoostChargeNeeded",
+	}) do
+		player:SetAttribute(name, nil)
+	end
+
+	-- Prolog nur auf ausdruecklichen Wunsch (zweiter Knopf).
+	if resetPrologue then
+		player:SetAttribute("HasCompletedPrologue", nil)
+		player:SetAttribute("PrologueCompletedMajor", nil)
+		player:SetAttribute("PrologueCompletedMinor", nil)
+		print("[Kaiju-Debug] Reset: Prolog-Kennzeichen geloescht -- der Prolog laeuft wieder.")
+	end
+
 	-- WICHTIG: recalculateStrength() wird sonst NUR einmal beim Charakter-Start
 	-- aufgerufen -- ohne diesen expliziten Aufruf hier bliebe die "Stärke" (Damage-
 	-- Attribut) nach dem Reset auf dem alten, hohen Wert stehen, obwohl ArmPower
@@ -1500,6 +1605,71 @@ ResetPlayerDataEvent.OnServerEvent:Connect(function(player)
 
 	local finalArmPower = player:FindFirstChild("ArmPower")
 	print("[Kaiju-Debug] Reset ENDE: ArmPower jetzt:", finalArmPower and finalArmPower.Value, "-- Damage-Attribut:", player.Character and player.Character:GetAttribute("Damage"))
+
+	-- ===== Die Welt =====
+	-- Ein Reset, nach dem man als Stufe-0-Spieler vor einem Guardian auf Alarmstufe 5
+	-- steht, ist zum Testen wertlos. Alle Staedte, unabhaengig davon, wer sonst im Server
+	-- ist -- der Knopf ist ein Gamemaster-Werkzeug, und eine Regel, die je nach
+	-- Anwesenheit anderer etwas anderes tut, waere beim Testen schlimmer als eine harte.
+	-- Die Ausgabe nennt es, damit ein Mitspieler die ploetzliche Stille einordnen kann.
+	local citiesReset = 0
+	if _G.ResetCityAlert then
+		for _, cityName in ipairs(CityAlertConfig.CityOrder or {}) do
+			if _G.DespawnGuardianForCity then
+				_G.DespawnGuardianForCity(cityName)
+			end
+			_G.ResetCityAlert(cityName)
+			citiesReset += 1
+		end
+	end
+	print(string.format(
+		"[Kaiju] Welt zurueckgesetzt von %s -- %d Staedte auf Alarmstufe 0, Guardians entfernt.",
+		player.Name, citiesReset))
+
+	-- ===== Speichern =====
+	-- Bisher schrieb der Reset NICHTS; er verliess sich auf den Autosave nach 120
+	-- Sekunden. Stirbt der Server dazwischen, ist das Zuruecksetzen weg.
+	--
+	-- Drei Riegel koennen das Schreiben verhindern, und alle drei sind still: ein
+	-- Speicherstand aus neuerer Fassung, eine anderswo gesperrte Sitzung, und ein bereits
+	-- erfolgter Abschluss-Save. Ein Reset, der scheinbar wirkt und beim naechsten Beitritt
+	-- wieder da ist, kostet eine halbe Stunde Fehlersuche am falschen Ende -- deshalb wird
+	-- der Fehlschlag benannt statt verschluckt.
+	--
+	-- Die drei Riegel werden HIER geprueft und nicht am Rueckgabewert von savePlayerData
+	-- abgelesen: die Funktion kehrt in allen drei Faellen mit einem blossen `return`
+	-- zurueck. Ein pcall darum meldet dann Erfolg, obwohl nichts geschrieben wurde --
+	-- also genau die Taeuschung, die diese Meldung verhindern soll.
+	local saveProblem = nil
+	if finalSaveDone[player] then
+		saveProblem = "Abschluss-Speicherung lief bereits"
+	elseif player:GetAttribute("SaveSchemaTooNew") then
+		saveProblem = "Speicherstand stammt aus einer neueren Fassung"
+	elseif player:GetAttribute("SaveLockedElsewhere") then
+		saveProblem = "Sitzung ist anderswo gesperrt"
+	else
+		local ok, err = pcall(function()
+			savePlayerData(player, buildPlayerSaveData(player))
+		end)
+		if not ok then
+			saveProblem = tostring(err)
+		end
+	end
+
+	if saveProblem then
+		warn("[Kaiju] Reset von " .. player.Name .. " NICHT gespeichert: " .. saveProblem)
+	else
+		print("[Kaiju] Reset von " .. player.Name .. " gespeichert.")
+	end
+	ResetPlayerDataEvent:FireClient(player, saveProblem == nil, saveProblem)
+
+	-- ===== Charakter neu laden =====
+	-- Zuletzt, damit der Speicherstand den zurueckgesetzten Zustand enthaelt. Ohne das
+	-- bliebe der halbe Zustand stehen: die Groesse eines gekauften Skins haengt am
+	-- Modell, nicht an einer Zahl. Gleiches Vorgehen wie _G.MarkPrologueComplete.
+	pcall(function()
+		player:LoadCharacter()
+	end)
 
 	print("[Kaiju] Alle Werte von " .. player.Name .. " wurden zurückgesetzt.")
 end)

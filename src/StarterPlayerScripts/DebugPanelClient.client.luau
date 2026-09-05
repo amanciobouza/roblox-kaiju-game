@@ -88,7 +88,7 @@ local panel = Instance.new("Frame")
 panel.Name = "DebugPanel"
 -- Vorletzter Summand: Zeile für den Spec-Prüfer-Knopf.
 -- Letzter Summand: drei Zeilen für den Showdown.
-panel.Size = UDim2.new(0, 340, 0, 340 + 60 + 90 + 50 + 50 + 50 + 50 + 150)
+panel.Size = UDim2.new(0, 340, 0, 340 + 60 + 90 + 50 + 50 + 50 + 50 + 150 + 34)
 panel.AnchorPoint = Vector2.new(0.5, 0.5)
 panel.Position = UDim2.new(0.5, 0, 0.5, 0)
 panel.BackgroundColor3 = Color3.fromRGB(35, 32, 45)
@@ -544,7 +544,9 @@ resetButton.MouseButton1Click:Connect(function()
 	awaitingConfirm = false
 
 	if ResetPlayerDataEvent then
-		ResetPlayerDataEvent:FireServer()
+		-- false = Prolog NICHT mit zuruecksetzen. Der zweite Knopf weiter unten feuert
+		-- dasselbe Ereignis mit true.
+		ResetPlayerDataEvent:FireServer(false)
 	end
 
 	-- Level-Regler im Debug-Fenster visuell mit zurücksetzen -- sonst würde er weiterhin
@@ -561,6 +563,91 @@ resetButton.MouseButton1Click:Connect(function()
 		resetButton.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
 	end)
 end)
+
+-- ===== Zweiter Knopf: auch den Prolog zuruecksetzen =====
+-- Bewusst getrennt und kleiner. Den Fortschritt setzt man beim Testen staendig zurueck,
+-- den Prolog selten -- beides auf denselben Knopf zu legen hiesse, entweder jedes Mal
+-- den mehrminuetigen Prolog mitzuspielen oder ihn nie testen zu koennen.
+local resetPrologueButton = Instance.new("TextButton")
+resetPrologueButton.Name = "DebugResetPrologueButton"
+resetPrologueButton.Size = UDim2.new(1, -32, 0, 26)
+-- ANS ENDE, nicht unter den Reset-Knopf: dort sitzt bereits die naechste Zeile (456).
+-- Der Abstand ist hier sogar erwuenscht -- der Prolog-Reset kostet mehrere Minuten
+-- Wiederholung und soll nicht neben dem Knopf liegen, den man staendig antippt.
+resetPrologueButton.Position = UDim2.new(0, 16, 0, 806)
+resetPrologueButton.BackgroundColor3 = Color3.fromRGB(120, 60, 90)
+resetPrologueButton.Font = Enum.Font.FredokaOne
+resetPrologueButton.TextScaled = true
+resetPrologueButton.TextColor3 = Color3.new(1, 1, 1)
+resetPrologueButton.Text = "⏮ Auch Prolog zuruecksetzen"
+resetPrologueButton.Parent = panel
+applyComicStyle(resetPrologueButton, 8, 2)
+
+local prologueAwaitingConfirm = false
+local prologueConfirmTimer = nil
+
+local function resetPrologueButtonIdle()
+	prologueAwaitingConfirm = false
+	resetPrologueButton.Text = "⏮ Auch Prolog zuruecksetzen"
+	resetPrologueButton.BackgroundColor3 = Color3.fromRGB(120, 60, 90)
+end
+
+resetPrologueButton.MouseButton1Click:Connect(function()
+	if not prologueAwaitingConfirm then
+		prologueAwaitingConfirm = true
+		resetPrologueButton.Text = "⚠️ Sure? Click again!"
+		resetPrologueButton.BackgroundColor3 = Color3.fromRGB(230, 160, 40)
+		if prologueConfirmTimer then
+			task.cancel(prologueConfirmTimer)
+		end
+		prologueConfirmTimer = task.delay(3, resetPrologueButtonIdle)
+		return
+	end
+	if prologueConfirmTimer then
+		task.cancel(prologueConfirmTimer)
+		prologueConfirmTimer = nil
+	end
+	prologueAwaitingConfirm = false
+
+	if ResetPlayerDataEvent then
+		ResetPlayerDataEvent:FireServer(true)
+	end
+	if resetLevelSliderVisual then
+		resetLevelSliderVisual(0, "Level: 0")
+	end
+	task.delay(1.5, resetPrologueButtonIdle)
+end)
+
+-- ===== Wer die beiden Knoepfe sieht =====
+-- Der Server entscheidet und setzt das Attribut; hier wird es nur befolgt. Ausblenden
+-- statt sperren: ein sichtbarer Knopf, der nichts tut, sieht aus wie ein Fehler.
+local function refreshResetVisibility()
+	local allowed = player:GetAttribute("MayResetData") == true
+	resetButton.Visible = allowed
+	resetPrologueButton.Visible = allowed
+end
+player:GetAttributeChangedSignal("MayResetData"):Connect(refreshResetVisibility)
+refreshResetVisibility()
+
+-- ===== Rueckmeldung des Servers =====
+-- Wichtigster Fall: zurueckgesetzt, aber NICHT gespeichert. Ohne diese Meldung wirkt der
+-- Reset und ist beim naechsten Beitritt wieder weg.
+if ResetPlayerDataEvent then
+	ResetPlayerDataEvent.OnClientEvent:Connect(function(saved, problem)
+		if saved then
+			resetButton.Text = "✅ Reset!"
+			resetButton.BackgroundColor3 = Color3.fromRGB(90, 200, 100)
+		else
+			resetButton.Text = "⚠️ " .. tostring(problem)
+			resetButton.BackgroundColor3 = Color3.fromRGB(200, 120, 40)
+			warn("[DebugPanelClient] Reset nicht gespeichert: " .. tostring(problem))
+		end
+		task.delay(4, function()
+			resetButton.Text = "🔄 Debug Reset"
+			resetButton.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
+		end)
+	end)
+end
 
 -- ===== Partikel-An/Aus-Umschalter: reines Performance-Diagnose-Werkzeug (rein
 -- clientseitig -- betrifft nur die eigene Sicht, nicht andere Spieler). Deaktiviert ALLE

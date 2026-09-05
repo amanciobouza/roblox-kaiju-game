@@ -80,6 +80,22 @@ end)
 -- Ergebnis: { Archive = "AlertHelicopter,Tank", Gifts = true }. Die Zeichenkette nennt die
 -- ungesehenen Eintraege, ein blosses true steht fuer "etwas Neues, aber ohne Einzelangabe"
 -- (Geschenke rechnen sich selbst aus und haben keine Ids).
+-- Loescht alle Laempchen. Gerufen vom Debug-Reset: sie verweisen auf "neue" Eintraege,
+-- die es nach einem Reset nicht mehr gibt -- ein rotes Laempchen an einem leeren Archiv
+-- waere ein Hinweis auf nichts.
+_G.ResetPlayerNavBadges = function(player)
+	local removed = 0
+	for key in pairs(VALID_KEYS) do
+		if player:GetAttribute(NAV_BADGE_PREFIX .. key) ~= nil then
+			removed += 1
+		end
+		player:SetAttribute(NAV_BADGE_PREFIX .. key, nil)
+		player:SetAttribute(NAV_ITEMS_PREFIX .. key, nil)
+	end
+	print(string.format("[Kaiju-Debug] Menue-Laempchen von %s geloescht -- %d aktiv gewesen.", player.Name, removed))
+	return removed
+end
+
 _G.GetNavBadgeSaveData = function(player)
 	local saved = {}
 	for key in pairs(VALID_KEYS) do
