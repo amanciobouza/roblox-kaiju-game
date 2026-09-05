@@ -27,6 +27,7 @@ local specs = {
 	require("../src/ReplicatedStorage/Specs/CityAlertSpec"),
 	require("../src/ReplicatedStorage/Specs/PlayerDataSpec"),
 	require("../src/ReplicatedStorage/Specs/ShowdownSpec"),
+	require("../src/ReplicatedStorage/Specs/BalancingSpec"),
 	require(WORKSHOP .. "WorkshopAssetSpec"),
 }
 
@@ -36,6 +37,7 @@ local ctx = {
 		TalentTree = require("../src/ReplicatedStorage/TalentTreeConfig"),
 		Achievements = require("../src/ReplicatedStorage/AchievementsConfig"),
 		Showdown = require("../src/ReplicatedStorage/ShowdownConfig"),
+		Skins = require("../src/ReplicatedStorage/SkinsConfig"),
 		-- Die Asset-Spezifikationen sind für die Regeln DATEN, keine Specs -- deshalb
 		-- stehen sie hier im config-Teil, nicht in der Spec-Liste oben.
 		WorkshopAssets = {
