@@ -1052,7 +1052,7 @@ ResearchCompleteEvent.OnClientEvent:Connect(function(factionName, talentId, newL
 	-- Laempchen am Menuepunkt: eine fertige Forschung ist ein einmaliges Ereignis und
 	-- damit ein echter Hinweis -- anders als "genug Energie fuer einen Knoten", das mit
 	-- der Energie staendig an- und ausginge.
-	if _G.SetNavBadge and not talentTreePanel.Visible then
+	if _G.SetNavBadge and not panel.Visible then
 		_G.SetNavBadge("Talents", true, talentId)
 	end
 	if not talentState.levels[factionName] then

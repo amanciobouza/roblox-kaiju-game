@@ -231,6 +231,87 @@ def rule_forward_reference(files):
     return violations
 
 
+# Namen, die es immer gibt: Roblox-Umgebung, Luau-Standardbibliothek, Schluesselwoerter.
+KNOWN_GLOBALS = set("""game workspace Workspace script shared _G plugin
+Instance Enum Vector2 Vector3 Vector3int16 CFrame Color3 BrickColor UDim UDim2 Rect
+NumberRange NumberSequence NumberSequenceKeypoint ColorSequence ColorSequenceKeypoint
+TweenInfo Ray Region3 Random Faces Axes PhysicalProperties DateTime Font OverlapParams
+RaycastParams CatalogSearchParams PathWaypoint
+math string table task os coroutine utf8 bit32 buffer debug
+print warn error assert pcall xpcall select type typeof tostring tonumber
+ipairs pairs next unpack require setmetatable getmetatable rawget rawset rawequal rawlen
+tick time wait spawn delay elapsedTime newproxy gcinfo collectgarbage
+self true false nil and or not if then else elseif end for while do repeat until return
+local function in break continue""".split())
+
+# Deklarationen. Ueber den GANZEN Dateitext gesucht, nicht zeilenweise: Parameterlisten
+# stehen im Bestand mehrfach ueber mehrere Zeilen, und zeilenweise gelesen galten ihre
+# Parameter faelschlich als undeklariert -- fuenf Fehlalarme bei der ersten Fassung.
+DECLARATIONS = [
+    re.compile(r"\blocal\s+([\w\s,]+?)\s*(?:=|$)", re.M),
+    re.compile(r"\blocal\s+function\s+(\w+)"),
+    re.compile(r"\bfunction\s+[\w.:]*?(\w+)\s*\("),
+    re.compile(r"\bfor\s+([\w\s,]+?)\s*(?:=|\bin\b)"),
+]
+PARAMETERS = re.compile(r"\bfunction\s*[\w.:]*\s*\(([^)]*)\)", re.S)
+
+# Geprueft wird ein Name nur, wenn er als Tabelle, Objekt oder Aufruf auftritt -- also
+# X.feld, X:methode() oder X(). Damit fallen Tabellen-SCHLUESSEL von vornherein raus
+# ("asset = ..." in einem Konstruktor ist keine Benutzung), und genau die waeren sonst
+# die groesste Fehlalarmquelle.
+NAME_USE = re.compile(r"(?<![\w.:])(\w+)\s*[.:(]")
+
+
+def rule_undefined_name(files):
+    """Ein Name wird benutzt, den es in dieser Datei gar nicht gibt.
+
+    Lua loest ihn still auf ein GLOBAL auf -- Wert nil. Bei einem Feldzugriff gibt es
+    dann "attempt to index nil with '...'", bei einem Aufruf "attempt to call a nil
+    value", und beides erst DANN, wenn die Zeile tatsaechlich laeuft.
+
+    Genau so ist es passiert: in TalentTreeClient stand `talentTreePanel.Visible`, obwohl
+    die Variable `panel` heisst. Die Zeile laeuft nur, wenn eine Forschung fertig wird --
+    der Fehler lag lange im Code, bevor ihn jemand ausgeloest hat.
+
+    Die Vorwaerts-Referenz-Regel findet das NICHT: sie prueft Namen, die zu frueh benutzt
+    werden, nicht solche, die es nirgends gibt.
+    """
+    violations = []
+    for path in files:
+        text = "\n".join(line for _n, line in read_lines(path))
+
+        declared = set()
+        for pattern in DECLARATIONS:
+            for hit in pattern.findall(text):
+                for name in re.split(r"[,\s]+", hit.strip()):
+                    if name:
+                        declared.add(name)
+        for params in PARAMETERS.findall(text):
+            for name in re.split(r"[,\s]+", params.strip()):
+                if name:
+                    declared.add(name.replace("...", ""))
+
+        previous = ""
+        for number, line in read_lines(path):
+            # Ein Methodenaufruf, dessen Doppelpunkt am Zeilenende steht und dessen Name
+            # die naechste Zeile beginnt ("section:" / "FindFirstChildWhichIsA("), sieht
+            # zeilenweise wie ein freier Name aus. Kommt in den erzeugten
+            # Installer-Skripten vor -- beide verbliebenen Fehlalarme waren von dieser Art.
+            continues_call = previous.rstrip().endswith((":", "."))
+            if line.strip():
+                previous = line
+            if continues_call:
+                continue
+
+            for name in NAME_USE.findall(line):
+                if name in declared or name in KNOWN_GLOBALS or name.isdigit():
+                    continue
+                violations.append(
+                    "%s:%d %s ist nirgends deklariert -- loest still auf nil auf"
+                    % (path, number, name))
+    return violations
+
+
 def rule_waitforchild_timeout(files):
     """WaitForChild ohne zweites Argument wartet unbegrenzt.
 
@@ -349,6 +430,13 @@ RULES = [
                   "niemand ruft, ist entweder unfertig angeschlossen oder Altbestand -- "
                   "beides sieht im Code aus wie ein fertiges System.",
         "check": rule_g_write_without_read,
+    },
+    {
+        "id": "source.undefined-name",
+        "intent": "Jeder benutzte Name ist in seiner Datei auch deklariert. Ein Name, den "
+                  "es nicht gibt, loest in Lua still auf ein Global auf und ist nil -- der "
+                  "Fehler faellt erst auf, wenn die betroffene Zeile zufaellig laeuft.",
+        "check": rule_undefined_name,
     },
     {
         "id": "source.forward-reference",
