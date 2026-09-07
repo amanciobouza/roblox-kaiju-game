@@ -28,6 +28,7 @@ local specs = {
 	require("../src/ReplicatedStorage/Specs/PlayerDataSpec"),
 	require("../src/ReplicatedStorage/Specs/ShowdownSpec"),
 	require("../src/ReplicatedStorage/Specs/BalancingSpec"),
+	require("../src/ReplicatedStorage/Specs/VillageChapterOneSpec"),
 	require(WORKSHOP .. "WorkshopAssetSpec"),
 }
 
