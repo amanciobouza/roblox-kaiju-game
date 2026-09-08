@@ -108,13 +108,16 @@ end)
 -- Angreifen sollen GLEICHZEITIG gehen, denn nur dann gehen drei ihrer Zahlen zusammen
 -- auf (88 % erhaltene Energie, 20 Minuten Referenzzeit, viereinhalb Durchgaenge).
 --
--- Strg statt einer Buchstabentaste, weil der kleine Finger sie halten kann, waehrend die
--- uebrigen Finger weiter laufen und angreifen. Beide Strg-Tasten, damit Links- wie
--- Rechtshaender ihre gewohnte erwischen. Am Gamepad die linke Schultertaste -- dort liegt
--- der Zeigefinger ohnehin und die Daumen bleiben frei.
+-- X, weil es neben den WASD-Tasten liegt: der Ringfinger haelt es, waehrend Zeige- und
+-- Mittelfinger weiter laufen und angreifen.
+--
+-- Zuerst lag es auf Strg -- fuer den kleinen Finger noch bequemer, aber Strg loest im
+-- Roblox Studio eigene Befehle aus und ist deshalb im Test unbrauchbar.
+--
+-- Am Gamepad bleibt es die linke Schultertaste: dort liegt der Zeigefinger ohnehin und die
+-- Daumen bleiben frei.
 local ABSORB_KEYS = {
-	[Enum.KeyCode.LeftControl] = true,
-	[Enum.KeyCode.RightControl] = true,
+	[Enum.KeyCode.X] = true,
 	[Enum.KeyCode.ButtonL1] = true,
 }
 
@@ -142,7 +145,7 @@ local function refreshAbsorbLabel()
 	elseif string.find(tostring(lastInput), "Gamepad") then
 		label.Text = "Absorb (L1)"
 	else
-		label.Text = "Absorb (Ctrl)"
+		label.Text = "Absorb (X)"
 	end
 end
 
