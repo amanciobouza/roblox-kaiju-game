@@ -1706,13 +1706,12 @@ local function damageHouse(house, amount, attackerPlayer, originPosition, isPass
 	local newHealth = house:GetAttribute("Health") - amount
 	house:SetAttribute("Health", math.max(newHealth, 0))
 
-	-- Special Energy: kleine, proportionale Menge pro verursachtem Schaden, plus fester
-	-- Bonus bei tatsächlicher Zerstörung (siehe unten bei destroyHouse-Aufruf ist der
-	-- Bonus NICHT hier, da destroyHouse selbst den Angreifer kennt und dort sauberer
-	-- anzusetzen ist).
-	if attackerPlayer and _G.AwardSpecialEnergyForBuildingDamage then
-		_G.AwardSpecialEnergyForBuildingDamage(attackerPlayer, amount)
-	end
+	-- KEINE Special Energy pro verursachtem Schaden mehr. Diese Stelle lief einmal je
+	-- getroffenem Gebäude UND einmal je Fokus-Tick -- also genau die Vervielfachung pro
+	-- Ziel, die die Village-Spezifikation ausschliesst ("Combat Energy entsteht durch
+	-- Kampfaktionen, nicht pro getroffenem Ziel"). Die Aktionen selbst zahlen weiterhin:
+	-- Schlag, Combo, Sprunglandung. Der feste Bonus bei tatsächlicher Zerstörung sitzt in
+	-- destroyHouse, das den Angreifer ohnehin kennt.
 
 	-- Guardian alarmieren: er soll zu einem angegriffenen Gebäude LAUFEN, statt darauf zu
 	-- warten, dass der Spieler in seinen Näherungsradius kommt. Bewusst hier bei jedem

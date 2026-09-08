@@ -18,28 +18,52 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- ===== Zentrale Balance-Werte =====
 local SPECIAL_ENERGY_MAX = 100
 
-local SPECIAL_ENERGY_COSTS = {
-	Focus = 25,
-	Area = 40,
-}
-
+-- WICHTIG (Village-Spezifikation, "Combat Energy"): Energie entsteht durch KAMPFAKTIONEN,
+-- nicht pro getroffenem Ziel. Ein Sprung, der fünf Gebäude trifft, zählt als EINE Aktion.
+-- Deshalb gibt es hier keinen Posten mehr, der mit dem verursachten Schaden oder der Zahl
+-- der Ziele mitwächst -- der frühere BuildingDamagePerHP tat genau das (er hing an
+-- DamageHouse und feuerte damit einmal je Gebäude UND einmal je Fokus-Tick).
 local SPECIAL_ENERGY_GAINS = {
-	-- Zielwert: 25 Energy (Focus-Kosten) durch reines Kämpfen (Schläge) in ca. 20 Sekunden
-	-- erreichbar -- genauso lang wie der frühere feste Focus-Cooldown, damit sich das
-	-- Tempo vertraut anfühlt. Bei angenommenem Schlagtempo von ~0.8s/Treffer sind das
-	-- ~25 Treffer in 20s -> ca. 1 Energy pro Treffer im Schnitt. Deutlich reduziert
-	-- gegenüber den ursprünglichen Ausgangswerten, die sich beim Testen zu schnell
-	-- anfühlten.
 	PunchHit = 1,
 	ComboHit = 1, -- normaler Combo-Treffer (Schritt 2)
 	ThirdComboHit = 3, -- Finisher (Schritt 3) -- bewusst höher, motiviert den Combo abzuschliessen
 	JumpLanding = 2,
-	BuildingDamagePerHP = 0.008, -- kleine, proportionale Menge pro verursachtem Gebäude-Schaden
 	BuildingDestroyed = 3,
-	AbsorbMin = 6,
-	AbsorbMax = 15,
-	AbsorbPerEnergyUnit = 0.25, -- Absorb skaliert zusätzlich mit der tatsächlich absorbierten Menge, geclampt auf Min/Max -- bleibt bewusst effizienter als reines Kämpfen (siehe Design-Vorgabe: Absorb ist ein Booster)
 }
+
+-- Eine "normale Kampfaktion" im Sinne der Spezifikation ist ein Schlag. Über einen
+-- vollständigen Dreier-Combo gemittelt sind das (1 + 1 + 3) / 3 Energy.
+local AVERAGE_GAIN_PER_COMBAT_ACTION = (SPECIAL_ENERGY_GAINS.PunchHit
+	+ SPECIAL_ENERGY_GAINS.ComboHit
+	+ SPECIAL_ENERGY_GAINS.ThirdComboHit) / 3
+
+-- Die Spezifikation setzt den Preis eines Specials auf zehn normale Kampfaktionen -- und
+-- zwar für BEIDE gleich. Nur so hängt die Wahl zwischen Fokus und Fläche an der Zahl der
+-- Ziele (Schnittpunkt bei drei, siehe AREA_DAMAGE_MULTIPLIER in SpecialAttackHandler)
+-- statt am Preis.
+local COMBAT_ACTIONS_PER_SPECIAL = 10
+local SPECIAL_COST = math.floor(COMBAT_ACTIONS_PER_SPECIAL * AVERAGE_GAIN_PER_COMBAT_ACTION + 0.5)
+
+local SPECIAL_ENERGY_COSTS = {
+	Focus = SPECIAL_COST,
+	Area = SPECIAL_COST,
+}
+
+-- ===== Deckel für den Absorb-Beitrag =====
+-- Absorbieren steuert weiterhin Combat Energy bei, aber gedeckelt -- sonst finanziert
+-- Danebenstehen die Specials schneller als Kämpfen.
+--
+-- Genau das war der Fall: die Vergabe hängt am Absorb-Takt JE BRENNENDEM GEBÄUDE. Bei
+-- sieben gleichzeitig brennenden Gebäuden zahlte ein einziger Takt 7 x AbsorbMin = 42
+-- Energy, also mehr als zwei ganze Specials, fürs Stehenbleiben.
+--
+-- Der Deckel wirkt deshalb über ALLE gleichzeitig absorbierten Gebäude ZUSAMMEN, als
+-- Rate: höchstens ABSORB_ENERGY_PER_SECOND pro Sekunde. Zum Vergleich -- Kämpfen liefert
+-- bei 0,8 s je Schlag rund 2,1 Energy pro Sekunde. Der Absorb-Beitrag liegt damit bei
+-- etwa einem Viertel davon: spürbar, aber nie die schnellere Art, ein Special zu bezahlen.
+local ABSORB_ENERGY_PER_SECOND = 0.5
+local ABSORB_PER_ENERGY_UNIT = 0.25 -- so viel WÜRDE ein Absorb-Tick geben; der Deckel oben schneidet ab
+local ABSORB_BURST_SECONDS = 4 -- so viele Sekunden Rate darf sich ansparen, damit kurze Absorb-Stösse nicht leer ausgehen
 
 -- Für den Client bereitstellen (HUD: Kosten-Anzeige auf Focus-/Area-Buttons, maximale
 -- Füllung für den Energy-Arc ums Berserker-Zifferblatt).
@@ -57,6 +81,17 @@ end
 publishConfigValue("SpecialEnergyMax", SPECIAL_ENERGY_MAX, "IntValue")
 publishConfigValue("FocusEnergyCost", SPECIAL_ENERGY_COSTS.Focus, "IntValue")
 publishConfigValue("AreaEnergyCost", SPECIAL_ENERGY_COSTS.Area, "IntValue")
+
+-- Nachweis beim Serverstart, dass die Herleitung oben tatsächlich greift: beide Specials
+-- müssen denselben Preis tragen, und der muss zehn Kampfaktionen entsprechen.
+print(string.format(
+	"[Kaiju Debug] Special Energy: Fokus %d, Flaeche %d -- %d Kampfaktionen a %.2f. Absorb gedeckelt auf %.2f/s (Kaempfen liefert ca. 2.1/s).",
+	SPECIAL_ENERGY_COSTS.Focus,
+	SPECIAL_ENERGY_COSTS.Area,
+	COMBAT_ACTIONS_PER_SPECIAL,
+	AVERAGE_GAIN_PER_COMBAT_ACTION,
+	ABSORB_ENERGY_PER_SECOND
+))
 
 -- ===== Speicher pro Spieler (Attribut, ähnlich wie Heat) =====
 Players.PlayerAdded:Connect(function(player)
@@ -106,19 +141,49 @@ end
 _G.AwardSpecialEnergyForJumpLanding = function(player)
 	awardSpecialEnergy(player, SPECIAL_ENERGY_GAINS.JumpLanding)
 end
-_G.AwardSpecialEnergyForBuildingDamage = function(player, damageAmount)
-	awardSpecialEnergy(player, (damageAmount or 0) * SPECIAL_ENERGY_GAINS.BuildingDamagePerHP)
-end
+-- ENTFÄLLT: _G.AwardSpecialEnergyForBuildingDamage. Die Funktion hing an DamageHouse und
+-- vergab damit Energie je Gebäude und je Fokus-Tick -- also genau die Vervielfachung pro
+-- Ziel, die die Spezifikation ausschliesst. Der Aufruf in HouseHandler ist mit entfernt.
 _G.AwardSpecialEnergyForBuildingDestroyed = function(player)
 	awardSpecialEnergy(player, SPECIAL_ENERGY_GAINS.BuildingDestroyed)
 end
--- Absorb ist ein BOOSTER: skaliert mit der tatsächlich absorbierten Menge, aber immer
--- innerhalb von AbsorbMin/AbsorbMax geclampt (auch ein winziger Absorb-Tick gibt spürbar
--- etwas, ein riesiger nicht unbegrenzt viel).
+
+-- Absorb-Beitrag mit gemeinsamem Deckel über alle Gebäude (siehe die Herleitung oben bei
+-- ABSORB_ENERGY_PER_SECOND). Umgesetzt als Eimer, der mit der erlaubten Rate nachläuft:
+-- was mehrere Gebäude im selben Takt zusammen anfordern, wird an dem gemessen, was seit
+-- dem letzten Mal nachgelaufen ist -- und der Rest fällt weg.
+local absorbBudget = {} -- [player] = { amount, lastRefillAt }
+
+Players.PlayerRemoving:Connect(function(player)
+	absorbBudget[player] = nil
+end)
+
 _G.AwardSpecialEnergyForAbsorb = function(player, absorbedAmount)
-	local scaled = (absorbedAmount or 0) * SPECIAL_ENERGY_GAINS.AbsorbPerEnergyUnit
-	local clamped = math.clamp(scaled, SPECIAL_ENERGY_GAINS.AbsorbMin, SPECIAL_ENERGY_GAINS.AbsorbMax)
-	awardSpecialEnergy(player, clamped)
+	if not player or not player.Parent then
+		return
+	end
+
+	local now = os.clock()
+	local bucket = absorbBudget[player]
+	if not bucket then
+		bucket = { amount = ABSORB_ENERGY_PER_SECOND * ABSORB_BURST_SECONDS, lastRefillAt = now }
+		absorbBudget[player] = bucket
+	end
+
+	bucket.amount = math.min(
+		bucket.amount + (now - bucket.lastRefillAt) * ABSORB_ENERGY_PER_SECOND,
+		ABSORB_ENERGY_PER_SECOND * ABSORB_BURST_SECONDS
+	)
+	bucket.lastRefillAt = now
+
+	local wanted = (absorbedAmount or 0) * ABSORB_PER_ENERGY_UNIT
+	local granted = math.min(wanted, bucket.amount)
+	if granted <= 0 then
+		return
+	end
+
+	bucket.amount -= granted
+	awardSpecialEnergy(player, granted)
 end
 
 -- ===== Energy ausgeben (von SpecialAttackHandler.lua aufgerufen) -- gibt true zurück,
