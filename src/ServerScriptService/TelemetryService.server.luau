@@ -46,9 +46,20 @@ local SAMPLE_INTERVAL = 2
 -- Ausgabefenster.
 local SNAPSHOT_INTERVAL = 15
 
--- Ab dieser Hitze gilt der Spieler als im Meltdown. Der Wert steht in HeatHandler und
--- kann per Talent auf bis zu 109 steigen; für die Auswertung genügt die Grundschwelle.
-local MELTDOWN_HEAT = 100
+-- Ob der Spieler im Meltdown ist, beantwortet HeatHandler selbst (_G.GetHeatStage) --
+-- hier steht bewusst KEINE eigene Schwelle mehr.
+--
+-- Vorher stand hier fest 100 mit der Begründung, für die Auswertung genüge die
+-- Grundschwelle. Das war falsch: das Talent "Overheat Specialist" hebt die Schwelle auf
+-- bis zu 109. Bei einem Spieler mit diesem Talent zählte alles zwischen 100 und seiner
+-- echten Schwelle hier als Meltdown, im Spiel aber nicht -- und weil in diesem Bereich
+-- weder die Mindestdauer-Sperre noch die langsame Meltdown-Abkühlung greifen, pendelte
+-- der Wert um die 100 und erzeugte eine Kette von Meltdown-Ereignissen, die es nie gab.
+-- Ein Messwerkzeug, das seine eigene Schwelle mitführt, misst irgendwann etwas anderes
+-- als das System, das es beobachten soll.
+local function isInMeltdown(player)
+	return _G.GetHeatStage and _G.GetHeatStage(player) == "Meltdown"
+end
 
 -- Zuwächse dieser Statistiken landen in jedem Zwischenstand. Sie beantworten zusammen
 -- fast alle Kennzahlen aus der Spezifikation -- darunter die neue Frage, ob der Schlag
@@ -167,9 +178,15 @@ local function finishRun(player, reason)
 	-- Hitzeverteilung als Histogramm über die Baender der Spezifikation. Der Mittelwert
 	-- allein waere nutzlos: 50 % koennte "immer lau" oder "staendig zwischen 0 und 100"
 	-- bedeuten, und das ist derselbe Unterschied wie zwischen gut und kaputt.
+	--
+	-- ACHTUNG, die 100 hier sind NICHT die Meltdown-Schwelle des Spielers (die ist per
+	-- Talent verschiebbar, siehe isInMeltdown oben), sondern die feste Bandgrenze der
+	-- Spezifikation. Beides muss getrennt bleiben: die Baender vergleichen alle Laeufe auf
+	-- derselben Skala, das Ereignis meldet, was diesem Spieler tatsaechlich widerfahren
+	-- ist.
 	local bands = { normal = 0, warm = 0, hot = 0, berserk = 0, meltdown = 0 }
 	for _, heat in ipairs(run.heatSamples) do
-		if heat >= MELTDOWN_HEAT then
+		if heat >= 100 then
 			bands.meltdown += 1
 		elseif heat >= 85 then
 			bands.berserk += 1
@@ -251,7 +268,7 @@ RunService.Heartbeat:Connect(function(deltaTime)
 			emit(berserk and "BerserkStart" or "BerserkEnd", player, { heat = heat })
 		end
 
-		local meltdown = heat >= MELTDOWN_HEAT
+		local meltdown = isInMeltdown(player)
 		if meltdown ~= run.meltdown then
 			run.meltdown = meltdown
 			if meltdown then
