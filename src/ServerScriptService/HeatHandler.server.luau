@@ -93,7 +93,26 @@ end)
 
 -- ===== Einstellungen: kontrollierter Berserk-Modus =====
 local BERSERK_HEAT_DECAY_PER_SECOND = 3 -- sinkt von selbst, langsam
-local LEG_TRAINING_HEAT_DECAY_PER_SECOND = 8 -- Bein-Training: deutlich schneller, unabhängig von der Stufe (siehe Heartbeat-Loop weiter unten)
+
+-- Training (Arm, Bein, Körper): schnellerer Abbau, unabhängig von der Stufe -- siehe
+-- Heartbeat-Loop weiter unten.
+--
+-- Der Wert liegt bewusst UNTER der Erzeugung: ein Arm-Combo macht 15 Hitze in 1,8
+-- Sekunden (rund 8,3/s), eine Sprunglandung 15 in 1,2 Sekunden (rund 12,5/s). Die Hitze
+-- soll beim Trainieren spürbar steigen und die Berserker-Schwelle auch erreichen können
+-- -- ein Abbau oberhalb der Erzeugung würde sie unerreichbar machen. Dass es trotzdem
+-- nicht in den Meltdown kippt, sichert die Deckelung in setHeat, nicht diese Zahl.
+--
+-- WICHTIG: dieser Abbau STAPELT sich mit BERSERK_HEAT_DECAY_PER_SECOND, denn der
+-- allgemeine Pfad weiter unten läuft während des Trainings ebenfalls (solange Berserk
+-- nicht aktiv ist). Zusammen sind das 6/s. Damit bleibt fürs Arm-Training netto rund
+-- 2,3/s, also etwa 37 Sekunden bis zur Berserker-Schwelle -- ungefähr das Tempo, das der
+-- Testlauf gezeigt hat, nur ohne den Absturz in den Meltdown danach. Fürs Bein-Training
+-- sind es rund 13 Sekunden.
+--
+-- Solange Berserk aktiv ist, fällt der allgemeine Pfad weg und jeder Treffer legt
+-- zusätzlich BERSERK_HEAT_PER_HIT nach: dann steigt die Hitze schnell an den Deckel.
+local TRAINING_HEAT_DECAY_PER_SECOND = 3
 local BERSERK_HEAT_PER_HIT = 4 -- jeder Treffer während Berserk lädt etwas nach
 local BERSERK_MIN_HEAT_TO_STAY = 40 -- fällt Heat darunter, endet Berserk automatisch
 local BERSERK_INACTIVITY_TIMEOUT = 4 -- Sekunden ohne Treffer -> Berserk endet
@@ -109,6 +128,10 @@ local lastMeltdownExplosionAt = {} -- [player] = Workspace:GetServerTimeNow()
 local wasInMeltdown = {} -- [player] = true/false, um den ÜBERGANG in Meltdown zu erkennen (sofortige erste Explosion)
 local meltdownLockedUntil = {} -- [player] = os.clock(), bis wann Heat mindestens bei 100% gehalten wird
 
+-- Drosselung der Trainings-Debugzeile -- ohne sie käme sie einmal pro Einzelbild.
+local TRAINING_HEAT_LOG_INTERVAL = 5
+local lastTrainingHeatLogAt = {} -- [player] = os.clock()
+
 local function getHeat(player)
 	return player:GetAttribute("Heat") or 0
 end
@@ -123,6 +146,15 @@ local function setHeat(player, value)
 	-- steigen -- Berserker-Modus ist gewünscht/erlaubt, Meltdown (Verlangsamung,
 	-- Explosionen) würde die geskriptete Kampfsequenz/Kamerafahrt stören.
 	if player:GetAttribute("IsInPrologue") then
+		value = math.min(value, getEffectiveMeltdownThreshold(player) - 1)
+	end
+
+	-- Dasselbe fürs Training: die Station darf heiss werden -- bis in den Berserker-Bereich,
+	-- das ist ausdrücklich gewollt (siehe TrainingHandler, AddPunchHeat) -- aber nie in den
+	-- Meltdown kippen. Trainieren ist kein Kampf; die Strafe dort gehört in die Stadt.
+	-- Ohne diesen Deckel wäre die Hitze beim Trainieren dauerhaft am oberen Anschlag, denn
+	-- die Erzeugung liegt über dem Abbau (siehe TRAINING_HEAT_DECAY_PER_SECOND).
+	if player:GetAttribute("TrainingStat") or player:GetAttribute("BodyTrainingActive") then
 		value = math.min(value, getEffectiveMeltdownThreshold(player) - 1)
 	end
 
@@ -436,13 +468,38 @@ RunService.Heartbeat:Connect(function(dt)
 			end
 		end
 
-		-- Bein-Training: Heat sinkt durchgehend und deutlich schneller als im echten
-		-- Kampf, UNABHÄNGIG von der aktuellen Stufe (normalerweise gibt es unterhalb der
-		-- Berserker-Schwelle gar keinen Abbau) -- damit bleibt Sprung/Spezialangriffe
-		-- trotz der zusätzlichen Heat-Erzeugung durchgehend nutzbar, statt in einer
-		-- Meltdown-Sackgasse zu enden.
-		if player:GetAttribute("TrainingStat") == "Leg" and heat > 0 then
-			setHeat(player, heat - LEG_TRAINING_HEAT_DECAY_PER_SECOND * dt)
+		-- Training: Heat sinkt durchgehend und schneller als im echten Kampf, UNABHÄNGIG
+		-- von der aktuellen Stufe (normalerweise gibt es unterhalb der Berserker-Schwelle
+		-- gar keinen Abbau) -- damit bleibt die Station trotz der zusätzlichen
+		-- Heat-Erzeugung durchgehend nutzbar, statt in einer Meltdown-Sackgasse zu enden.
+		--
+		-- Das galt bisher NUR fürs Bein-Training. Das Arm-Training erzeugt aber genauso
+		-- Hitze (siehe TrainingHandler, AddPunchHeat) und lief damit genau in die
+		-- Sackgasse, die dieser Abbau verhindern soll: im Testlauf stieg die Hitze in 36
+		-- Sekunden von 0 auf 100 und fiel danach eine halbe Stunde lang nicht mehr unter
+		-- 86.
+		--
+		-- WICHTIG, und der Grund, warum der Abbau auch beim Bein nie gewirkt hat: 'heat'
+		-- wird einmal am Schleifenanfang gelesen, und die Abbau-Pfade weiter unten
+		-- rechnen von DIESEM Stand aus. Ihr Schreibvorgang überschrieb den hier
+		-- vollständig -- der letzte gewinnt. Deshalb wird der Wert hier neu gelesen.
+		if isTraining and heat > 0 then
+			setHeat(player, heat - TRAINING_HEAT_DECAY_PER_SECOND * dt)
+			heat = getHeat(player)
+
+			-- Nachweis, dass Abbau UND Deckel greifen: höchstens alle fünf Sekunden eine
+			-- Zeile je Spieler, sonst wäre es eine Zeile pro Einzelbild.
+			local lastLog = lastTrainingHeatLogAt[player] or 0
+			if os.clock() - lastLog >= TRAINING_HEAT_LOG_INTERVAL then
+				lastTrainingHeatLogAt[player] = os.clock()
+				print(string.format(
+					"[Kaiju Debug] Training %s: Hitze %.1f von hoechstens %.0f (Stufe %s)",
+					tostring(player:GetAttribute("TrainingStat") or "Koerper"),
+					heat,
+					getEffectiveMeltdownThreshold(player) - 1,
+					getHeatStage(player)
+				))
+			end
 		end
 
 		-- Berserk automatisch beenden: zu lange kein Treffer, oder Heat zu weit gesunken
@@ -552,4 +609,5 @@ Players.PlayerRemoving:Connect(function(player)
 	hospitalStabilityUntil[player] = nil
 	wasInMeltdown[player] = nil
 	meltdownLockedUntil[player] = nil
+	lastTrainingHeatLogAt[player] = nil
 end)
