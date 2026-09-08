@@ -197,6 +197,20 @@ treeScroll.ClipsDescendants = true
 treeScroll.Parent = panel
 applyComicStyle(treeScroll, 12, 2)
 
+-- Der Baum wird auf einer festen Design-Flaeche aufgebaut. Auf kleineren Displays
+-- skaliert nur diese Flaeche; der ScrollingFrame selbst darf dadurch die gesamte
+-- verfuegbare Bildschirmbreite nutzen.
+local TREE_CANVAS_WIDTH = 960
+local TREE_CANVAS_HEIGHT = 900
+local treeContent = Instance.new("Frame")
+treeContent.Name = "TreeContent"
+treeContent.Size = UDim2.fromOffset(TREE_CANVAS_WIDTH, TREE_CANVAS_HEIGHT)
+treeContent.BackgroundTransparency = 1
+treeContent.Parent = treeScroll
+
+local treeContentScale = Instance.new("UIScale")
+treeContentScale.Parent = treeContent
+
 -- Baum und Detailspalte teilen sich die Breite. Beide standen vorher auf festen Werten
 -- (960 und 268 Pixel ab Position 8 beziehungsweise 976). Auf einem Vollbild-Bildschirm
 -- blieb dadurch rechts ein Drittel der Flaeche leer, waehrend die Textspalte auf 268 Pixel
@@ -210,35 +224,106 @@ local TREE_MAX_WIDTH = 960
 local DETAIL_MIN_WIDTH = 300
 local DETAIL_MAX_WIDTH = 520
 local COLUMN_GAP = 8
+local COMPACT_MAX_HEIGHT = 650
+local COMPACT_MAX_WIDTH = 1100
+
+local selectedTalentId = nil
+local compactDetailsOpen = false
+local isCompactLayout = false
+local detailBackButton = nil
+local tabButtons = {}
 
 -- ===== Detail-Panel: zeigt das AUSGEWÄHLTE Talent -- Icon/Name, Beschreibung, Kosten,
 -- Forschungszeit, und einen "Vorher -> Nachher"-Wertevergleich. =====
-local detailPanel = Instance.new("Frame")
+local detailPanel = Instance.new("ScrollingFrame")
 detailPanel.Size = UDim2.new(0, 268, 1, -110)
 detailPanel.Position = UDim2.new(0, 976, 0, 106)
 detailPanel.BackgroundColor3 = Color3.fromRGB(28, 25, 40)
+detailPanel.BorderSizePixel = 0
+detailPanel.ScrollBarThickness = 6
+detailPanel.CanvasSize = UDim2.fromOffset(0, 420)
+detailPanel.ClipsDescendants = true
 detailPanel.Parent = panel
 applyComicStyle(detailPanel, 12, 2)
 
 -- Beide Spalten neu setzen, sobald sich die Fensterbreite aendert.
 local function layoutColumns()
 	local width = panel.AbsoluteSize.X
-	if width <= 0 then
+	local height = panel.AbsoluteSize.Y
+	if width <= 0 or height <= 0 then
 		return
 	end
-	local detailWidth = math.clamp(
-		width - TREE_MAX_WIDTH - 3 * COLUMN_GAP,
-		DETAIL_MIN_WIDTH,
-		DETAIL_MAX_WIDTH
-	)
-	local treeWidth = math.min(TREE_MAX_WIDTH, width - detailWidth - 3 * COLUMN_GAP)
-	local total = treeWidth + COLUMN_GAP + detailWidth
-	local x = math.max(COLUMN_GAP, math.floor((width - total) / 2))
 
-	treeScroll.Position = UDim2.new(0, x, 0, 106)
-	treeScroll.Size = UDim2.new(0, treeWidth, 1, -110)
-	detailPanel.Position = UDim2.new(0, x + treeWidth + COLUMN_GAP, 0, 106)
-	detailPanel.Size = UDim2.new(0, detailWidth, 1, -110)
+	isCompactLayout = width <= COMPACT_MAX_WIDTH or height <= COMPACT_MAX_HEIGHT
+	local contentTop = 106
+	local contentHeight = math.max(120, height - contentTop - 4)
+
+	if isCompactLayout then
+		local titleWidth = math.min(190, width * 0.24)
+		titleLabel.Size = UDim2.new(0, titleWidth, 0, 32)
+		tabRow.Position = UDim2.new(0, titleWidth + 10, 0, 8)
+		tabRow.Size = UDim2.new(1, -(titleWidth + 62), 0, 32)
+		resourceLayout.Padding = UDim.new(0, 4)
+		local resourceWidth = math.max(44, math.floor((width - 36) / (#TalentTreeConfig.EnergyOrder + 1)))
+		for _, label in pairs(resourceLabels) do
+			label.Size = UDim2.new(0, resourceWidth, 1, 0)
+		end
+		coinsLabel.Size = UDim2.new(0, resourceWidth, 1, 0)
+		local tabAvailableWidth = width - titleWidth - 62
+		local tabWidth = math.max(72, math.floor((tabAvailableWidth - 12) / #FACTION_TABS))
+		for _, button in ipairs(tabButtons) do
+			button.Size = UDim2.new(0, tabWidth, 1, 0)
+		end
+	else
+		titleLabel.Size = UDim2.new(0, 300, 0, 32)
+		tabRow.Position = UDim2.new(0, 320, 0, 8)
+		tabRow.Size = UDim2.new(0, 400, 0, 32)
+		resourceLayout.Padding = UDim.new(0, 12)
+		for _, label in pairs(resourceLabels) do
+			label.Size = UDim2.new(0, 90, 1, 0)
+		end
+		coinsLabel.Size = UDim2.new(0, 90, 1, 0)
+		for _, button in ipairs(tabButtons) do
+			button.Size = UDim2.new(0, 126, 1, 0)
+		end
+	end
+
+	if isCompactLayout then
+		local treeWidth = width - 2 * COLUMN_GAP
+		treeScroll.Position = UDim2.new(0, COLUMN_GAP, 0, contentTop)
+		treeScroll.Size = UDim2.new(0, treeWidth, 0, contentHeight)
+		local scale = math.clamp(treeWidth / TREE_CANVAS_WIDTH, 0.55, 1)
+		treeContentScale.Scale = scale
+		treeScroll.CanvasSize = UDim2.fromOffset(TREE_CANVAS_WIDTH * scale, TREE_CANVAS_HEIGHT * scale)
+
+		local detailAvailableWidth = math.max(260, width - 2 * COLUMN_GAP)
+		local detailMinWidth = math.min(340, detailAvailableWidth)
+		local detailWidth = math.clamp(math.floor(width * 0.62), detailMinWidth, detailAvailableWidth)
+		detailPanel.Position = UDim2.new(1, -detailWidth - COLUMN_GAP, 0, contentTop)
+		detailPanel.Size = UDim2.new(0, detailWidth, 0, contentHeight)
+		detailPanel.Visible = compactDetailsOpen
+	else
+		treeContentScale.Scale = 1
+		treeScroll.CanvasSize = UDim2.fromOffset(TREE_CANVAS_WIDTH, TREE_CANVAS_HEIGHT)
+		local detailWidth = math.clamp(
+			width - TREE_MAX_WIDTH - 3 * COLUMN_GAP,
+			DETAIL_MIN_WIDTH,
+			DETAIL_MAX_WIDTH
+		)
+		local treeWidth = math.min(TREE_MAX_WIDTH, width - detailWidth - 3 * COLUMN_GAP)
+		local total = treeWidth + COLUMN_GAP + detailWidth
+		local x = math.max(COLUMN_GAP, math.floor((width - total) / 2))
+
+		treeScroll.Position = UDim2.new(0, x, 0, contentTop)
+		treeScroll.Size = UDim2.new(0, treeWidth, 0, contentHeight)
+		detailPanel.Position = UDim2.new(0, x + treeWidth + COLUMN_GAP, 0, contentTop)
+		detailPanel.Size = UDim2.new(0, detailWidth, 0, contentHeight)
+		detailPanel.Visible = true
+	end
+
+	if detailBackButton then
+		detailBackButton.Visible = isCompactLayout and compactDetailsOpen
+	end
 end
 
 panel:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutColumns)
@@ -402,6 +487,25 @@ detailResearchButton.Visible = false
 detailResearchButton.Parent = detailPanel
 applyComicStyle(detailResearchButton, 10, 2)
 
+detailBackButton = Instance.new("TextButton")
+detailBackButton.Name = "BackToTreeButton"
+detailBackButton.Size = UDim2.new(0, 72, 0, 28)
+detailBackButton.AnchorPoint = Vector2.new(1, 0)
+detailBackButton.Position = UDim2.new(1, -8, 0, 8)
+detailBackButton.BackgroundColor3 = Color3.fromRGB(70, 68, 90)
+detailBackButton.Font = Enum.Font.FredokaOne
+detailBackButton.TextScaled = true
+detailBackButton.TextColor3 = Color3.new(1, 1, 1)
+detailBackButton.Text = "← TREE"
+detailBackButton.ZIndex = 5
+detailBackButton.Visible = false
+detailBackButton.Parent = detailPanel
+applyComicStyle(detailBackButton, 8, 2)
+detailBackButton.MouseButton1Click:Connect(function()
+	compactDetailsOpen = false
+	layoutColumns()
+end)
+
 local closeButton = Instance.new("TextButton")
 closeButton.Size = UDim2.new(0, 32, 0, 32)
 closeButton.AnchorPoint = Vector2.new(1, 0)
@@ -469,7 +573,6 @@ local function getEffectTotal(factionName, effectKey, levelsOverride)
 	return total
 end
 
-local selectedTalentId = nil
 local currentFaction = "Kaiju"
 local nodeRefs = {}
 
@@ -560,7 +663,7 @@ local function drawLineSegment(fromPos, toPos, thickness)
 	line.BackgroundColor3 = Color3.fromRGB(80, 76, 98)
 	line.BorderSizePixel = 0
 	line.ZIndex = 60
-	line.Parent = treeScroll
+	line.Parent = treeContent
 end
 
 -- Gebogene Verbindungslinie: quadratische Bezier-Kurve (EIN Kontrollpunkt, wölbt sich
@@ -640,6 +743,10 @@ local STATE_COLORS = {
 -- Werte, Kosten (Energie + Coins), Forschungszeit, Vorstufen-Hinweis falls gesperrt. =====
 local function selectTalent(talent, state, level)
 	selectedTalentId = talent.id
+	if isCompactLayout then
+		compactDetailsOpen = true
+		layoutColumns()
+	end
 
 	detailEmpty.Visible = false
 	detailIcon.Visible = true
@@ -770,7 +877,7 @@ local function buildNode(talent, position, isActiveFaction)
 	button.BackgroundColor3 = STATE_COLORS[state]
 	button.Text = ""
 	button.ZIndex = 62
-	button.Parent = treeScroll
+	button.Parent = treeContent
 	local nodeCorner, nodeStroke = applyComicStyle(button, 44, 3)
 	if talent.isTradeoff then
 		nodeStroke.Color = Color3.fromRGB(230, 140, 40)
@@ -810,7 +917,7 @@ local function buildNode(talent, position, isActiveFaction)
 	infoLabel.TextColor3 = Color3.fromRGB(200, 200, 210)
 	infoLabel.Text = talent.name
 	infoLabel.ZIndex = 61
-	infoLabel.Parent = treeScroll
+	infoLabel.Parent = treeContent
 
 	button.MouseButton1Click:Connect(function()
 		selectTalent(talent, state, level)
@@ -840,6 +947,8 @@ local function renderTree(factionName)
 	if factionName ~= currentFaction then
 		-- Fraktion gewechselt -- Auswahl gehört zum alten Baum, macht hier keinen Sinn mehr.
 		selectedTalentId = nil
+		compactDetailsOpen = false
+		layoutColumns()
 		detailEmpty.Visible = true
 		detailIcon.Visible = false
 		detailName.Visible = false
@@ -862,8 +971,8 @@ local function renderTree(factionName)
 	-- Klassiker), wodurch alte Verbindungslinien von früheren Aufrufen liegen bleiben und
 	-- sich mit den neuen kreuzen.
 	local toDestroy = {}
-	for _, child in ipairs(treeScroll:GetChildren()) do
-		if not child:IsA("UICorner") and not child:IsA("UIStroke") then
+	for _, child in ipairs(treeContent:GetChildren()) do
+		if not child:IsA("UIScale") then
 			table.insert(toDestroy, child)
 		end
 	end
@@ -909,12 +1018,14 @@ for _, tabConfig in ipairs(FACTION_TABS) do
 	tabButton.TextColor3 = Color3.new(1, 1, 1)
 	tabButton.Text = tabConfig.icon .. " " .. tabConfig.label
 	tabButton.Parent = tabRow
+	table.insert(tabButtons, tabButton)
 	applyComicStyle(tabButton, 8, 2)
 
 	tabButton.MouseButton1Click:Connect(function()
 		renderTree(tabConfig.key)
 	end)
 end
+layoutColumns()
 
 -- ===== Forschungs-Statusanzeige aktualisieren =====
 -- ===== Eigenständiges HUD-Widget: zeigt den Forschungs-Fortschritt AUCH wenn das
