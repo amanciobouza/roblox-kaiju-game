@@ -29,8 +29,21 @@ CityAlertConfig.Cities = {
 		-- falls das Gebäude kein eigenes "AlertValue"-Attribut in Studio gesetzt hat.
 		AlertPerHP = 0.5,
 
-		FireEngineHP = 300,
-		FireEngineCount = 1, -- 1-3 laut Vorgabe, Village bekommt die untere Grenze
+		-- Die Spezifikation setzt fuer die Feuerwehr eine Referenz-Aufraeumzeit von rund
+		-- einer Minute an, Verfolgung eingerechnet. Mit 300 Lebenspunkten waren das
+		-- gegen den Eintrittsschaden von 17 nur 18 Schlaege oder nicht einmal zwei
+		-- Fokus-Angriffe -- ein Fokus allein macht 255. Das war kein Auftrag, das war ein
+		-- Zwischenfall.
+		--
+		-- Der Wert stammt aus der Zeit vor der Massstabs-Korrektur, als der Grundschaden
+		-- noch bei 8 lag und die Flaeche beim 1,75-fachen. Er ist mitgewachsen: 900
+		-- ergeben 53 Schlaege oder dreieinhalb Fokus-Angriffe.
+		FireEngineHP = 900,
+		-- Zwei statt einem. Nicht wegen der Lebenspunkte, sondern wegen der WIRKUNG: ein
+		-- einzelnes Fahrzeug loescht bei 24 Gebaeuden zu wenig, um den Ertrag spuerbar zu
+		-- druecken -- und genau das ist laut Spezifikation seine Aufgabe. Die Vorgabe
+		-- nennt 1 bis 3; das Village bleibt damit im Rahmen.
+		FireEngineCount = 2,
 		FireEngineSpeed = 14, -- Studs/Sekunde
 		FirefightingRate = 8, -- Energie/Sekunde, die ein Feuerwehrauto einer Feuerquelle entzieht
 		FirefightingRange = 45, -- Studs -- muss so nah dran sein, um zu löschen
