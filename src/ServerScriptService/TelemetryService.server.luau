@@ -213,6 +213,16 @@ end
 
 local accumulator = 0
 
+-- Steht die Stadt gerade im City-Broken-Fenster? Beantwortet zwei Fragen an derselben
+-- Marke: wann ein Lauf endet -- und wann KEIN neuer beginnen darf.
+local function isCityBroken(cityAlertFolder, cityName)
+	if not cityAlertFolder or not cityName then
+		return false
+	end
+	local brokenValue = cityAlertFolder:FindFirstChild(cityName .. "CityBroken")
+	return brokenValue ~= nil and brokenValue.Value == true
+end
+
 RunService.Heartbeat:Connect(function(deltaTime)
 	accumulator += deltaTime
 	if accumulator < SAMPLE_INTERVAL then
@@ -248,6 +258,17 @@ RunService.Heartbeat:Connect(function(deltaTime)
 		if not run then
 			-- Ein Lauf beginnt beim ERSTEN SCHADEN in einer Stadt, nicht beim Betreten:
 			-- die Zeit, in der man sich umsieht, gehoert nicht in den Kampfwert.
+			--
+			-- Solange die Stadt gebrochen ist, beginnt KEIN neuer Lauf. Das
+			-- City-Broken-Fenster dauert 75 Sekunden, und die Marke steht die ganze Zeit
+			-- -- der Lauf endete also in derselben Abtastung wieder, in der er begann.
+			-- Der Zerstoerungsrausch danach ist die Auszahlung des gerade beendeten
+			-- Laufs, kein neuer: er gehoert in keine Messung.
+			if cityName and isCityBroken(cityAlertFolder, cityName) then
+				player:SetAttribute("TelemetrySeenDamage", stat(player, "DamageDealt"))
+				continue
+			end
+
 			if cityName and stat(player, "DamageDealt") > 0 then
 				local seenDamage = player:GetAttribute("TelemetrySeenDamage") or 0
 				if stat(player, "DamageDealt") > seenDamage then
@@ -311,8 +332,7 @@ RunService.Heartbeat:Connect(function(deltaTime)
 				end
 			end
 
-			local brokenValue = cityAlertFolder:FindFirstChild(run.city .. "CityBroken")
-			if brokenValue and brokenValue.Value == true then
+			if isCityBroken(cityAlertFolder, run.city) then
 				finishRun(player, "CityBroken")
 				continue
 			end
@@ -324,9 +344,18 @@ RunService.Heartbeat:Connect(function(deltaTime)
 			local current = snapshotOf(player)
 			local delta = {}
 			for key, value in pairs(current) do
-				local before = run.previous[key] or 0
-				if value ~= before then
-					delta[key] = value - before
+				-- XP ist KEIN Zaehler, sondern der Fortschritt INNERHALB des Levels: beim
+				-- Aufstieg faellt er zurueck, und die Differenz wurde dann tief negativ
+				-- (im letzten Log bis -24311). Ein Zuwachs laesst sich daraus ohne die
+				-- Levelkurve nicht rekonstruieren -- der Wert steht deshalb unten als
+				-- absoluter Stand, nicht hier als Differenz. Die Frage, die er
+				-- beantworten sollte, beantwortet ohnehin EnergyReceived: eine
+				-- tatsaechlich erhaltene Energie ist ein XP.
+				if key ~= "XP" then
+					local before = run.previous[key] or 0
+					if value ~= before then
+						delta[key] = value - before
+					end
 				end
 			end
 			run.previous = current
@@ -338,6 +367,7 @@ RunService.Heartbeat:Connect(function(deltaTime)
 				arm = current.ArmPower,
 				leg = current.LegPower,
 				body = current.BodyPower,
+				xp = current.XP, -- absoluter Stand im aktuellen Level, siehe oben
 				delta = delta,
 			})
 		end
