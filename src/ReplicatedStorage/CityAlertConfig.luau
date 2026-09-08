@@ -22,9 +22,20 @@ CityAlertConfig.CityOrder = { "Village", "SmallTown", "City", "LargeCity", "Mega
 CityAlertConfig.Cities = {
 	Village = {
 		-- Alert Level 1 -> 2: wie viel Alert-Fortschritt nötig ist, bis die Feuerwehr anrückt
-		AlertThresholdLevel2 = 100,
+		--
+		-- Die Zahlen kommen aus der Village-Spezifikation und sind dort in Durchgängen
+		-- gedacht: das ganze Dorf einmal abzuräumen ergibt rund 49 Punkte. Stufe 2 nach
+		-- einem Durchgang, Stufe 3 nach viereinhalb -- und danach City Broken, was zusammen
+		-- die zwanzig Minuten Referenzzeit ergibt.
+		--
+		-- Vorher standen hier 100 und 400, also zwei und acht Durchgänge. Im Testlauf war
+		-- die Folge, dass Stufe 3 nach dreizehn Minuten aktiven Spiels noch nicht erreicht
+		-- war und City Broken damit unerreichbar blieb. Der Fortschritt zerfällt übrigens
+		-- nur, solange KEIN Spieler in der Stadt ist -- Aussitzen hilft also nicht, die
+		-- Schwellen sind das Einzige, was zählt.
+		AlertThresholdLevel2 = 50,
 		-- Alert Level 2 -> 3: Barrikaden-Schild-Cluster (siehe BarricadeClusterService.lua)
-		AlertThresholdLevel3 = 400,
+		AlertThresholdLevel3 = 225,
 		-- Alert-Wert pro HP eines zerstörten Gebäudes (AlertValue = MaxHealth * AlertPerHP),
 		-- falls das Gebäude kein eigenes "AlertValue"-Attribut in Studio gesetzt hat.
 		AlertPerHP = 0.5,
