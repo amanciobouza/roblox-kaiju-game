@@ -738,7 +738,9 @@ MeltdownExplosionEvent.OnClientEvent:Connect(function()
 	}):Play()
 end)
 
--- ===== 3 Kraft-Balken NEBENEINANDER: Bein/Arm/Körper, Cap = Level x StatCapPerLevel =====
+-- ===== 3 Kraft-Balken NEBENEINANDER: Bein/Arm/Körper =====
+-- Die Obergrenze kommt aus den Spieler-Attributen StatCap/ArmStatCap/LegStatCap (siehe
+-- unten), NICHT aus einer Formel im Client -- der Server rechnet sie über eine Kurve.
 -- Eigener kleiner Frame, direkt unter dem kompakten Player-Status-Cluster -- im HUD-
 -- Redesign nicht explizit erwähnt, bekommt aber trotzdem einen aufgeräumten Platz statt
 -- im (jetzt nicht mehr vorhandenen) grossen alten levelFrame zu stecken.

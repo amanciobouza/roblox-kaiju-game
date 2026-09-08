@@ -143,7 +143,12 @@ local PurchaseSkinEvent = RemoteEventUtils.GetOrCreate("PurchaseSkinEvent")
 local XP_PER_LEVEL_BASE = 12000 -- ÷100 (war 1.200.000) -- konsistent zur XP_SCALE-Korrektur in HouseHandler.lua
 local XP_PER_LEVEL_GROWTH = 1.18
 local LEVELS_PER_SKIN_TIER = 10 -- alle 10 Level braucht es den nächsten Skin, um weiterzuleveln (1 Tier pro Stadtzone)
-local STAT_CAP_PER_LEVEL = 10 -- max. Wert pro Kraft-Stat (Bein/Arm/Körper) = Level * 10
+-- ACHTUNG, historischer Wert: die echte Obergrenze ist KEINE Gerade "Level * 10", sondern
+-- die Stützpunkt-Kurve STAT_CAP_BREAKPOINTS in TrainingHandler. Diese Zahl wird zwar
+-- unten nach ReplicatedStorage veröffentlicht, aber von niemandem mehr gelesen -- das HUD
+-- zieht seine Balken aus den echten Spieler-Attributen StatCap/ArmStatCap/LegStatCap.
+-- Nur deshalb bleibt sie hier stehen, statt mitskaliert zu werden.
+local STAT_CAP_PER_LEVEL = 10
 
 -- Evolution-Skills: jeder Level gibt +BONUS_PRO_LEVEL auf den jeweiligen Effekt
 local EVO_BONUS_PER_LEVEL = 0.02 -- Speed: +2% pro Level

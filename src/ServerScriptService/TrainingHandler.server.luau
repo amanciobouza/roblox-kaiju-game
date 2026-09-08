@@ -46,6 +46,20 @@ end)
 -- 1.500.000) -- weiterhin ~11 Treffer am Zonen-Einstieg, Level 49 bewusst etwas härter
 -- (~18 Treffer) für den grössten Megacity-Boss. Der Sprung zwischen den letzten beiden
 -- Ankerpunkten sank dadurch von ×154 auf ×13.
+-- ===== Massstab der Kraftwerte =====
+-- Der Anker der Village-Spezifikation lautet: ein Cottage mit 100 Lebenspunkten faellt
+-- beim Eintritt nach SECHS Schlaegen, also bei 17 Schaden. Der Schaden ist
+-- ArmPower/ARM_CAP_SCALE, und ArmPower startet bei 80 % der Obergrenze fuer Level 1 --
+-- die lag bei 10 und ergab damit 8 Schaden, also 13 Schlaege statt 6.
+--
+-- Dieser Faktor hebt die GANZE Kurve an, statt einzelne Stuetzpunkte zu verschieben: so
+-- bleibt ihre Form erhalten und nur der Massstab aendert sich. Bei 2.1 wird die
+-- Obergrenze fuer Level 1 zu 22, der Startwert zu 1760 und der Schaden zu 17.
+--
+-- Das Training wird dadurch NICHT langsamer: der Gewinn je Klick ist
+-- Obergrenze * TRAINING_PROGRESS_RATIO, waechst also im selben Verhaeltnis mit.
+local STAT_CAP_SCALE = 2.1
+
 local STAT_CAP_BREAKPOINTS = {
 	{ level = 0, cap = 9 },
 	{ level = 9, cap = 45 },
@@ -107,11 +121,11 @@ local function rawStatCapForLevel(level)
 			local t = (b.level > a.level) and (level - a.level) / (b.level - a.level) or 0
 			-- Exponentielle (nicht lineare) Interpolation zwischen den beiden Ankerpunkten
 			local logCap = math.log(a.cap) + t * (math.log(b.cap) - math.log(a.cap))
-			return math.max(math.floor(math.exp(logCap)), 1)
+			return math.max(math.floor(math.exp(logCap) * STAT_CAP_SCALE), 1)
 		end
 	end
 
-	return STAT_CAP_BREAKPOINTS[#STAT_CAP_BREAKPOINTS].cap
+	return math.floor(STAT_CAP_BREAKPOINTS[#STAT_CAP_BREAKPOINTS].cap * STAT_CAP_SCALE)
 end
 
 -- WICHTIG: Die rohe Formel oben kann bei kleinen Level-Unterschieden (v.a. ganz am
