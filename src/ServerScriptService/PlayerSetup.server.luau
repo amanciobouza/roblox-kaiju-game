@@ -1442,6 +1442,13 @@ ResetPlayerDataEvent.OnServerEvent:Connect(function(player, resetPrologue)
 		_G.EndShowdown(player, "Reset")
 	end
 
+	-- Einen laufenden Telemetrie-Lauf abschliessen. Ohne das liefe er ueber den Reset
+	-- hinweg weiter und mischte zwei voellig verschiedene Spielzustaende in einen
+	-- Datensatz -- der waere dann fuer die Auswertung wertlos.
+	if _G.EndTelemetryRun then
+		_G.EndTelemetryRun(player, "Reset")
+	end
+
 	local leaderstats = player:FindFirstChild("leaderstats")
 	if not leaderstats then
 		return

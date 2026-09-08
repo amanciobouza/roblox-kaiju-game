@@ -78,7 +78,10 @@ local function isBlocked(player, cityName)
 
 	-- Während CITY BROKEN: die 75 Sekunden freie Zerstörung sind ausdrücklich die
 	-- Belohnungsphase ohne Eskalation.
-	local cityAlertFolder = ReplicatedStorage:FindFirstChild("CityAlert")
+	-- Der Ordner heisst CityAlertValues, nicht CityAlert. Mit dem falschen Namen war der
+	-- CITY-BROKEN-Ausschluss wirkungslos: FindFirstChild lieferte nil, die Pruefung fiel
+	-- still durch, und ein Showdown haette auch waehrend der Siegesphase starten koennen.
+	local cityAlertFolder = ReplicatedStorage:FindFirstChild("CityAlertValues")
 	local broken = cityAlertFolder and cityAlertFolder:FindFirstChild(cityName .. "CityBroken")
 	if broken and broken.Value == true then
 		return "CITY BROKEN"

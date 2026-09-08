@@ -88,7 +88,7 @@ local panel = Instance.new("Frame")
 panel.Name = "DebugPanel"
 -- Vorletzter Summand: Zeile für den Spec-Prüfer-Knopf.
 -- Letzter Summand: drei Zeilen für den Showdown.
-panel.Size = UDim2.new(0, 340, 0, 340 + 60 + 90 + 50 + 50 + 50 + 50 + 150 + 34)
+panel.Size = UDim2.new(0, 340, 0, 340 + 60 + 90 + 50 + 50 + 50 + 50 + 150 + 34 + 40)
 panel.AnchorPoint = Vector2.new(0.5, 0.5)
 panel.Position = UDim2.new(0.5, 0, 0.5, 0)
 panel.BackgroundColor3 = Color3.fromRGB(35, 32, 45)
@@ -952,3 +952,45 @@ shortDurationButton.MouseButton1Click:Connect(function()
 		and Color3.fromRGB(60, 90, 140)
 		or Color3.fromRGB(90, 90, 140)
 end)
+
+-- ===== Telemetrie-Schalter =====
+-- Die Aufzeichnung laeuft standardmaessig fuer alle. Dieser Knopf legt sie still, wenn
+-- gerade an etwas anderem gearbeitet wird -- ein 20-Minuten-Lauf erzeugt sonst rund
+-- hundert Zeilen im Ausgabefenster, die jede andere Meldung verdecken.
+local DebugTelemetryEvent = waitForRemote("DebugTelemetryEvent")
+
+local telemetryEnabled = true
+local telemetryButton = Instance.new("TextButton")
+telemetryButton.Name = "DebugTelemetryButton"
+telemetryButton.Size = UDim2.new(1, -32, 0, 30)
+telemetryButton.Position = UDim2.new(0, 16, 0, 846)
+telemetryButton.BackgroundColor3 = Color3.fromRGB(70, 110, 90)
+telemetryButton.Font = Enum.Font.FredokaOne
+telemetryButton.TextScaled = true
+telemetryButton.TextColor3 = Color3.new(1, 1, 1)
+telemetryButton.Text = "📊 Telemetrie: AN"
+telemetryButton.Parent = panel
+applyComicStyle(telemetryButton, 8, 2)
+
+local function showTelemetryState()
+	telemetryButton.Text = telemetryEnabled and "📊 Telemetrie: AN" or "📊 Telemetrie: AUS"
+	telemetryButton.BackgroundColor3 = telemetryEnabled
+		and Color3.fromRGB(70, 110, 90)
+		or Color3.fromRGB(90, 90, 100)
+end
+
+telemetryButton.MouseButton1Click:Connect(function()
+	telemetryEnabled = not telemetryEnabled
+	showTelemetryState()
+	if DebugTelemetryEvent then
+		DebugTelemetryEvent:FireServer(telemetryEnabled)
+	end
+end)
+
+if DebugTelemetryEvent then
+	-- Der Server hat das letzte Wort: er meldet zurueck, was tatsaechlich gilt.
+	DebugTelemetryEvent.OnClientEvent:Connect(function(actual)
+		telemetryEnabled = actual == true
+		showTelemetryState()
+	end)
+end
