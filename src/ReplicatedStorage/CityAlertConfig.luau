@@ -62,8 +62,20 @@ CityAlertConfig.Cities = {
 
 		WaterTowerEfficiencyBonus = 0.5, -- +50% Löschrate, solange der Wasserturm intakt ist
 
-		AlertDecayDelay = 20, -- Sekunden ohne neue Zerstörung, bevor der Abbau beginnt
-		AlertDecayRate = 4, -- Alert-Punkte/Sekunde, die danach abgebaut werden
+		AlertDecayDelay = 20, -- Sekunden NACH dem Verlassen der Stadt, bevor der Abbau beginnt
+		-- Alert-Punkte/Sekunde, die danach abgebaut werden. Der Abbau läuft NUR, solange
+		-- kein Spieler in der Stadt ist (siehe CityAlertService, cityEmptySince) --
+		-- Aussitzen innerhalb der Stadt bringt nichts.
+		--
+		-- Vorher 4/s, und das machte Alarmstufe 3 praktisch unerreichbar: bei einer
+		-- Schwelle von 225 war nach 76 Sekunden Abwesenheit ALLES weg. Im Testlauf gab es
+		-- zwei Trainingsausflüge von gut zwei Minuten, und beide Male fiel der Alarm von
+		-- Stufe 2 auf 0 zurück -- viereinhalb Dorf-Durchgänge Fortschritt, gelöscht.
+		--
+		-- Die Spezifikation will, dass ein Rückzug den Lauf VERLÄNGERT, nicht dass er ihn
+		-- zurücksetzt. Bei 0.5/s kostet ein zweiminütiger Ausflug rund 50 Punkte, also
+		-- genau einen Dorf-Durchgang. Spürbar, aber aufholbar.
+		AlertDecayRate = 0.5,
 
 		-- ===== Stufe 3: Barrikaden-Schild-Cluster =====
 		BarricadeScale = 1.0,
