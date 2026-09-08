@@ -11,6 +11,6 @@
 -- scheinbar wirkungslos blieb -- sie war schlicht nicht im laufenden Spiel.
 
 return {
-	Hash = "3206663ddd",
+	Hash = "6cab011f2b",
 	FileCount = 105,
 }

@@ -67,7 +67,7 @@ label.TextScaled = true
 label.TextColor3 = Color3.new(1, 1, 1)
 label.TextStrokeColor3 = Color3.new(0, 0, 0)
 label.TextStrokeTransparency = 0.4
-label.Text = "Absorb (F)"
+label.Text = "Absorb"
 label.Parent = absorbButton
 
 local function onPressStart()
@@ -102,20 +102,49 @@ absorbButton.MouseLeave:Connect(function()
 	end
 end)
 
--- ===== Tastenkürzel: F gehalten macht dasselbe wie der Button =====
-local ABSORB_KEY = Enum.KeyCode.F
+-- ===== Eigene Eingabe, getrennt vom Schlag =====
+-- Das Absorbieren lag frueher ebenfalls auf F -- derselben Taste wie der Schlag. Damit
+-- war die Absicht der Balancing-Spezifikation technisch unmoeglich: Absorbieren und
+-- Angreifen sollen GLEICHZEITIG gehen, denn nur dann gehen drei ihrer Zahlen zusammen
+-- auf (88 % erhaltene Energie, 20 Minuten Referenzzeit, viereinhalb Durchgaenge).
+--
+-- Strg statt einer Buchstabentaste, weil der kleine Finger sie halten kann, waehrend die
+-- uebrigen Finger weiter laufen und angreifen. Beide Strg-Tasten, damit Links- wie
+-- Rechtshaender ihre gewohnte erwischen. Am Gamepad die linke Schultertaste -- dort liegt
+-- der Zeigefinger ohnehin und die Daumen bleiben frei.
+local ABSORB_KEYS = {
+	[Enum.KeyCode.LeftControl] = true,
+	[Enum.KeyCode.RightControl] = true,
+	[Enum.KeyCode.ButtonL1] = true,
+}
 
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
 	if gameProcessedEvent then
 		return
 	end
-	if input.KeyCode == ABSORB_KEY then
+	if ABSORB_KEYS[input.KeyCode] then
 		onPressStart()
 	end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-	if input.KeyCode == ABSORB_KEY then
+	if ABSORB_KEYS[input.KeyCode] then
 		onPressEnd()
 	end
 end)
+
+-- Die Beschriftung nennt die Taste des Geraets, an dem gerade gespielt wird. Auf einem
+-- Beruehrungsbildschirm gibt es keine, dort steht nur der Name.
+local function refreshAbsorbLabel()
+	local lastInput = UserInputService:GetLastInputType()
+	if lastInput == Enum.UserInputType.Touch then
+		label.Text = "Absorb"
+	elseif string.find(tostring(lastInput), "Gamepad") then
+		label.Text = "Absorb (L1)"
+	else
+		label.Text = "Absorb (Ctrl)"
+	end
+end
+
+UserInputService.LastInputTypeChanged:Connect(refreshAbsorbLabel)
+refreshAbsorbLabel()
