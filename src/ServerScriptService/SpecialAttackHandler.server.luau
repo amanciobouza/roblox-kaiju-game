@@ -73,7 +73,24 @@ local FOCUS_CHARGE_TIME = 2 -- Sekunden Aufladezeit, bevor der Strahl wirklich l
 -- Gleiches Prinzip: kurzer Anti-Spam-Cooldown statt langer Wartezeit, Freischaltung läuft
 -- über Special Energy.
 local AREA_ATTACK_COOLDOWN = 1.5 -- Sekunden -- kurzer Anti-Spam-Schutz, nicht mehr die eigentliche Wartezeit
-local AREA_DAMAGE_MULTIPLIER = 1.75 -- x-facher normaler Schaden -- war 3, aber in Kombination mit hohem Endgame-Schaden UND mehreren gleichzeitig getroffenen Zielen zu stark (ganze Stadtblöcke in Sekunden plattgemacht)
+-- x-facher normaler Schaden, PRO getroffenem Gebäude.
+--
+-- Die 5 kommen aus der Village-Spezifikation und legen den Schnittpunkt zwischen den
+-- beiden Specials fest -- beide kosten gleich viel Combat Energy, also entscheidet allein
+-- die Zahl der Ziele:
+--   1 Ziel   ->  5 gegen 15 (Fokus)   -- Fokus klar besser
+--   2 Ziele  -> 10 gegen 15           -- Fokus besser
+--   3 Ziele  -> 15 gegen 15           -- gleichauf
+--   4+ Ziele -> Area wird effizienter
+-- Der Fokus kommt auf seine 15 über 10 Ticks à 1.5 (siehe oben).
+--
+-- ACHTUNG: der Wert stand schon einmal auf 3 und wurde auf 1.75 gesenkt, weil er im
+-- Endgame ganze Stadtblöcke in Sekunden plattmachte. Diese Sorge gilt weiterhin -- die
+-- Spezifikation deckt bisher nur Kapitel I ab. Wenn sich das in den grossen Städten
+-- wiederholt, ist die Antwort NICHT, diese Zahl wieder zu senken (das bricht den
+-- Schnittpunkt oben), sondern die Zahl gleichzeitig getroffener Ziele zu begrenzen
+-- oder den Radius zu deckeln.
+local AREA_DAMAGE_MULTIPLIER = 5
 -- Radius wächst genau wie beim Energie-Sammeln (EnergyCollectionHandler.lua) mit dem
 -- Körper-Wert -- unterproportional (Exponent < 1), automatisch durch den Level-Cap
 -- gedeckelt -- nur etwas großzügiger als beim reinen Energie-Sammeln.

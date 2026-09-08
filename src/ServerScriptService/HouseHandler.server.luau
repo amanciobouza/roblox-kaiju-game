@@ -1787,6 +1787,12 @@ local ROOF_TOLERANCE = 3 -- Studs Toleranz, um "steht auf dem Dach" zu erkennen
 -- damit das HUD einen "Sprung"-Button mit Cooldown-Anzeige zeigen kann.
 local JUMP_ATTACK_COOLDOWN = 1.2
 
+-- Schaden der Sprunglandung: JUMP_BASE_MULTIPLIER + Bein-Verhältnis * JUMP_LEG_BONUS,
+-- angewandt auf den Grundschaden. Die Herleitung der beiden Zahlen steht unten an der
+-- Anwendungsstelle in onHouseTouched.
+local JUMP_BASE_MULTIPLIER = 2
+local JUMP_LEG_BONUS = 1.25
+
 local jumpAttackCooldownValue = Instance.new("NumberValue")
 jumpAttackCooldownValue.Name = "JumpAttackCooldown"
 jumpAttackCooldownValue.Value = JUMP_ATTACK_COOLDOWN
@@ -2002,16 +2008,23 @@ onHouseTouched = function(house, housePart, hit)
 
 	if isOnRoof and isJumping then
 		-- Springen zählt immer, unabhängig von aktiver Bewegung. Der Multiplikator
-		-- kommt jetzt vom BEIN-Verhältnis (aktueller Wert / aktueller Cap): 1x bei
-		-- Bein=0, bis zu 2x bei voll trainiertem Bein. Basisschaden selbst kommt
-		-- weiterhin nur vom Arm-Wert (siehe PlayerSetup.lua, recalculateStrength).
+		-- kommt vom BEIN-Verhältnis (aktueller Wert / aktueller Cap). Basisschaden
+		-- selbst kommt weiterhin nur vom Arm-Wert (siehe PlayerSetup.lua,
+		-- recalculateStrength).
+		--
+		-- Die Village-Spezifikation setzt die Landung auf DREI Grundtreffer. Der
+		-- Referenzspieler startet mit 80 % der Bein-Obergrenze (siehe
+		-- computeStarterStats), also trifft er bei einem Verhältnis von 0.8 genau die
+		-- 3.0 -- daher diese beiden Zahlen: 2x ohne jedes Beintraining, 3.25x bei voll
+		-- trainiertem Bein. Der Sprung ist ausdrücklich eine gültige
+		-- Zerstörungsstrategie und darf auch gegen Einzelgebäude lohnen.
 		local legPower = player:FindFirstChild("LegPower")
 		local legValue = legPower and legPower.Value or 0
 		-- "LegStatCap" (Bein-spezifischer, ×100 skalierter Cap) statt dem generischen
 		-- "StatCap" -- sonst wäre das Verhältnis durch die Skalierung verfälscht.
 		local legCap = math.max(player:GetAttribute("LegStatCap") or 1, 1)
 		local legRatio = math.clamp(legValue / legCap, 0, 1)
-		local jumpMultiplier = 1 + legRatio -- 1x bis 2x
+		local jumpMultiplier = JUMP_BASE_MULTIPLIER + legRatio * JUMP_LEG_BONUS -- 2x bis 3.25x
 
 		damage = baseDamage * jumpMultiplier
 
