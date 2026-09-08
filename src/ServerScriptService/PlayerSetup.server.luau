@@ -1380,9 +1380,12 @@ PurchaseSkinEvent.OnServerEvent:Connect(function(player, skinId)
 end)
 
 -- ===== Debug: Alle Werte auf den Ausgangszustand zurücksetzen =====
-local ResetPlayerDataEvent = Instance.new("RemoteEvent")
-ResetPlayerDataEvent.Name = "ResetPlayerDataEvent"
-ResetPlayerDataEvent.Parent = ReplicatedStorage
+-- GetOrCreate, NICHT Instance.new: es gibt ein versioniertes Gegenstueck
+-- (ReplicatedStorage/ResetPlayerDataEvent.model.json), das Rojo bereits anlegt. Ein
+-- Instance.new daneben erzeugt ein ZWEITES Ereignis gleichen Namens -- der Client fand
+-- ueber WaitForChild das von Rojo, der Server hoerte auf seinem eigenen, und der
+-- Reset-Knopf feuerte ins Leere, ohne dass irgendwo ein Fehler entstand.
+local ResetPlayerDataEvent = RemoteEventUtils.GetOrCreate("ResetPlayerDataEvent")
 
 -- ===== Wer darf zuruecksetzen =====
 -- In Studio uneingeschraenkt. Auf einem echten Server nur diese beiden -- der Knopf
@@ -1409,7 +1412,7 @@ local function mayResetData(player)
 	return RESET_ALLOWED_NAMES[player.Name] == true
 end
 
-Players.PlayerAdded:Connect(function(player)
+local function publishResetPermission(player)
 	-- Als Attribut, nicht ueber _G: der Client kann Server-Globals nicht lesen, aber ein
 	-- Attribut am Spieler repliziert an genau diesen Client. Das Debug-Panel blendet den
 	-- Knopf danach aus -- ein sichtbarer Knopf, der nichts tut, sieht aus wie ein Fehler.
@@ -1421,7 +1424,16 @@ Players.PlayerAdded:Connect(function(player)
 			"[Kaiju-Debug] Reset-Berechtigung: %s hat die UserId %d -- bitte in "
 			.. "RESET_ALLOWED_USER_IDS eintragen.", player.Name, player.UserId))
 	end
-end)
+end
+
+Players.PlayerAdded:Connect(publishResetPermission)
+
+-- Auch fuer bereits anwesende Spieler. In Studio ist der Spieler haeufig schon da, bevor
+-- dieses Skript so weit ist -- dann feuert PlayerAdded nie, das Attribut bleibt leer, und
+-- die beiden Knoepfe im Debug-Panel waeren unsichtbar statt bloss wirkungslos.
+for _, player in ipairs(Players:GetPlayers()) do
+	publishResetPermission(player)
+end
 
 -- `resetPrologue` kommt vom zweiten Knopf: dann wird zusaetzlich das Prolog-Kennzeichen
 -- geloescht, und der Prolog laeuft beim anschliessenden Neuladen des Charakters wieder.

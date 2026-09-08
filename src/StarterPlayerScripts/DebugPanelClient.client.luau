@@ -543,11 +543,23 @@ resetButton.MouseButton1Click:Connect(function()
 	end
 	awaitingConfirm = false
 
-	if ResetPlayerDataEvent then
-		-- false = Prolog NICHT mit zuruecksetzen. Der zweite Knopf weiter unten feuert
-		-- dasselbe Ereignis mit true.
-		ResetPlayerDataEvent:FireServer(false)
+	-- Fehlt das Ereignis, wird das GEMELDET statt verschwiegen. Vorher lief die
+	-- Erfolgsmeldung unten in jedem Fall durch: der Knopf sagte "Reset!", gesendet wurde
+	-- nichts, und ein wirkungsloser Knopf war von einem wirkenden nicht zu unterscheiden.
+	if not ResetPlayerDataEvent then
+		warn("[DebugPanelClient] Reset nicht moeglich -- ResetPlayerDataEvent fehlt.")
+		resetButton.Text = "⚠️ Kein Ereignis"
+		resetButton.BackgroundColor3 = Color3.fromRGB(200, 140, 40)
+		task.delay(2.5, function()
+			resetButton.Text = "🔄 Debug Reset"
+			resetButton.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
+		end)
+		return
 	end
+
+	-- false = Prolog NICHT mit zuruecksetzen. Der zweite Knopf weiter unten feuert
+	-- dasselbe Ereignis mit true.
+	ResetPlayerDataEvent:FireServer(false)
 
 	-- Level-Regler im Debug-Fenster visuell mit zurücksetzen -- sonst würde er weiterhin
 	-- den alten Level-Wert anzeigen, obwohl der Spieler serverseitig schon auf Level 0
@@ -556,7 +568,9 @@ resetButton.MouseButton1Click:Connect(function()
 		resetLevelSliderVisual(0, "Level: 0")
 	end
 
-	resetButton.Text = "✅ Reset!"
+	-- "Gesendet", nicht "Erledigt": ob der Reset durchlief, meldet der Server zurueck
+	-- (OnClientEvent weiter unten). Der Knopf weiss es an dieser Stelle noch nicht.
+	resetButton.Text = "📤 Gesendet…"
 	resetButton.BackgroundColor3 = Color3.fromRGB(90, 200, 100)
 	task.delay(1.5, function()
 		resetButton.Text = "🔄 Debug Reset"
@@ -609,9 +623,14 @@ resetPrologueButton.MouseButton1Click:Connect(function()
 	end
 	prologueAwaitingConfirm = false
 
-	if ResetPlayerDataEvent then
-		ResetPlayerDataEvent:FireServer(true)
+	if not ResetPlayerDataEvent then
+		warn("[DebugPanelClient] Reset nicht moeglich -- ResetPlayerDataEvent fehlt.")
+		resetPrologueButton.Text = "⚠️ Kein Ereignis"
+		task.delay(2.5, resetPrologueButtonIdle)
+		return
 	end
+
+	ResetPlayerDataEvent:FireServer(true)
 	if resetLevelSliderVisual then
 		resetLevelSliderVisual(0, "Level: 0")
 	end
