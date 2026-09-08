@@ -228,7 +228,15 @@ RunService.Heartbeat:Connect(function(deltaTime)
 	local cityAlertFolder = ReplicatedStorage:FindFirstChild("CityAlertValues")
 
 	for _, player in ipairs(Players:GetPlayers()) do
+		-- ACHTUNG: CityAlertService setzt dieses Attribut ausserhalb jeder Stadt auf die
+		-- ZEICHENKETTE "None", nicht auf nil (siehe getCurrentCityForPosition). Eine
+		-- Pruefung auf blosse Anwesenheit geht darauf herein -- ein Trainingslauf im
+		-- Sanctuary startete so einen vollstaendigen Stadtlauf mit city="None" und
+		-- alert=-1, dessen Stadtuhr nie lief.
 		local cityName = player:GetAttribute("CurrentCityName")
+		if cityName == "None" then
+			cityName = nil
+		end
 		local run = runs[player]
 
 		-- Der Prolog zaehlt nicht mit: er ist eine geskriptete Sequenz mit eigenen
@@ -254,25 +262,34 @@ RunService.Heartbeat:Connect(function(deltaTime)
 		end
 
 		-- Die Stadt-Uhr laeuft nur, solange der Spieler dort ist.
-		if cityName == run.city then
+		local inCity = cityName == run.city
+		if inCity then
 			run.cityTime += elapsed
 		end
 
 		-- Hitze: jede Abtastung ins Histogramm, Zustandswechsel als eigenes Ereignis.
+		--
+		-- NUR waehrend die Stadtuhr laeuft. Der Rueckzug ins Sanctuary haelt den Lauf an;
+		-- was dort passiert, gehoert nicht in seine Zahlen. Trainingsschlaege erzeugen
+		-- ebenfalls Hitze, und ohne diese Bedingung landete ein halbstuendiges Training
+		-- vollstaendig in der Hitzeverteilung eines Stadtlaufs -- samt jedem Berserker-
+		-- und Meltdown-Ereignis, das dabei anfiel.
 		local heat = player:GetAttribute("Heat") or 0
-		table.insert(run.heatSamples, heat)
+		if inCity then
+			table.insert(run.heatSamples, heat)
 
-		local berserk = player:GetAttribute("BerserkActive") == true
-		if berserk ~= run.berserk then
-			run.berserk = berserk
-			emit(berserk and "BerserkStart" or "BerserkEnd", player, { heat = heat })
-		end
+			local berserk = player:GetAttribute("BerserkActive") == true
+			if berserk ~= run.berserk then
+				run.berserk = berserk
+				emit(berserk and "BerserkStart" or "BerserkEnd", player, { heat = heat })
+			end
 
-		local meltdown = isInMeltdown(player)
-		if meltdown ~= run.meltdown then
-			run.meltdown = meltdown
-			if meltdown then
-				emit("Meltdown", player, { heat = heat })
+			local meltdown = isInMeltdown(player)
+			if meltdown ~= run.meltdown then
+				run.meltdown = meltdown
+				if meltdown then
+					emit("Meltdown", player, { heat = heat })
+				end
 			end
 		end
 
