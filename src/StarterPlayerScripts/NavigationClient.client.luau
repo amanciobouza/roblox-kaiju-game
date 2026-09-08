@@ -1,5 +1,5 @@
--- VERSION: 2026-08-26 #2
--- FEATURE: Diagnose-Print mit Stack-Trace in setPanelVisible ergaenzt
+-- VERSION: 2026-09-08 #1
+-- FEATURE: Achievement-Karten und -Typografie fuer Mobile deutlich vergroessert
 -- Ort in Studio: StarterPlayer > StarterPlayerScripts
 -- Baut die 5 Buttons auf der linken Seite: Skins, Achievements (Platzhalter),
 -- Evolution (Skillbaum), Companion (Platzhalter, siehe Companion-Feature-Konzept), Geschenk (Zeit-Belohnungen).
@@ -26,8 +26,9 @@ local playerGui = player:WaitForChild("PlayerGui")
 -- Monitorbreite. Das liest sich schlecht: beim Zeilenwechsel findet das Auge den Anfang
 -- der naechsten Zeile nicht mehr. Statt den frei werdenden Rand leer zu lassen, wird er
 -- mit weiteren Spalten gefuellt -- kurze Zeilen UND mehr Inhalt auf einen Blick.
-local MIN_CARD_WIDTH = 460 -- darunter wird eine Achievement-Karte zu eng fuer Name + Balken
-local MAX_ACHIEVEMENT_COLUMNS = 3
+local MIN_CARD_WIDTH = 520 -- Platz fuer grosse Schrift, Beschreibung und Fortschrittsbalken
+local MAX_ACHIEVEMENT_COLUMNS = 2 -- auf Handys eine, auf grossen Bildschirmen hoechstens zwei gut lesbare Spalten
+local ACHIEVEMENT_CARD_HEIGHT = 104
 
 -- Breite des Behaelters ohne Rollbalken. AbsoluteSize enthaelt ihn mit; wer damit rechnet,
 -- bekommt eine Spalte zu viel und dann waagrechtes Rollen.
@@ -535,7 +536,7 @@ for _, achievement in ipairs(AchievementsConfig.List) do
 		layoutOrder += 1
 
 		local categoryHeader = Instance.new("TextLabel")
-		categoryHeader.Size = UDim2.new(1, 0, 0, 26)
+		categoryHeader.Size = UDim2.new(1, 0, 0, 38)
 		categoryHeader.BackgroundTransparency = 1
 		categoryHeader.Font = Enum.Font.LuckiestGuy
 		categoryHeader.TextScaled = true
@@ -555,8 +556,8 @@ for _, achievement in ipairs(AchievementsConfig.List) do
 		categoryFrame.Parent = achievementsScroll
 
 		currentCategoryGrid = Instance.new("UIGridLayout")
-		currentCategoryGrid.CellSize = UDim2.new(0, MIN_CARD_WIDTH, 0, 52)
-		currentCategoryGrid.CellPadding = UDim2.new(0, 8, 0, 8)
+		currentCategoryGrid.CellSize = UDim2.new(0, MIN_CARD_WIDTH, 0, ACHIEVEMENT_CARD_HEIGHT)
+		currentCategoryGrid.CellPadding = UDim2.new(0, 12, 0, 12)
 		currentCategoryGrid.SortOrder = Enum.SortOrder.LayoutOrder
 		currentCategoryGrid.Parent = categoryFrame
 		bindResponsiveGrid(achievementsScroll, currentCategoryGrid, MAX_ACHIEVEMENT_COLUMNS, MIN_CARD_WIDTH)
@@ -566,15 +567,15 @@ for _, achievement in ipairs(AchievementsConfig.List) do
 	local row = Instance.new("Frame")
 	row.Name = achievement.id .. "Row"
 	-- Groesse setzt das Raster; der Wert hier ist nur der Ausgangszustand.
-	row.Size = UDim2.new(0, MIN_CARD_WIDTH, 0, 52)
+	row.Size = UDim2.new(0, MIN_CARD_WIDTH, 0, ACHIEVEMENT_CARD_HEIGHT)
 	row.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
 	row.LayoutOrder = layoutOrder
 	row.Parent = currentCategoryGrid.Parent
 	applyComicStyle(row, 10, 2)
 
 	local iconLabel = Instance.new("TextLabel")
-	iconLabel.Size = UDim2.new(0, 40, 0, 40)
-	iconLabel.Position = UDim2.new(0, 6, 0, 6)
+	iconLabel.Size = UDim2.new(0, 56, 0, 56)
+	iconLabel.Position = UDim2.new(0, 8, 0, 24)
 	iconLabel.BackgroundTransparency = 1
 	iconLabel.Font = Enum.Font.FredokaOne
 	iconLabel.TextScaled = true
@@ -583,20 +584,20 @@ for _, achievement in ipairs(AchievementsConfig.List) do
 
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.Name = "NameLabel"
-	nameLabel.Size = UDim2.new(1, -158, 0, 20)
-	nameLabel.Position = UDim2.new(0, 52, 0, 4)
+	nameLabel.Size = UDim2.new(1, -210, 0, 30)
+	nameLabel.Position = UDim2.new(0, 72, 0, 8)
 	nameLabel.BackgroundTransparency = 1
-	UiTypography.Subhead(nameLabel, 16)
+	UiTypography.Subhead(nameLabel, 24)
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 	nameLabel.TextColor3 = Color3.fromRGB(235, 235, 245)
 	nameLabel.Text = achievement.name
 	nameLabel.Parent = row
 
 	local descLabel = Instance.new("TextLabel")
-	descLabel.Size = UDim2.new(1, -158, 0, 16)
-	descLabel.Position = UDim2.new(0, 52, 0, 24)
+	descLabel.Size = UDim2.new(1, -210, 0, 54)
+	descLabel.Position = UDim2.new(0, 72, 0, 40)
 	descLabel.BackgroundTransparency = 1
-	UiTypography.Body(descLabel, 14)
+	UiTypography.Body(descLabel, 20)
 	descLabel.TextXAlignment = Enum.TextXAlignment.Left
 	descLabel.TextColor3 = Color3.fromRGB(165, 165, 180)
 	descLabel.Text = achievement.description
@@ -605,8 +606,8 @@ for _, achievement in ipairs(AchievementsConfig.List) do
 	local progressBarFrame, progressFill, progressLabel
 	if achievement.type == "counter" then
 		local track = Instance.new("Frame")
-		track.Size = UDim2.new(0, 90, 0, 10)
-		track.Position = UDim2.new(1, -98, 0, 8)
+		track.Size = UDim2.new(0, 118, 0, 16)
+		track.Position = UDim2.new(1, -130, 0, 18)
 		track.BackgroundColor3 = Color3.fromRGB(210, 205, 190)
 		track.Parent = row
 		applyComicStyle(track, 5, 1)
@@ -618,8 +619,8 @@ for _, achievement in ipairs(AchievementsConfig.List) do
 		progressFill.Parent = track
 
 		progressLabel = Instance.new("TextLabel")
-		progressLabel.Size = UDim2.new(0, 90, 0, 16)
-		progressLabel.Position = UDim2.new(1, -98, 0, 20)
+		progressLabel.Size = UDim2.new(0, 118, 0, 26)
+		progressLabel.Position = UDim2.new(1, -130, 0, 40)
 		progressLabel.BackgroundTransparency = 1
 		progressLabel.Font = Enum.Font.FredokaOne
 		progressLabel.TextScaled = true
@@ -634,8 +635,8 @@ for _, achievement in ipairs(AchievementsConfig.List) do
 	local newFlag = Instance.new("TextLabel")
 	newFlag.Name = "NewFlag"
 	newFlag.AnchorPoint = Vector2.new(1, 0.5)
-	newFlag.Size = UDim2.new(0, 42, 0, 18)
-	newFlag.Position = UDim2.new(1, -8, 0.5, 0)
+	newFlag.Size = UDim2.new(0, 62, 0, 28)
+	newFlag.Position = UDim2.new(1, -10, 1, -18)
 	newFlag.BackgroundColor3 = Color3.fromRGB(235, 45, 45)
 	newFlag.Font = Enum.Font.FredokaOne
 	newFlag.TextScaled = true
