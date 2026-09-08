@@ -1963,8 +1963,6 @@ onHouseTouched = function(house, housePart, hit)
 	end
 	local isOnRoof = rootPart.Position.Y >= housePartTopY - ROOF_TOLERANCE
 
-	local state = humanoid:GetState()
-
 	-- Der Fall-Sample darf kurz vor dem eigentlichen Touched-Ereignis entstanden sein.
 	-- Das ist bei Landungen häufig der Fall: beim Touched steht der Humanoid bereits auf
 	-- "Landed"/"Running" und die aktuelle Y-Velocity ist schon nahe 0.
@@ -1976,9 +1974,19 @@ onHouseTouched = function(house, housePart, hit)
 		and (recentFallVelocity[player] or 0)
 		or rootPart.AssemblyLinearVelocity.Y
 
-	local isJumping = state == Enum.HumanoidStateType.Jumping
-		or state == Enum.HumanoidStateType.Freefall
-		or recentVelocityY < JUMP_FALL_VELOCITY_THRESHOLD
+	-- Ein Sprungangriff ist eine LANDUNG, also ausschliesslich Abwaertsbewegung.
+	--
+	-- Vorher zaehlte zusaetzlich der Humanoid-Zustand, und der war der Fehler: "Jumping"
+	-- ist der Absprung -- der Moment, in dem die Figur vom Dach NACH OBEN abstoesst und
+	-- dabei noch Kontakt hat. Ein einziger Sprung loeste damit ZWEI Treffer aus, einen
+	-- beim Absprung und einen beim Aufkommen. Der Sprung war so doppelt so stark wie
+	-- gedacht und erzeugte auch die doppelte Hitze. "Freefall" gilt ebenso beim Steigen
+	-- und half nicht dagegen.
+	--
+	-- Die Abwaertsgeschwindigkeit allein genuegt: der Heartbeat-Sammler oben merkt sich
+	-- einen schnellen Fall FALL_MEMORY_SECONDS lang, damit auch ein Touched unmittelbar
+	-- NACH dem Aufprall noch als Landung erkannt wird. Genau dafuer wurde er gebaut.
+	local isJumping = recentVelocityY < JUMP_FALL_VELOCITY_THRESHOLD
 
 	local isMoving = humanoid.MoveDirection.Magnitude > 0.1
 

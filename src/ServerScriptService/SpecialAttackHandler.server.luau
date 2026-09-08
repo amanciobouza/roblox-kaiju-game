@@ -91,15 +91,25 @@ local AREA_ATTACK_COOLDOWN = 1.5 -- Sekunden -- kurzer Anti-Spam-Schutz, nicht m
 -- Schnittpunkt oben), sondern die Zahl gleichzeitig getroffener Ziele zu begrenzen
 -- oder den Radius zu deckeln.
 local AREA_DAMAGE_MULTIPLIER = 5
--- Radius wächst genau wie beim Energie-Sammeln (EnergyCollectionHandler.lua) mit dem
--- Körper-Wert -- unterproportional (Exponent < 1), automatisch durch den Level-Cap
--- gedeckelt -- nur etwas großzügiger als beim reinen Energie-Sammeln.
-local AREA_ATTACK_RADIUS_BASE = 22 -- Studs bei Körper-Wert 0 -- angeglichen an EnergyCollectionHandler.lua
-local AREA_ATTACK_RADIUS_SCALE = 4.5
+-- Der Radius wächst unterproportional (Exponent < 1) mit dem BEIN-Wert -- der alte
+-- Kommentar hier nannte den Körper-Wert, das stimmt seit der Umstellung auf das Bein
+-- nicht mehr (siehe getAreaAttackRadius weiter unten).
+--
+-- Er bestimmt, wie viele Gebäude ein Flächenangriff trifft -- und damit, ob der
+-- Schnittpunkt aus der Spezifikation überhaupt eine Rolle spielt. Sie legt fest: bis zwei
+-- Ziele gewinnt der Fokus, bei drei sind beide gleichauf, ab vier die Fläche. Traf die
+-- Fläche zuverlässig acht oder zehn Gebäude, gäbe es diese Wahl gar nicht mehr -- dann
+-- wäre sie immer die richtige Antwort.
+--
+-- Deshalb halbiert: vorher rund 67 Studs beim Eintritt (Bein 1800), jetzt rund 33. Der
+-- frühere Aufschlag von 1.2 auf das Ergebnis war dabei nirgends begründet und ist mit
+-- entfallen; er steckt jetzt in diesen Zahlen.
+local AREA_ATTACK_RADIUS_BASE = 14 -- Studs bei Bein-Wert 0
+local AREA_ATTACK_RADIUS_SCALE = 2.5
 local AREA_ATTACK_RADIUS_EXPONENT = 0.7
 local AREA_CHARGE_TIME = 1.2 -- Sekunden Aufladezeit, bevor der Schaden passiert
 
-local AREA_ATTACK_RADIUS_MAX = 170 -- Studs (verdoppelt von 85 zurück auf 170, auf Wunsch)
+local AREA_ATTACK_RADIUS_MAX = 90 -- Studs (war 170; mit dem halbierten Radius oben mitgezogen)
 
 local function getAreaAttackRadius(player)
 	-- Hängt vom BEIN-Wert ab (nicht vom Körper-Wert) -- gleiche Formel-Struktur wie der
@@ -113,7 +123,7 @@ local function getAreaAttackRadius(player)
 	local legPower = player:FindFirstChild("LegPower")
 	local legCapScale = _G.LEG_CAP_SCALE or 1
 	local legValue = (legPower and legPower.Value or 0) / legCapScale
-	local radius = 1.2 * (AREA_ATTACK_RADIUS_BASE + AREA_ATTACK_RADIUS_SCALE * (legValue ^ AREA_ATTACK_RADIUS_EXPONENT))
+	local radius = AREA_ATTACK_RADIUS_BASE + AREA_ATTACK_RADIUS_SCALE * (legValue ^ AREA_ATTACK_RADIUS_EXPONENT)
 
 	-- Talent "Chain Reaction" (Kaiju-Talentbaum): vergrössert den Radius. Der Deckel
 	-- (AREA_ATTACK_RADIUS_MAX) wächst dabei nur zur HÄLFTE mit -- verhindert, dass das
