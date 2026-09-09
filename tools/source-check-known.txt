@@ -7,14 +7,13 @@
 # Neu erzeugen mit: python tools/source-check.py --accept
 # Format: <regel-id>|<verstosstext>
 
-source.g-read-without-write|_G.StopArmGauntletSession: 2 Lesestelle(n), keine Schreibstelle -- z.B. src/ServerScriptService/TrainingHandler.server.luau:719
-source.g-read-without-write|_G.StopBodyCircuitSession: 2 Lesestelle(n), keine Schreibstelle -- z.B. src/ServerScriptService/TrainingHandler.server.luau:729
-source.g-write-without-read|_G.AddHeat: gesetzt in src/ServerScriptService/HeatHandler.server.luau:180, aber nirgends aufgerufen
-source.g-write-without-read|_G.AwardSpecialEnergyForPunchHit: gesetzt in src/ServerScriptService/SpecialEnergyHandler.server.luau:94, aber nirgends aufgerufen
+source.g-read-without-write|_G.StopArmGauntletSession: 2 Lesestelle(n), keine Schreibstelle -- z.B. src/ServerScriptService/TrainingHandler.server.luau:733
+source.g-read-without-write|_G.StopBodyCircuitSession: 2 Lesestelle(n), keine Schreibstelle -- z.B. src/ServerScriptService/TrainingHandler.server.luau:743
+source.g-write-without-read|_G.AddHeat: gesetzt in src/ServerScriptService/HeatHandler.server.luau:310, aber nirgends aufgerufen
+source.g-write-without-read|_G.AwardSpecialEnergyForPunchHit: gesetzt in src/ServerScriptService/SpecialEnergyHandler.server.luau:129, aber nirgends aufgerufen
 source.g-write-without-read|_G.CheckEscalationStep: gesetzt in src/ServerScriptService/EscalationService.server.luau:58, aber nirgends aufgerufen
-source.g-write-without-read|_G.CloseNavPanels: gesetzt in src/StarterPlayerScripts/NavigationClient.client.luau:1105, aber nirgends aufgerufen
-source.g-write-without-read|_G.EVO_MAX_LEVEL: gesetzt in src/ServerScriptService/PlayerSetup.server.luau:1512, aber nirgends aufgerufen
-source.g-write-without-read|_G.EndShowdown: gesetzt in src/ServerScriptService/ShowdownService.server.luau:243, aber nirgends aufgerufen
+source.g-write-without-read|_G.CloseNavPanels: gesetzt in src/StarterPlayerScripts/NavigationClient.client.luau:1121, aber nirgends aufgerufen
+source.g-write-without-read|_G.EVO_MAX_LEVEL: gesetzt in src/ServerScriptService/PlayerSetup.server.luau:1730, aber nirgends aufgerufen
 source.g-write-without-read|_G.EscalationTriggered: gesetzt in src/ServerScriptService/EscalationService.server.luau:35, aber nirgends aufgerufen
 source.g-write-without-read|_G.FindBuildingsInRadius: gesetzt in src/ServerScriptService/EscalationService.server.luau:141, aber nirgends aufgerufen
 source.g-write-without-read|_G.FindNearestReactiveSpawnPoint: gesetzt in src/ServerScriptService/EscalationService.server.luau:104, aber nirgends aufgerufen
@@ -22,25 +21,23 @@ source.g-write-without-read|_G.GetBarricadeClusterState: gesetzt in src/ServerSc
 source.g-write-without-read|_G.GetCityAlertProgress: gesetzt in src/ServerScriptService/CityAlertService.server.luau:568, aber nirgends aufgerufen
 source.g-write-without-read|_G.GetGeneratorSide: gesetzt in src/ServerScriptService/BarricadeClusterService.server.luau:1112, aber nirgends aufgerufen
 source.g-write-without-read|_G.GetLastDamagePosition: gesetzt in src/ServerScriptService/EscalationService.server.luau:85, aber nirgends aufgerufen
-source.g-write-without-read|_G.GetLevelCap: gesetzt in src/ServerScriptService/PlayerSetup.server.luau:1509, aber nirgends aufgerufen
-source.g-write-without-read|_G.GetSpecialEnergyMax: gesetzt in src/ServerScriptService/SpecialEnergyHandler.server.luau:141, aber nirgends aufgerufen
-source.g-write-without-read|_G.GetStats: gesetzt in src/ServerScriptService/StatsService.server.luau:144, aber nirgends aufgerufen
+source.g-write-without-read|_G.GetSpecialEnergyMax: gesetzt in src/ServerScriptService/SpecialEnergyHandler.server.luau:206, aber nirgends aufgerufen
+source.g-write-without-read|_G.GetStats: gesetzt in src/ServerScriptService/StatsService.server.luau:168, aber nirgends aufgerufen
 source.g-write-without-read|_G.GetTalentLevel: gesetzt in src/ServerScriptService/TalentTreeService.server.luau:60, aber nirgends aufgerufen
 source.g-write-without-read|_G.HasAnyBarricadeEverActivated: gesetzt in src/ServerScriptService/BarricadeClusterService.server.luau:197, aber nirgends aufgerufen
-source.g-write-without-read|_G.HasNavBadge: gesetzt in src/StarterPlayerScripts/NavigationClient.client.luau:339, aber nirgends aufgerufen
+source.g-write-without-read|_G.HasNavBadge: gesetzt in src/StarterPlayerScripts/NavigationClient.client.luau:349, aber nirgends aufgerufen
 source.g-write-without-read|_G.IncrementAchievementCounter: gesetzt in src/ServerScriptService/AchievementService.server.luau:85, aber nirgends aufgerufen
 source.g-write-without-read|_G.IsArchiveEntryRevealed: gesetzt in src/ServerScriptService/ArchiveService.server.luau:117, aber nirgends aufgerufen
-source.g-write-without-read|_G.IsShowdownActive: gesetzt in src/ServerScriptService/ShowdownService.server.luau:239, aber nirgends aufgerufen
-source.g-write-without-read|_G.OpenHelpPanel: gesetzt in src/StarterPlayerScripts/NavigationClient.client.luau:1091, aber nirgends aufgerufen
+source.g-write-without-read|_G.IsShowdownActive: gesetzt in src/ServerScriptService/ShowdownService.server.luau:242, aber nirgends aufgerufen
+source.g-write-without-read|_G.OpenHelpPanel: gesetzt in src/StarterPlayerScripts/NavigationClient.client.luau:1107, aber nirgends aufgerufen
 source.g-write-without-read|_G.RevealArchiveEntry: gesetzt in src/ServerScriptService/ArchiveService.server.luau:113, aber nirgends aufgerufen
-source.g-write-without-read|_G.STAT_CAP_PER_LEVEL: gesetzt in src/ServerScriptService/PlayerSetup.server.luau:1510, aber nirgends aufgerufen
-source.g-write-without-read|_G.SetArchiveRevealAll: gesetzt in src/ServerScriptService/ArchiveService.server.luau:154, aber nirgends aufgerufen
+source.g-write-without-read|_G.STAT_CAP_PER_LEVEL: gesetzt in src/ServerScriptService/PlayerSetup.server.luau:1728, aber nirgends aufgerufen
 source.g-write-without-read|_G.UnlockAchievement: gesetzt in src/ServerScriptService/AchievementService.server.luau:42, aber nirgends aufgerufen
 source.remote-without-creator|LiftReleasePlayerEvent: gesucht in src/StarterPlayerScripts/SanctuaryLiftRider.client.luau:41, aber von keinem Repo-Skript angelegt und ohne .model.json -- existiert nur in Studio
 source.waitforchild-timeout|src/ServerScriptService/CityBrokenService.server.luau:26 WaitForChild("CityAlertValues") ohne Zeitgrenze
-source.waitforchild-timeout|src/ServerScriptService/PlayerSetup.server.luau:457 WaitForChild("Humanoid") ohne Zeitgrenze
-source.waitforchild-timeout|src/ServerScriptService/TrainingHandler.server.luau:571 WaitForChild("leaderstats") ohne Zeitgrenze
-source.waitforchild-timeout|src/ServerScriptService/TrainingHandler.server.luau:575 WaitForChild("Level") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/PlayerSetup.server.luau:489 WaitForChild("Humanoid") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/TrainingHandler.server.luau:585 WaitForChild("leaderstats") ohne Zeitgrenze
+source.waitforchild-timeout|src/ServerScriptService/TrainingHandler.server.luau:589 WaitForChild("Level") ohne Zeitgrenze
 source.waitforchild-timeout|src/ServerScriptService/TrenchbornPortalController.server.luau:5 WaitForChild("TrenchbornPortals") ohne Zeitgrenze
 source.waitforchild-timeout|src/StarterPlayerScripts/AttackClient.client.luau:16 WaitForChild("AttackCooldown") ohne Zeitgrenze
 source.waitforchild-timeout|src/StarterPlayerScripts/BodyTrainingControlClient.client.luau:20 WaitForChild("PlayerModule") ohne Zeitgrenze
@@ -55,48 +52,48 @@ source.waitforchild-timeout|src/StarterPlayerScripts/KanagawaBoneDebug.client.lu
 source.waitforchild-timeout|src/StarterPlayerScripts/KanagawaBoneDebug.client.luau:10 WaitForChild(waveName) ohne Zeitgrenze
 source.waitforchild-timeout|src/StarterPlayerScripts/KanagawaBoneDebug.client.luau:2 WaitForChild("Portal_1") ohne Zeitgrenze
 source.waitforchild-timeout|src/StarterPlayerScripts/KanagawaPortalWaveController.client.luau:3 WaitForChild("Portals") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:762 WaitForChild("SkinShopGui") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:763 WaitForChild("ShopFrame") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:769 WaitForChild("GiftGui") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:770 WaitForChild("GiftPanel") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:777 WaitForChild("FactionGui") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:778 WaitForChild("FactionPanel") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:784 WaitForChild("TalentTreeGui") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:785 WaitForChild("TalentTreePanel") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:791 WaitForChild("ArchiveGui") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:792 WaitForChild("ArchivePanel") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:776 WaitForChild("SkinShopGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:777 WaitForChild("ShopFrame") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:783 WaitForChild("GiftGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:784 WaitForChild("GiftPanel") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:791 WaitForChild("FactionGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:792 WaitForChild("FactionPanel") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:798 WaitForChild("TalentTreeGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:799 WaitForChild("TalentTreePanel") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:805 WaitForChild("ArchiveGui") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/NavigationClient.client.luau:806 WaitForChild("ArchivePanel") ohne Zeitgrenze
 source.waitforchild-timeout|src/StarterPlayerScripts/PlayerNameTagClient.client.luau:29 WaitForChild("Head") ohne Zeitgrenze
 source.waitforchild-timeout|src/StarterPlayerScripts/SanctuaryLiftRider.client.luau:125 WaitForChild("Humanoid") ohne Zeitgrenze
 source.waitforchild-timeout|src/StarterPlayerScripts/SanctuaryLiftRider.client.luau:128 WaitForChild("HumanoidRootPart") ohne Zeitgrenze
 source.waitforchild-timeout|src/StarterPlayerScripts/ShowdownClient.client.luau:81 WaitForChild("PlayerModule") ohne Zeitgrenze
 source.waitforchild-timeout|src/StarterPlayerScripts/ShowdownClient.client.luau:81 WaitForChild("PlayerScripts") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2110 WaitForChild("UnlockedSkins") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2111 WaitForChild("leaderstats") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2112 WaitForChild("EquippedSkin") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2204 WaitForChild("leaderstats") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2205 WaitForChild("Coins") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2205 WaitForChild("leaderstats") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2206 WaitForChild("Level") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2206 WaitForChild("leaderstats") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2207 WaitForChild("XP") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2208 WaitForChild("XPNeeded") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2209 WaitForChild("LegPower") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2210 WaitForChild("ArmPower") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2211 WaitForChild("BodyPower") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2212 WaitForChild("UnlockedSkins") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2213 WaitForChild("EquippedSkin") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2219 WaitForChild("Coins") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2219 WaitForChild("leaderstats") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2223 WaitForChild("leaderstats") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2246 WaitForChild("leaderstats") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2247 WaitForChild("Level") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2248 WaitForChild("XP") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2249 WaitForChild("XPNeeded") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2250 WaitForChild("LegPower") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2251 WaitForChild("ArmPower") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2252 WaitForChild("BodyPower") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2254 WaitForChild("UnlockedSkins") ohne Zeitgrenze
-source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2255 WaitForChild("EquippedSkin") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2107 WaitForChild("UnlockedSkins") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2108 WaitForChild("leaderstats") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2109 WaitForChild("EquippedSkin") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2201 WaitForChild("leaderstats") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2202 WaitForChild("Coins") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2202 WaitForChild("leaderstats") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2203 WaitForChild("Level") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2203 WaitForChild("leaderstats") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2204 WaitForChild("XP") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2205 WaitForChild("XPNeeded") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2206 WaitForChild("LegPower") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2207 WaitForChild("ArmPower") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2208 WaitForChild("BodyPower") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2209 WaitForChild("UnlockedSkins") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2210 WaitForChild("EquippedSkin") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2216 WaitForChild("Coins") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2216 WaitForChild("leaderstats") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2220 WaitForChild("leaderstats") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2243 WaitForChild("leaderstats") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2244 WaitForChild("Level") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2245 WaitForChild("XP") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2246 WaitForChild("XPNeeded") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2247 WaitForChild("LegPower") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2248 WaitForChild("ArmPower") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2249 WaitForChild("BodyPower") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2251 WaitForChild("UnlockedSkins") ohne Zeitgrenze
+source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:2252 WaitForChild("EquippedSkin") ohne Zeitgrenze
 source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:57 WaitForChild("StatCapPerLevel") ohne Zeitgrenze
 source.waitforchild-timeout|src/StarterPlayerScripts/SkinSelectionGui.client.luau:58 WaitForChild("BoostDuration") ohne Zeitgrenze
 source.waitforchild-timeout|src/StarterPlayerScripts/SpecialAttackClient.client.luau:214 WaitForChild("Humanoid") ohne Zeitgrenze

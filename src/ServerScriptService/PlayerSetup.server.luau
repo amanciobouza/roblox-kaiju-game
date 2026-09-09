@@ -160,7 +160,6 @@ local PurchaseSkinEvent = RemoteEventUtils.GetOrCreate("PurchaseSkinEvent")
 local XP_LEVEL_STEPS = { 100, 200, 275, 350, 400, 450, 500, 575, 700, 900 }
 local XP_STEP_SCALE = 15
 local XP_GROWTH_BEYOND_TABLE = 1.25 -- jenseits von Level 10 geometrisch weiter, im Tempo des letzten Schritts
-local LEVELS_PER_SKIN_TIER = 10 -- alle 10 Level braucht es den nächsten Skin, um weiterzuleveln (1 Tier pro Stadtzone)
 -- ACHTUNG, historischer Wert: die echte Obergrenze ist KEINE Gerade "Level * 10", sondern
 -- die Stützpunkt-Kurve STAT_CAP_BREAKPOINTS in TrainingHandler. Diese Zahl wird zwar
 -- unten nach ReplicatedStorage veröffentlicht, aber von niemandem mehr gelesen -- das HUD
@@ -191,23 +190,10 @@ local function xpNeededForLevel(level)
 end
 _G.XPNeededForLevel = xpNeededForLevel
 
--- Level-Obergrenze: Ohne gekaufte Skins kommt man bis Level 5 (kostenloser Skin_0 zählt
--- nicht mit). Jeder zusätzlich gekaufte Skin hebt die Grenze um weitere 5 Level an.
-local function getLevelCap(player)
-	local unlockedFolder = player:FindFirstChild("UnlockedSkins")
-	if not unlockedFolder then
-		return LEVELS_PER_SKIN_TIER
-	end
-
-	local paidSkinsOwned = 0
-	for _, marker in ipairs(unlockedFolder:GetChildren()) do
-		if marker.Value > 0 then
-			paidSkinsOwned += 1
-		end
-	end
-
-	return LEVELS_PER_SKIN_TIER * (1 + paidSkinsOwned)
-end
+-- ENTFALLEN: getLevelCap. Frueher deckelte jeder Skin das Level -- ohne Kauf war bei 10
+-- Schluss, jeder gekaufte Skin hob die Grenze um weitere 10. Das machte den Kauf zur
+-- Pflicht: wer nicht kaufte, sammelte XP ins Leere. Der Kaufgrund sind jetzt die Werte
+-- selbst, Leben UND Angriff (siehe SkinsConfig.DamagePercent und recalculateStrength).
 
 -- Berechnet die Gesamtstärke (Bein + Arm + Körper), wendet den Evolution-Schaden-Bonus an,
 -- berücksichtigt einen evtl. aktiven temporären Schaden-Boost (z.B. aus einem Geschenk) und
@@ -239,6 +225,19 @@ local function recalculateStrength(player)
 	local armCapScale = _G.ARM_CAP_SCALE or 1
 
 	local total = (armPower and armPower.Value or 0) / armCapScale
+
+	-- Angriffsbonus des ausgeruesteten Skins. Er ersetzt die frueher an die Skins
+	-- gekoppelte Level-Obergrenze als Kaufgrund: eine hoehere Stufe macht nicht mehr
+	-- weiteres Leveln moeglich, sondern schlaegt haerter zu. 100 heisst unveraendert.
+	local equippedSkin = player:FindFirstChild("EquippedSkin")
+	if equippedSkin then
+		for _, skin in ipairs(SkinsConfig.Skins) do
+			if skin.Id == equippedSkin.Value then
+				total = total * ((skin.DamagePercent or 100) / 100)
+				break
+			end
+		end
+	end
 
 	-- Talent "Apex Predator" (Kaiju-Talentbaum, Ultimate) + "Apex Instinct" (Start-Knoten):
 	-- dauerhafter Gesamtschadensbonus.
@@ -1298,9 +1297,9 @@ EquipSkinEvent.OnServerEvent:Connect(function(player, skinId)
 	end
 end)
 
--- Vergibt XP und verwaltet den Level-Aufstieg, bis zur aktuellen Level-Obergrenze
--- (siehe getLevelCap). Überschüssige XP bleiben gespeichert und werden automatisch
--- eingelöst, sobald die Grenze durch einen neuen Skin-Kauf angehoben wird.
+-- Vergibt XP und verwaltet den Level-Aufstieg. Es gibt KEINE Obergrenze mehr -- frueher
+-- deckelte der teuerste gekaufte Skin das Level, und ueberschuessige XP lagen brach, bis
+-- der naechste Kauf die Grenze anhob.
 -- Wird global über _G bereitgestellt, damit andere Skripte sie aufrufen können.
 local function awardXP(player, amount)
 	-- Prolog-Isolation: der Prolog-Kaiju ist ein temporärer, vom echten Fortschritt
@@ -1318,8 +1317,8 @@ local function awardXP(player, amount)
 
 	xpValue.Value += amount
 
-	local levelCap = getLevelCap(player)
-	while xpValue.Value >= xpNeededValue.Value and leaderstats.Level.Value < levelCap do
+	-- Keine Obergrenze mehr: das Level haengt allein an der gesammelten Erfahrung.
+	while xpValue.Value >= xpNeededValue.Value do
 		xpValue.Value -= xpNeededValue.Value
 		leaderstats.Level.Value += 1
 		xpNeededValue.Value = xpNeededForLevel(leaderstats.Level.Value)
@@ -1726,7 +1725,6 @@ end)
 
 _G.AwardXP = awardXP
 _G.RecalculateStrength = recalculateStrength
-_G.GetLevelCap = getLevelCap
 _G.STAT_CAP_PER_LEVEL = STAT_CAP_PER_LEVEL
 _G.EVO_BONUS_PER_LEVEL = EVO_BONUS_PER_LEVEL
 _G.EVO_MAX_LEVEL = EVO_MAX_LEVEL

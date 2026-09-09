@@ -15,12 +15,25 @@
 -- Charakterzüge der drei Fraktionen (Power / Control / Purpose) stehen bewusst woanders,
 -- auf den Karten im Fraktions-Panel.
 --
--- Die Level-Freischaltung wird NICHT hier beschrieben: jeder gekaufte Skin hebt die
--- Obergrenze um 10 (siehe PlayerSetup.getLevelCap), und der Bildschirm rechnet sie aus.
+-- ===== Keine Level-Obergrenze mehr =====
+-- Früher deckelte jeder Skin das Level: ohne Kauf war bei 10 Schluss, jeder gekaufte Skin
+-- hob die Grenze um weitere 10. Das machte den Kauf zur Pflicht und den Fortschritt zur
+-- Sperre -- wer nicht kaufte, sammelte XP ins Leere.
 --
--- ENTFERNT: das Feld "Damage". Es wurde im ganzen Projekt nirgends gelesen -- der Schaden
--- kommt aus ArmPower (siehe PlayerSetup.recalculateStrength). Ein Steckbrief hätte damit
--- eine Zahl versprochen, die keine Wirkung hat.
+-- Jetzt begrenzt kein Skin mehr das Level. Der Kaufgrund sind stattdessen die Werte
+-- selbst: Leben UND Angriff. Ein Spieler kann mit dem Baby Kaiju auf Stufe 50 kommen -- er
+-- schlägt dann nur halb so hart zu wie jemand im Radiant Apex.
+--
+-- ===== DamagePercent =====
+-- Hier stand einmal ein Feld "Damage", das entfernt wurde, weil es NIRGENDS gelesen wurde:
+-- ein Steckbrief hätte eine Zahl versprochen, die keine Wirkung hat. DamagePercent ist der
+-- Ersatz, und er wird tatsächlich angewandt (PlayerSetup.recalculateStrength multipliziert
+-- den aus ArmPower berechneten Schaden damit). 100 heisst unverändert, 225 heisst
+-- zweieinviertelfacher Schaden.
+--
+-- Die Zahl steigt in Schritten von 25 statt sich wie das Leben zu verdoppeln. Der Schaden
+-- wächst ohnehin schon über das Arm-Training; verdoppelte er sich zusätzlich je Stufe,
+-- wäre die Kurve am Ende nicht mehr zu balancieren.
 
 local SkinsConfig = {}
 
@@ -63,11 +76,12 @@ SkinsConfig.Skins = {
 		Id = 0,
 		Faction = "Kaiju",
 		Name = "Baby Kaiju",
-		Role = "Where every Kaiju starts. Free, and the only form below level 10.",
-		Strength = "None to speak of. It has the lowest health, the slowest pace and the shortest jump of the six -- every later stage is strictly better.",
+		Role = "Where every Kaiju starts. Free, and never required to leave -- it simply hits the softest.",
+		Strength = "None to speak of. Lowest health, slowest pace, shortest jump, and the baseline for attack power -- every later stage is strictly better.",
 		RequiredLevel = 0,
 		Cost = 0, -- Startskin, kostenlos
 		Health = 100,
+		DamagePercent = 100,
 		WalkSpeed = 14,
 		Scale = 1, -- weiter reduziert von 1.33 auf 1, war immer noch zu gross
 		AttackAnimationId = "", -- z.B. "rbxassetid://123456789" nach dem Export aus dem Animation Editor
@@ -77,10 +91,11 @@ SkinsConfig.Skins = {
 		Faction = "Kaiju",
 		Name = "Young Kaiju",
 		Role = "The first real step up, from level 10.",
-		Strength = "Twice the health of the starting form and a third more speed. Twice as tall, which roughly doubles how high a jump attack reaches.",
+		Strength = "Twice the health of the starting form, a quarter more attack power and a third more speed. Twice as tall, which roughly doubles how high a jump attack reaches.",
 		RequiredLevel = 10,
 		Cost = 150,
 		Health = 200,
+		DamagePercent = 125,
 		WalkSpeed = 18,
 		Scale = 2, -- vereinfacht auf lineare 1-6-Skala
 		AttackAnimationId = "",
@@ -90,10 +105,11 @@ SkinsConfig.Skins = {
 		Faction = "Kaiju",
 		Name = "Adult Kaiju",
 		Role = "The middle of the line, from level 20.",
-		Strength = "400 health and a stride half again as long as the Baby form's. Tall enough that walking through a street damages what stands along it.",
+		Strength = "400 health, half again the attack power of the starting form, and a stride half again as long. Tall enough that walking through a street damages what stands along it.",
 		RequiredLevel = 20,
 		Cost = 400,
 		Health = 400,
+		DamagePercent = 150,
 		WalkSpeed = 23,
 		Scale = 3, -- vereinfacht auf lineare 1-6-Skala
 		AttackAnimationId = "",
@@ -103,10 +119,11 @@ SkinsConfig.Skins = {
 		Faction = "Kaiju",
 		Name = "Elder Kaiju",
 		Role = "The last form before the two titans, from level 30.",
-		Strength = "800 health, and a jump that carries about four times as high as the starting form's -- enough to come down on most rooftops from above.",
+		Strength = "800 health, three quarters more attack power, and a jump that carries about four times as high as the starting form's -- enough to come down on most rooftops from above.",
 		RequiredLevel = 30,
 		Cost = 1000,
 		Health = 800,
+		DamagePercent = 175,
 		WalkSpeed = 29,
 		Scale = 4, -- vereinfacht auf lineare 1-6-Skala
 		AttackAnimationId = "",
@@ -116,10 +133,11 @@ SkinsConfig.Skins = {
 		Faction = "Kaiju",
 		Name = "Atomic Titan",
 		Role = "The first of the two end forms, from level 40.",
-		Strength = "1600 health and more than two and a half times the starting speed. At this size, buildings take damage from being brushed past.",
+		Strength = "1600 health, double the starting attack power and more than two and a half times the starting speed. At this size, buildings take damage from being brushed past.",
 		RequiredLevel = 40,
 		Cost = 2500,
 		Health = 1600,
+		DamagePercent = 200,
 		WalkSpeed = 37,
 		Scale = 5, -- vereinfacht auf lineare 1-6-Skala
 		AttackAnimationId = "",
@@ -129,10 +147,11 @@ SkinsConfig.Skins = {
 		Faction = "Kaiju",
 		Name = "Radiant Apex",
 		Role = "The final form, from level 50. Nothing follows it.",
-		Strength = "3200 health -- thirty-two times the Baby form -- the longest stride and the highest jump in the game. Little in a city can stop it directly.",
+		Strength = "3200 health -- thirty-two times the Baby form -- the hardest hit at two and a quarter times its attack power, the longest stride and the highest jump in the game. Little in a city can stop it directly.",
 		RequiredLevel = 50,
 		Cost = 6000,
 		Health = 3200,
+		DamagePercent = 225,
 		WalkSpeed = 47,
 		Scale = 6, -- vereinfacht auf lineare 1-6-Skala
 		AttackAnimationId = "",

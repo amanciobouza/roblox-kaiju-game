@@ -1057,8 +1057,10 @@ local detailStrengthWidthCap = Instance.new("UISizeConstraint")
 detailStrengthWidthCap.MaxSize = Vector2.new(SKIN_TEXT_MAX_WIDTH, math.huge)
 detailStrengthWidthCap.Parent = detailStrength
 
--- Level-Freischaltung: der staerkste Kaufgrund im Spiel und bis heute nirgends genannt.
--- Jeder GEKAUFTE Skin hebt die Obergrenze um 10 (PlayerSetup.getLevelCap).
+-- Der Kaufgrund in einer Zeile. Frueher stand hier die Level-Freischaltung -- jeder
+-- gekaufte Skin hob die Obergrenze um 10. Die Deckelung ist entfallen; an ihre Stelle
+-- tritt der Angriffsbonus, der die Stufen weiterhin unterscheidet, ohne den Fortschritt
+-- zu sperren.
 local detailBonus = Instance.new("TextLabel")
 detailBonus.Size = UDim2.new(0.58, -32, 0, 26)
 detailBonus.Position = UDim2.new(0.42, 0, 0, 200)
@@ -1076,18 +1078,21 @@ detailBonusWidthCap.MaxSize = Vector2.new(SKIN_TEXT_MAX_WIDTH, math.huge)
 detailBonusWidthCap.Parent = detailBonus
 applyComicStyle(detailBonus, 8, 2)
 
--- Drei Balken: Leben, Tempo, Groesse. "Damage" fehlt bewusst -- das Feld gab es zwar, es
--- wurde aber nirgends gelesen (Schaden kommt aus ArmPower) und ist deshalb entfernt.
+-- Vier Balken: Leben, Angriff, Tempo, Groesse. Der Angriffsbalken ist neu und hat eine
+-- Vorgeschichte: hier stand einmal ein Feld "Damage", das entfernt wurde, weil es nirgends
+-- gelesen wurde. DamagePercent ist der Ersatz und wird tatsaechlich angewandt (siehe
+-- PlayerSetup.recalculateStrength) -- deshalb darf er jetzt im Steckbrief stehen.
 local statRows = {}
 local STAT_DEFS = {
 	{ key = "Health", label = "Health" },
+	{ key = "DamagePercent", label = "Attack %" },
 	{ key = "WalkSpeed", label = "Speed" },
 	{ key = "Scale", label = "Size" },
 }
 for index, def in ipairs(STAT_DEFS) do
 	local row = Instance.new("Frame")
 	row.Size = UDim2.new(1, -32, 0, 30)
-	row.Position = UDim2.new(0, 16, 0.56, (index - 1) * 34)
+	row.Position = UDim2.new(0, 16, 0.52, (index - 1) * 34) -- 0.52 statt 0.56: der vierte Balken braucht den Platz
 	row.BackgroundTransparency = 1
 	row.Parent = detailFrame
 
@@ -1958,31 +1963,21 @@ local selectedPending = nil
 
 -- Hoechstwerte ueber alle Skins -- die Balken zeigen jeden Wert im Verhaeltnis zum
 -- staerksten. Einmal berechnet, die Liste aendert sich zur Laufzeit nicht.
-local STAT_MAX = { Health = 0, WalkSpeed = 0, Scale = 0 }
+local STAT_MAX = { Health = 0, DamagePercent = 0, WalkSpeed = 0, Scale = 0 }
 for _, skin in ipairs(SkinsConfig.Skins) do
 	for key in pairs(STAT_MAX) do
 		STAT_MAX[key] = math.max(STAT_MAX[key], skin[key] or 0)
 	end
 end
 
--- Die Level-Obergrenze steigt je GEKAUFTEM Skin um 10 (PlayerSetup.getLevelCap,
--- LEVELS_PER_SKIN_TIER). Der Startskin ist kostenlos und zaehlt nicht mit -- deshalb
--- ergibt sich die Grenze aus der Position in der Liste, nicht aus der Id.
-local function levelRangeFor(skin)
-	if (skin.Cost or 0) <= 0 then
+-- Der Kaufgrund als ein Satz: um wie viel diese Stufe haerter zuschlaegt als die
+-- Grundform. Frueher stand hier die Level-Obergrenze, die es nicht mehr gibt.
+local function attackBonusFor(skin)
+	local percent = skin.DamagePercent or 100
+	if percent <= 100 then
 		return nil
 	end
-	local paidIndex = 0
-	for _, other in ipairs(SkinsConfig.Skins) do
-		if (other.Cost or 0) > 0 then
-			paidIndex += 1
-			if other.Id == skin.Id then
-				break
-			end
-		end
-	end
-	local cap = 10 * (1 + paidIndex)
-	return (cap - 9) .. " to " .. cap
+	return "+" .. (percent - 100) .. "% attack power"
 end
 
 local function refreshDetail()
@@ -2034,10 +2029,10 @@ local function refreshDetail()
 	detailRole.Text = skin.Role or ""
 	detailStrength.Text = skin.Strength or ""
 
-	local range = levelRangeFor(skin)
-	detailBonus.Visible = range ~= nil and not isUnlocked
-	if range then
-		detailBonus.Text = "  ⬆  Unlocks levels " .. range
+	local bonus = attackBonusFor(skin)
+	detailBonus.Visible = bonus ~= nil and not isUnlocked
+	if bonus then
+		detailBonus.Text = "  ⬆  " .. bonus
 	end
 
 	for key, row in pairs(statRows) do
