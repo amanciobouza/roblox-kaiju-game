@@ -58,6 +58,30 @@ local AREA_HEAT = 8
 -- Tick), ohne dass wir jeden Gebäudetyp einzeln bepunkten müssen.
 local HEAT_COOL_PER_ABSORPTION_TICK = 1 -- fester, kleiner Betrag pro Tick -- unabhängig davon, wie viel Energie dabei gewonnen wurde
 
+-- Obergrenze der Absorb-Kühlung, über ALLE gleichzeitig absorbierten Gebäude zusammen.
+--
+-- Die Spezifikation sagt an zwei Stellen etwas, das zusammen nicht aufgeht. Paragraph 11:
+-- Absorbieren kühlt einen Punkt je Takt und Gebäude, additiv, Beispiel sieben Gebäude
+-- gleich minus sieben je Takt -- das sind 3,5 Punkte je Sekunde. Paragraph 12: Absorbieren
+-- und Angreifen laufen GLEICHZEITIG, denn nur so gehen die 88 Prozent erhaltene Energie
+-- und die zwanzig Minuten Referenzzeit auf.
+--
+-- Beides zusammen heisst: die Kühlung läuft dauerhaft mit und überfährt jede Erzeugung.
+-- Im Testlauf war genau das der Fall -- 317 von 330 Abtastungen im Normalbereich, kein
+-- einziger Berserker, kein Meltdown. Die Hitze war als Mechanik nicht mehr vorhanden.
+--
+-- Der Deckel löst den Widerspruch auf der Seite, die die Spezifikation selbst schwächer
+-- begründet: das Additive aus Paragraph 11 gilt bis zu dieser Grenze, danach nicht mehr.
+-- Damit bleibt Absorbieren der Weg nach unten, aber Angreifen bleibt der stärkere Weg nach
+-- oben -- und die Wahl zwischen beidem entsteht überhaupt erst.
+--
+-- Zahlen: Erzeugung im Testlauf 2,7 Punkte je Sekunde. Kühlung beim gleichzeitigen
+-- Absorbieren 1,0 plus 0,5 passiv. Netto steigt die Hitze also um 1,2 je Sekunde, die
+-- Berserker-Schwelle liegt gut eine Minute entfernt. Wer aufhört anzugreifen und nur noch
+-- absorbiert, kühlt mit 1,5 je Sekunde.
+local HEAT_COOL_ABSORPTION_MAX_PER_SECOND = 1.0
+local HEAT_COOL_ABSORPTION_BURST_SECONDS = 3 -- so viel Kühlung darf sich ansparen, damit kurze Absorb-Stösse wirken
+
 -- ===== Einstellungen: 5 Hitzestufen (0-100%) =====
 -- Bonus bei 85-100% gilt NUR, wenn Berserk manuell aktiviert wurde -- ohne Aktivierung
 -- bleibt der Bonus in diesem Bereich beim "Enraged"-Wert stehen (siehe getHeatMultipliers).
@@ -286,15 +310,43 @@ end
 _G.AddHeat = addHeat
 
 -- Von EnergyCollectionHandler.lua bei jedem Absorptions-Tick aufgerufen.
+-- Der Deckel wirkt über alle Gebäude ZUSAMMEN und ist als nachlaufender Eimer gebaut:
+-- was mehrere Gebäude im selben Takt anfordern, wird an dem gemessen, was seit dem letzten
+-- Mal nachgelaufen ist. Gleiche Mechanik wie beim Absorb-Beitrag zur Combat Energy.
+local absorbCoolBudget = {} -- [player] = { amount, lastRefillAt }
+
 _G.CoolHeatFromAbsorption = function(player, energyGained)
 	if not energyGained or energyGained <= 0 then
 		return
 	end
+
+	local now = os.clock()
+	local bucket = absorbCoolBudget[player]
+	if not bucket then
+		bucket = {
+			amount = HEAT_COOL_ABSORPTION_MAX_PER_SECOND * HEAT_COOL_ABSORPTION_BURST_SECONDS,
+			lastRefillAt = now,
+		}
+		absorbCoolBudget[player] = bucket
+	end
+
+	bucket.amount = math.min(
+		bucket.amount + (now - bucket.lastRefillAt) * HEAT_COOL_ABSORPTION_MAX_PER_SECOND,
+		HEAT_COOL_ABSORPTION_MAX_PER_SECOND * HEAT_COOL_ABSORPTION_BURST_SECONDS
+	)
+	bucket.lastRefillAt = now
+
 	-- Fester, kleiner Betrag pro Tick -- unabhängig davon, ob dabei 1 oder 100 Energie
 	-- gewonnen wurde. Vorher skalierte die Abkühlung proportional zur Energie-Menge,
 	-- wodurch mehrere gleichzeitige Quellen (oder einfach hohe Beträge) die Heat-Leiste
 	-- viel zu schnell komplett geleert haben.
-	setHeat(player, getHeat(player) - HEAT_COOL_PER_ABSORPTION_TICK)
+	local cooling = math.min(HEAT_COOL_PER_ABSORPTION_TICK, bucket.amount)
+	if cooling <= 0 then
+		return
+	end
+
+	bucket.amount -= cooling
+	setHeat(player, getHeat(player) - cooling)
 end
 
 -- Von CombatHandler.lua nach jedem Schlag aufgerufen (mit dem Combo-Schritt 1/2/3).
@@ -694,4 +746,5 @@ Players.PlayerRemoving:Connect(function(player)
 	wasInMeltdown[player] = nil
 	meltdownLockedUntil[player] = nil
 	lastTrainingHeatLogAt[player] = nil
+	absorbCoolBudget[player] = nil
 end)

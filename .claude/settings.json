@@ -4,7 +4,9 @@
       "Bash(python tools/source-check.py)",
       "Bash(luau /tmp/r.luau)",
       "Bash(python -)",
-      "Bash(luau /tmp/r2.luau)"
+      "Bash(luau /tmp/r2.luau)",
+      "Bash(cat)",
+      "Bash(luau /tmp/bilanz.luau)"
     ]
   },
   "hooks": {
