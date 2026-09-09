@@ -140,8 +140,26 @@ end
 local EquipSkinEvent = RemoteEventUtils.GetOrCreate("EquipSkinEvent")
 local PurchaseSkinEvent = RemoteEventUtils.GetOrCreate("PurchaseSkinEvent")
 
-local XP_PER_LEVEL_BASE = 12000 -- ÷100 (war 1.200.000) -- konsistent zur XP_SCALE-Korrektur in HouseHandler.lua
-local XP_PER_LEVEL_GROWTH = 1.18
+-- ===== Levelkurve =====
+-- Die Stufen kommen aus der Village-Spezifikation. Sie waren dort in ihrer eigenen
+-- Energie-Einheit gedacht (ein Cottage gibt 25); der Code gibt tatsächlich rund das
+-- 18-fache. Statt die Energie zu senken -- daran hängen Mutationsschwelle,
+-- Talentbaum-Kosten, Fraktions-Meilensteine, Berserk-Verlängerung und Elektro-Boost --
+-- bekommt die Kurve denselben Maßstab.
+--
+-- Vorher stand hier 12000 * 1.18^Level. Das war rund 62-mal steiler als die
+-- Spezifikation: 270.000 XP bis Level 10 statt 4.350. Im City-Broken-Lauf verdiente der
+-- Spieler 64.470 XP und stand damit auf Level 4 statt auf 10.
+--
+-- Der Maßstab 15 ist am selben Lauf geeicht: 4.450 * 15 = 66.750 XP bis Level 10, und
+-- er hatte 64.470. Damit steht er bei City Broken knapp unter Level 10 -- genau das
+-- „ungefähr, nicht exakt und nicht garantiert“ der Spezifikation.
+--
+-- Der erste Eintrag ist ein Zusatz: die Spezifikation beginnt bei Level 1, das Spiel bei
+-- Level 0. Die 100 sind der kurze Schritt davor, die übrigen neun sind ihre Tabelle.
+local XP_LEVEL_STEPS = { 100, 200, 275, 350, 400, 450, 500, 575, 700, 900 }
+local XP_STEP_SCALE = 15
+local XP_GROWTH_BEYOND_TABLE = 1.25 -- jenseits von Level 10 geometrisch weiter, im Tempo des letzten Schritts
 local LEVELS_PER_SKIN_TIER = 10 -- alle 10 Level braucht es den nächsten Skin, um weiterzuleveln (1 Tier pro Stadtzone)
 -- ACHTUNG, historischer Wert: die echte Obergrenze ist KEINE Gerade "Level * 10", sondern
 -- die Stützpunkt-Kurve STAT_CAP_BREAKPOINTS in TrainingHandler. Diese Zahl wird zwar
@@ -161,7 +179,15 @@ statCapPerLevelValue.Value = STAT_CAP_PER_LEVEL
 statCapPerLevelValue.Parent = ReplicatedStorage
 
 local function xpNeededForLevel(level)
-	return math.floor(XP_PER_LEVEL_BASE * (XP_PER_LEVEL_GROWTH ^ level))
+	level = math.max(math.floor(level), 0)
+	local step
+	if level < #XP_LEVEL_STEPS then
+		step = XP_LEVEL_STEPS[level + 1]
+	else
+		-- Jenseits der Tabelle: der letzte Schritt wächst geometrisch weiter.
+		step = XP_LEVEL_STEPS[#XP_LEVEL_STEPS] * (XP_GROWTH_BEYOND_TABLE ^ (level - #XP_LEVEL_STEPS + 1))
+	end
+	return math.floor(step * XP_STEP_SCALE)
 end
 _G.XPNeededForLevel = xpNeededForLevel
 
