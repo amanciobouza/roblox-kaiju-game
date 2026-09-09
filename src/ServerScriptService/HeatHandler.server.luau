@@ -119,7 +119,28 @@ local BERSERK_INACTIVITY_TIMEOUT = 4 -- Sekunden ohne Treffer -> Berserk endet
 
 -- ===== Einstellungen: Meltdown (100% Heat) =====
 local MELTDOWN_EXPLOSION_INTERVAL = 8 -- Sekunden zwischen automatischen Explosionen (nach der ersten, sofortigen)
-local MELTDOWN_SELF_DAMAGE = 8 -- HP-Verlust pro Explosion
+-- HP-Verlust pro Explosion, als ANTEIL der maximalen Lebenspunkte.
+--
+-- Vorher waren es feste 8 Punkte, und damit gab es die Meltdown-Strafe faktisch nicht:
+-- Roblox regeneriert standardmaessig 1 % der MaxHealth je Sekunde, und nichts im Projekt
+-- schaltet das ab. 8 Punkte alle 8 Sekunden sind 1 Punkt je Sekunde -- auf dem Starter-Skin
+-- (100 HP) hebt sich das exakt auf, auf jedem besseren Skin heilt der Spieler schneller,
+-- als der Meltdown ihm schadet. Bei 3200 HP dreissigmal schneller.
+--
+-- Im City-Broken-Lauf stand der Spieler 163 Abtastungen lang im Meltdown, also gut fuenf
+-- Minuten, und nahm dabei ZEHN Punkte Schaden -- und die kamen von einer Barrikade.
+local MELTDOWN_SELF_DAMAGE_FRACTION = 0.05
+
+-- Dazu ein kontinuierlicher Verlust, den die Spezifikation ausdruecklich nennt
+-- ("verliert kontinuierlich Lebenspunkte"). Er hat einen zweiten Zweck: Roblox' Regeneration
+-- setzt erst eine Sekunde NACH dem letzten Schaden wieder ein. Schaden in jedem Einzelbild
+-- haelt sie damit dauerhaft an -- ohne dass wir Roblox' eigenes Skript anfassen muessen.
+--
+-- Zusammen mit den Explosionen sind das rund 1,1 % der Lebenspunkte je Sekunde. Die
+-- Mindestdauer von zehn Sekunden kostet also gut ein Zehntel der Gesundheit, und wer im
+-- Meltdown bleibt, stirbt nach gut anderthalb Minuten. Das ist die Zahl zum Nachjustieren,
+-- falls es sich zu hart oder zu zahnlos anfuehlt.
+local MELTDOWN_DRAIN_PER_SECOND = 0.005
 local MELTDOWN_HEAT_DECAY_PER_SECOND = 0.2 -- sinkt während Meltdown nur sehr langsam von selbst
 local MELTDOWN_LOCK_DURATION = 10 -- Sekunden Mindestdauer in Meltdown, bevor überhaupt abgekühlt werden kann
 
@@ -131,6 +152,24 @@ local meltdownLockedUntil = {} -- [player] = os.clock(), bis wann Heat mindesten
 -- Drosselung der Trainings-Debugzeile -- ohne sie käme sie einmal pro Einzelbild.
 local TRAINING_HEAT_LOG_INTERVAL = 5
 local lastTrainingHeatLogAt = {} -- [player] = os.clock()
+
+-- Schaden einer Meltdown-Explosion. Anteilig an den maximalen Lebenspunkten, damit die
+-- Strafe über alle Skin-Stufen hinweg gleich schwer wiegt -- ein fester Betrag war beim
+-- 3200-HP-Skin bedeutungslos.
+--
+-- Wird ausserdem in die Lebensstatistik geschrieben. Das fehlte bisher ganz: der
+-- Meltdown-Schaden tauchte in DamageTaken nirgends auf, und die Telemetrie meldete darum
+-- Lauf um Lauf eine Null, obwohl der Spieler Minuten im Meltdown stand.
+local function meltdownExplosionDamage(player, humanoid)
+	if not humanoid or humanoid.Health <= 0 then
+		return
+	end
+	local damage = humanoid.MaxHealth * MELTDOWN_SELF_DAMAGE_FRACTION
+	humanoid:TakeDamage(damage)
+	if _G.RecordStat then
+		_G.RecordStat(player, "DamageTaken", damage)
+	end
+end
 
 local function getHeat(player)
 	return player:GetAttribute("Heat") or 0
@@ -526,6 +565,16 @@ RunService.Heartbeat:Connect(function(dt)
 			local root = character and character:FindFirstChild("HumanoidRootPart")
 			local now = Workspace:GetServerTimeNow()
 
+			-- Kontinuierlicher Verlust, jedes Einzelbild. Haelt nebenbei Roblox'
+			-- Regeneration an, die erst eine Sekunde nach dem letzten Schaden anlaeuft.
+			if humanoid and humanoid.Health > 0 then
+				local drain = humanoid.MaxHealth * MELTDOWN_DRAIN_PER_SECOND * dt
+				humanoid:TakeDamage(drain)
+				if _G.RecordStat then
+					_G.RecordStat(player, "DamageTaken", drain)
+				end
+			end
+
 			if not wasInMeltdown[player] then
 				-- Gerade erst in Meltdown eingetreten -- sofortige erste Explosion, nicht
 				-- erst nach den vollen 8 Sekunden warten. Zusätzlich die Mindestdauer-
@@ -536,7 +585,7 @@ RunService.Heartbeat:Connect(function(dt)
 				meltdownLockedUntil[player] = os.clock() + MELTDOWN_LOCK_DURATION
 				applyMeltdownGlow(character)
 				if humanoid and root then
-					humanoid:TakeDamage(MELTDOWN_SELF_DAMAGE)
+					meltdownExplosionDamage(player, humanoid)
 					MeltdownExplosionEvent:FireClient(player, root.Position)
 				end
 			else
@@ -547,7 +596,7 @@ RunService.Heartbeat:Connect(function(dt)
 				local lastExplosion = lastMeltdownExplosionAt[player] or 0
 				if now - lastExplosion >= MELTDOWN_EXPLOSION_INTERVAL and humanoid and root then
 					lastMeltdownExplosionAt[player] = now
-					humanoid:TakeDamage(MELTDOWN_SELF_DAMAGE)
+					meltdownExplosionDamage(player, humanoid)
 					MeltdownExplosionEvent:FireClient(player, root.Position)
 				end
 			end
