@@ -153,18 +153,29 @@ local MELTDOWN_EXPLOSION_INTERVAL = 8 -- Sekunden zwischen automatischen Explosi
 --
 -- Im City-Broken-Lauf stand der Spieler 163 Abtastungen lang im Meltdown, also gut fuenf
 -- Minuten, und nahm dabei ZEHN Punkte Schaden -- und die kamen von einer Barrikade.
-local MELTDOWN_SELF_DAMAGE_FRACTION = 0.05
+local MELTDOWN_SELF_DAMAGE_FRACTION = 0.08
 
 -- Dazu ein kontinuierlicher Verlust, den die Spezifikation ausdruecklich nennt
 -- ("verliert kontinuierlich Lebenspunkte"). Er hat einen zweiten Zweck: Roblox' Regeneration
 -- setzt erst eine Sekunde NACH dem letzten Schaden wieder ein. Schaden in jedem Einzelbild
 -- haelt sie damit dauerhaft an -- ohne dass wir Roblox' eigenes Skript anfassen muessen.
 --
--- Zusammen mit den Explosionen sind das rund 1,1 % der Lebenspunkte je Sekunde. Die
--- Mindestdauer von zehn Sekunden kostet also gut ein Zehntel der Gesundheit, und wer im
--- Meltdown bleibt, stirbt nach gut anderthalb Minuten. Das ist die Zahl zum Nachjustieren,
--- falls es sich zu hart oder zu zahnlos anfuehlt.
-local MELTDOWN_DRAIN_PER_SECOND = 0.005
+-- Zusammen mit den Explosionen sind das 3 % der Lebenspunkte je Sekunde: die Mindestdauer
+-- von zehn Sekunden kostet knapp ein Drittel der Gesundheit, und wer im Meltdown bleibt,
+-- stirbt aus voller Gesundheit nach 33 Sekunden.
+--
+-- Der erste Versuch lag bei 1,1 %/s und fuehlte sich weiterhin harmlos an -- zu Recht: im
+-- Testlauf kostete er ueber die ganze Runde 470 Punkte auf einen 100er-Balken, ohne einen
+-- einzigen Tod. Der Grund ist Roblox' Regeneration von 1 % je Sekunde: sie laeuft
+-- zwar waehrend des Meltdowns nicht (der Schaden in jedem Einzelbild haelt sie an), aber
+-- danach holt sie den Verlust in gut zwanzig Sekunden vollstaendig zurueck. Eine Strafe,
+-- die sich von selbst repariert, ist keine.
+--
+-- Bei 3 %/s uebersteigt der Verlust die Regeneration deutlich genug, dass sich Meltdowns
+-- ADDIEREN statt sich auszugleichen. Das ist die Zahl zum Nachjustieren. Falls es sich
+-- immer noch selbst repariert, waere der naechste Hebel nicht diese Zahl, sondern eine
+-- Sperre der Regeneration fuer einige Sekunden NACH dem Meltdown.
+local MELTDOWN_DRAIN_PER_SECOND = 0.02
 local MELTDOWN_HEAT_DECAY_PER_SECOND = 0.2 -- sinkt während Meltdown nur sehr langsam von selbst
 local MELTDOWN_LOCK_DURATION = 10 -- Sekunden Mindestdauer in Meltdown, bevor überhaupt abgekühlt werden kann
 
