@@ -34,10 +34,23 @@ MeltdownExplosionEvent.Name = "MeltdownExplosionEvent"
 MeltdownExplosionEvent.Parent = ReplicatedStorage
 
 -- ===== Einstellungen: Hitze-Erzeugung pro Aktion =====
-local PUNCH_HEAT_BY_COMBO_STEP = { [1] = 2, [2] = 3, [3] = 10 }
-local JUMP_HEAT = 15
-local FOCUS_HEAT = 25
-local AREA_HEAT = 35
+-- Der Anker der Spezifikation: rund DREI Punkte je normaler Kampfaktion, und damit vom
+-- Stand null bis in den Berserker-Bereich nach etwa dreissig Aktionen.
+--
+-- Vorher lagen die Werte bei 2/3/10 fuer den Combo, 15 fuer den Sprung, 25 fuer den Fokus
+-- und 35 fuer die Flaeche. Im letzten Testlauf ergab das ueber 366 Kampfaktionen eine
+-- Erzeugung von 9,87 Punkten je Sekunde gegen einen Abbau von 3,0 -- mehr als das
+-- Dreifache. Unter hundert zu bleiben war damit nicht eine Frage der Spielweise, sondern
+-- unmoeglich: der Spieler stand 48 Prozent des Laufs im Meltdown, und die Specials allein
+-- machten 89 Prozent der Hitze aus.
+--
+-- Die Reihenfolge bleibt -- ein Flaechenangriff heizt mehr als ein Schlag -- aber der
+-- Abstand schrumpft von zwoelffach auf knapp dreifach. Ein reiner Schlag-Combo trifft die
+-- drei Punkte der Spezifikation im Mittel genau.
+local PUNCH_HEAT_BY_COMBO_STEP = { [1] = 2, [2] = 3, [3] = 4 }
+local JUMP_HEAT = 4
+local FOCUS_HEAT = 6
+local AREA_HEAT = 8
 
 -- ===== Einstellungen: Abkühlung durchs Energie-Absorbieren =====
 -- Heat sinkt proportional zur absorbierten Energiemenge -- größere/wertvollere
@@ -92,28 +105,39 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 
 -- ===== Einstellungen: kontrollierter Berserk-Modus =====
-local BERSERK_HEAT_DECAY_PER_SECOND = 3 -- sinkt von selbst, langsam
+-- Passiver Abbau. Die Spezifikation nennt einen Punkt alle zwei Sekunden und sagt dazu
+-- ausdruecklich: "Passives Warten funktioniert, ist aber bewusst langsam." Der eigentliche
+-- Weg nach unten ist das Absorbieren (HEAT_COOL_PER_ABSORPTION_TICK, ein Punkt je Takt und
+-- Gebaeude -- bei sieben brennenden Gebaeuden also rund 3,5 Punkte je Sekunde).
+--
+-- Vorher stand hier 3,0, also das Sechsfache. Zusammen mit der viel zu hohen Erzeugung
+-- oben ergab das ein System, in dem beide Seiten stark verstellt waren und sich teilweise
+-- aufhoben.
+local BERSERK_HEAT_DECAY_PER_SECOND = 0.5
 
 -- Training (Arm, Bein, Körper): schnellerer Abbau, unabhängig von der Stufe -- siehe
 -- Heartbeat-Loop weiter unten.
 --
--- Der Wert liegt bewusst UNTER der Erzeugung: ein Arm-Combo macht 15 Hitze in 1,8
--- Sekunden (rund 8,3/s), eine Sprunglandung 15 in 1,2 Sekunden (rund 12,5/s). Die Hitze
--- soll beim Trainieren spürbar steigen und die Berserker-Schwelle auch erreichen können
--- -- ein Abbau oberhalb der Erzeugung würde sie unerreichbar machen. Dass es trotzdem
--- nicht in den Meltdown kippt, sichert die Deckelung in setHeat, nicht diese Zahl.
+-- Der Wert liegt bewusst UNTER der Erzeugung: ein Arm-Combo macht 9 Hitze in 1,8 Sekunden
+-- (rund 5/s), eine Sprunglandung 4 in 1,2 Sekunden (rund 3,3/s). Die Hitze soll beim
+-- Trainieren spürbar steigen und die Berserker-Schwelle auch erreichen können -- ein Abbau
+-- oberhalb der Erzeugung würde sie unerreichbar machen. Dass es trotzdem nicht in den
+-- Meltdown kippt, sichert die Deckelung in setHeat, nicht diese Zahl.
 --
 -- WICHTIG: dieser Abbau STAPELT sich mit BERSERK_HEAT_DECAY_PER_SECOND, denn der
 -- allgemeine Pfad weiter unten läuft während des Trainings ebenfalls (solange Berserk
--- nicht aktiv ist). Zusammen sind das 6/s. Damit bleibt fürs Arm-Training netto rund
--- 2,3/s, also etwa 37 Sekunden bis zur Berserker-Schwelle -- ungefähr das Tempo, das der
--- Testlauf gezeigt hat, nur ohne den Absturz in den Meltdown danach. Fürs Bein-Training
--- sind es rund 13 Sekunden.
+-- nicht aktiv ist). Zusammen sind das 2/s. Netto bleiben fürs Arm-Training rund 3/s, also
+-- knapp 30 Sekunden bis zur Berserker-Schwelle, fürs Bein-Training rund 1,3/s und damit
+-- gut eine Minute.
+--
+-- Der Wert stand bei 3, geeicht auf die alte, mehr als dreimal so hohe Hitze-Erzeugung.
+-- Mit der neuen Skala hätte er das Bein-Training KÄLTER gehalten, als es heizt (3,5 gegen
+-- 3,3) -- Berserker wäre dort unerreichbar gewesen.
 --
 -- Solange Berserk aktiv ist, fällt der allgemeine Pfad weg und jeder Treffer legt
--- zusätzlich BERSERK_HEAT_PER_HIT nach: dann steigt die Hitze schnell an den Deckel.
-local TRAINING_HEAT_DECAY_PER_SECOND = 3
-local BERSERK_HEAT_PER_HIT = 4 -- jeder Treffer während Berserk lädt etwas nach
+-- zusätzlich BERSERK_HEAT_PER_HIT nach.
+local TRAINING_HEAT_DECAY_PER_SECOND = 1.5
+local BERSERK_HEAT_PER_HIT = 1 -- jeder Treffer während Berserk lädt etwas nach (war 4, mit der Skala oben mitgezogen)
 local BERSERK_MIN_HEAT_TO_STAY = 40 -- fällt Heat darunter, endet Berserk automatisch
 local BERSERK_INACTIVITY_TIMEOUT = 4 -- Sekunden ohne Treffer -> Berserk endet
 
