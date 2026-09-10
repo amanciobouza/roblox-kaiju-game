@@ -11,6 +11,7 @@ local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtil
 local ComicStyleUtils = require(ReplicatedStorage:WaitForChild("ComicStyleUtils"))
 local UiTypography = require(ReplicatedStorage:WaitForChild("UiTypography"))
 local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
+local ResponsiveGridUtils = require(ReplicatedStorage:WaitForChild("ResponsiveGridUtils"))
 local applyComicStyle = ComicStyleUtils.Apply
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -106,6 +107,12 @@ gridLayout.CellSize = UDim2.new(0, 210, 0, 180)
 gridLayout.CellPadding = UDim2.new(0, 8, 0, 8)
 gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 gridLayout.Parent = grid
+
+-- Die 210 oben sind jetzt nur noch die MINDESTBREITE. Fest gesetzt liessen sie auf einem
+-- Telefon rechts einen toten Streifen von rund 190 Pixeln stehen -- zwei Karten passten
+-- hinein, fuer die dritte fehlten zwanzig Pixel. Die Karten fuellen die Breite nun aus,
+-- und ihre Hoehe waechst im gleichen Verhaeltnis mit (180/210).
+ResponsiveGridUtils.Bind(grid, gridLayout, 6, 210, 180 / 210)
 
 local giftCells = {} -- [n] = { button=, overlay=, timeLabel=, iconLabel= }
 

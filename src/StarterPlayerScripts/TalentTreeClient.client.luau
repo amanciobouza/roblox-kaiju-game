@@ -211,6 +211,25 @@ local DETAIL_MIN_WIDTH = 300
 local DETAIL_MAX_WIDTH = 520
 local COLUMN_GAP = 8
 
+-- ===== Schmale Bildschirme (Telefon) =====
+-- Unterhalb dieser Breite passen Baum und Detailspalte nicht mehr nebeneinander. Bei 640
+-- Pixeln -- ein gewoehnliches Telefon im Querformat -- blieben dem Baum 316 Pixel von
+-- seinen 960, also ein Drittel, waehrend die Detailspalte 300 belegte. Beides war
+-- unbenutzbar.
+--
+-- Darunter stehen sie deshalb UEBEREINANDER: der Baum ueber die volle Breite, die
+-- Detailspalte als Leiste am unteren Rand. Derselbe Aufbau, den Telefone fuer
+-- Liste-und-Detail ueblicherweise verwenden.
+local NARROW_WIDTH = 820
+local DETAIL_SHEET_MIN_HEIGHT = 170
+local DETAIL_SHEET_MAX_HEIGHT = 300
+local DETAIL_SHEET_FRACTION = 0.4
+
+-- Oberkante des Inhalts. Im breiten Fall stehen Titel und Fraktions-Tabs nebeneinander,
+-- im schmalen untereinander -- dann rutscht auch die Ressourcenleiste tiefer.
+local CONTENT_TOP_WIDE = 106
+local CONTENT_TOP_NARROW = 112
+
 -- ===== Detail-Panel: zeigt das AUSGEWÄHLTE Talent -- Icon/Name, Beschreibung, Kosten,
 -- Forschungszeit, und einen "Vorher -> Nachher"-Wertevergleich. =====
 local detailPanel = Instance.new("Frame")
@@ -220,12 +239,43 @@ detailPanel.BackgroundColor3 = Color3.fromRGB(28, 25, 40)
 detailPanel.Parent = panel
 applyComicStyle(detailPanel, 12, 2)
 
--- Beide Spalten neu setzen, sobald sich die Fensterbreite aendert.
+-- Kopfbereich und beide Spalten neu setzen, sobald sich die Fenstergroesse aendert.
 local function layoutColumns()
 	local width = panel.AbsoluteSize.X
-	if width <= 0 then
+	local height = panel.AbsoluteSize.Y
+	if width <= 0 or height <= 0 then
 		return
 	end
+
+	if width < NARROW_WIDTH then
+		-- Kopf: Titel oben, Tabs darunter ueber die volle Breite. Nebeneinander brauchten
+		-- sie 720 Pixel Mindestbreite -- auf einem Telefon lief die Tab-Reihe rechts aus
+		-- dem Bild.
+		titleLabel.Size = UDim2.new(0, math.min(300, width - 24), 0, 28)
+		tabRow.Position = UDim2.new(0, 12, 0, 42)
+		tabRow.Size = UDim2.new(1, -24, 0, 30)
+		resourceRow.Position = UDim2.new(0, 8, 0, 78)
+
+		local sheetHeight = math.clamp(
+			math.floor(height * DETAIL_SHEET_FRACTION),
+			DETAIL_SHEET_MIN_HEIGHT,
+			DETAIL_SHEET_MAX_HEIGHT
+		)
+		local treeHeight = math.max(height - CONTENT_TOP_NARROW - sheetHeight - 2 * COLUMN_GAP, 80)
+
+		treeScroll.Position = UDim2.new(0, COLUMN_GAP, 0, CONTENT_TOP_NARROW)
+		treeScroll.Size = UDim2.new(1, -2 * COLUMN_GAP, 0, treeHeight)
+		detailPanel.Position = UDim2.new(0, COLUMN_GAP, 0, CONTENT_TOP_NARROW + treeHeight + COLUMN_GAP)
+		detailPanel.Size = UDim2.new(1, -2 * COLUMN_GAP, 0, sheetHeight)
+		return
+	end
+
+	-- Breiter Fall: Titel und Tabs nebeneinander, Spalten daneben.
+	titleLabel.Size = UDim2.new(0, 300, 0, 32)
+	tabRow.Position = UDim2.new(0, 320, 0, 8)
+	tabRow.Size = UDim2.new(0, 400, 0, 32)
+	resourceRow.Position = UDim2.new(0, 8, 0, 44)
+
 	local detailWidth = math.clamp(
 		width - TREE_MAX_WIDTH - 3 * COLUMN_GAP,
 		DETAIL_MIN_WIDTH,
@@ -235,10 +285,10 @@ local function layoutColumns()
 	local total = treeWidth + COLUMN_GAP + detailWidth
 	local x = math.max(COLUMN_GAP, math.floor((width - total) / 2))
 
-	treeScroll.Position = UDim2.new(0, x, 0, 106)
-	treeScroll.Size = UDim2.new(0, treeWidth, 1, -110)
-	detailPanel.Position = UDim2.new(0, x + treeWidth + COLUMN_GAP, 0, 106)
-	detailPanel.Size = UDim2.new(0, detailWidth, 1, -110)
+	treeScroll.Position = UDim2.new(0, x, 0, CONTENT_TOP_WIDE)
+	treeScroll.Size = UDim2.new(0, treeWidth, 1, -(CONTENT_TOP_WIDE + 4))
+	detailPanel.Position = UDim2.new(0, x + treeWidth + COLUMN_GAP, 0, CONTENT_TOP_WIDE)
+	detailPanel.Size = UDim2.new(0, detailWidth, 1, -(CONTENT_TOP_WIDE + 4))
 end
 
 panel:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutColumns)

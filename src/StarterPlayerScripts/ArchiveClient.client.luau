@@ -26,6 +26,7 @@ local ComicStyleUtils = require(ReplicatedStorage:WaitForChild("ComicStyleUtils"
 local ModelPreviewUtils = require(ReplicatedStorage:WaitForChild("ModelPreviewUtils"))
 local UiTypography = require(ReplicatedStorage:WaitForChild("UiTypography"))
 local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
+local ResponsiveGridUtils = require(ReplicatedStorage:WaitForChild("ResponsiveGridUtils"))
 
 local ArchiveRevealedEvent = ReplicatedStorage:WaitForChild("ArchiveRevealedEvent", 20)
 local ArchiveModelFunction = ReplicatedStorage:WaitForChild("ArchiveModelFunction", 20)
@@ -160,6 +161,12 @@ scrollLayout.CellPadding = UDim2.new(0, 10, 0, 10)
 scrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
 scrollLayout.Parent = scroll
 
+-- CARD_SIZE ist damit nur noch die Mindestbreite; die Karten fuellen die Zeile aus und
+-- behalten ihr Hoehenverhaeltnis. Fest gesetzt blieb je nach Bildschirmbreite rechts ein
+-- toter Streifen stehen -- am schlimmsten auf dem Telefon, wo drei Karten passten und der
+-- Rest leer blieb.
+ResponsiveGridUtils.Bind(scroll, scrollLayout, 7, CARD_SIZE.X.Offset, CARD_SIZE.Y.Offset / CARD_SIZE.X.Offset)
+
 -- ===== Steckbrief: eigener Vollbild-Bereich, Rückweg ins Raster =====
 
 local detail = Instance.new("Frame")
@@ -188,7 +195,9 @@ detailBack.Parent = detail
 ComicStyleUtils.Apply(detailBack, 10, 3)
 
 local detailTitle = Instance.new("TextLabel")
-detailTitle.Size = UDim2.new(0, 420, 0, 40)
+-- Relativ statt fester 420 Pixel: auf einem Telefon lief der Titel sonst rechts aus dem
+-- Bild, weil er bei 72 Pixeln beginnt und 420 breit war -- zusammen 492 von 640.
+detailTitle.Size = UDim2.new(1, -92, 0, 40)
 detailTitle.Position = UDim2.new(0, 72, 0, 14)
 detailTitle.BackgroundTransparency = 1
 detailTitle.Font = Enum.Font.FredokaOne

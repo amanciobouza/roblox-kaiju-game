@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ComicStyleUtils = require(ReplicatedStorage:WaitForChild("ComicStyleUtils"))
 local UiTypography = require(ReplicatedStorage:WaitForChild("UiTypography"))
 local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
+local ResponsiveGridUtils = require(ReplicatedStorage:WaitForChild("ResponsiveGridUtils"))
 local applyComicStyle = ComicStyleUtils.Apply
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
 
@@ -29,31 +30,9 @@ local playerGui = player:WaitForChild("PlayerGui")
 local MIN_CARD_WIDTH = 460 -- darunter wird eine Achievement-Karte zu eng fuer Name + Balken
 local MAX_ACHIEVEMENT_COLUMNS = 3
 
--- Breite des Behaelters ohne Rollbalken. AbsoluteSize enthaelt ihn mit; wer damit rechnet,
--- bekommt eine Spalte zu viel und dann waagrechtes Rollen.
-local function usableWidth(container)
-	if container:IsA("ScrollingFrame") then
-		return container.AbsoluteWindowSize.X - container.ScrollBarThickness
-	end
-	return container.AbsoluteSize.X
-end
-
--- Verteilt die Breite von `container` auf so viele Spalten, wie bei `minCardWidth`
--- hineinpassen (hoechstens `maxColumns`), und setzt die Zellenbreite des Rasters.
-local function bindResponsiveGrid(container, grid, maxColumns, minCardWidth)
-	local function apply()
-		local width = usableWidth(container)
-		if width <= 0 then
-			return
-		end
-		local gap = grid.CellPadding.X.Offset
-		local columns = math.clamp(math.floor((width + gap) / (minCardWidth + gap)), 1, maxColumns)
-		local cellWidth = math.floor((width - (columns - 1) * gap) / columns)
-		grid.CellSize = UDim2.new(0, cellWidth, 0, grid.CellSize.Y.Offset)
-	end
-	container:GetPropertyChangedSignal("AbsoluteSize"):Connect(apply)
-	apply()
-end
+-- Die Raster-Logik lag frueher hier als lokale Funktion. Seit Archiv und Geschenke sie
+-- ebenfalls brauchen, steht sie in ReplicatedStorage.ResponsiveGridUtils -- einmal statt
+-- dreimal.
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "NavigationGui"
@@ -559,7 +538,7 @@ for _, achievement in ipairs(AchievementsConfig.List) do
 		currentCategoryGrid.CellPadding = UDim2.new(0, 8, 0, 8)
 		currentCategoryGrid.SortOrder = Enum.SortOrder.LayoutOrder
 		currentCategoryGrid.Parent = categoryFrame
-		bindResponsiveGrid(achievementsScroll, currentCategoryGrid, MAX_ACHIEVEMENT_COLUMNS, MIN_CARD_WIDTH)
+		ResponsiveGridUtils.Bind(achievementsScroll, currentCategoryGrid, MAX_ACHIEVEMENT_COLUMNS, MIN_CARD_WIDTH)
 	end
 
 	layoutOrder += 1
@@ -1074,7 +1053,7 @@ end
 -- wie man es von einer Seite erwartet.
 local helpColumnCount = 0
 local function layoutHelpColumns()
-	local width = usableWidth(helpScroll)
+	local width = ResponsiveGridUtils.UsableWidth(helpScroll)
 	if width <= 0 then
 		return
 	end
