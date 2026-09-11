@@ -53,6 +53,54 @@ screenGui.DisplayOrder = 90
 screenGui.IgnoreGuiInset = true
 screenGui.Parent = playerGui
 
+-- ===== Vollbild-Panels von der HUD-Skalierung ausnehmen =====
+-- ResponsiveHudScale haengt jedem ScreenGui eine UIScale an, die auf schmalen Geraeten bis
+-- auf 0.55 heruntergeht. Fuer die Navigationsleiste ist das noetig: eine Spalte aus
+-- 44-Pixel-Knoepfen waere bei voller Groesse hoeher als ein Telefon im Querformat.
+--
+-- Fuer die Panels DARIN ist es schaedlich. Sie stehen auf Size = (1,0,1,0), beanspruchen
+-- also ausdruecklich die ganze Flaeche -- bei Faktor 0.55 nehmen sie davon noch 55 Prozent
+-- ein und lassen den Rest leer. Und ihr Text schrumpft mit: aus 14 Punkten werden knapp
+-- acht, was auf dem Telefon nicht mehr zu lesen ist.
+--
+-- Eine zweite UIScale am Panel hebt die erste auf. Verschachtelte UIScale multiplizieren
+-- sich, 0.55 mal 1/0.55 ist eins -- das Panel rendert in seiner echten Groesse, die Leiste
+-- daneben bleibt verkleinert.
+local function unscalePanel(panel)
+	local compensation = Instance.new("UIScale")
+	compensation.Name = "HudScaleCompensation"
+	compensation.Scale = 1
+	compensation.Parent = panel
+
+	local watched = nil
+
+	local function apply()
+		local hudScale = screenGui:FindFirstChildOfClass("UIScale")
+		if hudScale and hudScale.Scale > 0 then
+			compensation.Scale = 1 / hudScale.Scale
+		else
+			compensation.Scale = 1
+		end
+	end
+
+	-- Die UIScale entsteht moeglicherweise ERST nach diesem Skript -- die HUD-Skripte
+	-- laufen parallel und ihre Reihenfolge ist nicht garantiert. Deshalb sowohl jetzt
+	-- pruefen als auch auf ihr Auftauchen und jede spaetere Aenderung hoeren.
+	local function rebind()
+		local hudScale = screenGui:FindFirstChildOfClass("UIScale")
+		if hudScale ~= watched then
+			watched = hudScale
+			if hudScale then
+				hudScale:GetPropertyChangedSignal("Scale"):Connect(apply)
+			end
+		end
+		apply()
+	end
+
+	screenGui.ChildAdded:Connect(rebind)
+	rebind()
+end
+
 -- ===== Menüleiste unten links =====
 -- Ersetzt den früheren Hamburger-Knopf samt zentriertem Overlay. Die Punkte kleben jetzt
 -- dauerhaft am Rand: ein Knopf, der eine ohnehin schmale Leiste versteckt, spart kaum
@@ -404,6 +452,7 @@ local function createPlaceholderPanel(key, title, message)
 	applyComicStyle(panel, 20, 5)
 	-- Auch der Platzhalter ist ein Vollbild-Panel und braucht das Polster.
 	TopInsetUtils.Bind(panel)
+	unscalePanel(panel)
 
 	local titleLabel = Instance.new("TextLabel")
 	titleLabel.Size = UDim2.new(1, -16, 0, 44)
@@ -457,6 +506,7 @@ applyComicStyle(achievementsPanel, 20, 5)
 -- Zeichenflaeche bewusst DARUNTER, damit oben kein Streifen mit Sicht auf die Welt bleibt --
 -- das gilt aber nur fuer den Hintergrund. Das Polster wird nachgezogen, siehe TopInsetUtils.
 TopInsetUtils.Bind(achievementsPanel)
+unscalePanel(achievementsPanel)
 panels["Achievements"] = achievementsPanel
 
 local achievementsTitleLabel = Instance.new("TextLabel")
@@ -806,6 +856,7 @@ applyComicStyle(helpPanel, 20, 5)
 -- Zeichenflaeche bewusst DARUNTER, damit oben kein Streifen mit Sicht auf die Welt bleibt --
 -- das gilt aber nur fuer den Hintergrund. Das Polster wird nachgezogen, siehe TopInsetUtils.
 TopInsetUtils.Bind(helpPanel)
+unscalePanel(helpPanel)
 panels["Help"] = helpPanel
 
 local helpTitleLabel = Instance.new("TextLabel")

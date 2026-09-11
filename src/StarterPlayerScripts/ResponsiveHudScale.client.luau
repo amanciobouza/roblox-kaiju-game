@@ -24,9 +24,35 @@ local REFERENCE_HEIGHT = 720 -- NEU: bisher wurde nur die Breite geprüft -- auf
 -- Bereichs landeten.
 local MIN_SCALE = 0.55 -- nie kleiner als das, sonst wird Text unlesbar
 
--- Namen von ScreenGuis, die NICHT mitskaliert werden sollen (z.B. reine Vollbild-Effekte
--- ohne Text/Buttons, wo Skalierung nichts bringt oder störend wäre).
-local EXCLUDED_GUI_NAMES = {}
+-- Namen von ScreenGuis, die NICHT mitskaliert werden sollen.
+--
+-- ===== Warum die Menue-Bildschirme hier stehen =====
+-- Eine UIScale auf dem ScreenGui verkleinert ALLES darin -- auch ein Panel, das mit
+-- Size = (1,0,1,0) ausdruecklich die ganze Flaeche beansprucht. Bei Faktor 0.55 nimmt so
+-- ein Vollbild-Panel noch 55 Prozent des Bildschirms ein, und 45 Prozent bleiben leer.
+-- Genau das war auf dem Telefon zu sehen: Bildschirme, die "nicht auf die ganze
+-- Screenflaeche" gehen, und Text, der bei 0.55 aus 14 Punkten sieben macht.
+--
+-- Die Skalierung war die richtige Antwort, solange die Panels mit festen Pixelwerten
+-- gebaut waren -- dann passten sie verkleinert wenigstens nebeneinander. Inzwischen
+-- rechnen sie ihre Anordnung selbst aus der verfuegbaren Flaeche: die Raster fuellen die
+-- Breite (ResponsiveGridUtils), der Talentbaum skaliert seinen Inhalt selbst und teilt die
+-- Spalten anteilig auf. Sie brauchen die Verkleinerung nicht mehr -- sie schadet ihnen.
+--
+-- Das HUD im Spiel bleibt skaliert: dort sitzen Knoepfe und Anzeigen an festen Positionen
+-- und muessen weiterhin gemeinsam schrumpfen, damit sie sich nicht ueberlappen.
+--
+-- NavigationGui steht bewusst NICHT hier: darin sitzt die Navigationsleiste, eine Spalte
+-- aus 44-Pixel-Knoepfen ueber dem unteren Rand. Bei voller Groesse waere sie auf einem 360
+-- Pixel hohen Telefon hoeher als der Bildschirm. Die Vollbild-Panels in diesem ScreenGui
+-- heben die Skalierung stattdessen einzeln wieder auf, siehe NavigationClient.
+local EXCLUDED_GUI_NAMES = {
+	TalentTreeGui = true,
+	ArchiveGui = true,
+	GiftGui = true,
+	SkinShopGui = true,
+	FactionGui = true,
+}
 
 local function getCurrentScale()
 	local camera = Workspace.CurrentCamera
@@ -52,6 +78,13 @@ local function applyScaleToGui(screenGui)
 		return
 	end
 	if EXCLUDED_GUI_NAMES[screenGui.Name] then
+		-- Eine frueher gesetzte Skalierung zuruecknehmen. Ohne das bliebe sie stehen, wenn
+		-- ein Bildschirm nachtraeglich in die Ausschlussliste wandert -- und der Fehler
+		-- waere dann nur noch in Studio zu sehen, nicht mehr im Quelltext.
+		local existing = screenGui:FindFirstChildOfClass("UIScale")
+		if existing then
+			existing.Scale = 1
+		end
 		return
 	end
 	if trackedScales[screenGui] then
