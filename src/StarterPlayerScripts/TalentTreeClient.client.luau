@@ -197,38 +197,50 @@ treeScroll.ClipsDescendants = true
 treeScroll.Parent = panel
 applyComicStyle(treeScroll, 12, 2)
 
+-- Skaliert ALLE Knoten und Verbindungslinien im Baum gemeinsam. Sie stehen auf festen
+-- Koordinaten einer 960x900-Flaeche -- ohne diesen Faktor sah ein Telefon davon nur einen
+-- Ausschnitt, und ein grosser Monitor liess den Rest der Flaeche leer.
+local treeScale = Instance.new("UIScale")
+treeScale.Scale = 1
+treeScale.Parent = treeScroll
+
 -- Baum und Detailspalte teilen sich die Breite. Beide standen vorher auf festen Werten
 -- (960 und 268 Pixel ab Position 8 beziehungsweise 976). Auf einem Vollbild-Bildschirm
 -- blieb dadurch rechts ein Drittel der Flaeche leer, waehrend die Textspalte auf 268 Pixel
 -- eingeengt war -- der Text darin brach nach zwei, drei Woertern um.
 --
--- Der Baum behaelt seine Hoechstbreite: er ist mit festen Koordinaten aufgebaut
--- (CanvasSize 960x900), ihn zu dehnen wuerde nur Leerraum INNERHALB des Rollbereichs
--- erzeugen. Der gewonnene Platz geht deshalb an die Detailspalte, und der ganze Block
--- steht mittig.
-local TREE_MAX_WIDTH = 960
+-- Der Baum hatte danach eine Hoechstbreite von 960 Pixeln, mit der Begruendung, ihn zu
+-- dehnen erzeuge nur Leerraum im Rollbereich -- er ist ja mit festen Koordinaten auf einer
+-- 960x900-Flaeche aufgebaut. Das stimmte, solange er nicht skaliert wurde. Seit er das
+-- wird (treeScale weiter unten), bekommt er den ganzen Rest der Breite, und der Block
+-- steht nicht mehr mittig, sondern fuellt die Flaeche.
 local DETAIL_MIN_WIDTH = 300
 local DETAIL_MAX_WIDTH = 520
 local COLUMN_GAP = 8
 
--- ===== Schmale Bildschirme (Telefon) =====
--- Unterhalb dieser Breite passen Baum und Detailspalte nicht mehr nebeneinander. Bei 640
--- Pixeln -- ein gewoehnliches Telefon im Querformat -- blieben dem Baum 316 Pixel von
--- seinen 960, also ein Drittel, waehrend die Detailspalte 300 belegte. Beides war
--- unbenutzbar.
+-- ===== Telefon im Querformat =====
+-- Die Detailspalte bleibt IMMER rechts. Auf dem Telefon wird im Querformat gespielt: dort
+-- ist die Breite reichlich und die HOEHE knapp -- Baum und Details uebereinander zu
+-- stapeln wuerde genau die knappe Groesse verbrauchen.
 --
--- Darunter stehen sie deshalb UEBEREINANDER: der Baum ueber die volle Breite, die
--- Detailspalte als Leiste am unteren Rand. Derselbe Aufbau, den Telefone fuer
--- Liste-und-Detail ueblicherweise verwenden.
-local NARROW_WIDTH = 820
-local DETAIL_SHEET_MIN_HEIGHT = 170
-local DETAIL_SHEET_MAX_HEIGHT = 300
-local DETAIL_SHEET_FRACTION = 0.4
+-- Stattdessen zwei Stellschrauben. Erstens darf die Detailspalte auf schmalen Geraeten
+-- schmaler werden als die 300 Pixel, die sie am Monitor mindestens bekommt -- feste 300
+-- von 640 sind fast die halbe Flaeche. Zweitens wird der Baum SKALIERT statt
+-- abgeschnitten: seine Knoten stehen auf festen Koordinaten einer 960x900-Flaeche, und
+-- ohne Skalierung sah ein Telefon davon 316 mal 254 Pixel, also ein Achtel.
+local DETAIL_WIDTH_FRACTION = 0.3
+local DETAIL_MIN_FRACTION = 0.32 -- so viel darf die Detailspalte hoechstens vom Bildschirm nehmen
 
--- Oberkante des Inhalts. Im breiten Fall stehen Titel und Fraktions-Tabs nebeneinander,
--- im schmalen untereinander -- dann rutscht auch die Ressourcenleiste tiefer.
-local CONTENT_TOP_WIDE = 106
-local CONTENT_TOP_NARROW = 112
+-- Grenzen der Baum-Skalierung. Nach unten, damit die Beschriftung lesbar bleibt -- lieber
+-- rollen als eine unleserliche Uebersicht. Nach oben, damit auf einem grossen Monitor
+-- keine handtellergrossen Knoten entstehen.
+local TREE_MIN_SCALE = 0.55
+local TREE_MAX_SCALE = 1.5
+local TREE_CANVAS_WIDTH = 960
+local TREE_CANVAS_HEIGHT = 900
+
+-- Oberkante des Inhalts, unter Titelzeile und Ressourcenleiste.
+local CONTENT_TOP = 106
 
 -- ===== Detail-Panel: zeigt das AUSGEWÄHLTE Talent -- Icon/Name, Beschreibung, Kosten,
 -- Forschungszeit, und einen "Vorher -> Nachher"-Wertevergleich. =====
@@ -247,48 +259,50 @@ local function layoutColumns()
 		return
 	end
 
-	if width < NARROW_WIDTH then
-		-- Kopf: Titel oben, Tabs darunter ueber die volle Breite. Nebeneinander brauchten
-		-- sie 720 Pixel Mindestbreite -- auf einem Telefon lief die Tab-Reihe rechts aus
-		-- dem Bild.
-		titleLabel.Size = UDim2.new(0, math.min(300, width - 24), 0, 28)
-		tabRow.Position = UDim2.new(0, 12, 0, 42)
-		tabRow.Size = UDim2.new(1, -24, 0, 30)
-		resourceRow.Position = UDim2.new(0, 8, 0, 78)
-
-		local sheetHeight = math.clamp(
-			math.floor(height * DETAIL_SHEET_FRACTION),
-			DETAIL_SHEET_MIN_HEIGHT,
-			DETAIL_SHEET_MAX_HEIGHT
-		)
-		local treeHeight = math.max(height - CONTENT_TOP_NARROW - sheetHeight - 2 * COLUMN_GAP, 80)
-
-		treeScroll.Position = UDim2.new(0, COLUMN_GAP, 0, CONTENT_TOP_NARROW)
-		treeScroll.Size = UDim2.new(1, -2 * COLUMN_GAP, 0, treeHeight)
-		detailPanel.Position = UDim2.new(0, COLUMN_GAP, 0, CONTENT_TOP_NARROW + treeHeight + COLUMN_GAP)
-		detailPanel.Size = UDim2.new(1, -2 * COLUMN_GAP, 0, sheetHeight)
-		return
-	end
-
-	-- Breiter Fall: Titel und Tabs nebeneinander, Spalten daneben.
-	titleLabel.Size = UDim2.new(0, 300, 0, 32)
-	tabRow.Position = UDim2.new(0, 320, 0, 8)
-	tabRow.Size = UDim2.new(0, 400, 0, 32)
+	-- Kopfzeile: Titel und Tabs bleiben NEBENEINANDER, schrumpfen aber mit. Fest standen
+	-- sie auf 300 plus 400 Pixeln, brauchten also 720 Mindestbreite -- auf einem Telefon
+	-- mit 640 lief die Tab-Reihe rechts aus dem Bild. Sie untereinander zu setzen waere
+	-- der naheliegende Ausweg, kostet im Querformat aber die knappe Hoehe.
+	local titleWidth = math.clamp(math.floor(width * 0.3), 140, 300)
+	titleLabel.Size = UDim2.new(0, titleWidth, 0, 32)
+	tabRow.Position = UDim2.new(0, titleWidth + 24, 0, 8)
+	tabRow.Size = UDim2.new(0, math.max(width - titleWidth - 36, 120), 0, 32)
 	resourceRow.Position = UDim2.new(0, 8, 0, 44)
 
+	-- Die Detailspalte bleibt rechts, darf aber nie mehr als DETAIL_MIN_FRACTION des
+	-- Bildschirms beanspruchen: feste 300 Pixel waeren auf einem 640er Telefon fast die
+	-- halbe Flaeche.
+	local detailFloor = math.min(DETAIL_MIN_WIDTH, math.floor(width * DETAIL_MIN_FRACTION))
 	local detailWidth = math.clamp(
-		width - TREE_MAX_WIDTH - 3 * COLUMN_GAP,
-		DETAIL_MIN_WIDTH,
+		math.floor(width * DETAIL_WIDTH_FRACTION),
+		detailFloor,
 		DETAIL_MAX_WIDTH
 	)
-	local treeWidth = math.min(TREE_MAX_WIDTH, width - detailWidth - 3 * COLUMN_GAP)
-	local total = treeWidth + COLUMN_GAP + detailWidth
-	local x = math.max(COLUMN_GAP, math.floor((width - total) / 2))
 
-	treeScroll.Position = UDim2.new(0, x, 0, CONTENT_TOP_WIDE)
-	treeScroll.Size = UDim2.new(0, treeWidth, 1, -(CONTENT_TOP_WIDE + 4))
-	detailPanel.Position = UDim2.new(0, x + treeWidth + COLUMN_GAP, 0, CONTENT_TOP_WIDE)
-	detailPanel.Size = UDim2.new(0, detailWidth, 1, -(CONTENT_TOP_WIDE + 4))
+	-- Der Baum bekommt den GANZEN Rest -- nicht mehr hoechstens 960 Pixel. Damit bleibt auf
+	-- einem breiten Monitor rechts und links kein Rand mehr leer.
+	local treeWidth = math.max(width - detailWidth - 3 * COLUMN_GAP, 160)
+	local treeHeight = math.max(height - CONTENT_TOP - COLUMN_GAP, 120)
+
+	treeScroll.Position = UDim2.new(0, COLUMN_GAP, 0, CONTENT_TOP)
+	treeScroll.Size = UDim2.new(0, treeWidth, 0, treeHeight)
+	detailPanel.Position = UDim2.new(0, COLUMN_GAP + treeWidth + COLUMN_GAP, 0, CONTENT_TOP)
+	detailPanel.Size = UDim2.new(0, detailWidth, 0, treeHeight)
+
+	-- Baum skalieren statt abschneiden. Die Knoten stehen auf festen Koordinaten einer
+	-- 960x900-Flaeche; der Faktor passt sie an den vorhandenen Platz an. Die CanvasSize
+	-- muss MITSKALIERT werden -- ein UIScale veraendert sie nicht von selbst, und ohne die
+	-- Anpassung liefe der Rollbereich ins Leere oder schnitte ab.
+	local scale = math.clamp(
+		math.min(treeWidth / TREE_CANVAS_WIDTH, treeHeight / TREE_CANVAS_HEIGHT),
+		TREE_MIN_SCALE,
+		TREE_MAX_SCALE
+	)
+	treeScale.Scale = scale
+	treeScroll.CanvasSize = UDim2.new(
+		0, math.floor(TREE_CANVAS_WIDTH * scale),
+		0, math.floor(TREE_CANVAS_HEIGHT * scale)
+	)
 end
 
 panel:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutColumns)
