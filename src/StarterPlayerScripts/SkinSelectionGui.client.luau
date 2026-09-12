@@ -796,42 +796,56 @@ do
 		return -90 + (math.clamp(percent, 0, GAUGE_MAX) / GAUGE_MAX) * 180
 	end
 
-	-- ===== Gehaeuseplatte =====
+	-- ===== Gehaeuse: ein Sockel, kein Hintergrund =====
 	--
-	-- Ohne sie schwebt der Tacho im Bild: eine runde Scheibe mit Ring, die auf nichts
-	-- sitzt. In der Vorlage ist das Instrument in eine Platte EINGELASSEN, und genau das
-	-- traegt den Eindruck "Geraet" statt "Grafik".
+	-- Erster Versuch war eine grosse Platte hinter dem ganzen Instrument. Das sah falsch
+	-- aus: ein Tacho braucht keine Rueckwand, er braucht etwas, WORAUF er sitzt. Eine
+	-- Flaeche hinter allem macht aus dem Geraet ein Schild.
 	--
-	-- Die Platte laeuft unten ueber den Rahmen hinaus bis an den Bildschirmrand. Eine
-	-- Konsole, die 24 Pixel ueber der Kante endet, sieht aus wie ein vergessenes Fenster;
-	-- eine, die am Rand ansetzt, sieht aus wie eingebaut.
-	local PLATTE_OBEN = 12
-	local PLATTE_UEBERSTAND = 24 -- so weit steht heatFrame ueber dem unteren Bildrand
+	-- Jetzt ein flacher Sockel an der Unterkante. Er beginnt ein Stueck oberhalb der
+	-- Drehachse -- so schneidet die flache Seite der Scheibe in ihn hinein, statt nur
+	-- daraufzustehen -- und laeuft nach unten bis an den Bildschirmrand. Dass er dort
+	-- ansetzt, ist der Punkt: ein Sockel, der in der Luft endet, ist kein Sockel.
+	local SOCKEL_UEBERLAPP = 16 -- so weit reicht er ueber die Drehachse hinauf
+	local SOCKEL_UEBERSTAND = 24 -- so weit steht heatFrame ueber dem unteren Bildrand
 
 	local gehaeuse = Instance.new("Frame")
 	gehaeuse.Name = "GaugeHousing"
-	gehaeuse.Size = UDim2.new(1, 0, 0, (GAUGE_CENTER.Y - PLATTE_OBEN) + PLATTE_UEBERSTAND)
-	gehaeuse.Position = UDim2.new(0, 0, 0, PLATTE_OBEN)
+	gehaeuse.Size = UDim2.new(1, 0, 0, SOCKEL_UEBERLAPP + SOCKEL_UEBERSTAND)
+	gehaeuse.Position = UDim2.new(0, 0, 0, GAUGE_CENTER.Y - SOCKEL_UEBERLAPP)
 	gehaeuse.ZIndex = 5
 	gehaeuse.Parent = heatFrame
-	HudChrome.Panel(gehaeuse, { radius = HudChrome.Radius.Panel, transparency = 0.06 })
+	HudChrome.Panel(gehaeuse, {
+		radius = HudChrome.Radius.Small,
+		fill = HudChrome.Color.PanelRaised,
+		transparency = 0,
+	})
 
-	-- Nieten in den Ecken der Platte. Dieselbe Bauart wie die Schrauben im Ring, nur etwas
-	-- groesser: sie halten die Platte, nicht das Glas.
-	for _, ecke in ipairs({
-		{ x = 14, y = 14 },
-		{ x = -14, y = 14 },
-		{ x = 14, y = -38 },
-		{ x = -14, y = -38 },
+	-- Eine helle Linie auf der Oberkante: dort faellt das Licht auf eine waagerechte
+	-- Metallkante. Ohne sie ist der Sockel ein graues Rechteck.
+	local sockelKante = Instance.new("Frame")
+	sockelKante.Name = "HousingEdge"
+	sockelKante.Size = UDim2.new(1, 0, 0, 1)
+	sockelKante.Position = UDim2.new(0, 0, 0, 0)
+	sockelKante.BackgroundColor3 = HudChrome.Color.BorderBright
+	sockelKante.BackgroundTransparency = 0.45
+	sockelKante.BorderSizePixel = 0
+	sockelKante.ZIndex = 6
+	sockelKante.Parent = gehaeuse
+
+	-- Vier Nieten, links und rechts je zwei -- dort, wo der Sockel an der Scheibe vorbei
+	-- sichtbar bleibt. In der Mitte waeren sie vom Instrument verdeckt.
+	for _, stelle in ipairs({
+		{ x = 18, y = 11 },
+		{ x = 18, y = 27 },
+		{ x = -18, y = 11 },
+		{ x = -18, y = 27 },
 	}) do
 		local niete = Instance.new("Frame")
 		niete.Name = "HousingRivet"
 		niete.AnchorPoint = Vector2.new(0.5, 0.5)
-		niete.Size = UDim2.new(0, 7, 0, 7)
-		niete.Position = UDim2.new(
-			ecke.x > 0 and 0 or 1, ecke.x,
-			ecke.y > 0 and 0 or 1, ecke.y
-		)
+		niete.Size = UDim2.new(0, 6, 0, 6)
+		niete.Position = UDim2.new(stelle.x > 0 and 0 or 1, stelle.x, 0, stelle.y)
 		niete.BackgroundColor3 = HudChrome.Color.PanelSunken
 		niete.BorderSizePixel = 0
 		niete.ZIndex = 6
@@ -844,7 +858,7 @@ do
 		local nieteRand = Instance.new("UIStroke")
 		nieteRand.Thickness = 1
 		nieteRand.Color = HudChrome.Color.BorderBright
-		nieteRand.Transparency = 0.35
+		nieteRand.Transparency = 0.4
 		nieteRand.Parent = niete
 	end
 
