@@ -13,6 +13,7 @@ local ModelPreviewUtils = require(ReplicatedStorage:WaitForChild("ModelPreviewUt
 local UiTypography = require(ReplicatedStorage:WaitForChild("UiTypography"))
 local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
 local applyComicStyle = ComicStyleUtils.Apply
+local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
 local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
@@ -169,18 +170,33 @@ screenGui.Parent = player:WaitForChild("PlayerGui")
 
 -- ===== Coins-Anzeige: oben rechts, klein (neue HUD-Spezifikation -- Geld ist
 -- sekundäre Information, keine grosse gelbe Fläche mehr) =====
+-- Das Geld stand in Gold auf braunem Grund mit dem Emoji 💰. Jetzt: dunkles Panel wie
+-- alles andere, das hochgeladene Muenz-Symbol links, die Zahl in der Ziffernschrift.
+--
+-- Die Zahl behaelt ihren Goldton -- sie IST eine Messung, und Farbe ist nach der Stilregel
+-- genau dafuer da. Grund und Rahmen bleiben farblos.
+local coinsFrame = Instance.new("Frame")
+coinsFrame.Name = "CoinsFrame"
+coinsFrame.Size = UDim2.new(0, 112, 0, 32)
+coinsFrame.AnchorPoint = Vector2.new(1, 0)
+coinsFrame.Position = UDim2.new(1, -68, 0, 20)
+coinsFrame.Parent = screenGui
+HudChrome.Panel(coinsFrame, { radius = HudChrome.Radius.Small })
+
+local coinsIcon = HudChrome.IconImage(coinsFrame, HudChrome.Icon.Coin)
+coinsIcon.Size = UDim2.new(0, 20, 0, 20)
+coinsIcon.Position = UDim2.new(0, 7, 0.5, -10)
+
 local coinsLabel = Instance.new("TextLabel")
 coinsLabel.Name = "CoinsLabel"
-coinsLabel.Size = UDim2.new(0, 92, 0, 30)
-coinsLabel.AnchorPoint = Vector2.new(1, 0)
-coinsLabel.Position = UDim2.new(1, -68, 0, 20)
-coinsLabel.BackgroundColor3 = Color3.fromRGB(40, 35, 20)
+coinsLabel.Size = UDim2.new(1, -34, 1, 0)
+coinsLabel.Position = UDim2.new(0, 31, 0, 0)
+coinsLabel.BackgroundTransparency = 1
+coinsLabel.TextXAlignment = Enum.TextXAlignment.Left
+coinsLabel.Text = "0"
+coinsLabel.Parent = coinsFrame
+HudChrome.Number(coinsLabel)
 coinsLabel.TextColor3 = Color3.fromRGB(255, 205, 60)
-coinsLabel.Font = Enum.Font.FredokaOne
-coinsLabel.TextScaled = true
-coinsLabel.Text = "💰 0"
-coinsLabel.Parent = screenGui
-applyComicStyle(coinsLabel, 8, 2)
 
 -- ===== Player-Status-Cluster: Health + Level + XP als EIN kompakter Block, oben Mitte
 -- (neue HUD-Spezifikation) -- vorher zwei separate, deutlich grössere Frames (142px
@@ -194,27 +210,33 @@ statusCluster.BackgroundTransparency = 1
 statusCluster.Parent = screenGui
 
 -- Level: klein, kompakt, ÜBER der Health-Bar (nicht mehr eigene grosse Fläche)
+-- "⭐ Level 0" mit Textumriss wird zu "LV 0" -- Bezeichnung in der Beschriftungsschrift,
+-- Zahl in der Ziffernschrift, wie in der Vorlage. Der Umriss faellt weg: er war noetig,
+-- weil der Text frei ueber der Welt stand; jetzt liegt er auf einem Panel.
 local levelLabel = Instance.new("TextLabel")
 levelLabel.Name = "LevelLabel"
 levelLabel.Size = UDim2.new(1, 0, 0, 18)
 levelLabel.Position = UDim2.new(0, 0, 0, 0)
 levelLabel.BackgroundTransparency = 1
-levelLabel.TextColor3 = Color3.new(1, 1, 1)
-levelLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
-levelLabel.TextStrokeTransparency = 0.4
-levelLabel.Font = Enum.Font.LuckiestGuy
-levelLabel.TextScaled = true
-levelLabel.Text = "⭐ Level 0"
+levelLabel.TextXAlignment = Enum.TextXAlignment.Left
+levelLabel.Text = "LV 0"
 levelLabel.Parent = statusCluster
+HudChrome.Label(levelLabel, 16)
 
 -- Health-Bar: 22px hoch, "100/100"-Text direkt IN der Bar (spart eigene Zeile)
+-- Der Balkenhintergrund war dunkelrot -- also farbig, obwohl er nichts misst. Jetzt die
+-- Vertiefung aus dem Baukasten; die Farbe traegt allein die Fuellung, und die misst
+-- tatsaechlich etwas.
 local healthFrame = Instance.new("Frame")
 healthFrame.Name = "HealthFrame"
 healthFrame.Size = UDim2.new(1, 0, 0, 22)
 healthFrame.Position = UDim2.new(0, 0, 0, 22)
-healthFrame.BackgroundColor3 = Color3.fromRGB(40, 15, 15)
 healthFrame.Parent = statusCluster
-applyComicStyle(healthFrame, 8, 2)
+HudChrome.Panel(healthFrame, {
+	radius = HudChrome.Radius.Small,
+	fill = HudChrome.Color.PanelSunken,
+	transparency = 0,
+})
 
 local healthBarFill = Instance.new("Frame")
 healthBarFill.Name = "Fill"
@@ -222,20 +244,21 @@ healthBarFill.Size = UDim2.new(1, 0, 1, 0)
 healthBarFill.BackgroundColor3 = Color3.fromRGB(70, 220, 90)
 healthBarFill.BorderSizePixel = 0
 healthBarFill.Parent = healthFrame
-applyComicStyle(healthBarFill, 6, 0)
+HudChrome.Panel(healthBarFill, { radius = HudChrome.Radius.Small, fill = false, border = false })
 
+-- "HP 8250 / 8250" wie in der Vorlage: Bezeichnung und Zahlen in der Ziffernschrift,
+-- linksbuendig statt mittig -- eine Zahl, die mittig steht, springt beim Aendern ihrer
+-- Stellenzahl hin und her.
 local healthLabel = Instance.new("TextLabel")
 healthLabel.Name = "HealthLabel"
-healthLabel.Size = UDim2.new(1, 0, 1, 0)
+healthLabel.Size = UDim2.new(1, -16, 1, 0)
+healthLabel.Position = UDim2.new(0, 8, 0, 0)
 healthLabel.BackgroundTransparency = 1
-healthLabel.Font = Enum.Font.FredokaOne
-healthLabel.TextScaled = true
-healthLabel.TextColor3 = Color3.new(1, 1, 1)
-healthLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
-healthLabel.TextStrokeTransparency = 0.4
+healthLabel.TextXAlignment = Enum.TextXAlignment.Left
 healthLabel.ZIndex = 2
-healthLabel.Text = "❤️ 100 / 100"
+healthLabel.Text = "HP 100 / 100"
 healthLabel.Parent = healthFrame
+HudChrome.Number(healthLabel, 14)
 
 local function updateHealthBar()
 	local character = player.Character
@@ -245,7 +268,7 @@ local function updateHealthBar()
 	end
 	local ratio = math.clamp(humanoid.Health / math.max(humanoid.MaxHealth, 1), 0, 1)
 	healthBarFill.Size = UDim2.new(ratio, 0, 1, 0)
-	healthLabel.Text = "❤️ " .. math.floor(humanoid.Health) .. " / " .. math.floor(humanoid.MaxHealth)
+	healthLabel.Text = "HP " .. math.floor(humanoid.Health) .. " / " .. math.floor(humanoid.MaxHealth)
 
 	-- Farbverlauf grün -> gelb -> rot, je niedriger desto dramatischer
 	if ratio > 0.5 then
@@ -1545,7 +1568,7 @@ local function updateCoinsLabel()
 	end
 	local leaderstats = player:FindFirstChild("leaderstats")
 	if leaderstats and leaderstats:FindFirstChild("Coins") then
-		coinsLabel.Text = "💰 " .. NumberFormat.Format(leaderstats.Coins.Value)
+		coinsLabel.Text = NumberFormat.Format(leaderstats.Coins.Value)
 	end
 end
 
@@ -1559,12 +1582,12 @@ local function animateCoinCount(fromValue, toValue)
 	connection = RunService.RenderStepped:Connect(function()
 		local alpha = math.clamp((os.clock() - startTime) / duration, 0, 1)
 		local current = math.floor(fromValue + (toValue - fromValue) * alpha)
-		coinsLabel.Text = "💰 " .. NumberFormat.Format(current)
+		coinsLabel.Text = NumberFormat.Format(current)
 
 		if alpha >= 1 then
 			connection:Disconnect()
 			isAnimatingCoins = false
-			coinsLabel.Text = "💰 " .. NumberFormat.Format(toValue)
+			coinsLabel.Text = NumberFormat.Format(toValue)
 		end
 	end)
 end
@@ -1851,7 +1874,7 @@ function updateLevelBar()
 		return
 	end
 
-	levelLabel.Text = "⭐ Level " .. leaderstats.Level.Value
+	levelLabel.Text = "LV " .. leaderstats.Level.Value
 
 	-- Bei einem ECHTEN Sprung (Level-Up, bei dem XP zurückgesetzt/übertragen wird, oder
 	-- Debug-Reset) sofort synchronisieren, ohne Aufleucht-Animation -- eine ausstehende

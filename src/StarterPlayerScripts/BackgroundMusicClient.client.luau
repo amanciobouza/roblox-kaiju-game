@@ -11,6 +11,9 @@ local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
+
 local player = Players.LocalPlayer
 
 -- WICHTIG: Trag hier deine eigene Musik-ID aus dem Creator Store ein (Format: "rbxassetid://12345678")
@@ -71,30 +74,35 @@ muteButton.Name = "MuteButton"
 -- Gleiche Grösse wie der Menü-Button (oben links, NavigationClient.lua) für ein
 -- einheitliches Bild. Direkt unterhalb des Home-Buttons platziert (der reicht bis
 -- y=16+42=58), mit Abstand statt der bisherigen Überlappung.
-muteButton.Size = UDim2.new(0, 52, 0, 48)
+-- Gleiches Mass wie der Home-Knopf darueber, damit die obere rechte Ecke eine Reihe
+-- ergibt statt einer Ansammlung. Vorher gelb mit schwarzem Umriss und Emoji.
+muteButton.Size = UDim2.new(0, 44, 0, 44)
 muteButton.AnchorPoint = Vector2.new(1, 0)
 muteButton.Position = UDim2.new(1, -16, 0, 66)
-muteButton.BackgroundColor3 = Color3.fromRGB(255, 205, 30)
-muteButton.Font = Enum.Font.LuckiestGuy
-muteButton.TextScaled = true
-muteButton.Text = "🔊"
+muteButton.AutoButtonColor = false
+muteButton.Text = ""
 muteButton.Parent = screenGui
+HudChrome.Panel(muteButton, { radius = HudChrome.Radius.Small })
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 16)
-corner.Parent = muteButton
-
-local stroke = Instance.new("UIStroke")
-stroke.Thickness = 5
-stroke.Color = Color3.fromRGB(0, 0, 0)
-stroke.Parent = muteButton
+local muteIcon = HudChrome.IconImage(muteButton, HudChrome.Icon.Music)
+muteIcon.Size = UDim2.new(1, -14, 1, -14)
+muteIcon.Position = UDim2.new(0, 7, 0, 7)
 
 local isMuted = false
+
+-- Stumm wird jetzt ueber die Deckkraft des Symbols gezeigt, nicht ueber einen Wechsel
+-- des Zeichens: es gibt ein hochgeladenes Musik-Symbol, aber keines fuer "stumm", und
+-- ein halbdurchsichtiges Symbol sagt dasselbe, ohne ein zweites Bild zu brauchen.
+local function showMuteState()
+	muteIcon.ImageTransparency = isMuted and 0.65 or 0
+	muteIcon.ImageColor3 = isMuted and HudChrome.Color.TextDim or Color3.new(1, 1, 1)
+end
+showMuteState()
 
 muteButton.MouseButton1Click:Connect(function()
 	isMuted = not isMuted
 	backgroundMusic.Volume = isMuted and 0 or MUSIC_VOLUME
-	muteButton.Text = isMuted and "🔇" or "🔊"
+	showMuteState()
 end)
 
 -- ===== Pause/Resume von aussen (z.B. StoryBeatClient.lua während des Prologs) =====
