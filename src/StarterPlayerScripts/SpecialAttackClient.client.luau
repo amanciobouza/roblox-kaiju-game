@@ -97,33 +97,15 @@ local ATTACK_SUBLABEL = {
 }
 
 -- ===== Symbole =====
--- Vorher standen hier Emoji (👊 🦶 🔴 💥). Die zeichnet das Betriebssystem in seinem
--- eigenen, bunten Stil -- sie sind der letzte sichtbare Rest des Comic-Looks und lassen
--- sich weder einfaerben noch in der Strichstaerke anpassen.
---
--- An ihrer Stelle stehen geometrische Zeichen: ein Vorwaertskeil fuer den Schlag, ein
--- Aufwaertskeil fuer den Sprung, ein Fadenkreuz fuer den Fokus, ein Bersten fuer die
--- Flaeche. Sie werden von der Oberflaechenschrift gezeichnet, nehmen also die Farbe an,
--- die man ihnen gibt, und passen im Strich zum Rest.
---
--- Das ist die beste Loesung mit Bordmitteln, nicht die beste ueberhaupt: echte Symbole
--- waeren hochgeladene Bilder. Solange die fehlen, ist ein sauberes Zeichen besser als ein
--- fremdgezeichnetes Emoji.
+-- Hier standen nacheinander Emoji (👊 🦶 🔴 💥) und geometrische Zeichen (▶ ▲ ◎ ✹).
+-- Beides war nur die beste Loesung mit Bordmitteln: Emoji zeichnet das Betriebssystem in
+-- seinem eigenen bunten Stil, geometrische Zeichen haengen an der verfuegbaren Schrift.
+-- Jetzt sind es hochgeladene Bilder aus HudChrome.Icon.
 local ATTACK_ICON = {
-	Attack = "▶",
-	Jump = "▲",
-	Focus = "◎",
-	Area = "✹",
-}
-
--- Die Symbolfarbe folgt derselben Regel wie der Akzentstreifen: weiss heisst frei,
--- Cyan heisst Special Energy. So sagen Symbol und Streifen dasselbe, und der Knopf ist
--- auch ohne Lesen der Bezeichnung einzuordnen.
-local ATTACK_ICON_COLOR = {
-	Attack = HudChrome.Color.TextPrimary,
-	Jump = HudChrome.Color.TextPrimary,
-	Focus = HudChrome.Color.Accent,
-	Area = HudChrome.Color.Accent,
+	Attack = HudChrome.Icon.Punch,
+	Jump = HudChrome.Icon.Jump,
+	Focus = HudChrome.Icon.Focus,
+	Area = HudChrome.Icon.Area,
 }
 
 -- Welche Ressource ein Knopf verbraucht -- und damit die Farbe seines Akzentstreifens.
@@ -136,11 +118,12 @@ local ATTACK_ACCENT = {
 	Area = HudChrome.Color.Accent,
 }
 
--- Der vierte Parameter hiess frueher `color` und faerbte den ganzen Knopf ein. Er
--- entfaellt: nach der Stilregel traegt das Chrome keine Farbe, nur die Anzeige. Die
--- Aufrufe uebergeben ihn weiterhin -- er wird bewusst ignoriert, damit die Aufrufzeilen
--- unveraendert bleiben und die Farben dort als Beleg stehen, was sie einmal waren.
-local function createAttackButton(name, icon, labelText, _legacyColor, position, keyHint)
+-- Zwei Parameter werden bewusst ignoriert. `_legacyIcon` war das Emoji, `_legacyColor`
+-- die Grundfarbe des Knopfes -- beide sind durch die Stilregeln ersetzt: das Symbol kommt
+-- aus HudChrome.Icon, und das Chrome traegt keine Farbe mehr, nur die Anzeige. Die
+-- Aufrufzeilen uebergeben sie weiter, damit dort als Beleg stehen bleibt, was einmal war;
+-- sie verschwinden, wenn die untere Zone in Scheibe 4 ohnehin umgebaut wird.
+local function createAttackButton(name, _legacyIcon, labelText, _legacyColor, position, keyHint)
 	-- 132 statt 100 Pixel breit. Die Vorlage zeigt Knoepfe, die deutlich breiter als hoch
 	-- sind -- und genau die Breite fehlte der Unterzeile: "VERTICAL POWER" braucht sie.
 	-- Platz ist da, die Gruppen stehen weit auseinander.
@@ -155,17 +138,10 @@ local function createAttackButton(name, icon, labelText, _legacyColor, position,
 	button.Parent = screenGui
 	HudChrome.Panel(button, { radius = HudChrome.Radius.Panel, transparency = 0.08 })
 
-	local iconLabel = Instance.new("TextLabel")
-	iconLabel.Name = "Icon"
+	local iconLabel = HudChrome.IconImage(button, ATTACK_ICON[name])
 	iconLabel.Size = UDim2.new(1, 0, 0, 42)
 	iconLabel.Position = UDim2.new(0, 0, 0, 4)
-	iconLabel.BackgroundTransparency = 1
-	iconLabel.Font = HudChrome.Font.Label
-	iconLabel.TextScaled = true
-	iconLabel.Text = ATTACK_ICON[name] or icon
-	iconLabel.TextColor3 = ATTACK_ICON_COLOR[name] or HudChrome.Color.TextPrimary
 	iconLabel.ZIndex = 11
-	iconLabel.Parent = button
 
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.Name = "NameLabel"

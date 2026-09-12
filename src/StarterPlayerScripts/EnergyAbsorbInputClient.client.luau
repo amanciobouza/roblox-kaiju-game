@@ -54,19 +54,9 @@ absorbButton.Text = ""
 absorbButton.Parent = screenGui
 HudChrome.Panel(absorbButton, { radius = HudChrome.Radius.Panel, transparency = 0.08 })
 
-local iconLabel = Instance.new("TextLabel")
-iconLabel.Name = "Icon"
+local iconLabel = HudChrome.IconImage(absorbButton, HudChrome.Icon.Absorb)
 iconLabel.Size = UDim2.new(1, 0, 0, 42)
 iconLabel.Position = UDim2.new(0, 0, 0, 4)
-iconLabel.BackgroundTransparency = 1
-iconLabel.Font = HudChrome.Font.Label
-iconLabel.TextScaled = true
--- Geometrisches Zeichen statt des Emoji 🌀 -- dieselbe Begruendung wie bei den
--- Angriffsknoepfen: ein Emoji zeichnet das Betriebssystem in seinem eigenen Stil und
--- laesst sich nicht einfaerben.
-iconLabel.Text = "◉"
-iconLabel.TextColor3 = HudChrome.Color.Accent
-iconLabel.Parent = absorbButton
 
 local label = Instance.new("TextLabel")
 label.Name = "NameLabel"

@@ -118,6 +118,59 @@ HudChrome.TextSize = {
 	NumberLarge = 24,
 }
 
+-- ===== Symbole =====
+--
+-- Von Amancio hochgeladene Bilder. Sie loesen die geometrischen Zeichen ab, die
+-- ihrerseits die Emoji abgeloest hatten -- Emoji zeichnet das Betriebssystem in seinem
+-- eigenen Stil, geometrische Zeichen haengen an der Schrift, und beides war nur die beste
+-- Loesung mit Bordmitteln.
+--
+-- Alle dreizehn stehen hier, obwohl das HUD erst fuenf davon benutzt. Die uebrigen
+-- gehoeren zu Kopfleiste, Objective-Liste und Menue und kommen in den naechsten Scheiben
+-- dazu -- eine zweite Liste an einer zweiten Stelle waere genau die Art Doppelung, die
+-- irgendwann auseinanderlaeuft.
+HudChrome.Icon = {
+	-- Angriffe
+	Punch = "rbxassetid://123083985565838",
+	Jump = "rbxassetid://134576136586426",
+	Focus = "rbxassetid://109063571686310",
+	Area = "rbxassetid://124403954068217",
+	Absorb = "rbxassetid://119396827761528",
+
+	-- Kopfleiste
+	Menu = "rbxassetid://82349353662422",
+	Home = "rbxassetid://129438474298071",
+	Music = "rbxassetid://72188447540073",
+	Coin = "rbxassetid://120384779936685",
+	Alert = "rbxassetid://98663897996847",
+
+	-- Objective-Liste
+	Objective = "rbxassetid://137194925165755",
+	BuildingDestruction = "rbxassetid://116647769762689",
+	Guardian = "rbxassetid://103770979890545",
+}
+
+-- Legt ein Symbol an.
+--
+-- ScaleType.Fit statt des Standards: gestreckte Symbole fallen sofort auf, und ein Bild
+-- in einem Kaestchen anderer Seitenverhaeltnisse ist der Normalfall, nicht die Ausnahme.
+--
+-- `tint` bleibt bewusst optional und ist standardmaessig AUS. Faerben lohnt nur bei
+-- einfarbigen Symbolen; traegt das Bild eigene Farben, macht ein Farbton es kaputt. Die
+-- Unterscheidung "frei gegen Energie" traegt ohnehin schon der Akzentstreifen.
+function HudChrome.IconImage(parent, assetId, tint)
+	local image = Instance.new("ImageLabel")
+	image.Name = "Icon"
+	image.BackgroundTransparency = 1
+	image.Image = assetId
+	image.ScaleType = Enum.ScaleType.Fit
+	if tint then
+		image.ImageColor3 = tint
+	end
+	image.Parent = parent
+	return image
+end
+
 -- ===== Panel =====
 --
 -- `options` (alle optional):
