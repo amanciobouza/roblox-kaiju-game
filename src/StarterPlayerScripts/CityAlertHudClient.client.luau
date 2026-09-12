@@ -1,17 +1,18 @@
--- VERSION: 2026-08-25 #1
--- FIX: Megacity -> MegaCity (Schreibweise an Studio-Attribut angeglichen)
--- VERSION: 2026-08-18 #9
+-- VERSION: 2026-09-12 #1
+-- UMBAU: militaerisch/Sci-Fi ueber HudChrome -- Sterne werden ein Fuenf-Segment-Balken
 -- LocalScript: CityAlertHudClient
 -- Ort in Studio: StarterPlayer > StarterPlayerScripts
--- Zeigt oben rechts den Namen der Stadt, in der sich der Spieler gerade befindet, plus
--- den Alert-Level als Sterne-Anzeige darunter (Level 1 = kein Stern, Level 2 = 1 Stern,
--- künftige Level 3+ = entsprechend mehr Sterne). Attribut "CurrentCityName" wird
+-- Zeigt oben rechts, in welcher Stadt der Spieler steht, wie hoch die Alarmstufe ist,
+-- wie weit es zur naechsten ist, welche Aufgaben offen sind -- und, sobald die Stadt
+-- gebrochen ist, den Countdown der freien Zerstoerung. Attribut "CurrentCityName" wird
 -- serverseitig von CityAlertService.lua gepflegt.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
+
+local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -32,159 +33,180 @@ local CITY_DISPLAY_NAMES = {
 	MegaCity = "Megacity",
 }
 
+-- Jede Stadt hat eine Uhrzeit, und die Uhrzeit ist das Koordinatensystem der Welt: es
+-- sind dieselben Indizes wie auf dem Zifferblatt im Sanctuary, wo jede Stunde eine
+-- Portalbucht ist. Wer "04:00" liest, weiss danach, wo Small Town auf der Karte liegt --
+-- das leistet kein Stadtname.
+local CITY_HOURS = {
+	Village = "02:00",
+	SmallTown = "04:00",
+	City = "06:00",
+	LargeCity = "08:00",
+	MegaCity = "10:00",
+}
+
+local MAX_ALERT_LEVEL = 5 -- so viele Segmente hat der Balken
+
+local PANEL_BREITE = 236
+local PANEL_HOEHE = 86
+local PANEL_RAND = 10
+local INNEN_BREITE = PANEL_BREITE - PANEL_RAND * 2
+
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "CityAlertHudGui"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
+-- Das Feld sitzt UNTER der Reihe aus Geld, Home und Ton -- vorher lag es auf derselben
+-- Hoehe wie der Ton-Knopf und damit teilweise unter ihm.
 local alertFrame = Instance.new("Frame")
 alertFrame.Name = "CityAlertFrame"
-alertFrame.Size = UDim2.new(0, 200, 0, 92)
+alertFrame.Size = UDim2.new(0, PANEL_BREITE, 0, PANEL_HOEHE)
 alertFrame.AnchorPoint = Vector2.new(1, 0)
-alertFrame.Position = UDim2.new(1, -20, 0, 66) -- unter der Coins/Home-Reihe (neue HUD-Spezifikation, Top Right)
-alertFrame.BackgroundTransparency = 1 -- kein Hintergrund/Rahmen mehr -- nur der Text/die Bar selbst ist sichtbar
+alertFrame.Position = UDim2.new(1, -16, 0, 118)
 alertFrame.Visible = false
 alertFrame.ZIndex = 20
 alertFrame.Parent = screenGui
+local _, alertStroke = HudChrome.Panel(alertFrame, { radius = HudChrome.Radius.Small })
 
--- Fortschritts-Balken zur NÄCHSTEN Alert-Stufe (0-100%) -- der Server berechnet den
--- zugrundeliegenden Wert (cityProgressValues) bereits, wurde bisher aber nirgends
--- angezeigt.
+-- ===== Kopfzeile: Stadt und Stunde =====
+local cityNameLabel = Instance.new("TextLabel")
+cityNameLabel.Name = "CityNameLabel"
+cityNameLabel.Size = UDim2.new(0, INNEN_BREITE - 60, 0, 22)
+cityNameLabel.Position = UDim2.new(0, PANEL_RAND, 0, 8)
+cityNameLabel.BackgroundTransparency = 1
+cityNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+cityNameLabel.ZIndex = 21
+cityNameLabel.Text = ""
+cityNameLabel.Parent = alertFrame
+HudChrome.Label(cityNameLabel, 18)
+
+local cityHourLabel = Instance.new("TextLabel")
+cityHourLabel.Name = "CityHourLabel"
+cityHourLabel.Size = UDim2.new(0, 56, 0, 22)
+cityHourLabel.Position = UDim2.new(0, PANEL_RAND + INNEN_BREITE - 56, 0, 8)
+cityHourLabel.BackgroundTransparency = 1
+cityHourLabel.TextXAlignment = Enum.TextXAlignment.Right
+cityHourLabel.ZIndex = 21
+cityHourLabel.Text = ""
+cityHourLabel.Parent = alertFrame
+HudChrome.Number(cityHourLabel, 13)
+cityHourLabel.TextColor3 = HudChrome.Color.TextDim
+
+-- ===== Alarmstufe: fuenf Segmente statt fuenf Sterne =====
+--
+-- Sterne waren Comic-Sprache und sagten ausserdem zu wenig: sie zeigten die erreichte
+-- Stufe, aber nicht, wie viele Stufen diese Stadt ueberhaupt kennt. Der Balken zeigt
+-- beides auf einmal -- erreichbare Segmente haben einen Rahmen, unerreichbare bleiben
+-- dunkel und leer. Man sieht damit im Vorbeigehen, wie weit es in dieser Stadt noch geht.
+local alertCaption = Instance.new("TextLabel")
+alertCaption.Name = "AlertCaption"
+alertCaption.Size = UDim2.new(0, 80, 0, 12)
+alertCaption.Position = UDim2.new(0, PANEL_RAND, 0, 34)
+alertCaption.BackgroundTransparency = 1
+alertCaption.TextXAlignment = Enum.TextXAlignment.Left
+alertCaption.ZIndex = 21
+alertCaption.Text = "ALERT"
+alertCaption.Parent = alertFrame
+HudChrome.Label(alertCaption, 11)
+alertCaption.TextColor3 = HudChrome.Color.TextSecondary
+
+local alertLevelLabel = Instance.new("TextLabel")
+alertLevelLabel.Name = "AlertLevelLabel"
+alertLevelLabel.Size = UDim2.new(0, 80, 0, 12)
+alertLevelLabel.Position = UDim2.new(0, PANEL_RAND + INNEN_BREITE - 80, 0, 34)
+alertLevelLabel.BackgroundTransparency = 1
+alertLevelLabel.TextXAlignment = Enum.TextXAlignment.Right
+alertLevelLabel.ZIndex = 21
+alertLevelLabel.Text = ""
+alertLevelLabel.Parent = alertFrame
+HudChrome.Number(alertLevelLabel, 11)
+alertLevelLabel.TextColor3 = HudChrome.Color.TextDim
+
+local SEGMENT_LUECKE = 4
+local SEGMENT_BREITE = (INNEN_BREITE - SEGMENT_LUECKE * (MAX_ALERT_LEVEL - 1)) / MAX_ALERT_LEVEL
+local SEGMENT_HOEHE = 14
+
+local segments = {}
+for i = 1, MAX_ALERT_LEVEL do
+	local segment = Instance.new("Frame")
+	segment.Name = "AlertSegment" .. i
+	segment.Size = UDim2.new(0, SEGMENT_BREITE, 0, SEGMENT_HOEHE)
+	segment.Position = UDim2.new(0, PANEL_RAND + (i - 1) * (SEGMENT_BREITE + SEGMENT_LUECKE), 0, 48)
+	segment.BackgroundColor3 = HudChrome.Color.PanelSunken
+	segment.BorderSizePixel = 0
+	segment.ZIndex = 21
+	segment.Parent = alertFrame
+
+	local segmentCorner = Instance.new("UICorner")
+	segmentCorner.CornerRadius = UDim.new(0, 2)
+	segmentCorner.Parent = segment
+
+	local segmentStroke = Instance.new("UIStroke")
+	segmentStroke.Thickness = HudChrome.BorderThickness
+	segmentStroke.Color = HudChrome.Color.BorderDim
+	segmentStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	segmentStroke.Parent = segment
+
+	segments[i] = { frame = segment, stroke = segmentStroke }
+end
+
+-- ===== Fortschritt zur naechsten Stufe =====
 local progressBackground = Instance.new("Frame")
 progressBackground.Name = "ProgressBackground"
-progressBackground.Size = UDim2.new(1, -12, 0, 16)
-progressBackground.Position = UDim2.new(0, 6, 0, 0)
-progressBackground.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+progressBackground.Size = UDim2.new(0, INNEN_BREITE, 0, 6)
+progressBackground.Position = UDim2.new(0, PANEL_RAND, 0, 68)
+progressBackground.BackgroundColor3 = HudChrome.Color.PanelSunken
 progressBackground.BorderSizePixel = 0
+progressBackground.ZIndex = 21
 progressBackground.Parent = alertFrame
 
 local progressCorner = Instance.new("UICorner")
-progressCorner.CornerRadius = UDim.new(1, 0)
+progressCorner.CornerRadius = UDim.new(0, 3)
 progressCorner.Parent = progressBackground
 
 local progressFill = Instance.new("Frame")
 progressFill.Name = "Fill"
 progressFill.Size = UDim2.new(0, 0, 1, 0)
-progressFill.BackgroundColor3 = Color3.fromRGB(90, 220, 130)
+progressFill.BackgroundColor3 = HudChrome.Color.Warning
 progressFill.BorderSizePixel = 0
+progressFill.ZIndex = 22
 progressFill.Parent = progressBackground
 
 local progressFillCorner = Instance.new("UICorner")
-progressFillCorner.CornerRadius = UDim.new(1, 0)
+progressFillCorner.CornerRadius = UDim.new(0, 3)
 progressFillCorner.Parent = progressFill
 
-local cityNameLabel = Instance.new("TextLabel")
-cityNameLabel.Name = "CityNameLabel"
-cityNameLabel.Size = UDim2.new(1, -12, 0, 30)
-cityNameLabel.Position = UDim2.new(0, 6, 0, 22)
-cityNameLabel.BackgroundTransparency = 1
-cityNameLabel.Font = Enum.Font.LuckiestGuy
-cityNameLabel.TextScaled = true
-cityNameLabel.TextColor3 = Color3.new(1, 1, 1)
-cityNameLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
-cityNameLabel.TextStrokeTransparency = 0.4
-cityNameLabel.Text = ""
-cityNameLabel.Parent = alertFrame
-
--- ===== Einzelne, animierbare Sterne statt einem Text-String -- jeder Stern ist ein
--- eigenes Label, das sich beim Erscheinen dreht, abbremst und mit einem Leuchteffekt
--- stehen bleibt. Bei mehreren neuen Sternen laufen die Animationen NACHEINANDER.
-local MAX_STARS = 5 -- genug Puffer für künftige Alert-Level
-
-local starsContainer = Instance.new("Frame")
-starsContainer.Name = "StarsContainer"
-starsContainer.Size = UDim2.new(1, -12, 0, 26)
-starsContainer.Position = UDim2.new(0, 6, 0, 52)
-starsContainer.BackgroundTransparency = 1
-starsContainer.Parent = alertFrame
-
-local starsLayout = Instance.new("UIListLayout")
-starsLayout.FillDirection = Enum.FillDirection.Horizontal
-starsLayout.Padding = UDim.new(0, 2)
-starsLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-starsLayout.Parent = starsContainer
-
-local INACTIVE_STAR_COLOR = Color3.fromRGB(90, 88, 82) -- gedimmt, für "erreichbar, aber noch nicht aktiv"
-local ACTIVE_STAR_COLOR = Color3.fromRGB(255, 210, 80)
-
-local starLabels = {}
-for i = 1, MAX_STARS do
-	local star = Instance.new("TextLabel")
-	star.Name = "Star" .. i
-	star.Size = UDim2.new(0, 22, 1, 0)
-	star.BackgroundTransparency = 1
-	star.Font = Enum.Font.FredokaOne
-	star.TextScaled = true
-	star.TextColor3 = ACTIVE_STAR_COLOR
-	star.TextStrokeColor3 = Color3.new(0, 0, 0)
-	star.TextStrokeTransparency = 0.4
-	star.Text = "★"
-	star.Visible = false
-	star.LayoutOrder = i
-	star.Parent = starsContainer
-	starLabels[i] = star
+-- Die Farbe der Alarmstufe: von Warnfarbe auf Gefahrfarbe, je naeher an der Hoechststufe
+-- dieser Stadt. Sie ist eine MESSUNG und darf deshalb farbig sein -- das Chrome drumherum
+-- bleibt farblos.
+local function alarmFarbe(level, maxLevel)
+	if maxLevel <= 1 then
+		return HudChrome.Color.Danger
+	end
+	local anteil = math.clamp((level - 1) / (maxLevel - 1), 0, 1)
+	return HudChrome.Color.Warning:Lerp(HudChrome.Color.Danger, anteil)
 end
-
--- Lässt EINEN Stern einfliegen: dreht sich schnell, bremst ab, blitzt kurz golden auf.
-local function animateStarIn(star)
-	star.Visible = true
-	star.Rotation = 0
-	star.TextColor3 = ACTIVE_STAR_COLOR
-
-	local spinTween = TweenService:Create(
-		star,
-		TweenInfo.new(0.55, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-		{ Rotation = 720 } -- zwei volle Umdrehungen, die sich sichtbar abbremsen
-	)
-	spinTween:Play()
-	spinTween.Completed:Connect(function()
-		star.Rotation = 0
-		-- Leuchteffekt: kurz auf reines Weiss aufblitzen, dann zurück zu Gold.
-		local flashTween = TweenService:Create(star, TweenInfo.new(0.12), { TextColor3 = Color3.new(1, 1, 1) })
-		flashTween:Play()
-		flashTween.Completed:Connect(function()
-			TweenService:Create(star, TweenInfo.new(0.3), { TextColor3 = ACTIVE_STAR_COLOR }):Play()
-		end)
-	end)
-end
-
--- Animiert mehrere neu hinzugekommene Sterne NACHEINANDER (nicht gleichzeitig).
-local function animateNewStars(fromCount, toCount)
-	task.spawn(function()
-		for i = fromCount + 1, toCount do
-			local star = starLabels[i]
-			if star then
-				animateStarIn(star)
-				task.wait(0.25) -- kurzer Versatz, bevor der nächste Stern startet
-			end
-		end
-	end)
-end
-
-local currentStarCount = 0
-local lastShownCityName = nil
-local lastShownMaxLevel = nil
 
 local lastShownLevel = nil
 
 local function updateAlertHud()
 	-- Sanctuary-Sonderfall: zeigt "Sanctuary" als Ortsname an (konsistent mit den echten
-	-- Städtenamen), statt die ganze Anzeige einfach auszublenden. Sterne/Fortschrittsbalken
+	-- Staedtenamen), statt die ganze Anzeige auszublenden. Alarmbalken und Fortschritt
 	-- bleiben versteckt, da dort ohnehin kein Alert-System greift.
 	if player:GetAttribute("CurrentZone") == "Sanctuary" then
 		alertFrame.Visible = true
 		cityNameLabel.Text = "Sanctuary"
-		for _, star in ipairs(starLabels) do
-			star.Visible = false
+		cityHourLabel.Text = "12:00"
+		alertCaption.Visible = false
+		alertLevelLabel.Visible = false
+		for _, segment in ipairs(segments) do
+			segment.frame.Visible = false
 		end
-		currentStarCount = 0
-		lastShownCityName = nil
-		lastShownMaxLevel = nil
 		progressBackground.Visible = false
 		lastShownLevel = nil
 		return
 	end
-	progressBackground.Visible = true
 
 	local cityName = player:GetAttribute("CurrentCityName")
 	if not cityName or cityName == "None" or cityName == "" then
@@ -199,77 +221,69 @@ local function updateAlertHud()
 		return
 	end
 
-	local level = levelValue.Value
-	local starCount = math.max(level, 0) -- Level 0 = 0 Sterne, Level 1 = 1 Stern, Level 2 = 2 Sterne, usw. -- entspricht direkt der Levelzahl
+	alertCaption.Visible = true
+	alertLevelLabel.Visible = true
+	progressBackground.Visible = true
 
+	local level = math.max(levelValue.Value, 0)
 	local config = CityAlertConfig.GetCityConfig(cityName)
-	-- Die Hoechststufe kommt VOM SERVER, nicht mehr aus dem Config: sie haengt am hoechsten
+
+	-- Die Hoechststufe kommt VOM SERVER, nicht aus dem Config: sie haengt am hoechsten
 	-- Kapitel der Anwesenden (siehe CityAlertService, MaxAlertLevelByChapter), und im
-	-- Config steht nur der Kapitel-I-Grundwert. Der Rueckfall auf das Config greift, solange
-	-- der Wert noch nicht repliziert ist.
-	local maxLevelValue = cityAlertValues and cityAlertValues:FindFirstChild(cityName .. "MaxLevel")
-	local rawMaxLevel = (maxLevelValue and maxLevelValue.Value) or (config and config.MaxAlertLevel) or MAX_STARS
-	local maxLevel = math.clamp(rawMaxLevel, 0, MAX_STARS)
+	-- Config steht nur der Kapitel-I-Grundwert. Der Rueckfall auf das Config greift,
+	-- solange der Wert noch nicht repliziert ist.
+	local maxLevelValue = cityAlertValues:FindFirstChild(cityName .. "MaxLevel")
+	local rawMaxLevel = (maxLevelValue and maxLevelValue.Value) or (config and config.MaxAlertLevel) or MAX_ALERT_LEVEL
+	local maxLevel = math.clamp(rawMaxLevel, 0, MAX_ALERT_LEVEL)
 
 	cityNameLabel.Text = CITY_DISPLAY_NAMES[cityName] or cityName
+	cityHourLabel.Text = CITY_HOURS[cityName] or ""
+	alertLevelLabel.Text = level .. " / " .. maxLevel
 
-	-- Beim Städtewechsel (unterschiedliches MaxAlertLevel) die gedimmten "Deckel"-Sterne
-	-- neu aufbauen: 1..maxLevel sichtbar (gedimmt, falls noch nicht aktiv), Rest
-	-- ausgeblendet -- zeigt sofort, wie viele Stufen diese Stadt überhaupt kennt.
-	-- Neu aufbauen beim Staedtewechsel UND wenn sich die Obergrenze derselben Stadt
-	-- aendert -- letzteres passiert, sobald ein Spieler eines hoeheren Kapitels die Stadt
-	-- betritt oder verlaesst. Ohne die zweite Bedingung blieben die gedimmten Sterne auf
-	-- dem Stand des Kapitels, in dem man die Stadt betreten hat.
-	if cityName ~= lastShownCityName or maxLevel ~= lastShownMaxLevel then
-		lastShownCityName = cityName
-		lastShownMaxLevel = maxLevel
-		for i = 1, MAX_STARS do
-			local star = starLabels[i]
-			if i <= maxLevel then
-				star.Visible = true
-				star.Rotation = 0
-				star.TextColor3 = i <= starCount and ACTIVE_STAR_COLOR or INACTIVE_STAR_COLOR
-			else
-				star.Visible = false
-			end
-		end
-		currentStarCount = starCount
-	end
+	local farbe = alarmFarbe(math.max(level, 1), maxLevel)
 
-	-- Sterne: neue animiert nacheinander einfliegen lassen, bei De-Eskalation überzählige
-	-- auf gedimmt zurücksetzen (nicht mehr ausblenden, solange sie <= maxLevel sind --
-	-- sie bleiben als "erreichbar, aber gerade nicht aktiv" sichtbar).
-	if starCount > currentStarCount then
-		animateNewStars(currentStarCount, starCount)
-	elseif starCount < currentStarCount then
-		for i = starCount + 1, currentStarCount do
-			if starLabels[i] then
-				if i <= maxLevel then
-					starLabels[i].TextColor3 = INACTIVE_STAR_COLOR
-				else
-					starLabels[i].Visible = false
-				end
-			end
+	for i = 1, MAX_ALERT_LEVEL do
+		local segment = segments[i]
+		if i > maxLevel then
+			-- Unerreichbar in dieser Stadt: dunkel und ohne Rahmen. Es bleibt sichtbar,
+			-- damit man sieht, dass es die Stufe grundsaetzlich gibt -- nur eben nicht hier.
+			segment.frame.Visible = true
+			segment.frame.BackgroundColor3 = HudChrome.Color.PanelSunken
+			segment.frame.BackgroundTransparency = 0.45
+			segment.stroke.Transparency = 1
+		elseif i <= level then
+			segment.frame.Visible = true
+			segment.frame.BackgroundColor3 = farbe
+			segment.frame.BackgroundTransparency = 0
+			segment.stroke.Transparency = 1
+		else
+			-- Erreichbar, aber noch nicht aktiv: leeres Fach mit Rahmen.
+			segment.frame.Visible = true
+			segment.frame.BackgroundColor3 = HudChrome.Color.PanelSunken
+			segment.frame.BackgroundTransparency = 0
+			segment.stroke.Transparency = 0
 		end
 	end
-	currentStarCount = starCount
 
 	-- Fortschritts-Balken: rohen Punktwert gegen die Schwelle DIESER Stadt normieren.
 	local progressValue = cityAlertValues:FindFirstChild(cityName .. "Progress")
-	local config = CityAlertConfig.GetCityConfig(cityName)
 	if progressValue and config and config.AlertThresholdLevel2 and config.AlertThresholdLevel2 > 0 then
 		local ratio = math.clamp(progressValue.Value / config.AlertThresholdLevel2, 0, 1)
 		progressFill.Size = UDim2.new(ratio, 0, 1, 0)
+		progressFill.BackgroundColor3 = alarmFarbe(math.min(level + 1, maxLevel), maxLevel)
 	end
 
 	alertFrame.Visible = true
 
-	-- Kurzes Aufleuchten bei einem ECHTEN Level-Wechsel (nicht bei jedem Check).
-	if lastShownLevel and lastShownLevel ~= level then
-		local original = alertFrame.Size
-		alertFrame.Size = UDim2.new(0, original.X.Offset * 1.12, 0, original.Y.Offset * 1.12)
-		TweenService:Create(alertFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-			Size = original,
+	-- Kurzes Aufleuchten bei einem ECHTEN Stufenwechsel (nicht bei jedem Durchlauf). Es
+	-- laeuft ueber den Rahmen, nicht ueber die Groesse: ein Feld, das kurz waechst, schiebt
+	-- alles darunter mit -- der Rahmen sagt dasselbe, ohne das Bild zu bewegen.
+	if lastShownLevel and lastShownLevel ~= level and alertStroke then
+		alertStroke.Color = farbe
+		alertStroke.Thickness = 2
+		TweenService:Create(alertStroke, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+			Color = HudChrome.Color.Border,
+			Thickness = HudChrome.BorderThickness,
 		}):Play()
 	end
 	lastShownLevel = level
@@ -278,13 +292,13 @@ end
 player:GetAttributeChangedSignal("CurrentCityName"):Connect(updateAlertHud)
 player:GetAttributeChangedSignal("CurrentZone"):Connect(updateAlertHud)
 
--- Auf Änderungen JEDES Stadt-Level-Werts UND JEDES Stadt-Progress-Werts reagieren --
--- Level-Wechsel sind selten (Sterne), Progress-Änderungen häufig (Balken).
+-- Auf Aenderungen JEDES Stadt-Level-Werts UND JEDES Stadt-Progress-Werts reagieren --
+-- Stufenwechsel sind selten (Segmente), Fortschritt aendert sich staendig (Balken).
 --
--- Das Muster "Level$" erfasst auch "<Stadt>MaxLevel" (die kapitelabhängige Obergrenze).
--- Das ist beabsichtigt und nötig: ohne dieses Abonnement bliebe die Sterne-Anzeige
--- stehen, wenn ein Spieler eines höheren Kapitels die Stadt betritt. Wer das Muster
--- ändert, muss den Wert ausdrücklich mit aufnehmen.
+-- Das Muster "Level$" erfasst auch "<Stadt>MaxLevel" (die kapitelabhaengige Obergrenze).
+-- Das ist beabsichtigt und noetig: ohne dieses Abonnement bliebe die Anzeige stehen, wenn
+-- ein Spieler eines hoeheren Kapitels die Stadt betritt. Wer das Muster aendert, muss den
+-- Wert ausdruecklich mit aufnehmen.
 for _, valueObject in ipairs(cityAlertValues:GetChildren()) do
 	if valueObject.Name:match("Level$") or valueObject.Name:match("Progress$") then
 		valueObject:GetPropertyChangedSignal("Value"):Connect(updateAlertHud)
@@ -293,107 +307,144 @@ end
 
 updateAlertHud() -- initialer Zustand beim Start
 
--- ===== Quest-Liste: zeigt pro Stadt die anwendbaren Aufgaben (Emergency/Defense/
--- Military/Titan Protocol) mit Häkchen, sobald besiegt. Sobald alle erledigt sind (siehe
--- CityBrokenService.lua), startet CITY BROKEN -- eigener Banner mit Countdown. =====
+-- ===== Aufgabenliste =====
+--
+-- Zeigt pro Stadt die anwendbaren Aufgaben (Emergency/Defense/Military/Titan Protocol).
+-- Sobald alle erledigt sind (siehe CityBrokenService.lua), bricht die Stadt -- eigener
+-- Banner mit Countdown.
+--
+-- Die Emoji-Symbole sind weg. Fuer zwei der vier Aufgaben gibt es ein hochgeladenes
+-- Symbol und fuer zwei nicht -- eine halb bebilderte Liste sieht nach Versehen aus. Den
+-- Zustand traegt jetzt ein Kaestchen am Zeilenanfang: leer mit Rahmen heisst offen,
+-- gefuellt heisst erledigt. Das ist ohnehin die einzige Frage an so eine Liste.
 local TASK_LIST = {
-	{ id = "Emergency", icon = "🚒", label = "Emergency Response eliminated" },
-	{ id = "Defense", icon = "🛡️", label = "Defense Barricades eliminated" },
-	{ id = "Military", icon = "🎖️", label = "Military eliminated" },
-	{ id = "Titan", icon = "🤖", label = "Guardian eliminated" },
+	{ id = "Emergency", label = "Emergency Response" },
+	{ id = "Defense", label = "Defense Barricades" },
+	{ id = "Military", label = "Military" },
+	{ id = "Titan", label = "Guardian" },
 }
+
+local ERLEDIGT_FARBE = Color3.fromRGB(70, 220, 90)
 
 local questFrame = Instance.new("Frame")
 questFrame.Name = "CityQuestFrame"
 questFrame.AnchorPoint = Vector2.new(1, 0)
-questFrame.Position = UDim2.new(1, -20, 0, 164) -- direkt unter alertFrame (92px hoch, startet bei y=66)
-questFrame.Size = UDim2.new(0, 220, 0, 0)
+questFrame.Position = UDim2.new(1, -16, 0, 118 + PANEL_HOEHE + 8)
+questFrame.Size = UDim2.new(0, PANEL_BREITE, 0, 0)
 questFrame.AutomaticSize = Enum.AutomaticSize.Y
-questFrame.BackgroundTransparency = 1
 questFrame.Visible = false
 questFrame.ZIndex = 20
 questFrame.Parent = screenGui
+HudChrome.Panel(questFrame, { radius = HudChrome.Radius.Small })
+
+local questPadding = Instance.new("UIPadding")
+questPadding.PaddingLeft = UDim.new(0, PANEL_RAND)
+questPadding.PaddingRight = UDim.new(0, PANEL_RAND)
+questPadding.PaddingTop = UDim.new(0, 8)
+questPadding.PaddingBottom = UDim.new(0, 8)
+questPadding.Parent = questFrame
 
 local questListLayout = Instance.new("UIListLayout")
-questListLayout.Padding = UDim.new(0, 3)
+questListLayout.Padding = UDim.new(0, 4)
 questListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-questListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
 questListLayout.Parent = questFrame
 
-local questRows = {} -- [taskId] = { row=, checkLabel=, textLabel= }
+local questHeader = Instance.new("TextLabel")
+questHeader.Name = "QuestHeader"
+questHeader.Size = UDim2.new(1, 0, 0, 14)
+questHeader.BackgroundTransparency = 1
+questHeader.TextXAlignment = Enum.TextXAlignment.Left
+questHeader.LayoutOrder = 0
+questHeader.ZIndex = 21
+questHeader.Text = "OBJECTIVES"
+questHeader.Parent = questFrame
+HudChrome.Label(questHeader, 11)
+questHeader.TextColor3 = HudChrome.Color.TextSecondary
+
+local questRows = {} -- [taskId] = { row=, box=, boxStroke=, textLabel= }
 for index, task in ipairs(TASK_LIST) do
 	local row = Instance.new("Frame")
 	row.Name = task.id .. "Row"
-	row.Size = UDim2.new(0, 220, 0, 20)
+	row.Size = UDim2.new(1, 0, 0, 18)
 	row.BackgroundTransparency = 1
 	row.LayoutOrder = index
+	row.ZIndex = 21
 	row.Parent = questFrame
 
+	local box = Instance.new("Frame")
+	box.Name = "StatusBox"
+	box.Size = UDim2.new(0, 10, 0, 10)
+	box.Position = UDim2.new(0, 0, 0.5, -5)
+	box.BackgroundColor3 = HudChrome.Color.PanelSunken
+	box.BorderSizePixel = 0
+	box.ZIndex = 22
+	box.Parent = row
+
+	local boxCorner = Instance.new("UICorner")
+	boxCorner.CornerRadius = UDim.new(0, 2)
+	boxCorner.Parent = box
+
+	local boxStroke = Instance.new("UIStroke")
+	boxStroke.Thickness = HudChrome.BorderThickness
+	boxStroke.Color = HudChrome.Color.BorderDim
+	boxStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	boxStroke.Parent = box
+
 	local textLabel = Instance.new("TextLabel")
-	textLabel.Size = UDim2.new(1, -26, 1, 0)
-	textLabel.Position = UDim2.new(0, 0, 0, 0)
+	textLabel.Name = "Label"
+	textLabel.Size = UDim2.new(1, -18, 1, 0)
+	textLabel.Position = UDim2.new(0, 18, 0, 0)
 	textLabel.BackgroundTransparency = 1
-	textLabel.Font = Enum.Font.FredokaOne
-	textLabel.TextScaled = true
-	textLabel.TextXAlignment = Enum.TextXAlignment.Right
-	textLabel.TextColor3 = Color3.fromRGB(210, 210, 210)
-	textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
-	textLabel.TextStrokeTransparency = 0.4
-	textLabel.Text = task.icon .. " " .. task.label
+	textLabel.TextXAlignment = Enum.TextXAlignment.Left
+	textLabel.ZIndex = 22
+	textLabel.Text = task.label
 	textLabel.Parent = row
+	HudChrome.Number(textLabel, 12)
+	textLabel.TextColor3 = HudChrome.Color.TextSecondary
 
-	local checkLabel = Instance.new("TextLabel")
-	checkLabel.Size = UDim2.new(0, 22, 1, 0)
-	checkLabel.Position = UDim2.new(1, -22, 0, 0)
-	checkLabel.BackgroundTransparency = 1
-	checkLabel.Font = Enum.Font.FredokaOne
-	checkLabel.TextScaled = true
-	checkLabel.TextColor3 = Color3.fromRGB(90, 220, 90)
-	checkLabel.Text = ""
-	checkLabel.Parent = row
-
-	questRows[task.id] = { row = row, checkLabel = checkLabel, textLabel = textLabel }
+	questRows[task.id] = { row = row, box = box, boxStroke = boxStroke, textLabel = textLabel }
 end
 
+-- ===== CITY BROKEN =====
 local cityBrokenBanner = Instance.new("Frame")
 cityBrokenBanner.Name = "CityBrokenBanner"
 cityBrokenBanner.AnchorPoint = Vector2.new(1, 0)
-cityBrokenBanner.Position = UDim2.new(1, -20, 0, 164)
-cityBrokenBanner.Size = UDim2.new(0, 220, 0, 46)
-cityBrokenBanner.BackgroundColor3 = Color3.fromRGB(120, 20, 20)
+cityBrokenBanner.Position = UDim2.new(1, -16, 0, 118 + PANEL_HOEHE + 8)
+cityBrokenBanner.Size = UDim2.new(0, PANEL_BREITE, 0, 54)
 cityBrokenBanner.Visible = false
 cityBrokenBanner.ZIndex = 21
 cityBrokenBanner.Parent = screenGui
-
-local cityBrokenCorner = Instance.new("UICorner")
-cityBrokenCorner.CornerRadius = UDim.new(0, 10)
-cityBrokenCorner.Parent = cityBrokenBanner
+HudChrome.Panel(cityBrokenBanner, {
+	radius = HudChrome.Radius.Small,
+	fill = Color3.fromRGB(38, 14, 12),
+	transparency = 0,
+	border = HudChrome.Color.Danger,
+	thickness = 2,
+})
 
 local cityBrokenTitle = Instance.new("TextLabel")
-cityBrokenTitle.Size = UDim2.new(1, -8, 0, 22)
-cityBrokenTitle.Position = UDim2.new(0, 4, 0, 2)
+cityBrokenTitle.Name = "Title"
+cityBrokenTitle.Size = UDim2.new(1, -20, 0, 22)
+cityBrokenTitle.Position = UDim2.new(0, PANEL_RAND, 0, 7)
 cityBrokenTitle.BackgroundTransparency = 1
-cityBrokenTitle.Font = Enum.Font.LuckiestGuy
-cityBrokenTitle.TextScaled = true
-cityBrokenTitle.TextColor3 = Color3.fromRGB(255, 210, 80)
-cityBrokenTitle.TextStrokeColor3 = Color3.new(0, 0, 0)
-cityBrokenTitle.TextStrokeTransparency = 0
+cityBrokenTitle.TextXAlignment = Enum.TextXAlignment.Left
 cityBrokenTitle.ZIndex = 22
-cityBrokenTitle.Text = "💀 CITY BROKEN"
+cityBrokenTitle.Text = "CITY BROKEN"
 cityBrokenTitle.Parent = cityBrokenBanner
+HudChrome.Label(cityBrokenTitle, 20)
+cityBrokenTitle.TextColor3 = HudChrome.Color.Ready
 
 local cityBrokenSubtitle = Instance.new("TextLabel")
-cityBrokenSubtitle.Size = UDim2.new(1, -8, 0, 18)
-cityBrokenSubtitle.Position = UDim2.new(0, 4, 0, 24)
+cityBrokenSubtitle.Name = "Subtitle"
+cityBrokenSubtitle.Size = UDim2.new(1, -20, 0, 16)
+cityBrokenSubtitle.Position = UDim2.new(0, PANEL_RAND, 0, 30)
 cityBrokenSubtitle.BackgroundTransparency = 1
-cityBrokenSubtitle.Font = Enum.Font.FredokaOne
-cityBrokenSubtitle.TextScaled = true
-cityBrokenSubtitle.TextColor3 = Color3.new(1, 1, 1)
-cityBrokenSubtitle.TextStrokeColor3 = Color3.new(0, 0, 0)
-cityBrokenSubtitle.TextStrokeTransparency = 0.3
+cityBrokenSubtitle.TextXAlignment = Enum.TextXAlignment.Left
 cityBrokenSubtitle.ZIndex = 22
-cityBrokenSubtitle.Text = "🔥 FREE DESTRUCTION -- 75s"
+cityBrokenSubtitle.Text = "FREE DESTRUCTION 75s"
 cityBrokenSubtitle.Parent = cityBrokenBanner
+HudChrome.Number(cityBrokenSubtitle, 13)
+cityBrokenSubtitle.TextColor3 = HudChrome.Color.TextSecondary
 
 local function updateQuestList()
 	local cityName = player:GetAttribute("CurrentCityName")
@@ -412,15 +463,15 @@ local function updateQuestList()
 		cityBrokenBanner.Visible = true
 		local endsAtValue = cityAlertValues:FindFirstChild(cityName .. "CityBrokenEndsAt")
 		local remaining = endsAtValue and math.max(math.floor(endsAtValue.Value - os.clock()), 0) or 0
-		cityBrokenSubtitle.Text = "🔥 FREE DESTRUCTION -- " .. remaining .. "s"
+		cityBrokenSubtitle.Text = "FREE DESTRUCTION " .. remaining .. "s"
 		return
 	end
 
 	cityBrokenBanner.Visible = false
 
-	-- Nur Aufgaben zeigen, die diese Stadt bereits TATSÄCHLICH erreicht hat -- "applicable"
-	-- bedeutet jetzt schon genau das (serverseitig dynamisch berechnet, siehe
-	-- CityBrokenService.lua), keine zusätzliche Level-Prüfung hier mehr nötig.
+	-- Nur Aufgaben zeigen, die diese Stadt bereits TATSAECHLICH erreicht hat --
+	-- "applicable" bedeutet schon genau das (serverseitig dynamisch berechnet, siehe
+	-- CityBrokenService.lua), keine zusaetzliche Stufenpruefung hier noetig.
 	local anyTaskVisible = false
 
 	for _, task in ipairs(TASK_LIST) do
@@ -431,19 +482,25 @@ local function updateQuestList()
 		if isApplicable then
 			anyTaskVisible = true
 			rowInfo.row.Visible = true
+
 			local completeValue = cityAlertValues:FindFirstChild(cityName .. "Task_" .. task.id .. "_Complete")
 			local isComplete = completeValue and completeValue.Value
-			rowInfo.checkLabel.Text = isComplete and "✅" or "⬜"
-			rowInfo.textLabel.TextColor3 = isComplete and Color3.fromRGB(120, 230, 120) or Color3.fromRGB(210, 210, 210)
 
-			-- Fortschritts-Anzeige ("1/2") anhängen, sofern der Server einen liefert
-			-- (Guardian-Aufgabe hat keinen -- einzelner Boss).
+			rowInfo.box.BackgroundColor3 = isComplete and ERLEDIGT_FARBE or HudChrome.Color.PanelSunken
+			rowInfo.boxStroke.Color = isComplete and ERLEDIGT_FARBE or HudChrome.Color.BorderDim
+			-- Erledigtes tritt zurueck: es ist noch da, damit man den Fortschritt sieht,
+			-- aber es braucht keine Aufmerksamkeit mehr. Die offene Zeile ist die, die
+			-- etwas von einem will.
+			rowInfo.textLabel.TextColor3 = isComplete and HudChrome.Color.TextDim or HudChrome.Color.TextPrimary
+
+			-- Fortschritts-Anzeige ("1/2") anhaengen, sofern der Server einen liefert
+			-- (die Guardian-Aufgabe hat keinen -- einzelner Gegner).
 			local progressValue = cityAlertValues:FindFirstChild(cityName .. "Task_" .. task.id .. "_Progress")
 			local progressText = progressValue and progressValue.Value or ""
 			if progressText ~= "" then
-				rowInfo.textLabel.Text = task.icon .. " " .. task.label .. " (" .. progressText .. ")"
+				rowInfo.textLabel.Text = task.label .. "  " .. progressText
 			else
-				rowInfo.textLabel.Text = task.icon .. " " .. task.label
+				rowInfo.textLabel.Text = task.label
 			end
 		else
 			rowInfo.row.Visible = false
@@ -463,24 +520,25 @@ end
 updateQuestList()
 
 -- Wird von CityAlertAnnouncementClient.lua aufgerufen, sobald die grosse zentrale
--- Ankündigung in die Ecke geflogen ist -- zusätzlicher Glow-Effekt, um den Blick genau
+-- Ankuendigung in die Ecke geflogen ist -- zusaetzlicher Leuchteffekt, um den Blick genau
 -- hierhin zu lenken.
+--
+-- Der Effekt laeuft ueber den VORHANDENEN Rahmen. Ein zweiter UIStroke am selben Objekt
+-- waere die naheliegende Loesung gewesen, aber Roblox zeichnet pro Objekt nur einen --
+-- der neue haette den bestehenden ersetzt und ihn nach dem Ausblenden mitgenommen.
 _G.FlashCityAlertIndicator = function(color)
-	local glow = Instance.new("UIStroke")
-	glow.Color = color or Color3.fromRGB(255, 230, 120)
-	glow.Thickness = 4
-	glow.Transparency = 0
-	glow.Parent = alertFrame
-
-	TweenService:Create(glow, TweenInfo.new(0.6, Enum.EasingStyle.Quad), {
-		Transparency = 1,
+	if not alertStroke then
+		return
+	end
+	alertStroke.Color = color or HudChrome.Color.Ready
+	alertStroke.Thickness = 3
+	TweenService:Create(alertStroke, TweenInfo.new(0.6, Enum.EasingStyle.Quad), {
+		Color = HudChrome.Color.Border,
+		Thickness = HudChrome.BorderThickness,
 	}):Play()
-	task.delay(0.6, function()
-		glow:Destroy()
-	end)
 end
 
--- Lässt die kompakte Anzeige kurz zittern -- Trigger-Moment (0.0s) der "ALERT
+-- Laesst die kompakte Anzeige kurz zittern -- Trigger-Moment (0.0s) der "ALERT
 -- ESCALATION"-Sequenz in CityAlertAnnouncementClient.lua.
 _G.ShakeCityAlertIndicator = function()
 	local originalPosition = alertFrame.Position
@@ -497,25 +555,29 @@ _G.ShakeCityAlertIndicator = function()
 	end)
 end
 
--- Lässt einen bestimmten Stern (1-basiert) kurz 2x pulsieren -- Trigger-Moment (0.0s) der
--- "ALERT ESCALATION"-Sequenz.
+-- Laesst ein bestimmtes Segment (1-basiert) kurz aufleuchten -- Trigger-Moment (0.0s) der
+-- "ALERT ESCALATION"-Sequenz. Hiess frueher PulseCityAlertStar; der Name bleibt, weil
+-- CityAlertAnnouncementClient ihn ruft, und ein Umbenennen beider Seiten gehoert nicht in
+-- diesen Umbau.
 _G.PulseCityAlertStar = function(starIndex)
-	local star = starLabels[starIndex]
-	if not star or not star.Visible then
+	local segment = segments[starIndex]
+	if not segment or not segment.frame.Visible then
 		return
 	end
 	task.spawn(function()
 		for _ = 1, 2 do
-			local pulseUp = TweenService:Create(star, TweenInfo.new(0.08, Enum.EasingStyle.Quad), {
-				Size = UDim2.new(0, 26, 1, 0),
+			local hoch = TweenService:Create(segment.frame, TweenInfo.new(0.08, Enum.EasingStyle.Quad), {
+				BackgroundColor3 = Color3.new(1, 1, 1),
 			})
-			pulseUp:Play()
-			pulseUp.Completed:Wait()
-			local pulseDown = TweenService:Create(star, TweenInfo.new(0.08, Enum.EasingStyle.Quad), {
-				Size = UDim2.new(0, 22, 1, 0),
+			hoch:Play()
+			hoch.Completed:Wait()
+			local runter = TweenService:Create(segment.frame, TweenInfo.new(0.12, Enum.EasingStyle.Quad), {
+				BackgroundColor3 = HudChrome.Color.Danger,
 			})
-			pulseDown:Play()
-			pulseDown.Completed:Wait()
+			runter:Play()
+			runter.Completed:Wait()
 		end
+		-- Danach den echten Zustand wiederherstellen -- der Puls hat die Farbe ueberschrieben.
+		updateAlertHud()
 	end)
 end
