@@ -506,7 +506,6 @@ HudChrome.NumberBold(healthLabel, 19)
 -- sich etwas geaendert hat -- die Anzeige wird auch dann aufgerufen, wenn nur das Maximum
 -- gewachsen ist.
 local letzterLebensstand = nil
-local popZaehler = 0
 
 local function updateHealthBar()
 	local character = player.Character
@@ -539,37 +538,24 @@ local function updateHealthBar()
 	-- danach fuer immer ins Gruen des ersten Aufrufs zurueck, auch bei zehn Prozent Leben.
 	healthBarFill:SetAttribute("RestColor", balkenFarbe)
 
-	-- Jede Aenderung poppt auf, und die FARBE des Aufpoppens sagt die Richtung: Rot fuer
-	-- Schaden, Gruen fuer Heilung. Vorher blitzte Schaden weiss -- damit musste man die
-	-- Zahl lesen, um zu wissen, was passiert ist. Die Farbe sagt es schneller.
+	-- NUR Schaden poppt auf. Heilung poppte anfangs mit und war im Spiel der lauteste
+	-- Effekt ueberhaupt -- dabei ist Heilung die gute Nachricht und braucht kein
+	-- Ausrufezeichen. Sie bewegt den Balken, und das genuegt.
 	--
-	-- Beide Toene sind absichtlich heller als die Balkenfarben. Bei wenig Leben ist der
-	-- Balken schon rot und bei viel Leben schon gruen; ein Blitz im selben Ton waere
-	-- genau dann unsichtbar, wenn er am meisten zaehlt.
+	-- Der Blitz nimmt die FARBE DES BALKENS und hellt sie nur auf. Eine eigene Signalfarbe
+	-- war falsch: ein roter Rahmen um einen gruenen Balken las sich wie ein zweiter,
+	-- widersprechender Zustand -- als wechselte der Balken gerade die Stufe. Die eigene,
+	-- aufgehellte Farbe sagt "hier hat sich etwas bewegt", ohne eine zweite Aussage
+	-- aufzumachen. Gruener Pop am gruenen Balken, roter am roten.
 	--
 	-- Winzige Aenderungen bleiben aussen vor: Roblox regeneriert im Hintergrund staendig,
 	-- und ein Balken, der im Sekundentakt blitzt, meldet nichts mehr, er flackert nur.
 	local aenderung = letzterLebensstand and (humanoid.Health - letzterLebensstand) or 0
 	letzterLebensstand = humanoid.Health
-	if math.abs(aenderung) >= maxLeben * 0.005 then
-		local popFarbe = aenderung < 0 and Color3.fromRGB(255, 80, 64) or Color3.fromRGB(100, 255, 130)
+	if aenderung <= -maxLeben * 0.005 then
+		local popFarbe = balkenFarbe:Lerp(Color3.new(1, 1, 1), 0.45)
 		flashElement(healthBarFill, popFarbe)
 		glowFlashElement(healthBarFill, popFarbe)
-
-		-- Nachweis fuer die ersten drei Male: der Balken wurde kleiner, poppte aber nicht
-		-- auf -- ohne diese Zeile ist von aussen nicht zu unterscheiden, ob der Aufruf
-		-- ausbleibt oder nur nichts zu sehen ist.
-		if popZaehler < 3 then
-			popZaehler += 1
-			print(string.format(
-				"[Kaiju Debug] HP-Pop %d: %s um %.0f (Stand %.0f von %.0f).",
-				popZaehler,
-				aenderung < 0 and "Schaden rot" or "Heilung gruen",
-				math.abs(aenderung),
-				humanoid.Health,
-				humanoid.MaxHealth
-			))
-		end
 	end
 end
 
