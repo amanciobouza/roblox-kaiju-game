@@ -2602,11 +2602,12 @@ shopFrame:GetPropertyChangedSignal("Visible"):Connect(function()
 		refreshShop()
 	end
 end)
-	-- Der Blitz sitzt auf dem Stufen-Feld, nicht auf dem Behaelter: der ist durchsichtig,
-	-- und flashElement faerbt Hintergruende -- es wuerde also eine sonst unsichtbare
-	-- Flaeche sichtbar machen. Gedaempftes Warmgrau statt Cremeweiss, weil das Feld dunkel
-	-- ist und eine helle Flaeche oben in der Mitte blenden wuerde.
-	flashElement(levelField, Color3.fromRGB(92, 82, 40))
+	-- Der Blitz sitzt auf dem XP-Balken und der Stufenzahl, nicht auf dem Feld: dessen
+	-- Flaeche besteht seit dem Umbau aus einzelnen Streifen, und der Rahmen darum ist
+	-- durchsichtig. flashElement faerbt Hintergruende -- auf dem Feld wuerde es also eine
+	-- sonst unsichtbare Flaeche sichtbar machen, statt etwas aufleuchten zu lassen.
+	flashElement(barBackground, Color3.fromRGB(92, 82, 40))
+	glowFlashElement(barFill, Color3.fromRGB(255, 235, 150))
 end)
 local leaderstatsFolder = player:WaitForChild("leaderstats")
 leaderstatsFolder:WaitForChild("Level"):GetPropertyChangedSignal("Value"):Connect(updateLevelBar)

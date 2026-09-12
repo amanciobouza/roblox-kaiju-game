@@ -364,101 +364,121 @@ end
 -- auf die Mitte des Bildschirms, wo die Spielfigur steht. Das ist der Grund fuer die Form
 -- -- sie ist keine Zierde, sie richtet den Blick.
 --
--- Roblox zeichnet keine Vielecke. Der Weg dahin fuehrt ueber einen Farbverlauf: ein
--- UIGradient bildet seine Werte entlang einer gedrehten Achse ab, und ein harter Sprung in
--- der Durchsichtigkeit erzeugt dadurch eine gerade Schnittkante quer durch das Rechteck.
--- Gedreht ist diese Kante schraeg.
+-- Roblox zeichnet keine Vielecke. Der erste Versuch lief ueber einen Farbverlauf mit
+-- hartem Sprung in der Durchsichtigkeit: gedrehte Achse, also schraege Schnittkante. Im
+-- Spiel sass dieser Schnitt aber weit neben der Stelle, an der er nach meiner Rechnung
+-- sitzen musste -- die Flaeche endete lange vor der schraegen Linie, und ein Stueck des
+-- Hintergrunds fehlte. Wie UIGradient seine Werte auf ein GEDREHTES Rechteck abbildet,
+-- liess sich von aussen nicht zuverlaessig bestimmen.
 --
--- Die Alternative -- ein gedrehtes Rechteck in einem beschneidenden Rahmen -- waere
--- naheliegender gewesen, haengt aber daran, ob ClipsDescendants gedrehte Kinder sauber
--- beschneidet. Der Farbverlauf braucht diese Annahme nicht.
+-- Deshalb jetzt aus reiner Geometrie: die Flaeche besteht aus waagerechten Streifen, die
+-- auf der schraegen Seite von Streifen zu Streifen weiter einruecken. Der Einzug ist
+-- schlichte Dreisatzrechnung, jeder Streifen sitzt dort, wo er nachrechenbar hingehoert,
+-- und es bleibt keine Annahme ueber das Verhalten der Engine uebrig.
 --
--- Wo genau der Schnitt sitzt, folgt aus der Geometrie. Die Achse zeigt in Richtung
--- `winkel`, der Verlauf spannt sich ueber die Projektion des Rechtecks auf diese Achse,
--- und daraus kuerzt sich der Schnittpunkt zu slant / (Breite + slant) -- unabhaengig von
--- der Hoehe, weil der Winkel selbst schon aus Hoehe und Versatz stammt.
+-- Die Streifen ueberlappen sich um einen Pixel und sind deckend. Beides gehoert zusammen:
+-- ohne Ueberlappung entstehen beim Skalieren Haarfugen, und bei durchscheinender Farbe
+-- wuerden ueberlappende Streifen an den Fugen doppelt dunkeln.
 --
 -- side = "Left": die linke Kante laeuft von oben links nach unten rechts ("\").
 -- side = "Right": die rechte Kante laeuft von oben rechts nach unten links ("/").
 --
--- Gibt (frame, stroke) zurueck. Achtung beim Fuellen: die abgeschnittene Ecke ist unten
--- aussen, Inhalt braucht dort mindestens `slant` Abstand zum Rand.
+-- Gibt (frame) zurueck. Achtung beim Fuellen: die abgeschnittene Ecke ist unten aussen,
+-- Inhalt braucht dort mindestens `slant` Abstand zum Rand.
+local STREIFEN_HOEHE = 2
+
 function HudChrome.SlantPanel(parent, options)
 	options = options or {}
 	local width = options.width or 220
 	local height = options.height or 62
 	local slant = options.slant or 16
 	local side = options.side or "Left"
+	local fill = options.fill or HudChrome.Color.Panel
+	local randFarbe = options.border or HudChrome.Color.Border
+	local dicke = options.thickness or HudChrome.BorderThickness
 
 	local frame = Instance.new("Frame")
 	frame.Name = options.name or "SlantPanel"
 	frame.Size = UDim2.new(0, width, 0, height)
+	frame.BackgroundTransparency = 1
+	frame.BorderSizePixel = 0
 	frame.Parent = parent
 
-	local _, stroke = HudChrome.Panel(frame, {
-		radius = options.radius or HudChrome.Radius.Small,
-		fill = options.fill,
-		transparency = options.transparency,
-		border = options.border,
-	})
+	local koerper = Instance.new("Frame")
+	koerper.Name = "Body"
+	koerper.Size = UDim2.new(1, 0, 1, 0)
+	koerper.BackgroundTransparency = 1
+	koerper.BorderSizePixel = 0
+	koerper.Parent = frame
 
-	local winkel = math.deg(math.atan(slant / height))
-	local schnitt = math.clamp(slant / (width + slant), 0.01, 0.5)
-	-- Bei "Right" zeigt die Achse nach links: dieselbe Neigung, um 180 Grad gedreht.
-	local richtung = (side == "Right") and (180 + winkel) or -winkel
+	local anzahl = math.ceil(height / STREIFEN_HOEHE)
+	for i = 0, anzahl - 1 do
+		local y = i * STREIFEN_HOEHE
+		-- Ein Pixel Ueberlappung nach unten, aber nie ueber die Unterkante des Feldes
+		-- hinaus -- sonst schaut der letzte Streifen unter der Randlinie hervor.
+		local hoehe = math.min(STREIFEN_HOEHE + 1, height - y)
+		-- Der Einzug folgt der Mitte des Streifens, nicht seiner Oberkante: so liegt die
+		-- Treppe symmetrisch auf der gedachten Linie statt durchgaengig daneben.
+		local einzug = slant * math.clamp((y + STREIFEN_HOEHE * 0.5) / height, 0, 1)
 
-	-- Der Sprung von durchsichtig auf deckend ist absichtlich nur einen Tausendstel breit
-	-- -- schmal genug, dass er als Kante wirkt, breit genug, dass Roblox ihn glaettet
-	-- statt ihn als Treppe zu zeichnen.
-	local folge = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 1),
-		NumberSequenceKeypoint.new(schnitt, 1),
-		NumberSequenceKeypoint.new(schnitt + 0.001, 0),
-		NumberSequenceKeypoint.new(1, 0),
-	})
-
-	local verlauf = Instance.new("UIGradient")
-	verlauf.Rotation = richtung
-	verlauf.Transparency = folge
-	verlauf.Parent = frame
-
-	-- Der Rahmenstrich muss denselben Schnitt bekommen. Sonst zoege er weiter das volle
-	-- Rechteck nach -- eine Linie quer durch die Luft neben der schraegen Kante.
-	if stroke then
-		local strichVerlauf = Instance.new("UIGradient")
-		strichVerlauf.Rotation = richtung
-		strichVerlauf.Transparency = folge
-		strichVerlauf.Parent = stroke
-
-		-- Damit fehlt aber die Linie AN der Schraegen -- und zwar zwangslaeufig: der
-		-- Rahmenstrich folgt dem Rechteck, und wo die Schraege laeuft, ist gar keine
-		-- Rechteckkante. Genau die Kante, die der Form ihren Charakter gibt, bliebe
-		-- ohne Strich.
-		--
-		-- Sie kommt deshalb als eigenes, gedrehtes Rechteck: ein duenner Balken, so lang
-		-- wie die Diagonale, um denselben Winkel gedreht, mit der Mitte auf der Mitte der
-		-- Schraegen. Der Farbverlauf des Feldes faerbt ihn nicht mit -- ein UIGradient
-		-- wirkt nur auf das Objekt, an dem er haengt, nicht auf dessen Kinder.
-		local laenge = math.sqrt(slant * slant + height * height) + 1
-
-		local kante = Instance.new("Frame")
-		kante.Name = "SlantEdge"
-		kante.AnchorPoint = Vector2.new(0.5, 0.5)
-		kante.Size = UDim2.new(0, stroke.Thickness, 0, laenge)
-		kante.BackgroundColor3 = stroke.Color
-		kante.BorderSizePixel = 0
-		if side == "Right" then
-			kante.Position = UDim2.new(1, -slant / 2, 0.5, 0)
-			kante.Rotation = winkel
-		else
-			kante.Position = UDim2.new(0, slant / 2, 0.5, 0)
-			kante.Rotation = -winkel
-		end
-		kante.Parent = frame
+		local streifen = Instance.new("Frame")
+		streifen.Name = "Strip"
+		streifen.Size = UDim2.new(0, width - einzug, 0, hoehe)
+		streifen.Position = UDim2.new(0, side == "Left" and einzug or 0, 0, y)
+		streifen.BackgroundColor3 = fill
+		streifen.BackgroundTransparency = options.transparency or 0
+		streifen.BorderSizePixel = 0
+		streifen.Parent = koerper
 	end
 
-	return frame, stroke
+	-- Die drei GERADEN Kanten als eigene Haarlinien. Ein UIStroke kann es nicht: er wuerde
+	-- entweder das ganze Rechteck nachziehen -- also auch dort, wo gar keine Flaeche ist --
+	-- oder, auf die Streifen gelegt, jede Treppenstufe einzeln umranden.
+	local function linie(name, groesse, position)
+		local l = Instance.new("Frame")
+		l.Name = name
+		l.Size = groesse
+		l.Position = position
+		l.BackgroundColor3 = randFarbe
+		l.BorderSizePixel = 0
+		l.ZIndex = 2
+		l.Parent = frame
+		return l
+	end
+
+	linie("EdgeTop", UDim2.new(1, 0, 0, dicke), UDim2.new(0, 0, 0, 0))
+	if side == "Left" then
+		linie("EdgeBottom", UDim2.new(1, -slant, 0, dicke), UDim2.new(0, slant, 1, -dicke))
+		linie("EdgeInner", UDim2.new(0, dicke, 1, 0), UDim2.new(1, -dicke, 0, 0))
+	else
+		linie("EdgeBottom", UDim2.new(1, -slant, 0, dicke), UDim2.new(0, 0, 1, -dicke))
+		linie("EdgeInner", UDim2.new(0, dicke, 1, 0), UDim2.new(0, 0, 0, 0))
+	end
+
+	-- Die schraege Kante als gedrehtes Rechteck, so lang wie die Diagonale, mit der Mitte
+	-- auf der Mitte der Schraegen.
+	local winkel = math.deg(math.atan(slant / height))
+	local laenge = math.sqrt(slant * slant + height * height) + 1
+
+	local kante = Instance.new("Frame")
+	kante.Name = "SlantEdge"
+	kante.AnchorPoint = Vector2.new(0.5, 0.5)
+	kante.Size = UDim2.new(0, dicke, 0, laenge)
+	kante.BackgroundColor3 = randFarbe
+	kante.BorderSizePixel = 0
+	kante.ZIndex = 2
+	if side == "Right" then
+		kante.Position = UDim2.new(1, -slant / 2, 0.5, 0)
+		kante.Rotation = winkel
+	else
+		kante.Position = UDim2.new(0, slant / 2, 0.5, 0)
+		kante.Rotation = -winkel
+	end
+	kante.Parent = frame
+
+	return frame
 end
+
 
 -- ===== Fette Zahlen =====
 --
