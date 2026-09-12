@@ -22,6 +22,7 @@ local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 local NumberFormat = require(ReplicatedStorage:WaitForChild("NumberFormat"))
+print("[Kaiju Debug] SkinSelectionGui: Module geladen, baue HUD.")
 
 -- Icon + Farbe pro Energie-Typ für die fliegende Zahl-Animation -- dieselben Farben wie
 -- im Talentbaum/HUD (TalentTreeClient.lua, EnergyTypesClient.lua), konsistent im ganzen Spiel.
@@ -1151,11 +1152,11 @@ RunService.Heartbeat:Connect(function()
 		else
 			wedgeInfo.frame.BackgroundColor3 = ZONE_MELTDOWN
 		end
+	end
 
 	-- Die rote Marke wandert auf die aktuelle Schwelle. Sie steht nicht fest bei 100:
 	-- das Talent "Meltdown Mastery" verschiebt sie, und das soll man am Geraet sehen.
 	redlinePivot.Rotation = percentToAngle(effectiveMeltdownThreshold)
-	end
 
 	-- Nadel bewegt sich mit Schwung (leichtes Überschwingen) zum neuen Wert, statt
 	-- sofort zu springen -- neuer Tween wird nur gestartet, wenn sich das Ziel
@@ -2775,3 +2776,49 @@ player:WaitForChild("BodyPower"):GetPropertyChangedSignal("Value"):Connect(updat
 player:GetAttributeChangedSignal("StatCap"):Connect(updateLevelBar)
 player:WaitForChild("UnlockedSkins").ChildAdded:Connect(refreshShop)
 player:WaitForChild("EquippedSkin"):GetPropertyChangedSignal("Value"):Connect(refreshShop)
+
+-- ===== Selbstauskunft: warum ist etwas nicht zu sehen? =====
+--
+-- Gemeldet: Level-/HP-Feld und Tacho fehlen beide. Beide entstehen in DIESER Datei, also
+-- kommen nur drei Ursachen in Frage: das Skript ist vorher abgebrochen, die Elemente sind
+-- auf unsichtbar gesetzt, oder sie sind da und werden mit Groesse null gezeichnet.
+--
+-- Der Block unterscheidet alle drei auf einmal. Erscheint er gar nicht, ist das Skript
+-- vorher gestorben -- dann steht der Grund als roter Fehler darueber.
+--
+-- WICHTIG dabei: beide Anzeigen sind in der Sanctuary-Zone ABSICHTLICH ausgeblendet
+-- (statusCluster ganz, der Tacho ausser beim Training). Das ist kein Fehler, sondern eine
+-- alte Entscheidung -- die Zeile "Zone" unten sagt, ob sie gerade greift.
+task.delay(3, function()
+	local zone = player:GetAttribute("CurrentZone")
+	print(string.format(
+		"[Kaiju Debug] HUD-Auskunft -- Zone %s, Stadt %s, Training %s.",
+		tostring(zone),
+		tostring(player:GetAttribute("CurrentCityName")),
+		tostring(player:GetAttribute("TrainingStat"))
+	))
+
+	local function melde(name, gui)
+		if not gui or not gui.Parent then
+			warn("[Kaiju Debug]   " .. name .. ": NICHT VORHANDEN")
+			return
+		end
+		print(string.format(
+			"[Kaiju Debug]   %s: sichtbar=%s, %d x %d Pixel bei (%d, %d)",
+			name,
+			tostring(gui.Visible),
+			gui.AbsoluteSize.X,
+			gui.AbsoluteSize.Y,
+			gui.AbsolutePosition.X,
+			gui.AbsolutePosition.Y
+		))
+	end
+
+	print("[Kaiju Debug]   GameHud aktiv: " .. tostring(screenGui.Enabled))
+	melde("PlayerStatusCluster", statusCluster)
+	melde("LevelField", levelField)
+	melde("HealthField", healthField)
+	melde("HeatFrame", heatFrame)
+	melde("GaugeDisc", gaugeDisc)
+	melde("Needle", needle)
+end)
