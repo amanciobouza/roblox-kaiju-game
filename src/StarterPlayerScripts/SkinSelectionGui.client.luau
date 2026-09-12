@@ -1152,9 +1152,17 @@ do
 	-- Duenner Ring knapp AUSSERHALB des Gehaeuserings, in Cyan -- der Farbe, die im ganzen
 	-- HUD allein der Special Energy gehoert. Er ueberdeckt den Tacho nicht und braucht kaum
 	-- zusaetzliche Hoehe, weil er derselben Kontur folgt.
+	-- Vierundzwanzig statt sechzig Segmente, dafuer jedes breiter: bei sechzig lagen sie
+	-- so dicht, dass sie zu einem durchgehenden Ring verschmolzen -- eine Fuellstandslinie,
+	-- kein Zaehlwerk. Mit sichtbaren Luecken sieht man wieder EINZELNE Sektoren und kann
+	-- sie im Vorbeigehen abschaetzen, statt eine Laenge zu vergleichen.
+	--
+	-- Der Abstand zwischen zwei Mitten betraegt am Innenrand rund 16 Pixel; bei 11 Pixeln
+	-- Segmentbreite bleiben gut 5 Pixel Luft.
 	local ENERGY_ARC_INNER = BEZEL_OUTER + 4
-	local ENERGY_ARC_THICK = 9
-	local ENERGY_ARC_SECTOR_COUNT = 60
+	local ENERGY_ARC_THICK = 10
+	local ENERGY_ARC_SECTOR_COUNT = 24
+	local ENERGY_ARC_SEGMENT_BREITE = 11
 	local ENERGY_ARC_COLOR = HudChrome.Color.Accent
 	local ENERGY_ARC_COLOR_DIM = Color3.fromRGB(28, 44, 54)
 
@@ -1168,7 +1176,7 @@ do
 		local wedge = Instance.new("Frame")
 		wedge.Name = "EnergyWedge"
 		wedge.AnchorPoint = Vector2.new(0.5, 1)
-		wedge.Size = UDim2.new(0, 7, 0, ENERGY_ARC_THICK)
+		wedge.Size = UDim2.new(0, ENERGY_ARC_SEGMENT_BREITE, 0, ENERGY_ARC_THICK)
 		wedge.Position = UDim2.new(0.5, 0, 0, -ENERGY_ARC_INNER)
 		wedge.BackgroundColor3 = ENERGY_ARC_COLOR_DIM
 		wedge.BorderSizePixel = 0
