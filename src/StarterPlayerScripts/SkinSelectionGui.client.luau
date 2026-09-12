@@ -658,58 +658,71 @@ heatFrame.BackgroundTransparency = 1 -- kein rechteckiger Rahmen mehr -- nur die
 heatFrame.ZIndex = 10
 heatFrame.Parent = screenGui
 
--- Titel oben -- macht auf den ersten Blick klar, worum es sich handelt.
-local heatTitleLabel = Instance.new("TextLabel")
-heatTitleLabel.Name = "HeatTitleLabel"
-heatTitleLabel.Size = UDim2.new(1, -12, 0, 26)
-heatTitleLabel.Position = UDim2.new(0, 6, 0, 0)
-heatTitleLabel.BackgroundTransparency = 1
-heatTitleLabel.Font = Enum.Font.LuckiestGuy
-heatTitleLabel.TextScaled = true
-heatTitleLabel.TextColor3 = Color3.fromRGB(255, 210, 80)
-heatTitleLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
-heatTitleLabel.TextStrokeTransparency = 0
-heatTitleLabel.ZIndex = 12
-heatTitleLabel.Text = "BERSERKER"
-heatTitleLabel.Parent = heatFrame
+-- ===== Der Tacho =====
+--
+-- Die Form bleibt, die Sprache aendert sich. Vorher fuellte das Zifferblatt eine
+-- durchgehende Farbflaeche vom Drehpunkt bis fast zum Rand -- viel Farbe, wenig Aussage,
+-- und der lauteste Comic-Rest im ganzen HUD. Jetzt traegt ein SCHMALES Band am Rand die
+-- Zonen, Teilstriche geben dem Blatt einen Massstab, und beschriftete Hauptwerte sagen,
+-- wo man steht. So liest sich ein Messgeraet: die Skala gehoert an den Rand, die Mitte
+-- bleibt ruhig.
+--
+-- WICHTIG (gilt fuer Nadel, Teilstriche und Bandsegmente gleichermassen): Roblox rotiert
+-- ein GuiObject um seinen EIGENEN Mittelpunkt, nicht um den AnchorPoint. Ein direkt
+-- rotiertes, langes Objekt draehte sich wie eine Kompassnadel um seine Mitte. Der Trick:
+-- ein winziger, unsichtbarer Dreh-Anker sitzt GENAU auf dem Drehpunkt, das eigentliche
+-- Teil ist sein Kind und ragt von ihm aus nach oben. Rotiert wird nur der Anker.
+local GAUGE_MAX = 110
+local GAUGE_CENTER = Vector2.new(140, 200) -- Drehpunkt = Unterkante von heatFrame = Grundlinie der Knoepfe
 
--- Bonus-Text direkt unter dem Titel (der Drehpunkt unten braucht den Platz fürs Zifferblatt).
-local heatBonusLabel = Instance.new("TextLabel")
-heatBonusLabel.Name = "HeatBonusLabel"
-heatBonusLabel.Size = UDim2.new(1, -8, 0, 26)
-heatBonusLabel.Position = UDim2.new(0, 4, 0, 26)
-heatBonusLabel.BackgroundTransparency = 1
-heatBonusLabel.Font = Enum.Font.FredokaOne
-heatBonusLabel.TextScaled = true
-heatBonusLabel.TextWrapped = true
-heatBonusLabel.TextColor3 = Color3.fromRGB(220, 220, 230)
-heatBonusLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
-heatBonusLabel.TextStrokeTransparency = 0.3
-heatBonusLabel.ZIndex = 12
-heatBonusLabel.Text = "No Bonus"
-heatBonusLabel.Parent = heatFrame
+local FACE_RADIUS = 104 -- dunkles Zifferblatt
+local BAND_OUTER = 100 -- Farbband
+local BAND_INNER = 88
+local TICK_OUTER = 86 -- Teilstriche wachsen von hier nach innen
+local TICK_MINOR = 5
+local TICK_MAJOR = 11
+local LABEL_RADIUS = 62 -- Beschriftung der Hauptwerte
+local BEZEL_INNER = FACE_RADIUS
+local BEZEL_THICK = 11
+local BEZEL_OUTER = BEZEL_INNER + BEZEL_THICK
+local NEEDLE_LENGTH = 84
 
--- ===== Tacho-Anzeige: farbig gefülltes Zifferblatt (Sektoren statt dünner schwarzer
--- Fläche) + Nadel, die WIRKLICH nur am unteren Ansatz fixiert ist. =====
--- WICHTIG: Roblox rotiert ein GuiObject immer um seinen EIGENEN Mittelpunkt, NICHT um
--- den AnchorPoint. Ein direkt rotiertes, langes Objekt würde sich deshalb wie eine
--- Kompassnadel um seine MITTE drehen (beide Enden bewegen sich). Der korrekte Trick:
--- ein winziger, unsichtbarer "Dreh-Anker" sitzt GENAU auf dem Drehpunkt, und die Nadel
--- ist ein KIND davon, das vom Anker aus nach oben ragt -- rotiert wird NUR der Anker,
--- die Nadel "erbt" die Drehung um genau diesen fixen Punkt.
-local GAUGE_RADIUS = 92
-local GAUGE_CENTER = Vector2.new(140, 200) -- Drehpunkt = EXAKT die Unterkante von heatFrame = Button-Grundlinie
-local DISC_RADIUS = GAUGE_RADIUS + 24
+-- Die Zonenfarben. Gedeckter als vorher: ein Messgeraet leuchtet nicht, es zeigt an.
+-- Die Grenzen 30/60/85 sind fest (siehe HeatHandler), die letzte haengt am Talent.
+local ZONE_CALM = Color3.fromRGB(58, 92, 130)
+local ZONE_AGGRESSIVE = Color3.fromRGB(186, 152, 46)
+local ZONE_ENRAGED = Color3.fromRGB(196, 104, 26)
+local ZONE_BERSERK = Color3.fromRGB(198, 42, 34)
+local ZONE_MELTDOWN = Color3.fromRGB(158, 34, 178)
 
--- ===== Halbscheibe als Hintergrund (echte Geigenzähler-Optik) =====
--- Roblox kennt keine native Halbkreis-Form -- daher: ein VOLLER Kreis (per UICorner mit
--- halbem Radius) wird in einem nur HALB so hohen Container mit ClipsDescendants=true
--- platziert. Der Container zeigt dadurch nur die obere Hälfte des Kreises.
+-- Hilfsfunktion: legt einen Dreh-Anker auf den Drehpunkt und gibt ihn zurueck.
+local function makePivot(name, angle, zIndex)
+	local pivot = Instance.new("Frame")
+	pivot.Name = name
+	pivot.AnchorPoint = Vector2.new(0.5, 0.5)
+	pivot.Size = UDim2.new(0, 1, 0, 1)
+	pivot.Position = UDim2.new(0, GAUGE_CENTER.X, 0, GAUGE_CENTER.Y)
+	pivot.Rotation = angle
+	pivot.BackgroundTransparency = 1
+	pivot.ZIndex = zIndex
+	pivot.Parent = heatFrame
+	return pivot
+end
+
+-- Prozentwert -> Winkel. 0 liegt links (-90), GAUGE_MAX rechts (+90).
+local function percentToAngle(percent)
+	return -90 + (math.clamp(percent, 0, GAUGE_MAX) / GAUGE_MAX) * 180
+end
+
+-- ===== Zifferblatt =====
+-- Roblox kennt keine Halbkreis-Form. Ein VOLLER Kreis (UICorner mit halbem Radius) sitzt
+-- in einem nur halb so hohen Container mit ClipsDescendants -- sichtbar bleibt die obere
+-- Haelfte. Das Kind ist dabei NICHT gedreht; auf gedrehte Kinder waere kein Verlass.
 local discClip = Instance.new("Frame")
 discClip.Name = "GaugeDiscClip"
 discClip.AnchorPoint = Vector2.new(0.5, 1)
 discClip.Position = UDim2.new(0, GAUGE_CENTER.X, 0, GAUGE_CENTER.Y)
-discClip.Size = UDim2.new(0, DISC_RADIUS * 2, 0, DISC_RADIUS)
+discClip.Size = UDim2.new(0, FACE_RADIUS * 2, 0, FACE_RADIUS)
 discClip.BackgroundTransparency = 1
 discClip.ClipsDescendants = true
 discClip.ZIndex = 7
@@ -718,85 +731,198 @@ discClip.Parent = heatFrame
 local gaugeDisc = Instance.new("Frame")
 gaugeDisc.Name = "GaugeDisc"
 gaugeDisc.AnchorPoint = Vector2.new(0.5, 0.5)
-gaugeDisc.Position = UDim2.new(0.5, 0, 1, 0) -- Kreismitte exakt auf der Unterkante des Clip-Containers (= Drehpunkt)
-gaugeDisc.Size = UDim2.new(0, DISC_RADIUS * 2, 0, DISC_RADIUS * 2)
-gaugeDisc.BackgroundColor3 = Color3.fromRGB(24, 22, 30)
+gaugeDisc.Position = UDim2.new(0.5, 0, 1, 0)
+gaugeDisc.Size = UDim2.new(0, FACE_RADIUS * 2, 0, FACE_RADIUS * 2)
+gaugeDisc.BackgroundColor3 = HudChrome.Color.PanelSunken
+gaugeDisc.BackgroundTransparency = 0.08
 gaugeDisc.BorderSizePixel = 0
 gaugeDisc.ZIndex = 7
 gaugeDisc.Parent = discClip
 
 local gaugeDiscCorner = Instance.new("UICorner")
-gaugeDiscCorner.CornerRadius = UDim.new(0.5, 0) -- bei gleicher Breite/Höhe ergibt das einen perfekten Kreis
+gaugeDiscCorner.CornerRadius = UDim.new(0.5, 0)
 gaugeDiscCorner.Parent = gaugeDisc
 
--- Goldener Rand um die Scheibe (gaugeDiscStroke) wurde entfernt -- störte visuell,
--- besonders zusammen mit dem neuen Special-Energy-Arc direkt aussen herum.
+-- ===== Gehaeusering =====
+-- Derselbe Kniff, aber der Ring ist der STRICH eines Kreises statt seiner Flaeche: ein
+-- UIStroke der Dicke BEZEL_THICK auf einem durchsichtigen Kreis. Ein Ring aus gedrehten
+-- Segmenten haette hundert Rahmen gekostet und an den Fugen geflimmert.
+local bezelClip = Instance.new("Frame")
+bezelClip.Name = "GaugeBezelClip"
+bezelClip.AnchorPoint = Vector2.new(0.5, 1)
+bezelClip.Position = UDim2.new(0, GAUGE_CENTER.X, 0, GAUGE_CENTER.Y)
+bezelClip.Size = UDim2.new(0, BEZEL_OUTER * 2, 0, BEZEL_OUTER)
+bezelClip.BackgroundTransparency = 1
+bezelClip.ClipsDescendants = true
+bezelClip.ZIndex = 6
+bezelClip.Parent = heatFrame
 
--- Sektor-Füllung: viele schmale, DURCHGEHENDE Keile vom Drehpunkt bis fast zum Rand
--- (nicht nur kurze Striche am Rand) -- dicht genug aneinandergereiht, dass sie wie eine
--- durchgehende Farbfläche wirken. Jeder Keil nutzt denselben Dreh-Anker-Trick wie die
--- Nadel (siehe oben), damit er wirklich am Drehpunkt ansetzt statt um die eigene Mitte
--- zu kippen.
--- Skala jetzt 0-110 (war 0-100) -- Zifferblatt zeigt mehr Headroom über Meltdown
--- hinaus. "percent" entspricht direkt dem echten Heat-Wert.
-local GAUGE_MAX = 110
-local SECTOR_COUNT = 90 -- sehr dicht, wirkt wie eine durchgehende Fläche statt einzelner Striche
+local bezelCircle = Instance.new("Frame")
+bezelCircle.Name = "GaugeBezel"
+bezelCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+bezelCircle.Position = UDim2.new(0.5, 0, 1, 0)
+-- Der Kreis ist genau so gross wie die INNENkante des Rings. Ein UIStroke im Modus
+-- "Border" zeichnet nach AUSSEN, nicht mittig auf der Kante -- der Ring liegt damit von
+-- BEZEL_INNER bis BEZEL_OUTER, so wie gerechnet.
+bezelCircle.Size = UDim2.new(0, BEZEL_INNER * 2, 0, BEZEL_INNER * 2)
+bezelCircle.BackgroundTransparency = 1
+bezelCircle.BorderSizePixel = 0
+bezelCircle.ZIndex = 6
+bezelCircle.Parent = bezelClip
+
+local bezelCorner = Instance.new("UICorner")
+bezelCorner.CornerRadius = UDim.new(0.5, 0)
+bezelCorner.Parent = bezelCircle
+
+local bezelStroke = Instance.new("UIStroke")
+bezelStroke.Name = "BezelStroke"
+bezelStroke.Thickness = BEZEL_THICK
+bezelStroke.Color = HudChrome.Color.PanelRaised
+bezelStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+bezelStroke.Parent = bezelCircle
+
+-- Ein Lichtkante-Verlauf ueber den Ring: oben heller, unten dunkler. Das ist der
+-- Unterschied zwischen einem gezeichneten Kreis und einem Ring aus Metall.
+local bezelGradient = Instance.new("UIGradient")
+bezelGradient.Rotation = 90
+bezelGradient.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, HudChrome.Color.BorderBright),
+	ColorSequenceKeypoint.new(0.55, HudChrome.Color.PanelRaised),
+	ColorSequenceKeypoint.new(1, HudChrome.Color.Panel),
+})
+bezelGradient.Parent = bezelStroke
+
+-- Schrauben im Gehaeusering. Vier, dezent, an Stellen, an denen sie ein Geraet wirklich
+-- haette -- sie sagen "gebaut" statt "gezeichnet".
+for _, winkel in ipairs({ -74, -26, 26, 74 }) do
+	local rad = math.rad(winkel)
+	local bolt = Instance.new("Frame")
+	bolt.Name = "BezelBolt"
+	bolt.AnchorPoint = Vector2.new(0.5, 0.5)
+	bolt.Size = UDim2.new(0, 5, 0, 5)
+	bolt.Position = UDim2.new(
+		0,
+		GAUGE_CENTER.X + math.sin(rad) * (BEZEL_INNER + BEZEL_THICK / 2),
+		0,
+		GAUGE_CENTER.Y - math.cos(rad) * (BEZEL_INNER + BEZEL_THICK / 2)
+	)
+	bolt.BackgroundColor3 = HudChrome.Color.PanelSunken
+	bolt.BorderSizePixel = 0
+	bolt.ZIndex = 7
+	bolt.Parent = heatFrame
+
+	local boltCorner = Instance.new("UICorner")
+	boltCorner.CornerRadius = UDim.new(0.5, 0)
+	boltCorner.Parent = bolt
+
+	local boltStroke = Instance.new("UIStroke")
+	boltStroke.Thickness = 1
+	boltStroke.Color = HudChrome.Color.BorderDim
+	boltStroke.Parent = bolt
+end
+
+-- ===== Farbband =====
+-- Schmal und am Rand. Die Segmente ueberlappen sich um ein Grad, sonst stehen bei
+-- krummen Winkeln Haarfugen zwischen ihnen.
+local SECTOR_COUNT = 90
 local sectorWedges = {}
 for i = 0, SECTOR_COUNT - 1 do
 	local percent = (i / (SECTOR_COUNT - 1)) * GAUGE_MAX
-	local angle = -90 + (percent / GAUGE_MAX) * 180
-
-	local pivot = Instance.new("Frame")
-	pivot.Name = "SectorPivot" .. i
-	pivot.AnchorPoint = Vector2.new(0.5, 0.5)
-	pivot.Size = UDim2.new(0, 1, 0, 1)
-	pivot.Position = UDim2.new(0, GAUGE_CENTER.X, 0, GAUGE_CENTER.Y)
-	pivot.Rotation = angle
-	pivot.BackgroundTransparency = 1
-	pivot.ZIndex = 8
-	pivot.Parent = heatFrame
+	local pivot = makePivot("SectorPivot" .. i, percentToAngle(percent), 8)
 
 	local wedge = Instance.new("Frame")
 	wedge.Name = "Wedge"
 	wedge.AnchorPoint = Vector2.new(0.5, 1)
-	wedge.Size = UDim2.new(0, 10, 0, GAUGE_RADIUS - 8) -- reicht fast bis zum Rand, nicht nur ein kurzer Strich
-	wedge.Position = UDim2.new(0.5, 0, 0, 0)
+	wedge.Size = UDim2.new(0, 8, 0, BAND_OUTER - BAND_INNER)
+	wedge.Position = UDim2.new(0.5, 0, 0, -BAND_INNER)
 	wedge.BorderSizePixel = 0
 	wedge.ZIndex = 8
 	wedge.Parent = pivot
 
-	-- Farbe wird NICHT mehr hier einmalig gesetzt, sondern laufend im Heartbeat-Loop
-	-- (siehe unten) -- die Berserker/Meltdown-Grenze hängt vom talent-abhängigen
-	-- EffectiveMeltdownThreshold-Attribut ab, das sich während des Spiels ändern kann.
-
+	-- Die Farbe setzt der Heartbeat: die Berserker/Meltdown-Grenze haengt am Talent
+	-- (EffectiveMeltdownThreshold) und kann sich waehrend des Spiels verschieben.
 	table.insert(sectorWedges, { frame = wedge, percent = percent })
 end
 
--- Kleine Symbole über den beiden Sonder-Sektoren als zusätzliche, unmissverständliche
--- Markierung (nicht nur Farbe).
-local function addSectorLabel(centerPercent, icon)
+-- ===== Teilstriche alle 5, Hauptstriche an den Zonengrenzen =====
+--
+-- Beschriftet werden 0 / 30 / 60 / 85 / 100 / 110. Im Grilling hatte ich 25 statt 30
+-- vorgeschlagen -- im Code liegt die Grenze zu "Aggressive" aber bei 30, und eine Skala,
+-- die andere Zahlen anschreibt als die, an denen etwas passiert, ist schlimmer als gar
+-- keine.
+local MAJOR_VALUES = { 0, 30, 60, 85, 100, 110 }
+local majorLookup = {}
+for _, value in ipairs(MAJOR_VALUES) do
+	majorLookup[value] = true
+end
+
+for value = 0, GAUGE_MAX, 5 do
+	local isMajor = majorLookup[value] or false
+	local pivot = makePivot("TickPivot" .. value, percentToAngle(value), 9)
+
+	local tick = Instance.new("Frame")
+	tick.Name = "Tick"
+	tick.AnchorPoint = Vector2.new(0.5, 1)
+	tick.Size = UDim2.new(0, isMajor and 2 or 1, 0, isMajor and TICK_MAJOR or TICK_MINOR)
+	tick.Position = UDim2.new(0.5, 0, 0, -(TICK_OUTER - (isMajor and TICK_MAJOR or TICK_MINOR)))
+	tick.BackgroundColor3 = isMajor and HudChrome.Color.BorderBright or HudChrome.Color.Border
+	tick.BorderSizePixel = 0
+	tick.ZIndex = 9
+	tick.Parent = pivot
+end
+
+-- Auch 100 und 110 bekommen einen Strich, aber 85 und 100 liegen nur 15 auseinander --
+-- die Beschriftung wandert deshalb nach innen, wo mehr Platz ist.
+for _, value in ipairs(MAJOR_VALUES) do
+	local rad = math.rad(percentToAngle(value))
 	local label = Instance.new("TextLabel")
+	label.Name = "TickLabel" .. value
 	label.AnchorPoint = Vector2.new(0.5, 0.5)
-	label.Size = UDim2.new(0, 32, 0, 32)
-	local labelAngle = math.rad(-90 + (centerPercent / 100) * 180)
+	label.Size = UDim2.new(0, 30, 0, 14)
 	label.Position = UDim2.new(
 		0,
-		GAUGE_CENTER.X + math.sin(labelAngle) * (GAUGE_RADIUS + 26),
+		GAUGE_CENTER.X + math.sin(rad) * LABEL_RADIUS,
 		0,
-		GAUGE_CENTER.Y - math.cos(labelAngle) * (GAUGE_RADIUS + 26)
+		GAUGE_CENTER.Y - math.cos(rad) * LABEL_RADIUS
 	)
 	label.BackgroundTransparency = 1
-	label.Font = Enum.Font.LuckiestGuy
-	label.TextScaled = true
-	label.Text = icon
-	label.ZIndex = 10
+	label.Text = tostring(value)
+	label.ZIndex = 9
 	label.Parent = heatFrame
-	return label
+	HudChrome.Number(label, 11)
+	label.TextColor3 = HudChrome.Color.TextSecondary
 end
--- Sektor-Icons entfernt (störten das HUD, laut Rückmeldung).
 
--- ===== Nadel: eigener Dreh-Anker EXAKT am Drehpunkt -- nur der Anker wird rotiert, die
--- Nadel selbst bleibt an ihrer unteren Kante fix mit ihm verbunden (siehe Erklärung oben).
+-- ===== Rote Marke an der Meltdown-Schwelle =====
+-- Sie ist beweglich, weil die Schwelle am Talent haengt. Genau deshalb gehoert sie aufs
+-- Blatt: sie zeigt, dass ein Talent etwas bewirkt hat, ohne dass man es nachrechnen muss.
+local redlinePivot = makePivot("RedlinePivot", percentToAngle(100), 10)
+
+local redlineMark = Instance.new("Frame")
+redlineMark.Name = "RedlineMark"
+redlineMark.AnchorPoint = Vector2.new(0.5, 1)
+redlineMark.Size = UDim2.new(0, 3, 0, BAND_OUTER - BAND_INNER + 8)
+redlineMark.Position = UDim2.new(0.5, 0, 0, -(BAND_INNER - 4))
+redlineMark.BackgroundColor3 = Color3.fromRGB(255, 236, 236)
+redlineMark.BorderSizePixel = 0
+redlineMark.ZIndex = 10
+redlineMark.Parent = redlinePivot
+
+-- ===== Schriftzug auf dem Blatt =====
+-- Die Sperrung entsteht durch eingefuegte Leerzeichen: Roblox kennt keine Laufweite.
+local wordmark = Instance.new("TextLabel")
+wordmark.Name = "GaugeWordmark"
+wordmark.AnchorPoint = Vector2.new(0.5, 1)
+wordmark.Size = UDim2.new(0, 180, 0, 12)
+wordmark.Position = UDim2.new(0, GAUGE_CENTER.X, 0, GAUGE_CENTER.Y - 26)
+wordmark.BackgroundTransparency = 1
+wordmark.Text = "T R E N C H B O R N"
+wordmark.ZIndex = 9
+wordmark.Parent = heatFrame
+HudChrome.Label(wordmark, 9)
+wordmark.TextColor3 = HudChrome.Color.TextDim
+
+-- ===== Nadel =====
 local needlePivot = Instance.new("Frame")
 needlePivot.Name = "NeedlePivot"
 needlePivot.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -809,50 +935,105 @@ needlePivot.Parent = heatFrame
 local needle = Instance.new("Frame")
 needle.Name = "Needle"
 needle.AnchorPoint = Vector2.new(0.5, 1)
-needle.Size = UDim2.new(0, 10, 0, GAUGE_RADIUS - 4)
+needle.Size = UDim2.new(0, 4, 0, NEEDLE_LENGTH)
 needle.Position = UDim2.new(0.5, 0, 0, 0)
-needle.BackgroundColor3 = Color3.new(1, 1, 1)
+needle.BackgroundColor3 = HudChrome.Color.TextPrimary
 needle.BorderSizePixel = 0
 needle.ZIndex = 11
 needle.Parent = needlePivot
-applyComicStyle(needle, 4, 2)
 
--- Nabe in der Mitte, überdeckt den Nadel-Ansatz. Bleibt unrotiert (eigenes Objekt, kein
--- Kind des Nadel-Ankers), damit sie immer rund/aufrecht aussieht.
+-- Gegengewicht hinter dem Drehpunkt -- der kurze Stummel, den jede echte Zeigernadel auf
+-- der anderen Seite der Achse hat. Kostet einen Rahmen und macht den Unterschied
+-- zwischen "Strich auf einer Scheibe" und "Instrument".
+local needleTail = Instance.new("Frame")
+needleTail.Name = "NeedleTail"
+needleTail.AnchorPoint = Vector2.new(0.5, 0)
+needleTail.Size = UDim2.new(0, 6, 0, 16)
+needleTail.Position = UDim2.new(0.5, 0, 0, 0)
+needleTail.BackgroundColor3 = HudChrome.Color.BorderBright
+needleTail.BorderSizePixel = 0
+needleTail.ZIndex = 11
+needleTail.Parent = needlePivot
+
+-- Nabe: aussen Stahl, innen ein farbiger Punkt. Die Stufe traegt damit der Punkt -- das
+-- Chrome drumherum bleibt farblos, so wie ueberall sonst im HUD.
 local needleHub = Instance.new("Frame")
 needleHub.Name = "NeedleHub"
 needleHub.AnchorPoint = Vector2.new(0.5, 0.5)
-needleHub.Size = UDim2.new(0, 28, 0, 28)
+needleHub.Size = UDim2.new(0, 22, 0, 22)
 needleHub.Position = UDim2.new(0, GAUGE_CENTER.X, 0, GAUGE_CENTER.Y)
-needleHub.BackgroundColor3 = Color3.fromRGB(255, 210, 80)
+needleHub.BackgroundColor3 = HudChrome.Color.PanelRaised
 needleHub.BorderSizePixel = 0
 needleHub.ZIndex = 12
 needleHub.Parent = heatFrame
-applyComicStyle(needleHub, 14, 2)
 
--- Prozentzahl + Stufen-Icon: im Zifferblatt selbst, knapp über dem Drehpunkt.
+local hubCorner = Instance.new("UICorner")
+hubCorner.CornerRadius = UDim.new(0.5, 0)
+hubCorner.Parent = needleHub
+
+local hubStroke = Instance.new("UIStroke")
+hubStroke.Thickness = 1
+hubStroke.Color = HudChrome.Color.BorderBright
+hubStroke.Parent = needleHub
+
+local hubDot = Instance.new("Frame")
+hubDot.Name = "HubDot"
+hubDot.AnchorPoint = Vector2.new(0.5, 0.5)
+hubDot.Size = UDim2.new(0, 10, 0, 10)
+hubDot.Position = UDim2.new(0.5, 0, 0.5, 0)
+hubDot.BackgroundColor3 = ZONE_CALM
+hubDot.BorderSizePixel = 0
+hubDot.ZIndex = 13
+hubDot.Parent = needleHub
+
+local hubDotCorner = Instance.new("UICorner")
+hubDotCorner.CornerRadius = UDim.new(0.5, 0)
+hubDotCorner.Parent = hubDot
+
+-- ===== Ablesung im Blatt =====
+-- ZIndex 9: die Nadel wandert sichtbar DARUEBER, wie bei einem echten Tacho.
 local heatLabel = Instance.new("TextLabel")
 heatLabel.Name = "HeatLabel"
 heatLabel.AnchorPoint = Vector2.new(0.5, 1)
-heatLabel.Size = UDim2.new(0, 112, 0, 30)
-heatLabel.Position = UDim2.new(0, GAUGE_CENTER.X, 0, GAUGE_CENTER.Y - 32)
+heatLabel.Size = UDim2.new(0, 140, 0, 32)
+heatLabel.Position = UDim2.new(0, GAUGE_CENTER.X, 0, GAUGE_CENTER.Y - 42)
 heatLabel.BackgroundTransparency = 1
-heatLabel.Font = Enum.Font.FredokaOne
-heatLabel.TextScaled = true
-heatLabel.TextColor3 = Color3.new(1, 1, 1)
-heatLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
-heatLabel.TextStrokeTransparency = 0.5
-heatLabel.ZIndex = 9 -- unter der Nadel, damit die Nadel sichtbar darüber wandert (wie bei einem echten Tacho)
+heatLabel.ZIndex = 9
+heatLabel.Text = "0"
 heatLabel.Parent = heatFrame
+HudChrome.NumberBold(heatLabel, 30)
 
--- Grosses Stage-Icon in der Mitte entfernt (heatStageLabel) -- störte das HUD, laut Rückmeldung.
+-- ===== Stufe gross, Bonus klein =====
+-- Die Stufe ist die Aussage, der Bonus ihre Begruendung. Vorher stand dort unveraenderlich
+-- "BERSERKER" -- ein Wort, das nur beschrieb, welches Geraet man ansieht, und nie, was es
+-- gerade anzeigt.
+local stageLabel = Instance.new("TextLabel")
+stageLabel.Name = "HeatStageLabel"
+stageLabel.Size = UDim2.new(1, -12, 0, 26)
+stageLabel.Position = UDim2.new(0, 6, 0, 4)
+stageLabel.BackgroundTransparency = 1
+stageLabel.ZIndex = 12
+stageLabel.Text = "CALM"
+stageLabel.Parent = heatFrame
+HudChrome.Label(stageLabel, 22)
 
--- Rauch-Glow für Meltdown -- sitzt über dem Zifferblatt.
+local heatBonusLabel = Instance.new("TextLabel")
+heatBonusLabel.Name = "HeatBonusLabel"
+heatBonusLabel.Size = UDim2.new(1, -12, 0, 16)
+heatBonusLabel.Position = UDim2.new(0, 6, 0, 30)
+heatBonusLabel.BackgroundTransparency = 1
+heatBonusLabel.ZIndex = 12
+heatBonusLabel.Text = ""
+heatBonusLabel.Parent = heatFrame
+HudChrome.Number(heatBonusLabel, 12)
+heatBonusLabel.TextColor3 = HudChrome.Color.TextSecondary
+
+-- Rauch-Glow fuer Meltdown -- sitzt ueber dem Zifferblatt.
 local smokeEmitter = Instance.new("ImageLabel")
 smokeEmitter.Name = "SmokeGlow"
 smokeEmitter.AnchorPoint = Vector2.new(0.5, 1)
 smokeEmitter.Size = UDim2.new(0, 140, 0, 140)
-smokeEmitter.Position = UDim2.new(0, GAUGE_CENTER.X, 0, GAUGE_CENTER.Y - GAUGE_RADIUS + 16)
+smokeEmitter.Position = UDim2.new(0, GAUGE_CENTER.X, 0, GAUGE_CENTER.Y - FACE_RADIUS + 16)
 smokeEmitter.BackgroundTransparency = 1
 smokeEmitter.Image = "rbxasset://textures/particles/smoke_main.dds"
 smokeEmitter.ImageColor3 = Color3.fromRGB(60, 30, 70)
@@ -860,63 +1041,57 @@ smokeEmitter.ImageTransparency = 1
 smokeEmitter.ZIndex = 13
 smokeEmitter.Parent = heatFrame
 
--- Kein manueller Berserk-Button mehr -- aktiviert sich jetzt automatisch serverseitig,
--- sobald die Heat-Schwelle erreicht ist (siehe HeatHandler.lua).
+-- Kein manueller Berserk-Knopf -- er aktiviert sich serverseitig, sobald die Schwelle
+-- erreicht ist (siehe HeatHandler.lua).
 
+local HEAT_STAGE_NAMES = {
+	Calm = "CALM",
+	Aggressive = "AGGRESSIVE",
+	Enraged = "ENRAGED",
+	Berserk = "BERSERK",
+	Meltdown = "MELTDOWN",
+}
+
+-- Die Emoji sind raus. Sie zeichnet das Betriebssystem in seinem eigenen Stil, und auf
+-- einem Messgeraet steht keine Bildsprache -- dort stehen Werte.
 local HEAT_STAGE_BONUS_TEXT = {
-	Calm = "No Bonus",
-	Aggressive = "⚔️+10%",
-	Enraged = "⚔️+30% 🏃+10%",
-	Berserk = "⚔️+60% 🏃+20%",
-	Meltdown = "⚔️+30% 🏃-75%",
+	Calm = "NO BONUS",
+	Aggressive = "DMG +10%",
+	Enraged = "DMG +30%   SPD +10%",
+	Berserk = "DMG +60%   SPD +20%",
+	Meltdown = "DMG +30%   SPD -75%",
 }
 
 local HEAT_STAGE_COLORS = {
-	Calm = Color3.fromRGB(80, 160, 255),
-	Aggressive = Color3.fromRGB(255, 210, 60),
-	Enraged = Color3.fromRGB(255, 140, 30),
-	Berserk = Color3.fromRGB(255, 40, 30),
-	Meltdown = Color3.fromRGB(180, 0, 220),
-}
-local HEAT_STAGE_ICONS = {
-	Calm = "🌡️",
-	Aggressive = "🌡️",
-	Enraged = "🌡️",
-	Berserk = "🔥",
-	Meltdown = "☢️",
+	Calm = ZONE_CALM,
+	Aggressive = ZONE_AGGRESSIVE,
+	Enraged = ZONE_ENRAGED,
+	Berserk = ZONE_BERSERK,
+	Meltdown = ZONE_MELTDOWN,
 }
 
--- ===== Special-Energy-Arc: dünner Ring knapp AUSSERHALB des Berserker-Zifferblatts --
--- eigene, klar unterscheidbare Farbsprache (Cyan/Elektrisch-Blau statt Heat-Rot/Orange),
--- überdeckt das Berserker-Element nicht, braucht kaum zusätzliche HUD-Höhe (dünn, folgt
--- exakt derselben Halbkreis-Kontur wie das Zifferblatt selbst).
-local ENERGY_ARC_RADIUS = DISC_RADIUS + 12
+-- ===== Special-Energy-Bogen =====
+-- Duenner Ring knapp AUSSERHALB des Gehaeuserings, in Cyan -- der Farbe, die im ganzen
+-- HUD allein der Special Energy gehoert. Er ueberdeckt den Tacho nicht und braucht kaum
+-- zusaetzliche Hoehe, weil er derselben Kontur folgt.
+local ENERGY_ARC_INNER = BEZEL_OUTER + 4
+local ENERGY_ARC_THICK = 9
 local ENERGY_ARC_SECTOR_COUNT = 60
-local ENERGY_ARC_COLOR = Color3.fromRGB(70, 210, 255)
-local ENERGY_ARC_COLOR_DIM = Color3.fromRGB(50, 60, 70)
+local ENERGY_ARC_COLOR = HudChrome.Color.Accent
+local ENERGY_ARC_COLOR_DIM = Color3.fromRGB(28, 44, 54)
 
 local specialEnergyMaxValue = ReplicatedStorage:FindFirstChild("SpecialEnergyMax")
 
 local energyArcWedges = {}
 for i = 0, ENERGY_ARC_SECTOR_COUNT - 1 do
 	local percent = (i / (ENERGY_ARC_SECTOR_COUNT - 1)) * 100
-	local angle = -90 + (percent / 100) * 180
-
-	local pivot = Instance.new("Frame")
-	pivot.Name = "EnergyArcPivot" .. i
-	pivot.AnchorPoint = Vector2.new(0.5, 0.5)
-	pivot.Size = UDim2.new(0, 1, 0, 1)
-	pivot.Position = UDim2.new(0, GAUGE_CENTER.X, 0, GAUGE_CENTER.Y)
-	pivot.Rotation = angle
-	pivot.BackgroundTransparency = 1
-	pivot.ZIndex = 6 -- unter dem Zifferblatt (das startet bei ZIndex 7) -- Arc liegt sichtbar dahinter/aussen, überdeckt nichts
-	pivot.Parent = heatFrame
+	local pivot = makePivot("EnergyArcPivot" .. i, -90 + (percent / 100) * 180, 6)
 
 	local wedge = Instance.new("Frame")
 	wedge.Name = "EnergyWedge"
 	wedge.AnchorPoint = Vector2.new(0.5, 1)
-	wedge.Size = UDim2.new(0, 5, 0, ENERGY_ARC_RADIUS - DISC_RADIUS) -- dünn, nur der schmale Ring-Bereich ausserhalb des Zifferblatts
-	wedge.Position = UDim2.new(0.5, 0, 0, -DISC_RADIUS) -- startet AM Rand des Zifferblatts, wächst nach aussen
+	wedge.Size = UDim2.new(0, 7, 0, ENERGY_ARC_THICK)
+	wedge.Position = UDim2.new(0.5, 0, 0, -ENERGY_ARC_INNER)
 	wedge.BackgroundColor3 = ENERGY_ARC_COLOR_DIM
 	wedge.BorderSizePixel = 0
 	wedge.ZIndex = 6
@@ -966,16 +1141,20 @@ RunService.Heartbeat:Connect(function()
 	for _, wedgeInfo in ipairs(sectorWedges) do
 		local wedgePercent = wedgeInfo.percent
 		if wedgePercent < 30 then
-			wedgeInfo.frame.BackgroundColor3 = Color3.fromRGB(70, 130, 210) -- Calm
+			wedgeInfo.frame.BackgroundColor3 = ZONE_CALM
 		elseif wedgePercent < 60 then
-			wedgeInfo.frame.BackgroundColor3 = Color3.fromRGB(210, 175, 50) -- Aggressive
+			wedgeInfo.frame.BackgroundColor3 = ZONE_AGGRESSIVE
 		elseif wedgePercent < 85 then
-			wedgeInfo.frame.BackgroundColor3 = Color3.fromRGB(210, 115, 25) -- Enraged
+			wedgeInfo.frame.BackgroundColor3 = ZONE_ENRAGED
 		elseif wedgePercent < effectiveMeltdownThreshold then
-			wedgeInfo.frame.BackgroundColor3 = Color3.fromRGB(210, 25, 20) -- Berserker-Sektor
+			wedgeInfo.frame.BackgroundColor3 = ZONE_BERSERK
 		else
-			wedgeInfo.frame.BackgroundColor3 = Color3.fromRGB(170, 20, 190) -- Meltdown-Sektor -- eigene Farbe, deutlich abgesetzt
+			wedgeInfo.frame.BackgroundColor3 = ZONE_MELTDOWN
 		end
+
+	-- Die rote Marke wandert auf die aktuelle Schwelle. Sie steht nicht fest bei 100:
+	-- das Talent "Meltdown Mastery" verschiebt sie, und das soll man am Geraet sehen.
+	redlinePivot.Rotation = percentToAngle(effectiveMeltdownThreshold)
 	end
 
 	-- Nadel bewegt sich mit Schwung (leichtes Überschwingen) zum neuen Wert, statt
@@ -995,13 +1174,28 @@ RunService.Heartbeat:Connect(function()
 	end
 	heatLabel.Text = math.floor(heat) .. "%"
 	heatBonusLabel.Text = HEAT_STAGE_BONUS_TEXT[stage]
-	needleHub.BackgroundColor3 = HEAT_STAGE_COLORS[stage]
+
+	-- Stufe gross, Bonus klein: die Stufe ist die Aussage, der Bonus ihre Begruendung.
+	local stageColor = HEAT_STAGE_COLORS[stage]
+	stageLabel.Text = HEAT_STAGE_NAMES[stage]
+	stageLabel.TextColor3 = stageColor
+	hubDot.BackgroundColor3 = stageColor
+	-- flashElement merkt sich die Ruhefarbe einmalig -- die des Punktes wechselt aber mit
+	-- der Stufe. Ohne diese Zeile kehrte er nach dem ersten Blitz fuer immer ins Blau der
+	-- ersten Stufe zurueck. (Derselbe Fall wie beim Lebensbalken.)
+	hubDot:SetAttribute("RestColor", stageColor)
 
 	-- Aufleuchten bei ECHTEM Anstieg (z.B. durch einen Treffer) -- nicht bei Abkühlung
 	-- oder unveränderten Werten.
 	if lastHeatValue and heat > lastHeatValue then
-		flashElement(needleHub, Color3.new(1, 1, 1))
-		glowFlashElement(heatFrame, Color3.fromRGB(255, 200, 150))
+		flashElement(hubDot, Color3.new(1, 1, 1))
+		-- Der Gehaeusering leuchtet kurz mit. Vorher lag der Effekt auf heatFrame -- und
+		-- der ist ein durchsichtiges Rechteck, das den ganzen Tacho umschliesst: der
+		-- "Glow" war in Wahrheit ein aufblitzender Kasten um eine runde Anzeige.
+		bezelStroke.Color = Color3.fromRGB(255, 214, 170)
+		TweenService:Create(bezelStroke, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+			Color = HudChrome.Color.PanelRaised,
+		}):Play()
 	end
 	lastHeatValue = heat
 
@@ -1018,7 +1212,7 @@ RunService.Heartbeat:Connect(function()
 		-- Dringlichkeit genau dort, wo es zählt. Nutzt die dynamische Schwelle statt fest 97.
 		for _, wedgeInfo in ipairs(sectorWedges) do
 			if wedgeInfo.percent >= effectiveMeltdownThreshold then
-				wedgeInfo.frame.BackgroundColor3 = Color3.fromRGB(170, 20, 190):Lerp(Color3.fromRGB(255, 255, 255), pulse * 0.5)
+				wedgeInfo.frame.BackgroundColor3 = ZONE_MELTDOWN:Lerp(Color3.new(1, 1, 1), pulse * 0.5)
 			end
 		end
 
