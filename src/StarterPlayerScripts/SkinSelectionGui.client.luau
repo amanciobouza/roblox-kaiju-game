@@ -475,20 +475,22 @@ local function updateHealthBar()
 	-- danach fuer immer ins Gruen des ersten Aufrufs zurueck, auch bei zehn Prozent Leben.
 	healthBarFill:SetAttribute("RestColor", balkenFarbe)
 
-	-- Jede Aenderung poppt auf. Treffer schlagen hell auf und gluehen rot nach, Heilung
-	-- gluehen nur gruen -- beides sichtbar, aber nicht gleich laut.
+	-- Jede Aenderung poppt auf, und die FARBE des Aufpoppens sagt die Richtung: Rot fuer
+	-- Schaden, Gruen fuer Heilung. Vorher blitzte Schaden weiss -- damit musste man die
+	-- Zahl lesen, um zu wissen, was passiert ist. Die Farbe sagt es schneller.
+	--
+	-- Beide Toene sind absichtlich heller als die Balkenfarben. Bei wenig Leben ist der
+	-- Balken schon rot und bei viel Leben schon gruen; ein Blitz im selben Ton waere
+	-- genau dann unsichtbar, wenn er am meisten zaehlt.
 	--
 	-- Winzige Aenderungen bleiben aussen vor: Roblox regeneriert im Hintergrund staendig,
 	-- und ein Balken, der im Sekundentakt blitzt, meldet nichts mehr, er flackert nur.
 	local aenderung = letzterLebensstand and (humanoid.Health - letzterLebensstand) or 0
 	letzterLebensstand = humanoid.Health
 	if math.abs(aenderung) >= maxLeben * 0.005 then
-		if aenderung < 0 then
-			flashElement(healthBarFill, Color3.fromRGB(255, 255, 255))
-			glowFlashElement(healthBarFill, Color3.fromRGB(255, 120, 100))
-		else
-			glowFlashElement(healthBarFill, Color3.fromRGB(170, 255, 185))
-		end
+		local popFarbe = aenderung < 0 and Color3.fromRGB(255, 80, 64) or Color3.fromRGB(100, 255, 130)
+		flashElement(healthBarFill, popFarbe)
+		glowFlashElement(healthBarFill, popFarbe)
 	end
 end
 
