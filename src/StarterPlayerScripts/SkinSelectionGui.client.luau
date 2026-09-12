@@ -103,8 +103,17 @@ local function flashElement(guiObject, flashColor)
 	-- jeder neue Aufruf die aktuelle, evtl. noch mitten im Übergang befindliche Farbe als
 	-- "Original" übernehmen, wodurch die Farbe über mehrere Klicks hinweg Richtung Weiß
 	-- driften und dort hängen bleiben könnte.
+	--
+	-- Die beiden Werte werden EINZELN geprueft, nicht gemeinsam in einem Block. Vorher
+	-- hing die Transparenz mit an der Bedingung "RestColor ist noch nicht gesetzt" -- und
+	-- der Lebensbalken setzt RestColor selbst, weil seine Ruhefarbe mit dem Stand wechselt.
+	-- Damit war die Bedingung beim ersten Aufruf schon falsch, RestTransparency blieb nil,
+	-- und math.min(nil, 0.3) brach die Funktion ab, bevor irgendein Uebergang startete:
+	-- der Balken wurde kleiner, poppte aber nie auf.
 	if guiObject:GetAttribute("RestColor") == nil then
 		guiObject:SetAttribute("RestColor", guiObject.BackgroundColor3)
+	end
+	if guiObject:GetAttribute("RestTransparency") == nil then
 		guiObject:SetAttribute("RestTransparency", guiObject.BackgroundTransparency)
 	end
 	local originalColor = guiObject:GetAttribute("RestColor")
@@ -497,6 +506,7 @@ HudChrome.NumberBold(healthLabel, 19)
 -- sich etwas geaendert hat -- die Anzeige wird auch dann aufgerufen, wenn nur das Maximum
 -- gewachsen ist.
 local letzterLebensstand = nil
+local popZaehler = 0
 
 local function updateHealthBar()
 	local character = player.Character
@@ -545,6 +555,21 @@ local function updateHealthBar()
 		local popFarbe = aenderung < 0 and Color3.fromRGB(255, 80, 64) or Color3.fromRGB(100, 255, 130)
 		flashElement(healthBarFill, popFarbe)
 		glowFlashElement(healthBarFill, popFarbe)
+
+		-- Nachweis fuer die ersten drei Male: der Balken wurde kleiner, poppte aber nicht
+		-- auf -- ohne diese Zeile ist von aussen nicht zu unterscheiden, ob der Aufruf
+		-- ausbleibt oder nur nichts zu sehen ist.
+		if popZaehler < 3 then
+			popZaehler += 1
+			print(string.format(
+				"[Kaiju Debug] HP-Pop %d: %s um %.0f (Stand %.0f von %.0f).",
+				popZaehler,
+				aenderung < 0 and "Schaden rot" or "Heilung gruen",
+				math.abs(aenderung),
+				humanoid.Health,
+				humanoid.MaxHealth
+			))
+		end
 	end
 end
 
