@@ -138,28 +138,54 @@ local function createAttackButton(name, _legacyIcon, labelText, _legacyColor, po
 	button.Parent = screenGui
 	HudChrome.Panel(button, { radius = HudChrome.Radius.Panel, transparency = 0.08 })
 
+	-- Das Symbol fuellt jetzt den GANZEN Knopf, statt sich die Hoehe mit der Beschriftung
+	-- zu teilen. Die Beschriftung liegt darueber -- das ist ausdruecklich gewollt und der
+	-- Grund, warum es unten einen Verlauf gibt.
 	local iconLabel = HudChrome.IconImage(button, ATTACK_ICON[name])
-	iconLabel.Size = UDim2.new(1, 0, 0, 42)
-	iconLabel.Position = UDim2.new(0, 0, 0, 4)
+	iconLabel.Size = UDim2.new(1, -8, 1, -8)
+	iconLabel.Position = UDim2.new(0, 4, 0, 4)
 	iconLabel.ZIndex = 11
+
+	-- Verlauf unter der Beschriftung: von durchsichtig oben nach dunkel unten. Ohne ihn
+	-- steht heller Text auf hellen Stellen des Bildes und wird stellenweise unlesbar --
+	-- und zwar unvorhersehbar, je nachdem was das Symbol dort gerade zeigt. Ein Verlauf
+	-- loest das, ohne wie ein aufgeklebter Kasten zu wirken.
+	local scrim = Instance.new("Frame")
+	scrim.Name = "TextScrim"
+	scrim.AnchorPoint = Vector2.new(0, 1)
+	scrim.Position = UDim2.new(0, 0, 1, 0)
+	scrim.Size = UDim2.new(1, 0, 0, 56)
+	scrim.BackgroundColor3 = HudChrome.Color.Panel
+	scrim.BorderSizePixel = 0
+	scrim.ZIndex = 12
+	scrim.Parent = button
+
+	local scrimGradient = Instance.new("UIGradient")
+	scrimGradient.Rotation = 90
+	scrimGradient.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(0.45, 0.35),
+		NumberSequenceKeypoint.new(1, 0.1),
+	})
+	scrimGradient.Parent = scrim
 
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.Name = "NameLabel"
 	nameLabel.Size = UDim2.new(1, -10, 0, 22)
-	nameLabel.Position = UDim2.new(0, 5, 0, 48)
+	nameLabel.Position = UDim2.new(0, 5, 1, -46)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.Text = string.upper(labelText)
-	nameLabel.ZIndex = 11
+	nameLabel.ZIndex = 13
 	nameLabel.Parent = button
 	HudChrome.Label(nameLabel)
 
 	local subLabel = Instance.new("TextLabel")
 	subLabel.Name = "SubLabel"
 	subLabel.Size = UDim2.new(1, -10, 0, 15)
-	subLabel.Position = UDim2.new(0, 5, 0, 71)
+	subLabel.Position = UDim2.new(0, 5, 1, -25)
 	subLabel.BackgroundTransparency = 1
 	subLabel.Text = ATTACK_SUBLABEL[name] or ""
-	subLabel.ZIndex = 11
+	subLabel.ZIndex = 13
 	subLabel.Parent = button
 	HudChrome.Sublabel(subLabel)
 

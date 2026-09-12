@@ -54,25 +54,49 @@ absorbButton.Text = ""
 absorbButton.Parent = screenGui
 HudChrome.Panel(absorbButton, { radius = HudChrome.Radius.Panel, transparency = 0.08 })
 
+-- Aufbau wie bei den vier Angriffsknoepfen: das Symbol fuellt den ganzen Knopf, die
+-- Beschriftung liegt mit einem Verlauf darunter darueber.
 local iconLabel = HudChrome.IconImage(absorbButton, HudChrome.Icon.Absorb)
-iconLabel.Size = UDim2.new(1, 0, 0, 42)
-iconLabel.Position = UDim2.new(0, 0, 0, 4)
+iconLabel.Size = UDim2.new(1, -8, 1, -8)
+iconLabel.Position = UDim2.new(0, 4, 0, 4)
+iconLabel.ZIndex = 2
+
+local scrim = Instance.new("Frame")
+scrim.Name = "TextScrim"
+scrim.AnchorPoint = Vector2.new(0, 1)
+scrim.Position = UDim2.new(0, 0, 1, 0)
+scrim.Size = UDim2.new(1, 0, 0, 56)
+scrim.BackgroundColor3 = HudChrome.Color.Panel
+scrim.BorderSizePixel = 0
+scrim.ZIndex = 3
+scrim.Parent = absorbButton
+
+local scrimGradient = Instance.new("UIGradient")
+scrimGradient.Rotation = 90
+scrimGradient.Transparency = NumberSequence.new({
+	NumberSequenceKeypoint.new(0, 1),
+	NumberSequenceKeypoint.new(0.45, 0.35),
+	NumberSequenceKeypoint.new(1, 0.1),
+})
+scrimGradient.Parent = scrim
 
 local label = Instance.new("TextLabel")
 label.Name = "NameLabel"
 label.Size = UDim2.new(1, -10, 0, 22)
-label.Position = UDim2.new(0, 5, 0, 48)
+label.Position = UDim2.new(0, 5, 1, -46)
 label.BackgroundTransparency = 1
 label.Text = "ABSORB"
+label.ZIndex = 4
 label.Parent = absorbButton
 HudChrome.Label(label)
 
 local subLabel = Instance.new("TextLabel")
 subLabel.Name = "SubLabel"
 subLabel.Size = UDim2.new(1, -10, 0, 15)
-subLabel.Position = UDim2.new(0, 5, 0, 71)
+subLabel.Position = UDim2.new(0, 5, 1, -25)
 subLabel.BackgroundTransparency = 1
 subLabel.Text = "DRAW MATTER"
+subLabel.ZIndex = 4
 subLabel.Parent = absorbButton
 HudChrome.Sublabel(subLabel)
 
@@ -92,6 +116,7 @@ keyLabel.AnchorPoint = Vector2.new(1, 0)
 keyLabel.Position = UDim2.new(1, -6, 0, 6)
 keyLabel.BackgroundTransparency = 1
 keyLabel.Text = "X"
+keyLabel.ZIndex = 4
 keyLabel.Parent = absorbButton
 HudChrome.Number(keyLabel, 12)
 keyLabel.TextColor3 = HudChrome.Color.TextDim
