@@ -163,6 +163,30 @@ local function glowFlashElement(guiObject, glowColor)
 	growTween:Play()
 end
 
+-- Laesst einen Balken auf seine neue Groesse GLEITEN statt zu springen. Ein Sprung von
+-- 100 auf 80 sagt nur "es ist jetzt weniger". Eine Bewegung zeigt, wie viel weniger und in
+-- welche Richtung -- das liest man, ohne die Zahl daneben anzusehen.
+--
+-- Ein laufender Uebergang wird vorher abgebrochen. Ohne das ueberlagern sich bei schnell
+-- aufeinanderfolgenden Treffern mehrere Uebergaenge, und der Balken zappelt, statt einer
+-- Bewegung zu folgen.
+local laufendeBalken = {}
+
+local function slideBar(fillFrame, ratio)
+	local alt = laufendeBalken[fillFrame]
+	if alt then
+		alt:Cancel()
+	end
+
+	local uebergang = TweenService:Create(
+		fillFrame,
+		TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{ Size = UDim2.new(math.clamp(ratio, 0, 1), 0, 1, 0) }
+	)
+	laufendeBalken[fillFrame] = uebergang
+	uebergang:Play()
+end
+
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "GameHud"
 screenGui.ResetOnSpawn = false
@@ -271,21 +295,34 @@ end
 -- Bildschirmmitte -- also ueber der Spielfigur, auf die auch die beiden Schraegen zeigen.
 -- Bei verschieden breiten Feldern sass die Fuge daneben, und die Symmetrie, die die
 -- Schraegen aufbauen, war schon durch die Aufteilung gebrochen.
-local STATUS_HOEHE = 48
+local STATUS_HOEHE = 56
 local STATUS_SCHRAEGE = 16
 local STATUS_LUECKE = 12
-local FELD_BREITE = 224
+local FELD_BREITE = 240
 
--- Innenraender. Auf der schraegen Seite braucht der Inhalt mehr Abstand: unten frisst die
--- Schraege bis zu STATUS_SCHRAEGE Pixel weg.
-local LEVEL_LINKS = 20
-local LEVEL_RECHTS = FELD_BREITE - 12
-local HP_LINKS = 12
-local HP_RECHTS = FELD_BREITE - 20
+-- Innenraender. Auf der SCHRAEGEN Seite braucht der Inhalt deutlich mehr Abstand als auf
+-- der geraden: unten frisst die Schraege bis zu STATUS_SCHRAEGE Pixel weg, und was nur
+-- knapp daneben sitzt, sieht aus, als laege es halb draussen. Der Wert ist deshalb die
+-- volle Schraege plus zehn Pixel Luft, nicht ein knapp gerechneter Rest.
+local RAND_SCHRAEG = STATUS_SCHRAEGE + 10
+local RAND_GERADE = 14
 
--- Die grosse Zahl beginnt in beiden Feldern gleich weit hinter der Bezeichnung, damit die
+local LEVEL_LINKS = RAND_SCHRAEG
+local LEVEL_RECHTS = FELD_BREITE - RAND_GERADE
+local HP_LINKS = RAND_GERADE
+local HP_RECHTS = FELD_BREITE - RAND_SCHRAEG
+
+-- Die Zeilen. Eine Textzeile oben, ein Balken darunter, darunter Luft -- als feste Werte
+-- an einer Stelle, damit die vier Beschriftungen und die zwei Balken nicht einzeln
+-- nachgerechnet werden muessen.
+local ZEILE_Y = 7
+local ZEILE_HOEHE = 22
+local BALKEN_Y = 34
+local BALKEN_HOEHE = 10
+
+-- Die fette Zahl beginnt in beiden Feldern gleich weit hinter der Bezeichnung, damit die
 -- zwei Felder denselben Takt haben -- auch wenn "LEVEL" laenger ist als "HP".
-local ZAHL_VERSATZ = 46
+local ZAHL_VERSATZ = 48
 
 local statusCluster = Instance.new("Frame")
 statusCluster.Name = "PlayerStatusCluster"
@@ -323,8 +360,8 @@ healthField.Position = UDim2.new(0, FELD_BREITE + STATUS_LUECKE, 0, 0)
 -- hilft nur nach.
 local levelCaption = Instance.new("TextLabel")
 levelCaption.Name = "LevelCaption"
-levelCaption.Size = UDim2.new(0, ZAHL_VERSATZ - 4, 0, 20)
-levelCaption.Position = UDim2.new(0, LEVEL_LINKS, 0, 6)
+levelCaption.Size = UDim2.new(0, ZAHL_VERSATZ - 4, 0, ZEILE_HOEHE)
+levelCaption.Position = UDim2.new(0, LEVEL_LINKS, 0, ZEILE_Y)
 levelCaption.BackgroundTransparency = 1
 levelCaption.TextXAlignment = Enum.TextXAlignment.Left
 levelCaption.Text = "LEVEL"
@@ -334,8 +371,8 @@ levelCaption.TextColor3 = HudChrome.Color.TextSecondary
 
 local levelLabel = Instance.new("TextLabel")
 levelLabel.Name = "LevelLabel"
-levelLabel.Size = UDim2.new(0, 70, 0, 20)
-levelLabel.Position = UDim2.new(0, LEVEL_LINKS + ZAHL_VERSATZ, 0, 6)
+levelLabel.Size = UDim2.new(0, 80, 0, ZEILE_HOEHE)
+levelLabel.Position = UDim2.new(0, LEVEL_LINKS + ZAHL_VERSATZ, 0, ZEILE_Y)
 levelLabel.BackgroundTransparency = 1
 levelLabel.TextXAlignment = Enum.TextXAlignment.Left
 levelLabel.Text = "0"
@@ -347,8 +384,8 @@ HudChrome.NumberBold(levelLabel, 19)
 -- und die Zahl musste deshalb im Balken stehen -- wo sie auf gelber Fuellung unlesbar war.
 local healthFrame = Instance.new("Frame")
 healthFrame.Name = "HealthFrame"
-healthFrame.Size = UDim2.new(0, HP_RECHTS - HP_LINKS, 0, 10)
-healthFrame.Position = UDim2.new(0, HP_LINKS, 0, 30)
+healthFrame.Size = UDim2.new(0, HP_RECHTS - HP_LINKS, 0, BALKEN_HOEHE)
+healthFrame.Position = UDim2.new(0, HP_LINKS, 0, BALKEN_Y)
 healthFrame.Parent = healthField
 HudChrome.Panel(healthFrame, {
 	radius = 3,
@@ -366,8 +403,8 @@ HudChrome.Panel(healthBarFill, { radius = 3, fill = false, border = false })
 
 local healthCaption = Instance.new("TextLabel")
 healthCaption.Name = "HealthCaption"
-healthCaption.Size = UDim2.new(0, ZAHL_VERSATZ - 4, 0, 20)
-healthCaption.Position = UDim2.new(0, HP_LINKS, 0, 6)
+healthCaption.Size = UDim2.new(0, ZAHL_VERSATZ - 4, 0, ZEILE_HOEHE)
+healthCaption.Position = UDim2.new(0, HP_LINKS, 0, ZEILE_Y)
 healthCaption.BackgroundTransparency = 1
 healthCaption.TextXAlignment = Enum.TextXAlignment.Left
 healthCaption.Text = "HP"
@@ -379,8 +416,8 @@ healthCaption.TextColor3 = HudChrome.Color.TextSecondary
 -- sich fast nie und darf den Blick nicht mit dem teilen, der sich staendig aendert.
 local healthMaxLabel = Instance.new("TextLabel")
 healthMaxLabel.Name = "HealthMaxLabel"
-healthMaxLabel.Size = UDim2.new(0, 120, 0, 20)
-healthMaxLabel.Position = UDim2.new(0, HP_RECHTS - 120, 0, 6)
+healthMaxLabel.Size = UDim2.new(0, 120, 0, ZEILE_HOEHE)
+healthMaxLabel.Position = UDim2.new(0, HP_RECHTS - 120, 0, ZEILE_Y)
 healthMaxLabel.BackgroundTransparency = 1
 healthMaxLabel.TextXAlignment = Enum.TextXAlignment.Right
 healthMaxLabel.Text = "/ 100"
@@ -394,13 +431,18 @@ healthMaxLabel.TextColor3 = HudChrome.Color.TextDim
 -- dieselbe Zahl stuende dann auf dunklem Grund.
 local healthLabel = Instance.new("TextLabel")
 healthLabel.Name = "HealthLabel"
-healthLabel.Size = UDim2.new(0, 90, 0, 20)
-healthLabel.Position = UDim2.new(0, HP_LINKS + ZAHL_VERSATZ, 0, 6)
+healthLabel.Size = UDim2.new(0, 100, 0, ZEILE_HOEHE)
+healthLabel.Position = UDim2.new(0, HP_LINKS + ZAHL_VERSATZ, 0, ZEILE_Y)
 healthLabel.BackgroundTransparency = 1
 healthLabel.TextXAlignment = Enum.TextXAlignment.Left
 healthLabel.Text = "100"
 healthLabel.Parent = healthField
 HudChrome.NumberBold(healthLabel, 19)
+
+-- Der zuletzt gezeigte Lebensstand. Braucht es, um zu wissen, OB und in welche Richtung
+-- sich etwas geaendert hat -- die Anzeige wird auch dann aufgerufen, wenn nur das Maximum
+-- gewachsen ist.
+local letzterLebensstand = nil
 
 local function updateHealthBar()
 	local character = player.Character
@@ -408,23 +450,45 @@ local function updateHealthBar()
 	if not humanoid then
 		return
 	end
-	local ratio = math.clamp(humanoid.Health / math.max(humanoid.MaxHealth, 1), 0, 1)
-	healthBarFill.Size = UDim2.new(ratio, 0, 1, 0)
+	local maxLeben = math.max(humanoid.MaxHealth, 1)
+	local ratio = math.clamp(humanoid.Health / maxLeben, 0, 1)
+	slideBar(healthBarFill, ratio)
 	healthLabel.Text = NumberFormat.Format(math.floor(humanoid.Health))
 	healthMaxLabel.Text = "/ " .. NumberFormat.Format(math.floor(humanoid.MaxHealth))
 
 	-- Farbverlauf grün -> gelb -> rot, je niedriger desto dramatischer. Die Zahl faerbt
 	-- erst ab der Warnstufe mit: solange es gut steht, ist Weiss die ruhigere Aussage --
 	-- und eine Farbe, die IMMER da ist, warnt vor nichts.
+	local balkenFarbe, zahlFarbe
 	if ratio > 0.5 then
-		healthBarFill.BackgroundColor3 = Color3.fromRGB(70, 220, 90)
-		healthLabel.TextColor3 = HudChrome.Color.TextPrimary
+		balkenFarbe, zahlFarbe = Color3.fromRGB(70, 220, 90), HudChrome.Color.TextPrimary
 	elseif ratio > 0.25 then
-		healthBarFill.BackgroundColor3 = HudChrome.Color.Warning
-		healthLabel.TextColor3 = HudChrome.Color.Warning
+		balkenFarbe, zahlFarbe = HudChrome.Color.Warning, HudChrome.Color.Warning
 	else
-		healthBarFill.BackgroundColor3 = HudChrome.Color.Danger
-		healthLabel.TextColor3 = HudChrome.Color.Danger
+		balkenFarbe, zahlFarbe = HudChrome.Color.Danger, HudChrome.Color.Danger
+	end
+	healthBarFill.BackgroundColor3 = balkenFarbe
+	healthLabel.TextColor3 = zahlFarbe
+
+	-- flashElement merkt sich die Ruhefarbe EINMALIG als Attribut. Beim Lebensbalken
+	-- wechselt sie aber mit dem Stand -- ohne diese Zeile blitzte er einmal auf und kehrte
+	-- danach fuer immer ins Gruen des ersten Aufrufs zurueck, auch bei zehn Prozent Leben.
+	healthBarFill:SetAttribute("RestColor", balkenFarbe)
+
+	-- Jede Aenderung poppt auf. Treffer schlagen hell auf und gluehen rot nach, Heilung
+	-- gluehen nur gruen -- beides sichtbar, aber nicht gleich laut.
+	--
+	-- Winzige Aenderungen bleiben aussen vor: Roblox regeneriert im Hintergrund staendig,
+	-- und ein Balken, der im Sekundentakt blitzt, meldet nichts mehr, er flackert nur.
+	local aenderung = letzterLebensstand and (humanoid.Health - letzterLebensstand) or 0
+	letzterLebensstand = humanoid.Health
+	if math.abs(aenderung) >= maxLeben * 0.005 then
+		if aenderung < 0 then
+			flashElement(healthBarFill, Color3.fromRGB(255, 255, 255))
+			glowFlashElement(healthBarFill, Color3.fromRGB(255, 120, 100))
+		else
+			glowFlashElement(healthBarFill, Color3.fromRGB(170, 255, 185))
+		end
 	end
 end
 
@@ -443,6 +507,7 @@ local function connectHealthBar(character)
 	if not humanoid then
 		return
 	end
+	letzterLebensstand = nil
 	updateHealthBar()
 	humanoid:GetPropertyChangedSignal("Health"):Connect(updateHealthBar)
 	humanoid:GetPropertyChangedSignal("MaxHealth"):Connect(updateHealthBar)
@@ -458,8 +523,8 @@ end
 -- Felder sind damit auf einen Blick als dasselbe Bauteil zu erkennen.
 local barBackground = Instance.new("Frame")
 barBackground.Name = "BarBackground"
-barBackground.Size = UDim2.new(0, LEVEL_RECHTS - LEVEL_LINKS, 0, 10)
-barBackground.Position = UDim2.new(0, LEVEL_LINKS, 0, 30)
+barBackground.Size = UDim2.new(0, LEVEL_RECHTS - LEVEL_LINKS, 0, BALKEN_HOEHE)
+barBackground.Position = UDim2.new(0, LEVEL_LINKS, 0, BALKEN_Y)
 barBackground.Parent = levelField
 HudChrome.Panel(barBackground, {
 	radius = 3,
@@ -481,8 +546,8 @@ HudChrome.Panel(barFill, { radius = 3, fill = false, border = false })
 -- zusammengehoeren; das Wort "XP" spart das ein.
 local xpLabel = Instance.new("TextLabel")
 xpLabel.Name = "XpLabel"
-xpLabel.Size = UDim2.new(0, 120, 0, 20)
-xpLabel.Position = UDim2.new(0, LEVEL_RECHTS - 120, 0, 6)
+xpLabel.Size = UDim2.new(0, 120, 0, ZEILE_HOEHE)
+xpLabel.Position = UDim2.new(0, LEVEL_RECHTS - 120, 0, ZEILE_Y)
 xpLabel.BackgroundTransparency = 1
 xpLabel.TextXAlignment = Enum.TextXAlignment.Right
 xpLabel.Text = "0 / 0"
@@ -2008,7 +2073,7 @@ function advanceXPBar(amount)
 	displayedXP = math.min(displayedXP + amount, xpValue.Value)
 
 	local needed = math.max(xpNeededValue.Value, 1)
-	barFill.Size = UDim2.new(math.clamp(displayedXP / needed, 0, 1), 0, 1, 0)
+	slideBar(barFill, displayedXP / needed)
 	xpLabel.Text = NumberFormat.Format(math.floor(displayedXP)) .. " / " .. NumberFormat.Format(needed)
 	flashElement(barFill, Color3.fromRGB(255, 255, 200))
 	glowFlashElement(barFill, Color3.fromRGB(255, 255, 150))
@@ -2032,7 +2097,7 @@ function updateLevelBar()
 	if displayedXP == nil or xpValue.Value < displayedXP then
 		displayedXP = xpValue.Value
 		local needed = math.max(xpNeededValue.Value, 1)
-		barFill.Size = UDim2.new(math.clamp(displayedXP / needed, 0, 1), 0, 1, 0)
+		slideBar(barFill, displayedXP / needed)
 		xpLabel.Text = NumberFormat.Format(math.floor(displayedXP)) .. " / " .. NumberFormat.Format(needed)
 		print("[Kaiju-Debug-Client] updateLevelBar SYNC: Level=", leaderstats.Level.Value, "XP=", xpValue.Value, "XPNeeded=", xpNeededValue.Value, "ratio=", displayedXP / needed)
 	end
