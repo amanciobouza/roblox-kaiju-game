@@ -157,8 +157,8 @@ local function createAttackButton(name, icon, labelText, _legacyColor, position,
 
 	local iconLabel = Instance.new("TextLabel")
 	iconLabel.Name = "Icon"
-	iconLabel.Size = UDim2.new(1, 0, 0, 30)
-	iconLabel.Position = UDim2.new(0, 0, 0, 10)
+	iconLabel.Size = UDim2.new(1, 0, 0, 42)
+	iconLabel.Position = UDim2.new(0, 0, 0, 4)
 	iconLabel.BackgroundTransparency = 1
 	iconLabel.Font = HudChrome.Font.Label
 	iconLabel.TextScaled = true
@@ -170,7 +170,7 @@ local function createAttackButton(name, icon, labelText, _legacyColor, position,
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.Name = "NameLabel"
 	nameLabel.Size = UDim2.new(1, -10, 0, 22)
-	nameLabel.Position = UDim2.new(0, 5, 0, 44)
+	nameLabel.Position = UDim2.new(0, 5, 0, 48)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.Text = string.upper(labelText)
 	nameLabel.ZIndex = 11
@@ -180,7 +180,7 @@ local function createAttackButton(name, icon, labelText, _legacyColor, position,
 	local subLabel = Instance.new("TextLabel")
 	subLabel.Name = "SubLabel"
 	subLabel.Size = UDim2.new(1, -10, 0, 15)
-	subLabel.Position = UDim2.new(0, 5, 0, 66)
+	subLabel.Position = UDim2.new(0, 5, 0, 71)
 	subLabel.BackgroundTransparency = 1
 	subLabel.Text = ATTACK_SUBLABEL[name] or ""
 	subLabel.ZIndex = 11

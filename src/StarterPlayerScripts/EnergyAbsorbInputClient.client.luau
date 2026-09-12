@@ -56,8 +56,8 @@ HudChrome.Panel(absorbButton, { radius = HudChrome.Radius.Panel, transparency = 
 
 local iconLabel = Instance.new("TextLabel")
 iconLabel.Name = "Icon"
-iconLabel.Size = UDim2.new(1, 0, 0, 30)
-iconLabel.Position = UDim2.new(0, 0, 0, 10)
+iconLabel.Size = UDim2.new(1, 0, 0, 42)
+iconLabel.Position = UDim2.new(0, 0, 0, 4)
 iconLabel.BackgroundTransparency = 1
 iconLabel.Font = HudChrome.Font.Label
 iconLabel.TextScaled = true
@@ -71,7 +71,7 @@ iconLabel.Parent = absorbButton
 local label = Instance.new("TextLabel")
 label.Name = "NameLabel"
 label.Size = UDim2.new(1, -10, 0, 22)
-label.Position = UDim2.new(0, 5, 0, 44)
+label.Position = UDim2.new(0, 5, 0, 48)
 label.BackgroundTransparency = 1
 label.Text = "ABSORB"
 label.Parent = absorbButton
@@ -80,7 +80,7 @@ HudChrome.Label(label)
 local subLabel = Instance.new("TextLabel")
 subLabel.Name = "SubLabel"
 subLabel.Size = UDim2.new(1, -10, 0, 15)
-subLabel.Position = UDim2.new(0, 5, 0, 66)
+subLabel.Position = UDim2.new(0, 5, 0, 71)
 subLabel.BackgroundTransparency = 1
 subLabel.Text = "DRAW MATTER"
 subLabel.Parent = absorbButton

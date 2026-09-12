@@ -42,7 +42,7 @@ HudChrome.Color = {
 	BorderDim = Color3.fromRGB(40, 46, 55), -- für Gesperrtes und Ruhendes
 
 	TextPrimary = Color3.fromRGB(232, 238, 245),
-	TextSecondary = Color3.fromRGB(140, 152, 168), -- die Unterzeilen
+	TextSecondary = Color3.fromRGB(172, 184, 200), -- die Unterzeilen; heller als zuerst (140,152,168), das war auf dunklem Grund zu schwach
 	TextDim = Color3.fromRGB(86, 96, 110), -- Gesperrtes
 
 	Accent = Color3.fromRGB(70, 210, 255), -- Special Energy, sonst nichts
@@ -177,9 +177,17 @@ function HudChrome.Label(textLabel, size)
 	return textLabel
 end
 
--- Unterzeile: klein, grau, gesperrt. Sie sagt, WAS das Element tut.
+-- Unterzeile: klein, grau. Sie sagt, WAS das Element tut.
+--
+-- Sie benutzt bewusst die ZIFFERNSCHRIFT und nicht die Beschriftungsschrift. Oswald ist
+-- schmal, und schmale Schrift mit duennem Strich wird bei 13 Punkten auf dunklem Grund
+-- unleserlich -- genau das war sie im ersten Versuch. Eine Schrift mit gleicher
+-- Zeichenbreite ist an dieser Stelle doppelt richtig: sie ist breiter und damit lesbarer,
+-- und sie klingt nach Beschriftung auf einem Geraet statt nach Ueberschrift.
+--
+-- Eine vierte Schrift waere die Alternative gewesen. Drei sind genug.
 function HudChrome.Sublabel(textLabel, size)
-	textLabel.Font = HudChrome.Font.Label
+	textLabel.Font = HudChrome.Font.Number
 	textLabel.TextScaled = false
 	textLabel.TextSize = size or HudChrome.TextSize.Sublabel
 	textLabel.TextColor3 = HudChrome.Color.TextSecondary
