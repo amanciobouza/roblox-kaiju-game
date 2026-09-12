@@ -48,7 +48,7 @@ local CITY_HOURS = {
 local MAX_ALERT_LEVEL = 5 -- so viele Segmente hat der Balken
 
 local PANEL_BREITE = 236
-local PANEL_HOEHE = 86
+local PANEL_HOEHE = 92
 local PANEL_RAND = 10
 local INNEN_BREITE = PANEL_BREITE - PANEL_RAND * 2
 
@@ -93,12 +93,16 @@ cityHourLabel.Parent = alertFrame
 HudChrome.Number(cityHourLabel, 13)
 cityHourLabel.TextColor3 = HudChrome.Color.TextDim
 
--- ===== Alarmstufe: fuenf Segmente statt fuenf Sterne =====
+-- ===== Alarmstufe: Sterne =====
 --
--- Sterne waren Comic-Sprache und sagten ausserdem zu wenig: sie zeigten die erreichte
--- Stufe, aber nicht, wie viele Stufen diese Stadt ueberhaupt kennt. Der Balken zeigt
--- beides auf einmal -- erreichbare Segmente haben einen Rahmen, unerreichbare bleiben
--- dunkel und leer. Man sieht damit im Vorbeigehen, wie weit es in dieser Stadt noch geht.
+-- Der Fuenf-Segment-Balken war im Spiel schwaecher als die Sterne, die er ersetzt hat --
+-- ein Balken ist eine Menge, ein Stern ist ein Ereignis. Wenn eine Stufe dazukommt, soll
+-- etwas ERSCHEINEN, nicht ein Kaestchen die Farbe wechseln. Die Sterne sind zurueck, aber
+-- ohne Comic-Umriss: Alarmfarbe, wenn erreicht, dunkles Grau, wenn noch nicht.
+--
+-- Es werden nur so viele Sterne gezeigt, wie diese Stadt Stufen hat. Drei Stufen, drei
+-- Sterne. Platzhalter fuer Stufen, die es hier gar nicht gibt, machen die Anzeige nur
+-- schwerer zu lesen und versprechen etwas, das nicht kommt.
 local alertCaption = Instance.new("TextLabel")
 alertCaption.Name = "AlertCaption"
 alertCaption.Size = UDim2.new(0, 80, 0, 12)
@@ -111,71 +115,115 @@ alertCaption.Parent = alertFrame
 HudChrome.Label(alertCaption, 11)
 alertCaption.TextColor3 = HudChrome.Color.TextSecondary
 
-local alertLevelLabel = Instance.new("TextLabel")
-alertLevelLabel.Name = "AlertLevelLabel"
-alertLevelLabel.Size = UDim2.new(0, 80, 0, 12)
-alertLevelLabel.Position = UDim2.new(0, PANEL_RAND + INNEN_BREITE - 80, 0, 34)
-alertLevelLabel.BackgroundTransparency = 1
-alertLevelLabel.TextXAlignment = Enum.TextXAlignment.Right
-alertLevelLabel.ZIndex = 21
-alertLevelLabel.Text = ""
-alertLevelLabel.Parent = alertFrame
-HudChrome.Number(alertLevelLabel, 11)
-alertLevelLabel.TextColor3 = HudChrome.Color.TextDim
+local STERN_GROESSE = 26
 
-local SEGMENT_LUECKE = 4
-local SEGMENT_BREITE = (INNEN_BREITE - SEGMENT_LUECKE * (MAX_ALERT_LEVEL - 1)) / MAX_ALERT_LEVEL
-local SEGMENT_HOEHE = 14
+local starsContainer = Instance.new("Frame")
+starsContainer.Name = "StarsContainer"
+starsContainer.Size = UDim2.new(0, INNEN_BREITE, 0, STERN_GROESSE)
+starsContainer.Position = UDim2.new(0, PANEL_RAND, 0, 46)
+starsContainer.BackgroundTransparency = 1
+starsContainer.ZIndex = 21
+starsContainer.Parent = alertFrame
 
-local segments = {}
+local starsLayout = Instance.new("UIListLayout")
+starsLayout.FillDirection = Enum.FillDirection.Horizontal
+starsLayout.Padding = UDim.new(0, 4)
+starsLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+starsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+starsLayout.Parent = starsContainer
+
+local STERN_AUS = Color3.fromRGB(58, 64, 74) -- erreichbar, aber noch nicht erreicht
+
+-- Das Sternzeichen gibt es weder in Oswald noch in RobotoMono. Eine dritte Schrift nur
+-- fuer ein Zeichen ist vertretbar -- es ist ein SYMBOL, kein Text, und die Alternative
+-- waere ein Bild, das erst hochgeladen werden muesste.
+local starLabels = {}
 for i = 1, MAX_ALERT_LEVEL do
-	local segment = Instance.new("Frame")
-	segment.Name = "AlertSegment" .. i
-	segment.Size = UDim2.new(0, SEGMENT_BREITE, 0, SEGMENT_HOEHE)
-	segment.Position = UDim2.new(0, PANEL_RAND + (i - 1) * (SEGMENT_BREITE + SEGMENT_LUECKE), 0, 48)
-	segment.BackgroundColor3 = HudChrome.Color.PanelSunken
-	segment.BorderSizePixel = 0
-	segment.ZIndex = 21
-	segment.Parent = alertFrame
-
-	local segmentCorner = Instance.new("UICorner")
-	segmentCorner.CornerRadius = UDim.new(0, 2)
-	segmentCorner.Parent = segment
-
-	local segmentStroke = Instance.new("UIStroke")
-	segmentStroke.Thickness = HudChrome.BorderThickness
-	segmentStroke.Color = HudChrome.Color.BorderDim
-	segmentStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	segmentStroke.Parent = segment
-
-	segments[i] = { frame = segment, stroke = segmentStroke }
+	local star = Instance.new("TextLabel")
+	star.Name = "Star" .. i
+	star.Size = UDim2.new(0, STERN_GROESSE, 0, STERN_GROESSE)
+	star.BackgroundTransparency = 1
+	star.Font = Enum.Font.GothamBold
+	star.TextScaled = true
+	star.TextColor3 = STERN_AUS
+	star.TextStrokeTransparency = 1
+	star.Text = "\u{2605}"
+	star.Visible = false
+	star.LayoutOrder = i
+	star.ZIndex = 21
+	star.Parent = starsContainer
+	starLabels[i] = star
 end
 
+-- Laesst EINEN Stern einfliegen: dreht sich schnell, bremst ab, blitzt kurz weiss auf.
+-- Das ist der Moment, den der Balken nicht hatte.
+local function animateStarIn(star, farbe)
+	star.Visible = true
+	star.Rotation = 0
+	star.TextColor3 = farbe
+
+	local spinTween = TweenService:Create(
+		star,
+		TweenInfo.new(0.55, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+		{ Rotation = 720 }
+	)
+	spinTween:Play()
+	spinTween.Completed:Connect(function()
+		star.Rotation = 0
+		local flashTween = TweenService:Create(star, TweenInfo.new(0.12), { TextColor3 = Color3.new(1, 1, 1) })
+		flashTween:Play()
+		flashTween.Completed:Connect(function()
+			TweenService:Create(star, TweenInfo.new(0.3), { TextColor3 = farbe }):Play()
+		end)
+	end)
+end
+
+-- Mehrere neue Sterne laufen NACHEINANDER ein, nicht gleichzeitig.
+local function animateNewStars(fromCount, toCount, farbe)
+	task.spawn(function()
+		for i = fromCount + 1, toCount do
+			local star = starLabels[i]
+			if star then
+				animateStarIn(star, farbe)
+				task.wait(0.25)
+			end
+		end
+	end)
+end
+
+local currentStarCount = 0
+local lastShownMaxLevel = nil
+
 -- ===== Fortschritt zur naechsten Stufe =====
-local progressBackground = Instance.new("Frame")
-progressBackground.Name = "ProgressBackground"
-progressBackground.Size = UDim2.new(0, INNEN_BREITE, 0, 6)
-progressBackground.Position = UDim2.new(0, PANEL_RAND, 0, 68)
-progressBackground.BackgroundColor3 = HudChrome.Color.PanelSunken
-progressBackground.BorderSizePixel = 0
-progressBackground.ZIndex = 21
-progressBackground.Parent = alertFrame
+-- Er zeigt den Druck in DREI groben Stufen, nicht auf den Punkt genau. Vorher lief er
+-- linear mit dem Serverwert mit -- damit konnte man ablesen, dass der naechste Schlag die
+-- Stufe ausloest, und der Moment war verschenkt, bevor er da war.
+--
+-- Der dritte Block deckt alles von 70 bis 100 Prozent ab. Man weiss also, dass gleich
+-- etwas kommt, aber nicht wann. Genau diese Unschaerfe ist der Zweck: Anspannung statt
+-- Countdown.
+local DRUCK_BLOECKE = 3
+local DRUCK_SCHWELLEN = { 0.15, 0.45, 0.70 }
+local DRUCK_LUECKE = 4
+local DRUCK_BREITE = (INNEN_BREITE - DRUCK_LUECKE * (DRUCK_BLOECKE - 1)) / DRUCK_BLOECKE
 
-local progressCorner = Instance.new("UICorner")
-progressCorner.CornerRadius = UDim.new(0, 3)
-progressCorner.Parent = progressBackground
+local pressureBlocks = {}
+for i = 1, DRUCK_BLOECKE do
+	local block = Instance.new("Frame")
+	block.Name = "PressureBlock" .. i
+	block.Size = UDim2.new(0, DRUCK_BREITE, 0, 6)
+	block.Position = UDim2.new(0, PANEL_RAND + (i - 1) * (DRUCK_BREITE + DRUCK_LUECKE), 0, 78)
+	block.BackgroundColor3 = HudChrome.Color.PanelSunken
+	block.BorderSizePixel = 0
+	block.ZIndex = 21
+	block.Parent = alertFrame
 
-local progressFill = Instance.new("Frame")
-progressFill.Name = "Fill"
-progressFill.Size = UDim2.new(0, 0, 1, 0)
-progressFill.BackgroundColor3 = HudChrome.Color.Warning
-progressFill.BorderSizePixel = 0
-progressFill.ZIndex = 22
-progressFill.Parent = progressBackground
+	local blockCorner = Instance.new("UICorner")
+	blockCorner.CornerRadius = UDim.new(0, 2)
+	blockCorner.Parent = block
 
-local progressFillCorner = Instance.new("UICorner")
-progressFillCorner.CornerRadius = UDim.new(0, 3)
-progressFillCorner.Parent = progressFill
+	pressureBlocks[i] = block
+end
 
 -- Die Farbe der Alarmstufe: von Warnfarbe auf Gefahrfarbe, je naeher an der Hoechststufe
 -- dieser Stadt. Sie ist eine MESSUNG und darf deshalb farbig sein -- das Chrome drumherum
@@ -199,11 +247,14 @@ local function updateAlertHud()
 		cityNameLabel.Text = "Sanctuary"
 		cityHourLabel.Text = "12:00"
 		alertCaption.Visible = false
-		alertLevelLabel.Visible = false
-		for _, segment in ipairs(segments) do
-			segment.frame.Visible = false
+		for _, star in ipairs(starLabels) do
+			star.Visible = false
 		end
-		progressBackground.Visible = false
+		for _, block in ipairs(pressureBlocks) do
+			block.Visible = false
+		end
+		currentStarCount = 0
+		lastShownMaxLevel = nil
 		lastShownLevel = nil
 		return
 	end
@@ -222,8 +273,9 @@ local function updateAlertHud()
 	end
 
 	alertCaption.Visible = true
-	alertLevelLabel.Visible = true
-	progressBackground.Visible = true
+	for _, block in ipairs(pressureBlocks) do
+		block.Visible = true
+	end
 
 	local level = math.max(levelValue.Value, 0)
 	local config = CityAlertConfig.GetCityConfig(cityName)
@@ -238,39 +290,67 @@ local function updateAlertHud()
 
 	cityNameLabel.Text = CITY_DISPLAY_NAMES[cityName] or cityName
 	cityHourLabel.Text = CITY_HOURS[cityName] or ""
-	alertLevelLabel.Text = level .. " / " .. maxLevel
 
 	local farbe = alarmFarbe(math.max(level, 1), maxLevel)
 
-	for i = 1, MAX_ALERT_LEVEL do
-		local segment = segments[i]
-		if i > maxLevel then
-			-- Unerreichbar in dieser Stadt: dunkel und ohne Rahmen. Es bleibt sichtbar,
-			-- damit man sieht, dass es die Stufe grundsaetzlich gibt -- nur eben nicht hier.
-			segment.frame.Visible = true
-			segment.frame.BackgroundColor3 = HudChrome.Color.PanelSunken
-			segment.frame.BackgroundTransparency = 0.45
-			segment.stroke.Transparency = 1
-		elseif i <= level then
-			segment.frame.Visible = true
-			segment.frame.BackgroundColor3 = farbe
-			segment.frame.BackgroundTransparency = 0
-			segment.stroke.Transparency = 1
-		else
-			-- Erreichbar, aber noch nicht aktiv: leeres Fach mit Rahmen.
-			segment.frame.Visible = true
-			segment.frame.BackgroundColor3 = HudChrome.Color.PanelSunken
-			segment.frame.BackgroundTransparency = 0
-			segment.stroke.Transparency = 0
+	local starCount = math.clamp(level, 0, maxLevel)
+
+	-- Neu aufbauen beim Staedtewechsel UND wenn sich die Obergrenze derselben Stadt
+	-- aendert -- letzteres passiert, sobald ein Spieler eines hoeheren Kapitels die Stadt
+	-- betritt oder verlaesst. Ohne die zweite Bedingung bliebe die Zahl der Sterne auf dem
+	-- Stand des Kapitels, in dem man die Stadt betreten hat.
+	if maxLevel ~= lastShownMaxLevel then
+		lastShownMaxLevel = maxLevel
+		for i = 1, MAX_ALERT_LEVEL do
+			-- NUR so viele Sterne, wie diese Stadt Stufen hat. Ein Platzhalter fuer eine
+			-- Stufe, die es hier nicht gibt, verspricht etwas, das nicht kommt.
+			starLabels[i].Visible = i <= maxLevel
+			starLabels[i].Rotation = 0
+			starLabels[i].TextColor3 = i <= starCount and farbe or STERN_AUS
 		end
+		currentStarCount = starCount
 	end
 
-	-- Fortschritts-Balken: rohen Punktwert gegen die Schwelle DIESER Stadt normieren.
+	if starCount > currentStarCount then
+		animateNewStars(currentStarCount, starCount, farbe)
+	elseif starCount < currentStarCount then
+		for i = starCount + 1, currentStarCount do
+			if starLabels[i] then
+				starLabels[i].TextColor3 = STERN_AUS
+			end
+		end
+	end
+	-- Die bereits stehenden Sterne ziehen die Farbe der aktuellen Stufe nach: sie wandert
+	-- mit jeder Eskalation weiter Richtung Gefahrfarbe.
+	--
+	-- Nur bei einem echten Stufenwechsel. Diese Funktion laeuft auch bei jeder Aenderung
+	-- des Druckwerts, und der aendert sich im Kampf staendig -- ohne die Bedingung wuerde
+	-- sie dem gerade einfliegenden Stern mitten in seinem Aufblitzen die Farbe wegnehmen.
+	if lastShownLevel ~= level then
+		for i = 1, math.min(starCount, MAX_ALERT_LEVEL) do
+			if starLabels[i].Rotation == 0 then
+				starLabels[i].TextColor3 = farbe
+			end
+		end
+	end
+	currentStarCount = starCount
+
+	-- Druckanzeige: DREI grobe Bloecke statt eines mitlaufenden Balkens. Der dritte deckt
+	-- alles ab 70 Prozent ab -- man weiss, dass gleich etwas kommt, aber nicht wann.
 	local progressValue = cityAlertValues:FindFirstChild(cityName .. "Progress")
+	local ratio = 0
 	if progressValue and config and config.AlertThresholdLevel2 and config.AlertThresholdLevel2 > 0 then
-		local ratio = math.clamp(progressValue.Value / config.AlertThresholdLevel2, 0, 1)
-		progressFill.Size = UDim2.new(ratio, 0, 1, 0)
-		progressFill.BackgroundColor3 = alarmFarbe(math.min(level + 1, maxLevel), maxLevel)
+		ratio = math.clamp(progressValue.Value / config.AlertThresholdLevel2, 0, 1)
+	end
+	local naechsteFarbe = alarmFarbe(math.min(level + 1, maxLevel), maxLevel)
+	for i, block in ipairs(pressureBlocks) do
+		if ratio >= DRUCK_SCHWELLEN[i] then
+			block.BackgroundColor3 = naechsteFarbe
+			block.BackgroundTransparency = 0
+		else
+			block.BackgroundColor3 = HudChrome.Color.PanelSunken
+			block.BackgroundTransparency = 0
+		end
 	end
 
 	alertFrame.Visible = true
@@ -555,29 +635,25 @@ _G.ShakeCityAlertIndicator = function()
 	end)
 end
 
--- Laesst ein bestimmtes Segment (1-basiert) kurz aufleuchten -- Trigger-Moment (0.0s) der
--- "ALERT ESCALATION"-Sequenz. Hiess frueher PulseCityAlertStar; der Name bleibt, weil
--- CityAlertAnnouncementClient ihn ruft, und ein Umbenennen beider Seiten gehoert nicht in
--- diesen Umbau.
+-- Laesst einen bestimmten Stern (1-basiert) kurz zweimal pulsieren -- Trigger-Moment
+-- (0.0s) der "ALERT ESCALATION"-Sequenz in CityAlertAnnouncementClient.lua.
 _G.PulseCityAlertStar = function(starIndex)
-	local segment = segments[starIndex]
-	if not segment or not segment.frame.Visible then
+	local star = starLabels[starIndex]
+	if not star or not star.Visible then
 		return
 	end
 	task.spawn(function()
 		for _ = 1, 2 do
-			local hoch = TweenService:Create(segment.frame, TweenInfo.new(0.08, Enum.EasingStyle.Quad), {
-				BackgroundColor3 = Color3.new(1, 1, 1),
+			local hoch = TweenService:Create(star, TweenInfo.new(0.08, Enum.EasingStyle.Quad), {
+				Size = UDim2.new(0, STERN_GROESSE + 6, 0, STERN_GROESSE + 6),
 			})
 			hoch:Play()
 			hoch.Completed:Wait()
-			local runter = TweenService:Create(segment.frame, TweenInfo.new(0.12, Enum.EasingStyle.Quad), {
-				BackgroundColor3 = HudChrome.Color.Danger,
+			local runter = TweenService:Create(star, TweenInfo.new(0.08, Enum.EasingStyle.Quad), {
+				Size = UDim2.new(0, STERN_GROESSE, 0, STERN_GROESSE),
 			})
 			runter:Play()
 			runter.Completed:Wait()
 		end
-		-- Danach den echten Zustand wiederherstellen -- der Puls hat die Farbe ueberschrieben.
-		updateAlertHud()
 	end)
 end
