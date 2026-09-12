@@ -16,6 +16,7 @@ local UiTypography = require(ReplicatedStorage:WaitForChild("UiTypography"))
 local SkinsConfig = require(ReplicatedStorage:WaitForChild("SkinsConfig"))
 local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
 local applyComicStyle = ComicStyleUtils.Apply
+local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local SoundService = game:GetService("SoundService")
@@ -48,20 +49,67 @@ local ENERGY_CONFIG = {
 }
 
 -- ===== Welt-Event-Banner =====
-local eventBanner = Instance.new("TextLabel")
+--
+-- Vorher eine gelbe Flaeche mit schwarzem Umriss und einer Zeile aus Emoji. Jetzt ein
+-- Feld wie alle anderen im HUD -- farblos, mit einem farbigen Streifen an der Kante.
+--
+-- Der Streifen traegt die Farbe des Energietyps und ersetzt damit das Emoji: die Farben
+-- sind ohnehin schon die Sprache, in der das Spiel ueber Energie redet (dieselben Werte
+-- stehen in ENERGY_CONFIG und spaeter im Talentbaum). Ein Emoji zeichnet dagegen jedes
+-- Betriebssystem anders.
+local BANNER_RUHE_Y = -76
+local BANNER_AUS_X = 340 -- so weit rechts ausserhalb, dass nichts hervorlugt
+
+local eventBanner = Instance.new("Frame")
 eventBanner.Name = "WorldEventBanner"
-eventBanner.Size = UDim2.new(0, 300, 0, 44)
+eventBanner.Size = UDim2.new(0, 300, 0, 52)
 eventBanner.AnchorPoint = Vector2.new(1, 1)
-eventBanner.Position = UDim2.new(1, 340, 1, -70) -- startet ausserhalb rechts, fährt beim Event rein
-eventBanner.BackgroundColor3 = Color3.fromRGB(255, 210, 40)
-eventBanner.Font = Enum.Font.LuckiestGuy
-eventBanner.TextScaled = true
-eventBanner.TextColor3 = Color3.fromRGB(30, 20, 0)
-eventBanner.Text = ""
+eventBanner.Position = UDim2.new(1, BANNER_AUS_X, 1, BANNER_RUHE_Y)
 eventBanner.Visible = false
 eventBanner.ZIndex = 60
 eventBanner.Parent = screenGui
-applyComicStyle(eventBanner, 14, 3)
+HudChrome.Panel(eventBanner, { radius = HudChrome.Radius.Small })
+
+local eventStripe = Instance.new("Frame")
+eventStripe.Name = "TypeStripe"
+eventStripe.Size = UDim2.new(0, 4, 1, -12)
+eventStripe.Position = UDim2.new(0, 8, 0, 6)
+eventStripe.BackgroundColor3 = HudChrome.Color.Ready
+eventStripe.BorderSizePixel = 0
+eventStripe.ZIndex = 61
+eventStripe.Parent = eventBanner
+
+local eventNameLabel = Instance.new("TextLabel")
+eventNameLabel.Name = "EventName"
+eventNameLabel.Size = UDim2.new(1, -30, 0, 20)
+eventNameLabel.Position = UDim2.new(0, 22, 0, 7)
+eventNameLabel.BackgroundTransparency = 1
+eventNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+eventNameLabel.ZIndex = 61
+eventNameLabel.Text = ""
+eventNameLabel.Parent = eventBanner
+HudChrome.Label(eventNameLabel, 17)
+
+local eventSubLabel = Instance.new("TextLabel")
+eventSubLabel.Name = "EventSub"
+eventSubLabel.Size = UDim2.new(1, -30, 0, 16)
+eventSubLabel.Position = UDim2.new(0, 22, 0, 28)
+eventSubLabel.BackgroundTransparency = 1
+eventSubLabel.TextXAlignment = Enum.TextXAlignment.Left
+eventSubLabel.ZIndex = 61
+eventSubLabel.Text = ""
+eventSubLabel.Parent = eventBanner
+HudChrome.Number(eventSubLabel, 12)
+
+-- Farbe je Energietyp, aus derselben Tabelle wie der Rest des Spiels.
+local function farbeFuerTyp(energyType)
+	for _, eintrag in ipairs(ENERGY_CONFIG) do
+		if eintrag.key == energyType then
+			return eintrag.color
+		end
+	end
+	return HudChrome.Color.Ready
+end
 
 -- ===== Countdown: zeigt entweder "Event X endet in MM:SS" (falls eines läuft) oder
 -- "Nächstes Event in MM:SS" (falls gerade keines aktiv ist) -- derselbe Zeitstempel
@@ -70,20 +118,40 @@ applyComicStyle(eventBanner, 14, 3)
 local NextWorldEventRollTime = ReplicatedStorage:WaitForChild("NextWorldEventRollTime")
 local activeEventLabel = nil -- z.B. "🔥 Heat Wave", nil wenn kein Event läuft
 
+-- Bezeichnung und Zeit sind getrennt: die Bezeichnung sagt, WORAUF man wartet, und
+-- aendert sich selten; die Zahl laeuft. Vorher stand beides in einer Zeile, und die Zahl
+-- sprang mit der Textlaenge hin und her.
+local countdownFrame = Instance.new("Frame")
+countdownFrame.Name = "WorldEventCountdown"
+countdownFrame.Size = UDim2.new(0, 200, 0, 34)
+countdownFrame.AnchorPoint = Vector2.new(1, 1)
+countdownFrame.Position = UDim2.new(1, -16, 1, -16)
+countdownFrame.ZIndex = 55
+countdownFrame.Parent = screenGui
+HudChrome.Panel(countdownFrame, { radius = HudChrome.Radius.Small })
+
+local countdownCaption = Instance.new("TextLabel")
+countdownCaption.Name = "Caption"
+countdownCaption.Size = UDim2.new(0, 120, 1, 0)
+countdownCaption.Position = UDim2.new(0, 10, 0, 0)
+countdownCaption.BackgroundTransparency = 1
+countdownCaption.TextXAlignment = Enum.TextXAlignment.Left
+countdownCaption.ZIndex = 56
+countdownCaption.Text = "NEXT EVENT"
+countdownCaption.Parent = countdownFrame
+HudChrome.Label(countdownCaption, 11)
+countdownCaption.TextColor3 = HudChrome.Color.TextSecondary
+
 local countdownLabel = Instance.new("TextLabel")
-countdownLabel.Name = "WorldEventCountdown"
-countdownLabel.Size = UDim2.new(0, 240, 0, 24)
-countdownLabel.AnchorPoint = Vector2.new(1, 1)
-countdownLabel.Position = UDim2.new(1, -20, 1, -20)
-countdownLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
-countdownLabel.BackgroundTransparency = 0.25
-countdownLabel.Font = Enum.Font.FredokaOne
-countdownLabel.TextScaled = true
-countdownLabel.TextColor3 = Color3.fromRGB(230, 230, 240)
+countdownLabel.Name = "Time"
+countdownLabel.Size = UDim2.new(0, 70, 1, 0)
+countdownLabel.Position = UDim2.new(1, -80, 0, 0)
+countdownLabel.BackgroundTransparency = 1
+countdownLabel.TextXAlignment = Enum.TextXAlignment.Right
+countdownLabel.ZIndex = 56
 countdownLabel.Text = ""
-countdownLabel.ZIndex = 55
-countdownLabel.Parent = screenGui
-applyComicStyle(countdownLabel, 8, 2)
+countdownLabel.Parent = countdownFrame
+HudChrome.NumberBold(countdownLabel, 18)
 
 local function formatCountdown(seconds)
 	seconds = math.max(math.floor(seconds), 0)
@@ -94,11 +162,8 @@ end
 
 RunService.Heartbeat:Connect(function()
 	local remaining = NextWorldEventRollTime.Value - Workspace:GetServerTimeNow()
-	if activeEventLabel then
-		countdownLabel.Text = activeEventLabel .. " ends in " .. formatCountdown(remaining)
-	else
-		countdownLabel.Text = "⏳ Next event in " .. formatCountdown(remaining)
-	end
+	countdownCaption.Text = activeEventLabel and (activeEventLabel:upper() .. " ENDS") or "NEXT EVENT"
+	countdownLabel.Text = formatCountdown(remaining)
 end)
 
 -- ===== Musik pro Welt-Event =====
@@ -178,7 +243,7 @@ local function showWorldEventBanner(event)
 		activeEventLabel = nil
 		stopEventMusic()
 		TweenService:Create(eventBanner, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-			Position = UDim2.new(1, 340, 1, -70),
+			Position = UDim2.new(1, BANNER_AUS_X, 1, BANNER_RUHE_Y),
 		}):Play()
 		task.delay(0.4, function()
 			eventBanner.Visible = false
@@ -186,12 +251,18 @@ local function showWorldEventBanner(event)
 		return
 	end
 
-	activeEventLabel = event.emoji .. " " .. event.name
-	eventBanner.Text = event.emoji .. " " .. event.name:upper() .. " -- " .. event.emoji .. " x" .. event.multiplier
+	activeEventLabel = event.name
+
+	local typFarbe = farbeFuerTyp(event.energyType)
+	eventStripe.BackgroundColor3 = typFarbe
+	eventNameLabel.Text = event.name:upper()
+	eventSubLabel.Text = string.upper(tostring(event.energyType or "")) .. "   x" .. tostring(event.multiplier)
+	eventSubLabel.TextColor3 = typFarbe
+
 	eventBanner.Visible = true
-	eventBanner.Position = UDim2.new(1, 340, 1, -70)
+	eventBanner.Position = UDim2.new(1, BANNER_AUS_X, 1, BANNER_RUHE_Y)
 	TweenService:Create(eventBanner, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-		Position = UDim2.new(1, -20, 1, -70),
+		Position = UDim2.new(1, -16, 1, BANNER_RUHE_Y),
 	}):Play()
 
 	playEventMusic(event.musicId)
