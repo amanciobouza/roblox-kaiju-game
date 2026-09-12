@@ -142,8 +142,10 @@ local function createAttackButton(name, _legacyIcon, labelText, _legacyColor, po
 	-- zu teilen. Die Beschriftung liegt darueber -- das ist ausdruecklich gewollt und der
 	-- Grund, warum es unten einen Verlauf gibt.
 	local iconLabel = HudChrome.IconImage(button, ATTACK_ICON[name])
-	iconLabel.Size = UDim2.new(1, -8, 1, -8)
-	iconLabel.Position = UDim2.new(0, 4, 0, 4)
+	-- Etwas kleiner als der volle Knopf: 96 mal 76 statt 120 mal 96. Leicht nach oben
+	-- gerueckt, damit unter dem Symbol Luft fuer die Beschriftung bleibt.
+	iconLabel.Size = UDim2.new(1, -32, 1, -28)
+	iconLabel.Position = UDim2.new(0, 16, 0, 6)
 	iconLabel.ZIndex = 11
 
 	-- Verlauf unter der Beschriftung: von durchsichtig oben nach dunkel unten. Ohne ihn

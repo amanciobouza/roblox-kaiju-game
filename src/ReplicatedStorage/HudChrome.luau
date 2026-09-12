@@ -171,6 +171,64 @@ function HudChrome.IconImage(parent, assetId, tint)
 	return image
 end
 
+-- ===== Symbole vorladen =====
+--
+-- Roblox laedt Bilder einzeln und still nach, sobald sie zum ersten Mal gezeigt werden.
+-- Scheitert eines -- falsche Kennung, noch nicht freigegeben, zu gross fuer den Speicher
+-- des Geraets -- bleibt das Feld einfach leer. Es gibt keinen Fehler, keine Warnung, und
+-- auf dem Telefon sieht man ein anderes Ergebnis als am PC, ohne zu wissen warum.
+--
+-- Deshalb hier: alle Symbole aktiv vorladen und danach BERICHTEN, welche angekommen sind.
+-- Das ist der Unterschied zwischen "das Symbol fehlt" und "ich habe an der falschen Stelle
+-- geschaut".
+local function preloadIcons()
+	local ContentProvider = game:GetService("ContentProvider")
+
+	local liste = {}
+	local namen = {}
+	for name, assetId in pairs(HudChrome.Icon) do
+		table.insert(liste, assetId)
+		namen[assetId] = name
+	end
+
+	local ok = pcall(function()
+		ContentProvider:PreloadAsync(liste)
+	end)
+	if not ok then
+		warn("[Kaiju Debug] HudChrome: Vorladen der Symbole fehlgeschlagen.")
+		return
+	end
+
+	-- PreloadAsync kehrt auch dann zurueck, wenn einzelne Bilder NICHT geladen werden
+	-- konnten. Ob eines wirklich da ist, sagt nur IsLoaded an einem echten ImageLabel.
+	local fehlend = {}
+	for assetId, name in pairs(namen) do
+		local probe = Instance.new("ImageLabel")
+		probe.Image = assetId
+		if not probe.IsLoaded then
+			table.insert(fehlend, string.format("%s (%s)", name, assetId))
+		end
+		probe:Destroy()
+	end
+
+	if #fehlend > 0 then
+		warn(string.format(
+			"[Kaiju Debug] HudChrome: %d von %d Symbolen sind NICHT geladen -- %s. "
+				.. "Moegliche Gruende: Kennung falsch, Bild von Roblox noch nicht freigegeben, "
+				.. "oder es gehoert einem anderen Konto als dem, dem dieses Spiel gehoert.",
+			#fehlend,
+			#liste,
+			table.concat(fehlend, ", ")
+		))
+	else
+		print(string.format("[Kaiju Debug] HudChrome: alle %d Symbole geladen.", #liste))
+	end
+end
+
+if game:GetService("RunService"):IsClient() then
+	task.spawn(preloadIcons)
+end
+
 -- ===== Panel =====
 --
 -- `options` (alle optional):

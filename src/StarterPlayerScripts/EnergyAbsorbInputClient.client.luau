@@ -57,8 +57,8 @@ HudChrome.Panel(absorbButton, { radius = HudChrome.Radius.Panel, transparency = 
 -- Aufbau wie bei den vier Angriffsknoepfen: das Symbol fuellt den ganzen Knopf, die
 -- Beschriftung liegt mit einem Verlauf darunter darueber.
 local iconLabel = HudChrome.IconImage(absorbButton, HudChrome.Icon.Absorb)
-iconLabel.Size = UDim2.new(1, -8, 1, -8)
-iconLabel.Position = UDim2.new(0, 4, 0, 4)
+iconLabel.Size = UDim2.new(1, -32, 1, -28)
+iconLabel.Position = UDim2.new(0, 16, 0, 6)
 iconLabel.ZIndex = 2
 
 local scrim = Instance.new("Frame")
