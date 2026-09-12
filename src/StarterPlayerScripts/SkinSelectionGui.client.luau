@@ -1152,17 +1152,23 @@ do
 	-- Duenner Ring knapp AUSSERHALB des Gehaeuserings, in Cyan -- der Farbe, die im ganzen
 	-- HUD allein der Special Energy gehoert. Er ueberdeckt den Tacho nicht und braucht kaum
 	-- zusaetzliche Hoehe, weil er derselben Kontur folgt.
-	-- Vierundzwanzig statt sechzig Segmente, dafuer jedes breiter: bei sechzig lagen sie
-	-- so dicht, dass sie zu einem durchgehenden Ring verschmolzen -- eine Fuellstandslinie,
-	-- kein Zaehlwerk. Mit sichtbaren Luecken sieht man wieder EINZELNE Sektoren und kann
-	-- sie im Vorbeigehen abschaetzen, statt eine Laenge zu vergleichen.
+	-- Sechzig feine Sektoren, nicht vierundzwanzig breite.
 	--
-	-- Der Abstand zwischen zwei Mitten betraegt am Innenrand rund 16 Pixel; bei 11 Pixeln
-	-- Segmentbreite bleiben gut 5 Pixel Luft.
+	-- Die Zahl folgt aus dem Spiel, nicht aus der Optik: ein Schlag gibt 1 Energie von 100.
+	-- Bei vierundzwanzig Sektoren braucht es vier Schlaege, bis sich ueberhaupt etwas
+	-- ruehrt -- der Bogen stand dann die meiste Zeit still, und das Aufblitzen beim Laden
+	-- traf oft gar kein Segment. Bei sechzig ruecken zwei Schlaege ein Segment weiter, und
+	-- man sieht beim Kaempfen, dass man vorankommt.
+	--
+	-- Der Abstand zwischen zwei Mitten betraegt am Innenrand 6.3 Pixel; bei 5 Pixeln
+	-- Breite bleiben 1.3 Pixel Luft. Das ist wenig, aber es ist genau das Mass, das vorher
+	-- als "klar aus Sektoren bestehend" gelesen wurde. Mehr Luft gaebe es nur mit weniger
+	-- Sektoren oder groesserem Radius -- und der Radius ist durch die Angriffsknoepfe
+	-- daneben gedeckelt.
 	local ENERGY_ARC_INNER = BEZEL_OUTER + 4
-	local ENERGY_ARC_THICK = 10
-	local ENERGY_ARC_SECTOR_COUNT = 24
-	local ENERGY_ARC_SEGMENT_BREITE = 11
+	local ENERGY_ARC_THICK = 12
+	local ENERGY_ARC_SECTOR_COUNT = 60
+	local ENERGY_ARC_SEGMENT_BREITE = 5
 	local ENERGY_ARC_COLOR = HudChrome.Color.Accent
 	local ENERGY_ARC_COLOR_DIM = Color3.fromRGB(28, 44, 54)
 
