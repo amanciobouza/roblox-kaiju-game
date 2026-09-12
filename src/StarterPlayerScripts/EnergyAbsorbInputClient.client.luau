@@ -46,7 +46,7 @@ screenGui.Parent = playerGui
 -- Gruppe neben Focus und Area, wo er hingehoert.
 local absorbButton = Instance.new("TextButton")
 absorbButton.Name = "AbsorbButton"
-absorbButton.Size = UDim2.new(0, 100, 0, 100)
+absorbButton.Size = UDim2.new(0, 128, 0, 104)
 absorbButton.AnchorPoint = Vector2.new(1, 1)
 absorbButton.Position = UDim2.new(1, -20, 1, -140)
 absorbButton.AutoButtonColor = false
@@ -56,18 +56,22 @@ HudChrome.Panel(absorbButton, { radius = HudChrome.Radius.Panel, transparency = 
 
 local iconLabel = Instance.new("TextLabel")
 iconLabel.Name = "Icon"
-iconLabel.Size = UDim2.new(1, 0, 0, 38)
+iconLabel.Size = UDim2.new(1, 0, 0, 30)
 iconLabel.Position = UDim2.new(0, 0, 0, 10)
 iconLabel.BackgroundTransparency = 1
-iconLabel.Font = Enum.Font.LuckiestGuy -- Emoji, die Schrift spielt keine Rolle
+iconLabel.Font = HudChrome.Font.Label
 iconLabel.TextScaled = true
-iconLabel.Text = "🌀"
+-- Geometrisches Zeichen statt des Emoji 🌀 -- dieselbe Begruendung wie bei den
+-- Angriffsknoepfen: ein Emoji zeichnet das Betriebssystem in seinem eigenen Stil und
+-- laesst sich nicht einfaerben.
+iconLabel.Text = "◉"
+iconLabel.TextColor3 = HudChrome.Color.Accent
 iconLabel.Parent = absorbButton
 
 local label = Instance.new("TextLabel")
 label.Name = "NameLabel"
-label.Size = UDim2.new(1, -8, 0, 18)
-label.Position = UDim2.new(0, 4, 0, 50)
+label.Size = UDim2.new(1, -10, 0, 22)
+label.Position = UDim2.new(0, 5, 0, 44)
 label.BackgroundTransparency = 1
 label.Text = "ABSORB"
 label.Parent = absorbButton
@@ -75,8 +79,8 @@ HudChrome.Label(label)
 
 local subLabel = Instance.new("TextLabel")
 subLabel.Name = "SubLabel"
-subLabel.Size = UDim2.new(1, -8, 0, 12)
-subLabel.Position = UDim2.new(0, 4, 0, 68)
+subLabel.Size = UDim2.new(1, -10, 0, 15)
+subLabel.Position = UDim2.new(0, 5, 0, 66)
 subLabel.BackgroundTransparency = 1
 subLabel.Text = "DRAW MATTER"
 subLabel.Parent = absorbButton

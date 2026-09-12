@@ -96,6 +96,36 @@ local ATTACK_SUBLABEL = {
 	Area = "DEVASTATION",
 }
 
+-- ===== Symbole =====
+-- Vorher standen hier Emoji (👊 🦶 🔴 💥). Die zeichnet das Betriebssystem in seinem
+-- eigenen, bunten Stil -- sie sind der letzte sichtbare Rest des Comic-Looks und lassen
+-- sich weder einfaerben noch in der Strichstaerke anpassen.
+--
+-- An ihrer Stelle stehen geometrische Zeichen: ein Vorwaertskeil fuer den Schlag, ein
+-- Aufwaertskeil fuer den Sprung, ein Fadenkreuz fuer den Fokus, ein Bersten fuer die
+-- Flaeche. Sie werden von der Oberflaechenschrift gezeichnet, nehmen also die Farbe an,
+-- die man ihnen gibt, und passen im Strich zum Rest.
+--
+-- Das ist die beste Loesung mit Bordmitteln, nicht die beste ueberhaupt: echte Symbole
+-- waeren hochgeladene Bilder. Solange die fehlen, ist ein sauberes Zeichen besser als ein
+-- fremdgezeichnetes Emoji.
+local ATTACK_ICON = {
+	Attack = "▶",
+	Jump = "▲",
+	Focus = "◎",
+	Area = "✹",
+}
+
+-- Die Symbolfarbe folgt derselben Regel wie der Akzentstreifen: weiss heisst frei,
+-- Cyan heisst Special Energy. So sagen Symbol und Streifen dasselbe, und der Knopf ist
+-- auch ohne Lesen der Bezeichnung einzuordnen.
+local ATTACK_ICON_COLOR = {
+	Attack = HudChrome.Color.TextPrimary,
+	Jump = HudChrome.Color.TextPrimary,
+	Focus = HudChrome.Color.Accent,
+	Area = HudChrome.Color.Accent,
+}
+
 -- Welche Ressource ein Knopf verbraucht -- und damit die Farbe seines Akzentstreifens.
 -- Bernstein heisst frei, Cyan heisst Special Energy. Das ist die einzige Farbe am Knopf;
 -- der Grund ist bei allen gleich dunkel (siehe HudChrome, Regel 2).
@@ -111,9 +141,12 @@ local ATTACK_ACCENT = {
 -- Aufrufe uebergeben ihn weiterhin -- er wird bewusst ignoriert, damit die Aufrufzeilen
 -- unveraendert bleiben und die Farben dort als Beleg stehen, was sie einmal waren.
 local function createAttackButton(name, icon, labelText, _legacyColor, position, keyHint)
+	-- 132 statt 100 Pixel breit. Die Vorlage zeigt Knoepfe, die deutlich breiter als hoch
+	-- sind -- und genau die Breite fehlte der Unterzeile: "VERTICAL POWER" braucht sie.
+	-- Platz ist da, die Gruppen stehen weit auseinander.
 	local button = Instance.new("TextButton")
 	button.Name = name .. "Button"
-	button.Size = UDim2.new(0, 100, 0, 100)
+	button.Size = UDim2.new(0, 128, 0, 104)
 	button.Position = position
 	button.AnchorPoint = Vector2.new(0.5, 1)
 	button.AutoButtonColor = false
@@ -124,19 +157,20 @@ local function createAttackButton(name, icon, labelText, _legacyColor, position,
 
 	local iconLabel = Instance.new("TextLabel")
 	iconLabel.Name = "Icon"
-	iconLabel.Size = UDim2.new(1, 0, 0, 38)
+	iconLabel.Size = UDim2.new(1, 0, 0, 30)
 	iconLabel.Position = UDim2.new(0, 0, 0, 10)
 	iconLabel.BackgroundTransparency = 1
-	iconLabel.Font = Enum.Font.LuckiestGuy -- Symbole sind Emoji, die Schrift ist hier egal
+	iconLabel.Font = HudChrome.Font.Label
 	iconLabel.TextScaled = true
-	iconLabel.Text = icon
+	iconLabel.Text = ATTACK_ICON[name] or icon
+	iconLabel.TextColor3 = ATTACK_ICON_COLOR[name] or HudChrome.Color.TextPrimary
 	iconLabel.ZIndex = 11
 	iconLabel.Parent = button
 
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.Name = "NameLabel"
-	nameLabel.Size = UDim2.new(1, -8, 0, 18)
-	nameLabel.Position = UDim2.new(0, 4, 0, 50)
+	nameLabel.Size = UDim2.new(1, -10, 0, 22)
+	nameLabel.Position = UDim2.new(0, 5, 0, 44)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.Text = string.upper(labelText)
 	nameLabel.ZIndex = 11
@@ -145,8 +179,8 @@ local function createAttackButton(name, icon, labelText, _legacyColor, position,
 
 	local subLabel = Instance.new("TextLabel")
 	subLabel.Name = "SubLabel"
-	subLabel.Size = UDim2.new(1, -8, 0, 12)
-	subLabel.Position = UDim2.new(0, 4, 0, 68)
+	subLabel.Size = UDim2.new(1, -10, 0, 15)
+	subLabel.Position = UDim2.new(0, 5, 0, 66)
 	subLabel.BackgroundTransparency = 1
 	subLabel.Text = ATTACK_SUBLABEL[name] or ""
 	subLabel.ZIndex = 11
@@ -220,13 +254,13 @@ local function addEnergyCostLabel(button)
 end
 
 local attackButton, attackOverlay, attackCooldownLabel, attackAccent =
-	createAttackButton("Attack", "👊", "Punch", Color3.fromRGB(90, 140, 220), UDim2.new(0.5, -290, 1, -24))
+	createAttackButton("Attack", "👊", "Punch", Color3.fromRGB(90, 140, 220), UDim2.new(0.5, -350, 1, -24))
 local jumpButton, jumpOverlay, jumpCooldownLabel, jumpAccent =
-	createAttackButton("Jump", "🦶", "Jump", Color3.fromRGB(90, 190, 140), UDim2.new(0.5, -180, 1, -24))
+	createAttackButton("Jump", "🦶", "Jump", Color3.fromRGB(90, 190, 140), UDim2.new(0.5, -210, 1, -24))
 local focusButton, focusOverlay, focusCooldownLabel, focusAccent =
-	createAttackButton("Focus", "🔴", "Focus", Color3.fromRGB(220, 60, 60), UDim2.new(0.5, 180, 1, -24), "Q")
+	createAttackButton("Focus", "🔴", "Focus", Color3.fromRGB(220, 60, 60), UDim2.new(0.5, 210, 1, -24), "Q")
 local areaButton, areaOverlay, areaCooldownLabel, areaAccent =
-	createAttackButton("Area", "💥", "Area", Color3.fromRGB(255, 150, 30), UDim2.new(0.5, 290, 1, -24), "E")
+	createAttackButton("Area", "💥", "Area", Color3.fromRGB(255, 150, 30), UDim2.new(0.5, 350, 1, -24), "E")
 
 -- Die beiden Kosten-Labels sind leere Huellen (siehe addEnergyCostLabel) und werden nur
 -- noch angelegt, damit die Knopfstruktur unveraendert bleibt.

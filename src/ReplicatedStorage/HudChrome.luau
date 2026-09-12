@@ -105,12 +105,17 @@ print(string.format(
 -- Feste Werte, KEIN TextScaled. Im Bestand steht fast jeder Text auf TextScaled, die
 -- Schriftgrösse folgt dort also der Kästchenhöhe -- zwei gleichrangige Beschriftungen
 -- sehen dadurch verschieden gross aus, je nachdem wie gross ihr Kästchen zufällig ist.
+--
+-- Die ersten Werte (Label 15, Sublabel 11) waren zu knapp: auf einem 100 Pixel breiten
+-- Knopf musste man genau hinsehen, und die Unterzeile war gar nicht zu lesen. Oswald ist
+-- zusaetzlich schmal -- schmale Schrift braucht mehr Groesse als eine breite, um bei
+-- gleichem Eindruck lesbar zu bleiben. Beide Werte sind deshalb deutlich angehoben.
 HudChrome.TextSize = {
-	Title = 20,
-	Label = 15,
-	Sublabel = 11,
-	Number = 16,
-	NumberLarge = 22,
+	Title = 22,
+	Label = 19,
+	Sublabel = 13,
+	Number = 17,
+	NumberLarge = 24,
 }
 
 -- ===== Panel =====
