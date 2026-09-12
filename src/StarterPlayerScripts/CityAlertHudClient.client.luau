@@ -340,6 +340,141 @@ end
 
 updateAlertHud() -- initialer Zustand beim Start
 
+-- ===== Vorwarnung: "gleich kommt etwas, und zwar DAS" =====
+--
+-- Sie ersetzt nicht die geloeschte Druckanzeige, sie macht etwas anderes. Der Balken lief
+-- mit und liess mitzaehlen; die Vorwarnung ist ein EREIGNIS mit einem Namen. Man erfaehrt,
+-- dass eine Eskalation naht und welche Antwort sie bringt -- aber nicht, wann genau. Die
+-- Spanne zwischen "sie erscheint" und "es passiert" bleibt unbestimmt.
+--
+-- Die Namen sind dieselben wie in der grossen Ankuendigung (CityAlertAnnouncementClient),
+-- damit die Warnung und das, was dann kommt, erkennbar dasselbe meinen.
+local ANTWORT_NAMEN = {
+	[2] = "EMERGENCY RESPONSE",
+	[3] = "SECURITY RESPONSE",
+	[4] = "MILITARY RESPONSE",
+	[5] = "MAXIMUM ALERT",
+}
+
+local WARN_HOEHE = 30
+local WARN_AN = 0.80 -- ab hier erscheint sie
+local WARN_AUS = 0.72 -- und verschwindet erst hier wieder: ohne diesen Abstand flackert
+-- sie an der Schwelle, weil der Druckwert im Kampf staendig hin und her geht.
+
+local warnFrame = Instance.new("Frame")
+warnFrame.Name = "AlertWarningFrame"
+warnFrame.Size = UDim2.new(0, PANEL_BREITE, 0, WARN_HOEHE)
+warnFrame.AnchorPoint = Vector2.new(1, 0)
+warnFrame.Position = UDim2.new(1, -16, 0, 118 + PANEL_HOEHE + 6)
+warnFrame.Visible = false
+warnFrame.ZIndex = 20
+warnFrame.Parent = screenGui
+local _, warnStroke = HudChrome.Panel(warnFrame, {
+	radius = HudChrome.Radius.Small,
+	fill = Color3.fromRGB(34, 26, 10),
+	transparency = 0,
+	border = HudChrome.Color.Warning,
+})
+
+local warnIcon = HudChrome.IconImage(warnFrame, HudChrome.Icon.Alert, HudChrome.Color.Warning)
+warnIcon.Size = UDim2.new(0, 18, 0, 18)
+warnIcon.Position = UDim2.new(0, PANEL_RAND, 0, 6)
+warnIcon.ZIndex = 21
+
+local warnLabel = Instance.new("TextLabel")
+warnLabel.Name = "WarningLabel"
+warnLabel.Size = UDim2.new(0, INNEN_BREITE - 26, 0, 18)
+warnLabel.Position = UDim2.new(0, PANEL_RAND + 26, 0, 6)
+warnLabel.BackgroundTransparency = 1
+warnLabel.TextXAlignment = Enum.TextXAlignment.Left
+warnLabel.ZIndex = 21
+warnLabel.Text = ""
+warnLabel.Parent = warnFrame
+HudChrome.Label(warnLabel, 13)
+warnLabel.TextColor3 = HudChrome.Color.Warning
+
+-- Die Liste rueckt nach, wenn die Warnung da ist -- sonst laege sie darunter begraben.
+local function listenY()
+	return 118 + PANEL_HOEHE + 8 + (warnFrame.Visible and (WARN_HOEHE + 6) or 0)
+end
+
+local function updateWarnung()
+	local cityName = player:GetAttribute("CurrentCityName")
+	local zone = player:GetAttribute("CurrentZone")
+	if not cityName or cityName == "None" or zone == "Sanctuary" then
+		warnFrame.Visible = false
+		return
+	end
+
+	local levelValue = cityAlertValues:FindFirstChild(cityName .. "Level")
+	local progressValue = cityAlertValues:FindFirstChild(cityName .. "Progress")
+	local config = CityAlertConfig.GetCityConfig(cityName)
+	if not levelValue or not progressValue or not config then
+		warnFrame.Visible = false
+		return
+	end
+
+	local maxLevelValue = cityAlertValues:FindFirstChild(cityName .. "MaxLevel")
+	local rawMaxLevel = (maxLevelValue and maxLevelValue.Value) or config.MaxAlertLevel or MAX_ALERT_LEVEL
+	local maxLevel = math.clamp(rawMaxLevel, 0, MAX_ALERT_LEVEL)
+	local level = math.max(levelValue.Value, 0)
+
+	-- Auf der Hoechststufe dieser Stadt kommt nichts mehr -- dann gibt es auch nichts
+	-- anzukuendigen.
+	if level >= maxLevel then
+		warnFrame.Visible = false
+		return
+	end
+
+	local schwelle = config.AlertThresholdLevel2
+	if not schwelle or schwelle <= 0 then
+		warnFrame.Visible = false
+		return
+	end
+	local ratio = math.clamp(progressValue.Value / schwelle, 0, 1)
+
+	local warSichtbar = warnFrame.Visible
+	local sichtbar
+	if warSichtbar then
+		sichtbar = ratio >= WARN_AUS
+	else
+		sichtbar = ratio >= WARN_AN
+	end
+
+	if sichtbar then
+		local naechste = math.min(level + 1, maxLevel)
+		warnLabel.Text = (ANTWORT_NAMEN[naechste] or "ALERT") .. " INBOUND"
+	end
+
+	if sichtbar ~= warSichtbar then
+		warnFrame.Visible = sichtbar
+	end
+end
+
+player:GetAttributeChangedSignal("CurrentCityName"):Connect(updateWarnung)
+player:GetAttributeChangedSignal("CurrentZone"):Connect(updateWarnung)
+
+-- Hier wird der Fortschrittswert wieder gebraucht -- aber nur noch fuer diese eine Frage:
+-- ist die Schwelle nah? Was er genau sagt, erfaehrt der Spieler nicht mehr.
+for _, valueObject in ipairs(cityAlertValues:GetChildren()) do
+	if valueObject.Name:match("Progress$") or valueObject.Name:match("Level$") then
+		valueObject:GetPropertyChangedSignal("Value"):Connect(updateWarnung)
+	end
+end
+
+updateWarnung()
+
+-- Das Pulsieren laeuft nur, solange die Warnung steht. Ein Rahmen, der ruhig daliegt,
+-- waere eine Feststellung; einer, der atmet, ist eine Warnung.
+RunService.Heartbeat:Connect(function()
+	if not warnFrame.Visible then
+		return
+	end
+	local puls = (math.sin(os.clock() * 4) + 1) / 2
+	warnStroke.Transparency = 0.15 + puls * 0.45
+	warnIcon.ImageTransparency = puls * 0.35
+end)
+
 -- ===== Aufgabenliste =====
 --
 -- Zeigt pro Stadt die anwendbaren Aufgaben (Emergency/Defense/Military/Titan Protocol).
@@ -362,7 +497,7 @@ local ERLEDIGT_FARBE = Color3.fromRGB(70, 220, 90)
 local questFrame = Instance.new("Frame")
 questFrame.Name = "CityQuestFrame"
 questFrame.AnchorPoint = Vector2.new(1, 0)
-questFrame.Position = UDim2.new(1, -16, 0, 118 + PANEL_HOEHE + 8)
+questFrame.Position = UDim2.new(1, -16, 0, listenY())
 questFrame.Size = UDim2.new(0, PANEL_BREITE, 0, 0)
 questFrame.AutomaticSize = Enum.AutomaticSize.Y
 questFrame.Visible = false
@@ -442,7 +577,7 @@ end
 local cityBrokenBanner = Instance.new("Frame")
 cityBrokenBanner.Name = "CityBrokenBanner"
 cityBrokenBanner.AnchorPoint = Vector2.new(1, 0)
-cityBrokenBanner.Position = UDim2.new(1, -16, 0, 118 + PANEL_HOEHE + 8)
+cityBrokenBanner.Position = UDim2.new(1, -16, 0, listenY())
 cityBrokenBanner.Size = UDim2.new(0, PANEL_BREITE, 0, 54)
 cityBrokenBanner.Visible = false
 cityBrokenBanner.ZIndex = 21
@@ -480,6 +615,11 @@ HudChrome.Number(cityBrokenSubtitle, 13)
 cityBrokenSubtitle.TextColor3 = HudChrome.Color.TextSecondary
 
 local function updateQuestList()
+	-- Die Warnung kann jederzeit erscheinen oder gehen; beide Felder darunter folgen ihr.
+	local y = listenY()
+	questFrame.Position = UDim2.new(1, -16, 0, y)
+	cityBrokenBanner.Position = UDim2.new(1, -16, 0, y)
+
 	local cityName = player:GetAttribute("CurrentCityName")
 	local zone = player:GetAttribute("CurrentZone")
 	if not cityName or cityName == "None" or zone == "Sanctuary" then
