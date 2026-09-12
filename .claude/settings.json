@@ -7,7 +7,9 @@
       "Bash(luau /tmp/r2.luau)",
       "Bash(cat)",
       "Bash(luau /tmp/bilanz.luau)",
-      "Bash(luau /tmp/radius.luau)"
+      "Bash(luau /tmp/radius.luau)",
+      "Bash(luau \"C:/Users/amanc/AppData/Local/Temp/claude/c--Users-amanc-Projects-roblox-kaiju-game/e4f8a841-7879-425a-bb18-b5a7118ab429/scratchpad/talent_probe2.luau\")",
+      "Bash(luau tools/spec-check.luau)"
     ]
   },
   "hooks": {

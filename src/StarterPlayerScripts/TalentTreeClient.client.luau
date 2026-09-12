@@ -251,10 +251,33 @@ detailPanel.BackgroundColor3 = Color3.fromRGB(28, 25, 40)
 detailPanel.Parent = panel
 applyComicStyle(detailPanel, 12, 2)
 
--- Kopfbereich und beide Spalten neu setzen, sobald sich die Fenstergroesse aendert.
-local function layoutColumns()
+-- Flaeche, die den Kindern des Panels tatsaechlich zur Verfuegung steht.
+--
+-- AbsoluteSize ist die Groesse des Panels SELBST. TopInsetUtils legt darauf ein UIPadding
+-- (48 Pixel oben fuer die Roblox-Systemleiste, 8 unten), und Kinder beginnen erst
+-- darunter. Wer mit AbsoluteSize rechnet und Hoehen als festen Versatz setzt, baut ein
+-- Kind, das 56 Pixel zu hoch ist -- es reicht unter den Bildschirmrand, und alles, was an
+-- seiner Unterkante haengt, verschwindet.
+--
+-- Genau so ist der Research-Knopf verschwunden. Vorher waren die Hoehen skalenbasiert
+-- (1, -110) und haben das Polster deshalb von selbst beruecksichtigt; beim Umbau auf feste
+-- Hoehen -- die der Baum fuer seine Skalierung braucht -- ging das verloren.
+local function contentSize()
 	local width = panel.AbsoluteSize.X
 	local height = panel.AbsoluteSize.Y
+	local padding = panel:FindFirstChildOfClass("UIPadding")
+	if padding then
+		width -= padding.PaddingLeft.Offset + padding.PaddingLeft.Scale * width
+		width -= padding.PaddingRight.Offset + padding.PaddingRight.Scale * panel.AbsoluteSize.X
+		height -= padding.PaddingTop.Offset + padding.PaddingTop.Scale * height
+		height -= padding.PaddingBottom.Offset + padding.PaddingBottom.Scale * panel.AbsoluteSize.Y
+	end
+	return width, height
+end
+
+-- Kopfbereich und beide Spalten neu setzen, sobald sich die Fenstergroesse aendert.
+local function layoutColumns()
+	local width, height = contentSize()
 	if width <= 0 or height <= 0 then
 		return
 	end
@@ -306,6 +329,19 @@ local function layoutColumns()
 end
 
 panel:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutColumns)
+
+-- Auch auf das Polster hören, nicht nur auf die Fenstergrösse. TopInsetUtils liest die
+-- Höhe der Roblox-Systemleiste nicht nur einmal, sondern zieht sie nach -- bei jeder
+-- Änderung der Leiste und zusätzlich zeitversetzt, weil sie beim Start noch null meldet.
+-- Wenn sich dabei das Polster ändert, bleibt AbsoluteSize gleich; ohne diese Verbindung
+-- rechnete die Anordnung weiter mit dem alten Wert und die Detailspalte stünde wieder ein
+-- Stück zu tief.
+local panelPadding = panel:FindFirstChildOfClass("UIPadding")
+if panelPadding then
+	panelPadding:GetPropertyChangedSignal("PaddingTop"):Connect(layoutColumns)
+	panelPadding:GetPropertyChangedSignal("PaddingBottom"):Connect(layoutColumns)
+end
+
 layoutColumns()
 
 local detailEmpty = Instance.new("TextLabel")
