@@ -332,6 +332,60 @@ statusCluster.Position = UDim2.new(0.5, 0, 0, 8)
 statusCluster.BackgroundTransparency = 1
 statusCluster.Parent = screenGui
 
+-- ===== Eigene, mildere Skalierung fuer den Statusblock =====
+--
+-- Die Messung im Spiel hat es entschieden: die Felder werden geometrisch RICHTIG gebaut,
+-- kein Kind ragt hinaus. Zu klein sind sie, weil ResponsiveHudScale das ganze HUD auf bis
+-- zu 0.55 verkleinert -- es ist fuer 1280 x 720 ausgelegt, und auf dem Testgeraet greift
+-- genau dieser Boden. Aus 240 x 56 werden dann 132 x 30 Pixel, aus 19 Punkt Schrift werden
+-- zehn, aus 13 werden sieben.
+--
+-- Deshalb half Vergroessern zweimal nicht: der Faktor multipliziert jeden neuen Wert mit.
+-- 240 statt 224 sind auf dem Schirm 132 statt 123 Pixel -- neun Pixel, wo dreissig fehlen.
+--
+-- Der Statusblock ist die Anzeige, die man im Kampf am haeufigsten ansieht. Er bekommt
+-- seine eigene Gegenskalierung, die die globale teilweise zurueckdreht, bis mindestens
+-- STATUS_MINDESTSKALA erreicht ist. Vollstaendig zurueckdrehen waere falsch: auf einem
+-- kleinen Schirm SOLL das HUD schrumpfen, nur nicht so weit, dass man es nicht mehr liest.
+local STATUS_MINDESTSKALA = 0.82
+
+local statusScale = Instance.new("UIScale")
+statusScale.Name = "StatusScaleCompensation"
+statusScale.Scale = 1
+statusScale.Parent = statusCluster
+
+do
+	local beobachtet = nil
+
+	local function anwenden()
+		local hudScale = screenGui:FindFirstChildOfClass("UIScale")
+		local global = (hudScale and hudScale.Scale > 0) and hudScale.Scale or 1
+		-- Nur nach OBEN ausgleichen: bei voller Groesse bleibt der Block unveraendert.
+		statusScale.Scale = math.max(STATUS_MINDESTSKALA / global, 1)
+	end
+
+	-- Die globale UIScale entsteht moeglicherweise erst NACH diesem Skript -- die
+	-- HUD-Skripte laufen parallel, ihre Reihenfolge ist nicht garantiert. Also sowohl
+	-- jetzt pruefen als auch auf ihr Auftauchen und jede spaetere Aenderung hoeren.
+	local function neuBinden()
+		local hudScale = screenGui:FindFirstChildOfClass("UIScale")
+		if hudScale ~= beobachtet then
+			beobachtet = hudScale
+			if hudScale then
+				hudScale:GetPropertyChangedSignal("Scale"):Connect(anwenden)
+			end
+		end
+		anwenden()
+	end
+
+	screenGui.ChildAdded:Connect(function(kind)
+		if kind:IsA("UIScale") then
+			neuBinden()
+		end
+	end)
+	neuBinden()
+end
+
 local levelField = HudChrome.SlantPanel(statusCluster, {
 	name = "LevelField",
 	width = FELD_BREITE,
@@ -578,11 +632,16 @@ task.delay(2, function()
 	end
 
 	local skala = screenGui:FindFirstChildOfClass("UIScale")
+	local global = skala and skala.Scale or 1
+	local wirksam = global * statusScale.Scale
 	print(string.format(
-		"[Kaiju Debug] Statusfelder -- UIScale %.3f, erwartet je %d x %d Pixel.",
-		skala and skala.Scale or 1,
-		FELD_BREITE,
-		STATUS_HOEHE
+		"[Kaiju Debug] Statusfelder -- HUD-Skala %.3f, Ausgleich %.3f, wirksam %.3f."
+			.. " Erwartet je %d x %d Pixel.",
+		global,
+		statusScale.Scale,
+		wirksam,
+		math.floor(FELD_BREITE * wirksam + 0.5),
+		math.floor(STATUS_HOEHE * wirksam + 0.5)
 	))
 
 	for _, feld in { levelField, healthField } do
