@@ -175,35 +175,76 @@ screenGui.Parent = player:WaitForChild("PlayerGui")
 --
 -- Die Zahl behaelt ihren Goldton -- sie IST eine Messung, und Farbe ist nach der Stilregel
 -- genau dafuer da. Grund und Rahmen bleiben farblos.
+-- Dieselbe Hoehe wie der Home-Knopf daneben (44), damit die obere rechte Ecke eine Reihe
+-- ergibt. Vorher war das Feld mit 32 Pixeln niedriger als seine Nachbarn.
 local coinsFrame = Instance.new("Frame")
 coinsFrame.Name = "CoinsFrame"
-coinsFrame.Size = UDim2.new(0, 112, 0, 32)
+coinsFrame.Size = UDim2.new(0, 168, 0, 44)
 coinsFrame.AnchorPoint = Vector2.new(1, 0)
 coinsFrame.Position = UDim2.new(1, -68, 0, 20)
 coinsFrame.Parent = screenGui
 HudChrome.Panel(coinsFrame, { radius = HudChrome.Radius.Small })
 
-local coinsIcon = HudChrome.IconImage(coinsFrame, HudChrome.Icon.Coin)
-coinsIcon.Size = UDim2.new(0, 20, 0, 20)
-coinsIcon.Position = UDim2.new(0, 7, 0.5, -10)
+-- Das Waehrungszeichen aus der Vorlage statt des hochgeladenen Muenzbildes. Das Bild ist
+-- bunt und bricht damit die Regel, dass das Chrome farblos bleibt -- ein Zeichen nimmt
+-- dagegen den Goldton des Betrags an und gehoert sichtbar zu ihm.
+--
+-- Das Muenzbild bleibt in HudChrome.Icon.Coin erhalten: die fliegenden Muenzen, die beim
+-- Zerstoeren eines Gebaeudes zum Zaehler wandern, sind genau die Stelle, an der ein
+-- buntes Bild richtig ist.
+local coinsIcon = Instance.new("TextLabel")
+coinsIcon.Name = "CoinsIcon"
+coinsIcon.Size = UDim2.new(0, 30, 1, 0)
+coinsIcon.Position = UDim2.new(0, 10, 0, 0)
+coinsIcon.BackgroundTransparency = 1
+coinsIcon.TextXAlignment = Enum.TextXAlignment.Left
+coinsIcon.Text = "¥"
+coinsIcon.Parent = coinsFrame
+HudChrome.Number(coinsIcon, 26)
+coinsIcon.TextColor3 = Color3.fromRGB(255, 205, 60)
 
+-- Rechtsbuendig, wie Betraege in der Buchhaltung stehen: die Einerstelle bleibt an
+-- derselben Stelle, egal wie lang die Zahl wird. Bei einem Zaehler, der von 9.999 auf
+-- 10.000 springt, ist das der Unterschied zwischen ruhig und zappelig.
 local coinsLabel = Instance.new("TextLabel")
 coinsLabel.Name = "CoinsLabel"
-coinsLabel.Size = UDim2.new(1, -34, 1, 0)
-coinsLabel.Position = UDim2.new(0, 31, 0, 0)
+coinsLabel.Size = UDim2.new(1, -56, 1, 0)
+coinsLabel.Position = UDim2.new(0, 44, 0, 0)
 coinsLabel.BackgroundTransparency = 1
-coinsLabel.TextXAlignment = Enum.TextXAlignment.Left
+coinsLabel.TextXAlignment = Enum.TextXAlignment.Right
 coinsLabel.Text = "0"
 coinsLabel.Parent = coinsFrame
-HudChrome.Number(coinsLabel)
+HudChrome.Number(coinsLabel, 22)
 coinsLabel.TextColor3 = Color3.fromRGB(255, 205, 60)
+
+-- Laesst das GANZE Geldfeld aufblitzen: Grund und Rahmen. flashElement allein faerbt nur
+-- den Hintergrund; bei einem Panel mit duennem Stahlrahmen ist der Rahmen aber die
+-- sichtbarste Kante, und ein Blitz, der ihn auslaesst, wirkt wie ein Fehler.
+local coinsStroke = coinsFrame:FindFirstChildOfClass("UIStroke")
+
+local function flashCoinsFrame()
+	flashElement(coinsFrame, Color3.fromRGB(255, 232, 150))
+	if not coinsStroke then
+		return
+	end
+	if coinsStroke:GetAttribute("RestColor") == nil then
+		coinsStroke:SetAttribute("RestColor", coinsStroke.Color)
+	end
+	local ruhe = coinsStroke:GetAttribute("RestColor")
+	coinsStroke.Color = Color3.fromRGB(255, 232, 150)
+	TweenService:Create(
+		coinsStroke,
+		TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+		{ Color = ruhe }
+	):Play()
+end
 
 -- ===== Player-Status-Cluster: Health + Level + XP als EIN kompakter Block, oben Mitte
 -- (neue HUD-Spezifikation) -- vorher zwei separate, deutlich grössere Frames (142px
 -- Gesamthöhe), jetzt ein einziger, ~78px hoher Cluster. Priorität: Health > Level > XP.
 local statusCluster = Instance.new("Frame")
 statusCluster.Name = "PlayerStatusCluster"
-statusCluster.Size = UDim2.new(0, 320, 0, 78)
+statusCluster.Size = UDim2.new(0, 460, 0, 48)
 statusCluster.AnchorPoint = Vector2.new(0.5, 0)
 statusCluster.Position = UDim2.new(0.5, 0, 0, 8)
 statusCluster.BackgroundTransparency = 1
@@ -229,7 +270,7 @@ HudChrome.Label(levelLabel, 16)
 -- tatsaechlich etwas.
 local healthFrame = Instance.new("Frame")
 healthFrame.Name = "HealthFrame"
-healthFrame.Size = UDim2.new(1, 0, 0, 22)
+healthFrame.Size = UDim2.new(0.5, -8, 0, 22)
 healthFrame.Position = UDim2.new(0, 0, 0, 22)
 healthFrame.Parent = statusCluster
 HudChrome.Panel(healthFrame, {
@@ -305,15 +346,22 @@ if player.Character then
 	connectHealthBar(player.Character)
 end
 
--- XP-Bar: nur noch 8px hoch (dünner Streifen unter der Health-Bar), kein eigener
--- Hintergrund-Rahmen mehr -- soll im Kampf nicht mit Health konkurrieren.
+-- XP-Balken: steht jetzt NEBEN dem Lebensbalken, nicht mehr als duenner Streifen
+-- darunter. Die Vorlage stellt beide als gleichwertige Messungen nebeneinander, und das
+-- ist auch richtig: Leben und Fortschritt sind zwei Groessen, keine Haupt- und Nebensache.
+--
+-- Er war vorher 8 Pixel hoch, ohne Beschriftung und mit blauem Hintergrund. Jetzt gleich
+-- hoch wie der Lebensbalken, mit der Zahl darin und derselben Vertiefung als Grund.
 local barBackground = Instance.new("Frame")
 barBackground.Name = "BarBackground"
-barBackground.Size = UDim2.new(1, 0, 0, 8)
-barBackground.Position = UDim2.new(0, 0, 0, 48)
-barBackground.BackgroundColor3 = Color3.fromRGB(30, 60, 100)
+barBackground.Size = UDim2.new(0.5, -8, 0, 22)
+barBackground.Position = UDim2.new(0.5, 8, 0, 22)
 barBackground.Parent = statusCluster
-applyComicStyle(barBackground, 4, 1)
+HudChrome.Panel(barBackground, {
+	radius = HudChrome.Radius.Small,
+	fill = HudChrome.Color.PanelSunken,
+	transparency = 0,
+})
 
 local barFill = Instance.new("Frame")
 barFill.Name = "BarFill"
@@ -322,7 +370,18 @@ barFill.BackgroundColor3 = Color3.fromRGB(255, 220, 60)
 barFill.BorderSizePixel = 0
 barFill.ZIndex = 2
 barFill.Parent = barBackground
-applyComicStyle(barFill, 3, 0)
+HudChrome.Panel(barFill, { radius = HudChrome.Radius.Small, fill = false, border = false })
+
+local xpLabel = Instance.new("TextLabel")
+xpLabel.Name = "XpLabel"
+xpLabel.Size = UDim2.new(1, -16, 1, 0)
+xpLabel.Position = UDim2.new(0, 8, 0, 0)
+xpLabel.BackgroundTransparency = 1
+xpLabel.TextXAlignment = Enum.TextXAlignment.Left
+xpLabel.ZIndex = 3
+xpLabel.Text = "XP 0 / 0"
+xpLabel.Parent = barBackground
+HudChrome.Number(xpLabel, 14)
 
 -- ===== Heat/Berserker-Leiste -- VERTIKAL, unten zentriert zwischen den Angriffs-Buttons
 -- (Standardangriffe links, Spezialangriffe rechts) -- gleicher Kampf-Kontext, gleiche
@@ -1703,7 +1762,12 @@ local function flyCoinsToHud(worldPosition, amount)
 				arrivedCount += 1
 				if arrivedCount == coinCount then
 					animateCoinCount(oldValue, newValue)
+					-- Das GANZE Feld blinkt, nicht nur die Zahl -- Rahmen, Zeichen und
+					-- Betrag gehoeren zusammen, und ein Aufblitzen, das an der Kante des
+					-- Textes endet, sieht aus wie ein Fehler.
 					flashElement(coinsLabel, Color3.fromRGB(255, 255, 180))
+					flashElement(coinsIcon, Color3.fromRGB(255, 255, 180))
+					flashCoinsFrame()
 				end
 			end)
 		end)
@@ -1862,6 +1926,7 @@ function advanceXPBar(amount)
 
 	local needed = math.max(xpNeededValue.Value, 1)
 	barFill.Size = UDim2.new(math.clamp(displayedXP / needed, 0, 1), 0, 1, 0)
+	xpLabel.Text = "XP " .. NumberFormat.Format(math.floor(displayedXP)) .. " / " .. NumberFormat.Format(needed)
 	flashElement(barFill, Color3.fromRGB(255, 255, 200))
 	glowFlashElement(barFill, Color3.fromRGB(255, 255, 150))
 end
@@ -1885,6 +1950,7 @@ function updateLevelBar()
 		displayedXP = xpValue.Value
 		local needed = math.max(xpNeededValue.Value, 1)
 		barFill.Size = UDim2.new(math.clamp(displayedXP / needed, 0, 1), 0, 1, 0)
+		xpLabel.Text = "XP " .. NumberFormat.Format(math.floor(displayedXP)) .. " / " .. NumberFormat.Format(needed)
 		print("[Kaiju-Debug-Client] updateLevelBar SYNC: Level=", leaderstats.Level.Value, "XP=", xpValue.Value, "XPNeeded=", xpNeededValue.Value, "ratio=", displayedXP / needed)
 	end
 
