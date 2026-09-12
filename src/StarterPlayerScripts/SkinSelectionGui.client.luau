@@ -15,6 +15,7 @@ local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
 local applyComicStyle = ComicStyleUtils.Apply
 local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
 local SoundService = game:GetService("SoundService")
+local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -501,6 +502,27 @@ healthLabel.TextXAlignment = Enum.TextXAlignment.Left
 healthLabel.Text = "100"
 healthLabel.Parent = healthField
 HudChrome.NumberBold(healthLabel, 19)
+
+-- Robloxs EIGENE Lebensanzeige abschalten. Sie blendet sich oben rechts von selbst ein,
+-- sobald das Leben unter das Maximum faellt -- also genau dann, wenn unsere eigene Anzeige
+-- gerade etwas zu sagen hat. Zwei Lebensbalken auf einem Bildschirm sind einer zu viel,
+-- und der von Roblox gehoert nicht zu diesem HUD.
+--
+-- Der Aufruf steht in einer Schleife mit pcall: SetCoreGuiEnabled schlaegt fehl, solange
+-- die CoreGui noch nicht geladen ist, und die Reihenfolge zwischen ihr und diesem Skript
+-- ist nicht garantiert. Ein einzelner Versuch beim Start waere ein Gluecksspiel.
+task.spawn(function()
+	for _ = 1, 10 do
+		local ok = pcall(function()
+			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)
+		end)
+		if ok then
+			return
+		end
+		task.wait(0.5)
+	end
+	warn("[Kaiju Debug] Robloxs Standard-Lebensanzeige liess sich nicht abschalten.")
+end)
 
 -- Der zuletzt gezeigte Lebensstand. Braucht es, um zu wissen, OB und in welche Richtung
 -- sich etwas geaendert hat -- die Anzeige wird auch dann aufgerufen, wenn nur das Maximum
