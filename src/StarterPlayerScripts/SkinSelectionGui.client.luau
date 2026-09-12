@@ -181,7 +181,7 @@ local coinsFrame = Instance.new("Frame")
 coinsFrame.Name = "CoinsFrame"
 coinsFrame.Size = UDim2.new(0, 168, 0, 44)
 coinsFrame.AnchorPoint = Vector2.new(1, 0)
-coinsFrame.Position = UDim2.new(1, -68, 0, 20)
+coinsFrame.Position = UDim2.new(1, -68, 0, 16) -- gleiche Oberkante wie der Home-Knopf daneben
 coinsFrame.Parent = screenGui
 HudChrome.Panel(coinsFrame, { radius = HudChrome.Radius.Small })
 
@@ -222,8 +222,27 @@ coinsLabel.TextColor3 = Color3.fromRGB(255, 205, 60)
 -- sichtbarste Kante, und ein Blitz, der ihn auslaesst, wirkt wie ein Fehler.
 local coinsStroke = coinsFrame:FindFirstChildOfClass("UIStroke")
 
+local COINS_GOLD = Color3.fromRGB(255, 205, 60)
+local COINS_BLITZ = Color3.fromRGB(255, 240, 190)
+
+-- Der Text wird ueber seine SCHRIFTfarbe aufgehellt, nicht ueber seinen Hintergrund.
+-- flashElement kann das nicht: es faerbt grundsaetzlich den Hintergrund und hebt ihn dabei
+-- auf Transparenz 0.3 an. Bei einem durchsichtigen Label macht das ein Rechteck sichtbar,
+-- das sonst niemand sieht -- das waren die "verschiedenen Felder mit schwarzen Raendern".
+local function pulseCoinText(label)
+	label.TextColor3 = COINS_BLITZ
+	TweenService:Create(
+		label,
+		TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+		{ TextColor3 = COINS_GOLD }
+	):Play()
+end
+
+-- Ein einziger Blitz ueber das ganze Feld: Grund, Rahmen, Zeichen und Betrag zusammen.
 local function flashCoinsFrame()
-	flashElement(coinsFrame, Color3.fromRGB(255, 232, 150))
+	flashElement(coinsFrame, Color3.fromRGB(60, 52, 28))
+	pulseCoinText(coinsIcon)
+	pulseCoinText(coinsLabel)
 	if not coinsStroke then
 		return
 	end
@@ -231,7 +250,7 @@ local function flashCoinsFrame()
 		coinsStroke:SetAttribute("RestColor", coinsStroke.Color)
 	end
 	local ruhe = coinsStroke:GetAttribute("RestColor")
-	coinsStroke.Color = Color3.fromRGB(255, 232, 150)
+	coinsStroke.Color = COINS_BLITZ
 	TweenService:Create(
 		coinsStroke,
 		TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
@@ -244,11 +263,20 @@ end
 -- Gesamthöhe), jetzt ein einziger, ~78px hoher Cluster. Priorität: Health > Level > XP.
 local statusCluster = Instance.new("Frame")
 statusCluster.Name = "PlayerStatusCluster"
-statusCluster.Size = UDim2.new(0, 460, 0, 48)
+statusCluster.Size = UDim2.new(0, 476, 0, 62)
 statusCluster.AnchorPoint = Vector2.new(0.5, 0)
 statusCluster.Position = UDim2.new(0.5, 0, 0, 8)
-statusCluster.BackgroundTransparency = 1
 statusCluster.Parent = screenGui
+HudChrome.Panel(statusCluster, { radius = HudChrome.Radius.Panel })
+
+-- Das Polster macht die Innenflaeche genau 460 x 50 gross -- die Kinder rechnen weiter
+-- mit denselben Massen wie vorher, nur liegen sie jetzt in einem Gehaeuse.
+local statusPadding = Instance.new("UIPadding")
+statusPadding.PaddingLeft = UDim.new(0, 8)
+statusPadding.PaddingRight = UDim.new(0, 8)
+statusPadding.PaddingTop = UDim.new(0, 6)
+statusPadding.PaddingBottom = UDim.new(0, 6)
+statusPadding.Parent = statusCluster
 
 -- Level: klein, kompakt, ÜBER der Health-Bar (nicht mehr eigene grosse Fläche)
 -- "⭐ Level 0" mit Textumriss wird zu "LV 0" -- Bezeichnung in der Beschriftungsschrift,
@@ -256,7 +284,7 @@ statusCluster.Parent = screenGui
 -- weil der Text frei ueber der Welt stand; jetzt liegt er auf einem Panel.
 local levelLabel = Instance.new("TextLabel")
 levelLabel.Name = "LevelLabel"
-levelLabel.Size = UDim2.new(1, 0, 0, 18)
+levelLabel.Size = UDim2.new(0, 96, 0, 18)
 levelLabel.Position = UDim2.new(0, 0, 0, 0)
 levelLabel.BackgroundTransparency = 1
 levelLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -270,8 +298,8 @@ HudChrome.Label(levelLabel, 16)
 -- tatsaechlich etwas.
 local healthFrame = Instance.new("Frame")
 healthFrame.Name = "HealthFrame"
-healthFrame.Size = UDim2.new(0.5, -8, 0, 22)
-healthFrame.Position = UDim2.new(0, 0, 0, 22)
+healthFrame.Size = UDim2.new(0.5, -8, 0, 24)
+healthFrame.Position = UDim2.new(0, 0, 0, 24)
 healthFrame.Parent = statusCluster
 HudChrome.Panel(healthFrame, {
 	radius = HudChrome.Radius.Small,
@@ -287,19 +315,22 @@ healthBarFill.BorderSizePixel = 0
 healthBarFill.Parent = healthFrame
 HudChrome.Panel(healthBarFill, { radius = HudChrome.Radius.Small, fill = false, border = false })
 
--- "HP 8250 / 8250" wie in der Vorlage: Bezeichnung und Zahlen in der Ziffernschrift,
--- linksbuendig statt mittig -- eine Zahl, die mittig steht, springt beim Aendern ihrer
--- Stellenzahl hin und her.
+-- Die Zahl steht UEBER dem Balken, nicht darin. Im Balken war sie unlesbar: weisse
+-- Schrift auf gruener und vor allem auf gelber Fuellung. Eine dunkle Schrift haette es
+-- nicht geloest -- bei niedrigem Leben ist der Balken fast leer und dieselbe Zahl stuende
+-- dann auf dem dunklen Grund. Ueber dem Balken stimmt der Kontrast in jeder Lage.
+--
+-- Rechtsbuendig an der Kante ihres eigenen Balkens, damit Bezeichnung links und Messung
+-- rechts eine Spalte bilden.
 local healthLabel = Instance.new("TextLabel")
 healthLabel.Name = "HealthLabel"
-healthLabel.Size = UDim2.new(1, -16, 1, 0)
-healthLabel.Position = UDim2.new(0, 8, 0, 0)
+healthLabel.Size = UDim2.new(0.5, -104, 0, 18)
+healthLabel.Position = UDim2.new(0, 96, 0, 0)
 healthLabel.BackgroundTransparency = 1
-healthLabel.TextXAlignment = Enum.TextXAlignment.Left
-healthLabel.ZIndex = 2
+healthLabel.TextXAlignment = Enum.TextXAlignment.Right
 healthLabel.Text = "HP 100 / 100"
-healthLabel.Parent = healthFrame
-HudChrome.Number(healthLabel, 14)
+healthLabel.Parent = statusCluster
+HudChrome.Number(healthLabel, 15)
 
 local function updateHealthBar()
 	local character = player.Character
@@ -354,8 +385,8 @@ end
 -- hoch wie der Lebensbalken, mit der Zahl darin und derselben Vertiefung als Grund.
 local barBackground = Instance.new("Frame")
 barBackground.Name = "BarBackground"
-barBackground.Size = UDim2.new(0.5, -8, 0, 22)
-barBackground.Position = UDim2.new(0.5, 8, 0, 22)
+barBackground.Size = UDim2.new(0.5, -8, 0, 24)
+barBackground.Position = UDim2.new(0.5, 8, 0, 24)
 barBackground.Parent = statusCluster
 HudChrome.Panel(barBackground, {
 	radius = HudChrome.Radius.Small,
@@ -372,16 +403,17 @@ barFill.ZIndex = 2
 barFill.Parent = barBackground
 HudChrome.Panel(barFill, { radius = HudChrome.Radius.Small, fill = false, border = false })
 
+-- Gleiche Begruendung wie beim Lebensbalken: die gelbe Fuellung war der schlimmste Fall
+-- fuer weisse Schrift. Die Zahl steht jetzt ueber ihrem Balken, rechtsbuendig.
 local xpLabel = Instance.new("TextLabel")
 xpLabel.Name = "XpLabel"
-xpLabel.Size = UDim2.new(1, -16, 1, 0)
-xpLabel.Position = UDim2.new(0, 8, 0, 0)
+xpLabel.Size = UDim2.new(0.5, -8, 0, 18)
+xpLabel.Position = UDim2.new(0.5, 8, 0, 0)
 xpLabel.BackgroundTransparency = 1
-xpLabel.TextXAlignment = Enum.TextXAlignment.Left
-xpLabel.ZIndex = 3
+xpLabel.TextXAlignment = Enum.TextXAlignment.Right
 xpLabel.Text = "XP 0 / 0"
-xpLabel.Parent = barBackground
-HudChrome.Number(xpLabel, 14)
+xpLabel.Parent = statusCluster
+HudChrome.Number(xpLabel, 15)
 
 -- ===== Heat/Berserker-Leiste -- VERTIKAL, unten zentriert zwischen den Angriffs-Buttons
 -- (Standardangriffe links, Spezialangriffe rechts) -- gleicher Kampf-Kontext, gleiche
@@ -1669,34 +1701,14 @@ local function spawnFlyingCoin(worldPosition, onArrive)
 	local sideJump = (math.random(0, 1) == 0 and -1 or 1) * math.random(100, 180)
 	local poppedPosition = UDim2.new(0, screenPoint.X + sideJump - 20, 0, screenPoint.Y - 48)
 
-	-- Gezeichnete Münze statt Emoji-Text, damit sie unabhängig von Schriftart-Emoji-Support
-	-- immer sichtbar ist (runder gelber Kreis mit schwarzem Comic-Rand, wie die Coins-Anzeige).
-	local coinIcon = Instance.new("Frame")
+	-- Das hochgeladene Muenzbild statt des gezeichneten Kreises mit schwarzem Comic-Rand.
+	-- Hier ist ein buntes Bild richtig: die fliegende Muenze ist Belohnung, kein Chrome --
+	-- sie darf aus dem farblosen HUD herausfallen, das ist gerade ihre Aufgabe.
+	local coinIcon = HudChrome.IconImage(screenGui, HudChrome.Icon.Coin)
 	coinIcon.Name = "FlyingCoin"
 	coinIcon.Size = UDim2.new(0, 0, 0, 0) -- startet unsichtbar klein, für den Pop-Effekt
 	coinIcon.Position = UDim2.new(0, screenPoint.X + sideJump * 0.3, 0, screenPoint.Y - 20)
-	coinIcon.BackgroundColor3 = Color3.fromRGB(255, 205, 30)
 	coinIcon.ZIndex = 50
-	coinIcon.Parent = screenGui
-
-	local coinCorner = Instance.new("UICorner")
-	coinCorner.CornerRadius = UDim.new(1, 0) -- 1,0 = perfekter Kreis
-	coinCorner.Parent = coinIcon
-
-	local coinStroke = Instance.new("UIStroke")
-	coinStroke.Thickness = 3
-	coinStroke.Color = Color3.fromRGB(0, 0, 0)
-	coinStroke.Parent = coinIcon
-
-	local coinSymbol = Instance.new("TextLabel")
-	coinSymbol.Size = UDim2.new(1, 0, 1, 0)
-	coinSymbol.BackgroundTransparency = 1
-	coinSymbol.Font = Enum.Font.LuckiestGuy
-	coinSymbol.TextScaled = true
-	coinSymbol.Text = "$"
-	coinSymbol.TextColor3 = Color3.fromRGB(90, 55, 0)
-	coinSymbol.ZIndex = 51
-	coinSymbol.Parent = coinIcon
 
 	-- Phase 1: seitlich hüpfen + auf volle Größe aufpoppen (Überschwung-Easing)
 	local popTween = TweenService:Create(
@@ -1715,9 +1727,9 @@ local function spawnFlyingCoin(worldPosition, onArrive)
 			-- Phase 3: erst jetzt Richtung Coins-Anzeige fliegen
 			local targetPosition = UDim2.new(
 				0,
-				coinsLabel.AbsolutePosition.X + coinsLabel.AbsoluteSize.X / 2 - 20,
+				coinsFrame.AbsolutePosition.X + coinsFrame.AbsoluteSize.X / 2 - 20,
 				0,
-				coinsLabel.AbsolutePosition.Y + coinsLabel.AbsoluteSize.Y / 2 - 20
+				coinsFrame.AbsolutePosition.Y + coinsFrame.AbsoluteSize.Y / 2 - 20
 			)
 
 			local flightTween = TweenService:Create(
@@ -1762,11 +1774,7 @@ local function flyCoinsToHud(worldPosition, amount)
 				arrivedCount += 1
 				if arrivedCount == coinCount then
 					animateCoinCount(oldValue, newValue)
-					-- Das GANZE Feld blinkt, nicht nur die Zahl -- Rahmen, Zeichen und
-					-- Betrag gehoeren zusammen, und ein Aufblitzen, das an der Kante des
-					-- Textes endet, sieht aus wie ein Fehler.
-					flashElement(coinsLabel, Color3.fromRGB(255, 255, 180))
-					flashElement(coinsIcon, Color3.fromRGB(255, 255, 180))
+					-- Ein Aufruf fuer das ganze Feld -- Grund, Rahmen und beide Texte.
 					flashCoinsFrame()
 				end
 			end)
@@ -2327,7 +2335,10 @@ shopFrame:GetPropertyChangedSignal("Visible"):Connect(function()
 		refreshShop()
 	end
 end)
-	flashElement(statusCluster, Color3.fromRGB(255, 255, 150))
+	-- Gedaempfter Blitz statt Cremeweiss: der Block hat jetzt ein eigenes dunkles Gehaeuse,
+	-- und eine helle Flaeche von 476 x 62 Pixeln oben in der Mitte waere beim Stufenaufstieg
+	-- ein Schlag ins Gesicht statt eines Hinweises.
+	flashElement(statusCluster, Color3.fromRGB(92, 82, 40))
 end)
 local leaderstatsFolder = player:WaitForChild("leaderstats")
 leaderstatsFolder:WaitForChild("Level"):GetPropertyChangedSignal("Value"):Connect(updateLevelBar)
