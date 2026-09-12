@@ -50,10 +50,75 @@ end
 -- Richtet `model` mittig aus und stellt die Kamera so, dass es den Rahmen füllt.
 -- `container` liefert das Seitenverhältnis; vor dem ersten Zeichnen ist es null, dann
 -- wird 1:1 angenommen.
+-- Hüllquader NUR über die sichtbaren Teile.
+--
+-- GetBoundingBox() zählt jedes BasePart mit, auch vollständig durchsichtige: Trefferzonen,
+-- Rotorscheiben, Lichtkegel, durchsichtige Wurzelteile. Die verschieben den Mittelpunkt,
+-- ohne dass man sie sieht -- das Modell steht dann sichtbar aus der Mitte gerückt, und die
+-- Kamera steht zu weit weg, weil sie einen grösseren Körper rahmt als den, der gezeigt
+-- wird. Genau so sah der Verkehrshelikopter aus: zur Seite und nach oben versetzt.
+--
+-- Eine Vorschau soll rahmen, was man SIEHT. Das Modell muss dafür bereits achsenparallel
+-- stehen (der Aufrufer setzt es auf CFrame.new(0,0,0)), dann genügen die Eckpunkte.
+local function visibleBounds(model)
+	local minimum, maximum
+	local skipped = 0
+
+	for _, part in ipairs(model:GetDescendants()) do
+		if part:IsA("BasePart") then
+			if part.Transparency >= 1 then
+				skipped += 1
+			else
+				local half = part.Size / 2
+				for _, signX in ipairs({ -1, 1 }) do
+					for _, signY in ipairs({ -1, 1 }) do
+						for _, signZ in ipairs({ -1, 1 }) do
+							local corner = (part.CFrame * CFrame.new(
+								half.X * signX,
+								half.Y * signY,
+								half.Z * signZ
+							)).Position
+							minimum = minimum and minimum:Min(corner) or corner
+							maximum = maximum and maximum:Max(corner) or corner
+						end
+					end
+				end
+			end
+		end
+	end
+
+	if not minimum then
+		return nil, nil, skipped
+	end
+	return (minimum + maximum) / 2, maximum - minimum, skipped
+end
+
 function ModelPreviewUtils.Fit(viewport, model, container, fill)
 	model:PivotTo(CFrame.new(0, 0, 0))
-	local boundingCFrame, size = model:GetBoundingBox()
-	model:PivotTo(model:GetPivot() - boundingCFrame.Position)
+
+	local center, size, skipped = visibleBounds(model)
+	if not center then
+		-- Kein einziges sichtbares Teil -- dann bleibt nur der volle Hüllquader. Ein Modell
+		-- ohne sichtbare Teile ist zwar unsinnig, aber eine Vorschau, die deshalb gar nichts
+		-- anzeigt, wäre schlechter als eine schiefe.
+		local boundingCFrame
+		boundingCFrame, size = model:GetBoundingBox()
+		center = boundingCFrame.Position
+	elseif skipped > 0 then
+		-- Nachweis, dass die Korrektur greift, und zugleich der Hinweis aufs Modell: um
+		-- diesen Betrag stand die Vorschau vorher daneben.
+		local _, fullSize = model:GetBoundingBox()
+		local shift = (fullSize - size).Magnitude
+		if shift > 0.5 then
+			print(string.format(
+				"[Kaiju Debug] Vorschau %s: %d durchsichtige Teile uebergangen, "
+					.. "Huellquader dadurch um %.1f Studs kleiner.",
+				model.Name, skipped, shift
+			))
+		end
+	end
+
+	model:PivotTo(model:GetPivot() - center)
 
 	local camera = Instance.new("Camera")
 	camera.FieldOfView = FIELD_OF_VIEW
