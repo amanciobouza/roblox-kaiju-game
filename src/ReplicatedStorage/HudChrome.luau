@@ -178,9 +178,9 @@ end
 -- des Geraets -- bleibt das Feld einfach leer. Es gibt keinen Fehler, keine Warnung, und
 -- auf dem Telefon sieht man ein anderes Ergebnis als am PC, ohne zu wissen warum.
 --
--- Deshalb hier: alle Symbole aktiv vorladen und danach BERICHTEN, welche angekommen sind.
--- Das ist der Unterschied zwischen "das Symbol fehlt" und "ich habe an der falschen Stelle
--- geschaut".
+-- Deshalb hier: alle Symbole aktiv vorladen und dabei je Datei BERICHTEN, ob sie
+-- angekommen ist. Das ist der Unterschied zwischen "das Symbol fehlt" und "ich habe an der
+-- falschen Stelle geschaut".
 local function preloadIcons()
 	local ContentProvider = game:GetService("ContentProvider")
 
@@ -191,24 +191,26 @@ local function preloadIcons()
 		namen[assetId] = name
 	end
 
+	-- PreloadAsync meldet je Datei zurueck, OB sie geladen wurde -- genau das wird hier
+	-- gebraucht.
+	--
+	-- Der erste Versuch pruefte stattdessen IsLoaded an einem frisch angelegten
+	-- ImageLabel. Das war falsch: ein ImageLabel, das nirgends eingehaengt ist, wird nie
+	-- gezeichnet, also laedt Roblox sein Bild gar nicht erst. IsLoaded blieb dadurch bei
+	-- ALLEN auf false -- auch bei denen, die im Spiel einwandfrei zu sehen waren. Eine
+	-- Pruefung, die immer dasselbe sagt, ist keine Pruefung.
+	local fehlend = {}
 	local ok = pcall(function()
-		ContentProvider:PreloadAsync(liste)
+		ContentProvider:PreloadAsync(liste, function(contentId, status)
+			if status ~= Enum.AssetFetchStatus.Success then
+				local name = namen[contentId] or "?"
+				table.insert(fehlend, string.format("%s (%s, %s)", name, contentId, status.Name))
+			end
+		end)
 	end)
 	if not ok then
 		warn("[Kaiju Debug] HudChrome: Vorladen der Symbole fehlgeschlagen.")
 		return
-	end
-
-	-- PreloadAsync kehrt auch dann zurueck, wenn einzelne Bilder NICHT geladen werden
-	-- konnten. Ob eines wirklich da ist, sagt nur IsLoaded an einem echten ImageLabel.
-	local fehlend = {}
-	for assetId, name in pairs(namen) do
-		local probe = Instance.new("ImageLabel")
-		probe.Image = assetId
-		if not probe.IsLoaded then
-			table.insert(fehlend, string.format("%s (%s)", name, assetId))
-		end
-		probe:Destroy()
 	end
 
 	if #fehlend > 0 then
