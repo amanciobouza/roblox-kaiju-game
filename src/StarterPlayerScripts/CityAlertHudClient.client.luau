@@ -1,11 +1,11 @@
--- VERSION: 2026-09-12 #1
--- UMBAU: militaerisch/Sci-Fi ueber HudChrome -- Sterne werden ein Fuenf-Segment-Balken
+-- VERSION: 2026-09-12 #2
+-- UMBAU: militaerisch/Sci-Fi ueber HudChrome; Druckanzeige entfernt
 -- LocalScript: CityAlertHudClient
 -- Ort in Studio: StarterPlayer > StarterPlayerScripts
 -- Zeigt oben rechts, in welcher Stadt der Spieler steht, wie hoch die Alarmstufe ist,
--- wie weit es zur naechsten ist, welche Aufgaben offen sind -- und, sobald die Stadt
--- gebrochen ist, den Countdown der freien Zerstoerung. Attribut "CurrentCityName" wird
--- serverseitig von CityAlertService.lua gepflegt.
+-- welche Aufgaben offen sind -- und, sobald die Stadt gebrochen ist, den Countdown der
+-- freien Zerstoerung. Attribut "CurrentCityName" wird serverseitig von
+-- CityAlertService.lua gepflegt.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -48,7 +48,7 @@ local CITY_HOURS = {
 local MAX_ALERT_LEVEL = 5 -- so viele Segmente hat der Balken
 
 local PANEL_BREITE = 236
-local PANEL_HOEHE = 92
+local PANEL_HOEHE = 80
 local PANEL_RAND = 10
 local INNEN_BREITE = PANEL_BREITE - PANEL_RAND * 2
 
@@ -194,36 +194,12 @@ end
 local currentStarCount = 0
 local lastShownMaxLevel = nil
 
--- ===== Fortschritt zur naechsten Stufe =====
--- Er zeigt den Druck in DREI groben Stufen, nicht auf den Punkt genau. Vorher lief er
--- linear mit dem Serverwert mit -- damit konnte man ablesen, dass der naechste Schlag die
--- Stufe ausloest, und der Moment war verschenkt, bevor er da war.
+-- Eine Anzeige des Drucks zur naechsten Stufe gibt es bewusst NICHT.
 --
--- Der dritte Block deckt alles von 70 bis 100 Prozent ab. Man weiss also, dass gleich
--- etwas kommt, aber nicht wann. Genau diese Unschaerfe ist der Zweck: Anspannung statt
--- Countdown.
-local DRUCK_BLOECKE = 3
-local DRUCK_SCHWELLEN = { 0.15, 0.45, 0.70 }
-local DRUCK_LUECKE = 4
-local DRUCK_BREITE = (INNEN_BREITE - DRUCK_LUECKE * (DRUCK_BLOECKE - 1)) / DRUCK_BLOECKE
-
-local pressureBlocks = {}
-for i = 1, DRUCK_BLOECKE do
-	local block = Instance.new("Frame")
-	block.Name = "PressureBlock" .. i
-	block.Size = UDim2.new(0, DRUCK_BREITE, 0, 6)
-	block.Position = UDim2.new(0, PANEL_RAND + (i - 1) * (DRUCK_BREITE + DRUCK_LUECKE), 0, 78)
-	block.BackgroundColor3 = HudChrome.Color.PanelSunken
-	block.BorderSizePixel = 0
-	block.ZIndex = 21
-	block.Parent = alertFrame
-
-	local blockCorner = Instance.new("UICorner")
-	blockCorner.CornerRadius = UDim.new(0, 2)
-	blockCorner.Parent = block
-
-	pressureBlocks[i] = block
-end
+-- Sie stand hier zweimal: erst als mitlaufender Balken, dann als drei grobe Bloecke. Auch
+-- grob war sie noch zu viel -- die Eskalation kuendigt sich ohnehin selbst an, sobald sie
+-- eintritt, und diese Ankuendigung sagt auch, was jetzt kommt. Eine zweite Anzeige davor
+-- nimmt dem Moment genau das, was ihn ausmacht: dass er ueberrascht.
 
 -- Die Farbe der Alarmstufe: von Warnfarbe auf Gefahrfarbe, je naeher an der Hoechststufe
 -- dieser Stadt. Sie ist eine MESSUNG und darf deshalb farbig sein -- das Chrome drumherum
@@ -250,9 +226,6 @@ local function updateAlertHud()
 		for _, star in ipairs(starLabels) do
 			star.Visible = false
 		end
-		for _, block in ipairs(pressureBlocks) do
-			block.Visible = false
-		end
 		currentStarCount = 0
 		lastShownMaxLevel = nil
 		lastShownLevel = nil
@@ -273,9 +246,6 @@ local function updateAlertHud()
 	end
 
 	alertCaption.Visible = true
-	for _, block in ipairs(pressureBlocks) do
-		block.Visible = true
-	end
 
 	local level = math.max(levelValue.Value, 0)
 	local config = CityAlertConfig.GetCityConfig(cityName)
@@ -335,24 +305,6 @@ local function updateAlertHud()
 	end
 	currentStarCount = starCount
 
-	-- Druckanzeige: DREI grobe Bloecke statt eines mitlaufenden Balkens. Der dritte deckt
-	-- alles ab 70 Prozent ab -- man weiss, dass gleich etwas kommt, aber nicht wann.
-	local progressValue = cityAlertValues:FindFirstChild(cityName .. "Progress")
-	local ratio = 0
-	if progressValue and config and config.AlertThresholdLevel2 and config.AlertThresholdLevel2 > 0 then
-		ratio = math.clamp(progressValue.Value / config.AlertThresholdLevel2, 0, 1)
-	end
-	local naechsteFarbe = alarmFarbe(math.min(level + 1, maxLevel), maxLevel)
-	for i, block in ipairs(pressureBlocks) do
-		if ratio >= DRUCK_SCHWELLEN[i] then
-			block.BackgroundColor3 = naechsteFarbe
-			block.BackgroundTransparency = 0
-		else
-			block.BackgroundColor3 = HudChrome.Color.PanelSunken
-			block.BackgroundTransparency = 0
-		end
-	end
-
 	alertFrame.Visible = true
 
 	-- Kurzes Aufleuchten bei einem ECHTEN Stufenwechsel (nicht bei jedem Durchlauf). Es
@@ -372,15 +324,16 @@ end
 player:GetAttributeChangedSignal("CurrentCityName"):Connect(updateAlertHud)
 player:GetAttributeChangedSignal("CurrentZone"):Connect(updateAlertHud)
 
--- Auf Aenderungen JEDES Stadt-Level-Werts UND JEDES Stadt-Progress-Werts reagieren --
--- Stufenwechsel sind selten (Segmente), Fortschritt aendert sich staendig (Balken).
+-- Nur noch auf die Stufen-Werte hoeren. Der Fortschrittswert aendert sich im Kampf
+-- staendig; seit die Druckanzeige weg ist, zeigt die Anzeige davon nichts mehr, und jeder
+-- dieser Aufrufe waere Arbeit ohne Wirkung.
 --
 -- Das Muster "Level$" erfasst auch "<Stadt>MaxLevel" (die kapitelabhaengige Obergrenze).
--- Das ist beabsichtigt und noetig: ohne dieses Abonnement bliebe die Anzeige stehen, wenn
--- ein Spieler eines hoeheren Kapitels die Stadt betritt. Wer das Muster aendert, muss den
--- Wert ausdruecklich mit aufnehmen.
+-- Das ist beabsichtigt und noetig: ohne dieses Abonnement bliebe die Zahl der Sterne
+-- stehen, wenn ein Spieler eines hoeheren Kapitels die Stadt betritt. Wer das Muster
+-- aendert, muss den Wert ausdruecklich mit aufnehmen.
 for _, valueObject in ipairs(cityAlertValues:GetChildren()) do
-	if valueObject.Name:match("Level$") or valueObject.Name:match("Progress$") then
+	if valueObject.Name:match("Level$") then
 		valueObject:GetPropertyChangedSignal("Value"):Connect(updateAlertHud)
 	end
 end
