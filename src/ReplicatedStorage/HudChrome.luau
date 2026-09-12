@@ -429,6 +429,32 @@ function HudChrome.SlantPanel(parent, options)
 		strichVerlauf.Rotation = richtung
 		strichVerlauf.Transparency = folge
 		strichVerlauf.Parent = stroke
+
+		-- Damit fehlt aber die Linie AN der Schraegen -- und zwar zwangslaeufig: der
+		-- Rahmenstrich folgt dem Rechteck, und wo die Schraege laeuft, ist gar keine
+		-- Rechteckkante. Genau die Kante, die der Form ihren Charakter gibt, bliebe
+		-- ohne Strich.
+		--
+		-- Sie kommt deshalb als eigenes, gedrehtes Rechteck: ein duenner Balken, so lang
+		-- wie die Diagonale, um denselben Winkel gedreht, mit der Mitte auf der Mitte der
+		-- Schraegen. Der Farbverlauf des Feldes faerbt ihn nicht mit -- ein UIGradient
+		-- wirkt nur auf das Objekt, an dem er haengt, nicht auf dessen Kinder.
+		local laenge = math.sqrt(slant * slant + height * height) + 1
+
+		local kante = Instance.new("Frame")
+		kante.Name = "SlantEdge"
+		kante.AnchorPoint = Vector2.new(0.5, 0.5)
+		kante.Size = UDim2.new(0, stroke.Thickness, 0, laenge)
+		kante.BackgroundColor3 = stroke.Color
+		kante.BorderSizePixel = 0
+		if side == "Right" then
+			kante.Position = UDim2.new(1, -slant / 2, 0.5, 0)
+			kante.Rotation = winkel
+		else
+			kante.Position = UDim2.new(0, slant / 2, 0.5, 0)
+			kante.Rotation = -winkel
+		end
+		kante.Parent = frame
 	end
 
 	return frame, stroke

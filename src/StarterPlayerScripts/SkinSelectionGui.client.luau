@@ -267,22 +267,29 @@ end
 --
 -- Die aeussere Kante jedes Feldes laeuft schraeg nach unten auf die Mitte zu. Beide
 -- Schraegen zeigen damit auf denselben Punkt: die Spielfigur in der Bildschirmmitte.
-local STATUS_HOEHE = 62
+-- Beide Felder sind GLEICH breit. Damit liegt die Trennfuge zwischen ihnen genau auf der
+-- Bildschirmmitte -- also ueber der Spielfigur, auf die auch die beiden Schraegen zeigen.
+-- Bei verschieden breiten Feldern sass die Fuge daneben, und die Symmetrie, die die
+-- Schraegen aufbauen, war schon durch die Aufteilung gebrochen.
+local STATUS_HOEHE = 48
 local STATUS_SCHRAEGE = 16
 local STATUS_LUECKE = 12
-local LEVEL_BREITE = 200
-local HP_BREITE = 250
+local FELD_BREITE = 224
 
 -- Innenraender. Auf der schraegen Seite braucht der Inhalt mehr Abstand: unten frisst die
 -- Schraege bis zu STATUS_SCHRAEGE Pixel weg.
-local LEVEL_LINKS = 22
-local LEVEL_RECHTS = LEVEL_BREITE - 12
+local LEVEL_LINKS = 20
+local LEVEL_RECHTS = FELD_BREITE - 12
 local HP_LINKS = 12
-local HP_RECHTS = HP_BREITE - 18
+local HP_RECHTS = FELD_BREITE - 20
+
+-- Die grosse Zahl beginnt in beiden Feldern gleich weit hinter der Bezeichnung, damit die
+-- zwei Felder denselben Takt haben -- auch wenn "LEVEL" laenger ist als "HP".
+local ZAHL_VERSATZ = 46
 
 local statusCluster = Instance.new("Frame")
 statusCluster.Name = "PlayerStatusCluster"
-statusCluster.Size = UDim2.new(0, LEVEL_BREITE + STATUS_LUECKE + HP_BREITE, 0, STATUS_HOEHE)
+statusCluster.Size = UDim2.new(0, FELD_BREITE * 2 + STATUS_LUECKE, 0, STATUS_HOEHE)
 statusCluster.AnchorPoint = Vector2.new(0.5, 0)
 statusCluster.Position = UDim2.new(0.5, 0, 0, 8)
 statusCluster.BackgroundTransparency = 1
@@ -290,7 +297,7 @@ statusCluster.Parent = screenGui
 
 local levelField = HudChrome.SlantPanel(statusCluster, {
 	name = "LevelField",
-	width = LEVEL_BREITE,
+	width = FELD_BREITE,
 	height = STATUS_HOEHE,
 	slant = STATUS_SCHRAEGE,
 	side = "Left",
@@ -299,20 +306,25 @@ levelField.Position = UDim2.new(0, 0, 0, 0)
 
 local healthField = HudChrome.SlantPanel(statusCluster, {
 	name = "HealthField",
-	width = HP_BREITE,
+	width = FELD_BREITE,
 	height = STATUS_HOEHE,
 	slant = STATUS_SCHRAEGE,
 	side = "Right",
 })
-healthField.Position = UDim2.new(0, LEVEL_BREITE + STATUS_LUECKE, 0, 0)
+healthField.Position = UDim2.new(0, FELD_BREITE + STATUS_LUECKE, 0, 0)
 
--- Die Bezeichnung ist klein und grau, die Zahl gross und fett. Beides zusammen sagt in
--- einem Blick, was es ist und wie es steht -- ohne dass die Bezeichnung um Aufmerksamkeit
--- mit der Zahl konkurriert.
+-- EINE Textzeile, nicht zwei: Bezeichnung, aktueller Wert und Zielwert stehen
+-- nebeneinander. Zwei Zeilen machten aus einer Anzeige zwei und schoben den Balken nach
+-- unten -- dabei ist der Balken die eigentliche Aussage, er zeigt das Verhaeltnis
+-- schneller, als eine Zahl es je kann.
+--
+-- Die fette Zahl ist deshalb auch nur noch WENIG groesser als der Rest. Sie muss sich vom
+-- Zielwert unterscheiden lassen, mehr nicht -- das erledigt der fette Schnitt, die Groesse
+-- hilft nur nach.
 local levelCaption = Instance.new("TextLabel")
 levelCaption.Name = "LevelCaption"
-levelCaption.Size = UDim2.new(0, 60, 0, 14)
-levelCaption.Position = UDim2.new(0, LEVEL_LINKS, 0, 5)
+levelCaption.Size = UDim2.new(0, ZAHL_VERSATZ - 4, 0, 20)
+levelCaption.Position = UDim2.new(0, LEVEL_LINKS, 0, 6)
 levelCaption.BackgroundTransparency = 1
 levelCaption.TextXAlignment = Enum.TextXAlignment.Left
 levelCaption.Text = "LEVEL"
@@ -322,21 +334,21 @@ levelCaption.TextColor3 = HudChrome.Color.TextSecondary
 
 local levelLabel = Instance.new("TextLabel")
 levelLabel.Name = "LevelLabel"
-levelLabel.Size = UDim2.new(0, 120, 0, 29)
-levelLabel.Position = UDim2.new(0, LEVEL_LINKS, 0, 19)
+levelLabel.Size = UDim2.new(0, 70, 0, 20)
+levelLabel.Position = UDim2.new(0, LEVEL_LINKS + ZAHL_VERSATZ, 0, 6)
 levelLabel.BackgroundTransparency = 1
 levelLabel.TextXAlignment = Enum.TextXAlignment.Left
 levelLabel.Text = "0"
 levelLabel.Parent = levelField
-HudChrome.NumberBold(levelLabel, 28)
+HudChrome.NumberBold(levelLabel, 19)
 
 -- Der Balken ist zum schmalen Streifen an der Unterkante geworden. Die Zahl darueber
 -- traegt die Aussage; der Balken zeigt nur noch das Verhaeltnis. Vorher war es umgekehrt,
 -- und die Zahl musste deshalb im Balken stehen -- wo sie auf gelber Fuellung unlesbar war.
 local healthFrame = Instance.new("Frame")
 healthFrame.Name = "HealthFrame"
-healthFrame.Size = UDim2.new(0, HP_RECHTS - HP_LINKS, 0, 6)
-healthFrame.Position = UDim2.new(0, HP_LINKS, 0, 52)
+healthFrame.Size = UDim2.new(0, HP_RECHTS - HP_LINKS, 0, 10)
+healthFrame.Position = UDim2.new(0, HP_LINKS, 0, 30)
 healthFrame.Parent = healthField
 HudChrome.Panel(healthFrame, {
 	radius = 3,
@@ -354,8 +366,8 @@ HudChrome.Panel(healthBarFill, { radius = 3, fill = false, border = false })
 
 local healthCaption = Instance.new("TextLabel")
 healthCaption.Name = "HealthCaption"
-healthCaption.Size = UDim2.new(0, 40, 0, 14)
-healthCaption.Position = UDim2.new(0, HP_LINKS, 0, 5)
+healthCaption.Size = UDim2.new(0, ZAHL_VERSATZ - 4, 0, 20)
+healthCaption.Position = UDim2.new(0, HP_LINKS, 0, 6)
 healthCaption.BackgroundTransparency = 1
 healthCaption.TextXAlignment = Enum.TextXAlignment.Left
 healthCaption.Text = "HP"
@@ -367,8 +379,8 @@ healthCaption.TextColor3 = HudChrome.Color.TextSecondary
 -- sich fast nie und darf den Blick nicht mit dem teilen, der sich staendig aendert.
 local healthMaxLabel = Instance.new("TextLabel")
 healthMaxLabel.Name = "HealthMaxLabel"
-healthMaxLabel.Size = UDim2.new(0, 140, 0, 14)
-healthMaxLabel.Position = UDim2.new(0, HP_RECHTS - 140, 0, 5)
+healthMaxLabel.Size = UDim2.new(0, 120, 0, 20)
+healthMaxLabel.Position = UDim2.new(0, HP_RECHTS - 120, 0, 6)
 healthMaxLabel.BackgroundTransparency = 1
 healthMaxLabel.TextXAlignment = Enum.TextXAlignment.Right
 healthMaxLabel.Text = "/ 100"
@@ -376,19 +388,19 @@ healthMaxLabel.Parent = healthField
 HudChrome.Number(healthMaxLabel, 12)
 healthMaxLabel.TextColor3 = HudChrome.Color.TextDim
 
--- Die grosse, fette Zahl: der aktuelle Lebensstand. Sie steht UEBER dem Balken, nicht
--- darin. Im Balken war sie unlesbar -- weisse Schrift auf gruener und vor allem gelber
--- Fuellung. Eine dunkle Schrift haette es nicht geloest: bei niedrigem Leben ist der
--- Balken fast leer, und dieselbe Zahl stuende dann auf dunklem Grund.
+-- Der aktuelle Lebensstand, fett. Er steht NEBEN dem Balken, nicht darin: im Balken war
+-- er unlesbar -- weisse Schrift auf gruener und vor allem gelber Fuellung. Eine dunkle
+-- Schrift haette es nicht geloest, denn bei niedrigem Leben ist der Balken fast leer und
+-- dieselbe Zahl stuende dann auf dunklem Grund.
 local healthLabel = Instance.new("TextLabel")
 healthLabel.Name = "HealthLabel"
-healthLabel.Size = UDim2.new(0, HP_RECHTS - HP_LINKS, 0, 29)
-healthLabel.Position = UDim2.new(0, HP_LINKS, 0, 19)
+healthLabel.Size = UDim2.new(0, 90, 0, 20)
+healthLabel.Position = UDim2.new(0, HP_LINKS + ZAHL_VERSATZ, 0, 6)
 healthLabel.BackgroundTransparency = 1
 healthLabel.TextXAlignment = Enum.TextXAlignment.Left
 healthLabel.Text = "100"
 healthLabel.Parent = healthField
-HudChrome.NumberBold(healthLabel, 28)
+HudChrome.NumberBold(healthLabel, 19)
 
 local function updateHealthBar()
 	local character = player.Character
@@ -446,8 +458,8 @@ end
 -- Felder sind damit auf einen Blick als dasselbe Bauteil zu erkennen.
 local barBackground = Instance.new("Frame")
 barBackground.Name = "BarBackground"
-barBackground.Size = UDim2.new(0, LEVEL_RECHTS - LEVEL_LINKS, 0, 6)
-barBackground.Position = UDim2.new(0, LEVEL_LINKS, 0, 52)
+barBackground.Size = UDim2.new(0, LEVEL_RECHTS - LEVEL_LINKS, 0, 10)
+barBackground.Position = UDim2.new(0, LEVEL_LINKS, 0, 30)
 barBackground.Parent = levelField
 HudChrome.Panel(barBackground, {
 	radius = 3,
@@ -469,8 +481,8 @@ HudChrome.Panel(barFill, { radius = 3, fill = false, border = false })
 -- zusammengehoeren; das Wort "XP" spart das ein.
 local xpLabel = Instance.new("TextLabel")
 xpLabel.Name = "XpLabel"
-xpLabel.Size = UDim2.new(0, 120, 0, 14)
-xpLabel.Position = UDim2.new(0, LEVEL_RECHTS - 120, 0, 5)
+xpLabel.Size = UDim2.new(0, 120, 0, 20)
+xpLabel.Position = UDim2.new(0, LEVEL_RECHTS - 120, 0, 6)
 xpLabel.BackgroundTransparency = 1
 xpLabel.TextXAlignment = Enum.TextXAlignment.Right
 xpLabel.Text = "0 / 0"
