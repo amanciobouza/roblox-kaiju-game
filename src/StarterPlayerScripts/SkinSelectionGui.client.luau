@@ -764,6 +764,10 @@ do
 	local BEZEL_THICK = 11
 	local BEZEL_OUTER = BEZEL_INNER + BEZEL_THICK
 	local NEEDLE_LENGTH = 84
+	-- Der Energiebogen liegt aussen. Seine Masse stehen hier oben bei den uebrigen, weil
+	-- die Beschriftung sich an seiner Oberkante ausrichtet.
+	local ENERGY_ARC_INNER = 119
+	local ENERGY_ARC_THICK = 12
 
 	-- Die Zonenfarben. Gedeckter als vorher: ein Messgeraet leuchtet nicht, es zeigt an.
 	-- Die Grenzen 30/60/85 sind fest (siehe HeatHandler), die letzte haengt am Talent.
@@ -790,6 +794,58 @@ do
 	-- Prozentwert -> Winkel. 0 liegt links (-90), GAUGE_MAX rechts (+90).
 	local function percentToAngle(percent)
 		return -90 + (math.clamp(percent, 0, GAUGE_MAX) / GAUGE_MAX) * 180
+	end
+
+	-- ===== Gehaeuseplatte =====
+	--
+	-- Ohne sie schwebt der Tacho im Bild: eine runde Scheibe mit Ring, die auf nichts
+	-- sitzt. In der Vorlage ist das Instrument in eine Platte EINGELASSEN, und genau das
+	-- traegt den Eindruck "Geraet" statt "Grafik".
+	--
+	-- Die Platte laeuft unten ueber den Rahmen hinaus bis an den Bildschirmrand. Eine
+	-- Konsole, die 24 Pixel ueber der Kante endet, sieht aus wie ein vergessenes Fenster;
+	-- eine, die am Rand ansetzt, sieht aus wie eingebaut.
+	local PLATTE_OBEN = 12
+	local PLATTE_UEBERSTAND = 24 -- so weit steht heatFrame ueber dem unteren Bildrand
+
+	local gehaeuse = Instance.new("Frame")
+	gehaeuse.Name = "GaugeHousing"
+	gehaeuse.Size = UDim2.new(1, 0, 0, (GAUGE_CENTER.Y - PLATTE_OBEN) + PLATTE_UEBERSTAND)
+	gehaeuse.Position = UDim2.new(0, 0, 0, PLATTE_OBEN)
+	gehaeuse.ZIndex = 5
+	gehaeuse.Parent = heatFrame
+	HudChrome.Panel(gehaeuse, { radius = HudChrome.Radius.Panel, transparency = 0.06 })
+
+	-- Nieten in den Ecken der Platte. Dieselbe Bauart wie die Schrauben im Ring, nur etwas
+	-- groesser: sie halten die Platte, nicht das Glas.
+	for _, ecke in ipairs({
+		{ x = 14, y = 14 },
+		{ x = -14, y = 14 },
+		{ x = 14, y = -38 },
+		{ x = -14, y = -38 },
+	}) do
+		local niete = Instance.new("Frame")
+		niete.Name = "HousingRivet"
+		niete.AnchorPoint = Vector2.new(0.5, 0.5)
+		niete.Size = UDim2.new(0, 7, 0, 7)
+		niete.Position = UDim2.new(
+			ecke.x > 0 and 0 or 1, ecke.x,
+			ecke.y > 0 and 0 or 1, ecke.y
+		)
+		niete.BackgroundColor3 = HudChrome.Color.PanelSunken
+		niete.BorderSizePixel = 0
+		niete.ZIndex = 6
+		niete.Parent = gehaeuse
+
+		local nieteEcke = Instance.new("UICorner")
+		nieteEcke.CornerRadius = UDim.new(0.5, 0)
+		nieteEcke.Parent = niete
+
+		local nieteRand = Instance.new("UIStroke")
+		nieteRand.Thickness = 1
+		nieteRand.Color = HudChrome.Color.BorderBright
+		nieteRand.Transparency = 0.35
+		nieteRand.Parent = niete
 	end
 
 	-- ===== Zifferblatt =====
@@ -1085,25 +1141,33 @@ do
 	-- Die Stufe ist die Aussage, der Bonus ihre Begruendung. Vorher stand dort unveraenderlich
 	-- "BERSERKER" -- ein Wort, das nur beschrieb, welches Geraet man ansieht, und nie, was es
 	-- gerade anzeigt.
+	-- Beide sitzen jetzt dicht ueber dem Energiebogen statt weit oben im Rahmen. Vorher
+	-- klebte die Stufe an der Oberkante, mit einem Loch von zwanzig Pixeln zum Instrument
+	-- darunter -- zwei Dinge, die zusammengehoeren, standen getrennt.
+	--
+	-- Und beide sind groesser: die Stufe ist die wichtigste Aussage des Tachos, sie war
+	-- kleiner gesetzt als der Stadtname oben rechts.
+	local BOGEN_OBERKANTE = GAUGE_CENTER.Y - (ENERGY_ARC_INNER + ENERGY_ARC_THICK)
+
 	local stageLabel = Instance.new("TextLabel")
 	stageLabel.Name = "HeatStageLabel"
-	stageLabel.Size = UDim2.new(1, -12, 0, 26)
-	stageLabel.Position = UDim2.new(0, 6, 0, 4)
+	stageLabel.Size = UDim2.new(1, -12, 0, 30)
+	stageLabel.Position = UDim2.new(0, 6, 0, BOGEN_OBERKANTE - 54)
 	stageLabel.BackgroundTransparency = 1
 	stageLabel.ZIndex = 12
 	stageLabel.Text = "CALM"
 	stageLabel.Parent = heatFrame
-	HudChrome.Label(stageLabel, 22)
+	HudChrome.Label(stageLabel, 26)
 
 	local heatBonusLabel = Instance.new("TextLabel")
 	heatBonusLabel.Name = "HeatBonusLabel"
-	heatBonusLabel.Size = UDim2.new(1, -12, 0, 16)
-	heatBonusLabel.Position = UDim2.new(0, 6, 0, 30)
+	heatBonusLabel.Size = UDim2.new(1, -12, 0, 20)
+	heatBonusLabel.Position = UDim2.new(0, 6, 0, BOGEN_OBERKANTE - 24)
 	heatBonusLabel.BackgroundTransparency = 1
 	heatBonusLabel.ZIndex = 12
 	heatBonusLabel.Text = ""
 	heatBonusLabel.Parent = heatFrame
-	HudChrome.Number(heatBonusLabel, 12)
+	HudChrome.Number(heatBonusLabel, 15)
 	heatBonusLabel.TextColor3 = HudChrome.Color.TextSecondary
 
 	-- Rauch-Glow fuer Meltdown -- sitzt ueber dem Zifferblatt.
@@ -1165,8 +1229,6 @@ do
 	-- als "klar aus Sektoren bestehend" gelesen wurde. Mehr Luft gaebe es nur mit weniger
 	-- Sektoren oder groesserem Radius -- und der Radius ist durch die Angriffsknoepfe
 	-- daneben gedeckelt.
-	local ENERGY_ARC_INNER = BEZEL_OUTER + 4
-	local ENERGY_ARC_THICK = 12
 	local ENERGY_ARC_SECTOR_COUNT = 60
 	local ENERGY_ARC_SEGMENT_BREITE = 5
 	local ENERGY_ARC_COLOR = HudChrome.Color.Accent

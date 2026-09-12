@@ -158,6 +158,22 @@ HudChrome.Icon = {
 -- `tint` bleibt bewusst optional und ist standardmaessig AUS. Faerben lohnt nur bei
 -- einfarbigen Symbolen; traegt das Bild eigene Farben, macht ein Farbton es kaputt. Die
 -- Unterscheidung "frei gegen Energie" traegt ohnehin schon der Akzentstreifen.
+-- ===== Symbole der Energietypen =====
+--
+-- Noch nicht hochgeladen. Sie stehen hier und nicht beim Welt-Event-Banner, weil ausser
+-- ihm auch der Talentbaum und die Energie-Anzeigen dieselben fuenf Typen zeigen -- eine
+-- zweite Liste anderswo waere die naechste Stelle, die auseinanderlaeuft.
+--
+-- Leer heisst: der Aufrufer weicht auf den Farbstreifen aus. Sobald eine ID hier steht,
+-- erscheint das Bild ueberall, wo der Typ vorkommt.
+HudChrome.EnergyIcon = {
+	Heat = "",
+	Chemical = "",
+	Electric = "",
+	Radiation = "",
+	Spirit = "",
+}
+
 function HudChrome.IconImage(parent, assetId, tint)
 	local image = Instance.new("ImageLabel")
 	image.Name = "Icon"
