@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
 local ComicStyleUtils = require(ReplicatedStorage:WaitForChild("ComicStyleUtils"))
 local applyComicStyle = ComicStyleUtils.Apply
+local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -86,27 +87,47 @@ screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
 -- ===== Baut einen einzelnen Spezialangriffs-Button =====
-local function createAttackButton(name, icon, labelText, color, position, keyHint)
+-- Unterzeilen: sie sagen, WAS der Angriff tut, und tragen den militaerischen Ton. Die
+-- Texte stammen aus Amancios Vorlage.
+local ATTACK_SUBLABEL = {
+	Attack = "BRUTAL FORCE",
+	Jump = "VERTICAL POWER",
+	Focus = "PRECISION MODE",
+	Area = "DEVASTATION",
+}
+
+-- Welche Ressource ein Knopf verbraucht -- und damit die Farbe seines Akzentstreifens.
+-- Bernstein heisst frei, Cyan heisst Special Energy. Das ist die einzige Farbe am Knopf;
+-- der Grund ist bei allen gleich dunkel (siehe HudChrome, Regel 2).
+local ATTACK_ACCENT = {
+	Attack = HudChrome.Color.Ready,
+	Jump = HudChrome.Color.Ready,
+	Focus = HudChrome.Color.Accent,
+	Area = HudChrome.Color.Accent,
+}
+
+-- Der vierte Parameter hiess frueher `color` und faerbte den ganzen Knopf ein. Er
+-- entfaellt: nach der Stilregel traegt das Chrome keine Farbe, nur die Anzeige. Die
+-- Aufrufe uebergeben ihn weiterhin -- er wird bewusst ignoriert, damit die Aufrufzeilen
+-- unveraendert bleiben und die Farben dort als Beleg stehen, was sie einmal waren.
+local function createAttackButton(name, icon, labelText, _legacyColor, position, keyHint)
 	local button = Instance.new("TextButton")
 	button.Name = name .. "Button"
 	button.Size = UDim2.new(0, 100, 0, 100)
 	button.Position = position
 	button.AnchorPoint = Vector2.new(0.5, 1)
-	button.BackgroundColor3 = color
 	button.AutoButtonColor = false
-	button.Font = Enum.Font.LuckiestGuy
-	button.TextScaled = true
 	button.Text = ""
 	button.ZIndex = 10
 	button.Parent = screenGui
-	applyComicStyle(button, 20, 5)
+	HudChrome.Panel(button, { radius = HudChrome.Radius.Panel, transparency = 0.08 })
 
 	local iconLabel = Instance.new("TextLabel")
 	iconLabel.Name = "Icon"
-	iconLabel.Size = UDim2.new(1, 0, 0.55, 0)
-	iconLabel.Position = UDim2.new(0, 0, 0, 4)
+	iconLabel.Size = UDim2.new(1, 0, 0, 38)
+	iconLabel.Position = UDim2.new(0, 0, 0, 10)
 	iconLabel.BackgroundTransparency = 1
-	iconLabel.Font = Enum.Font.LuckiestGuy
+	iconLabel.Font = Enum.Font.LuckiestGuy -- Symbole sind Emoji, die Schrift ist hier egal
 	iconLabel.TextScaled = true
 	iconLabel.Text = icon
 	iconLabel.ZIndex = 11
@@ -114,31 +135,43 @@ local function createAttackButton(name, icon, labelText, color, position, keyHin
 
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.Name = "NameLabel"
-	nameLabel.Size = UDim2.new(1, 0, 0.25, 0)
-	nameLabel.Position = UDim2.new(0, 0, 0.6, 0)
+	nameLabel.Size = UDim2.new(1, -8, 0, 18)
+	nameLabel.Position = UDim2.new(0, 4, 0, 50)
 	nameLabel.BackgroundTransparency = 1
-	nameLabel.Font = Enum.Font.FredokaOne
-	nameLabel.TextScaled = true
-	nameLabel.TextColor3 = Color3.new(1, 1, 1)
-	nameLabel.Text = labelText
+	nameLabel.Text = string.upper(labelText)
 	nameLabel.ZIndex = 11
 	nameLabel.Parent = button
+	HudChrome.Label(nameLabel)
+
+	local subLabel = Instance.new("TextLabel")
+	subLabel.Name = "SubLabel"
+	subLabel.Size = UDim2.new(1, -8, 0, 12)
+	subLabel.Position = UDim2.new(0, 4, 0, 68)
+	subLabel.BackgroundTransparency = 1
+	subLabel.Text = ATTACK_SUBLABEL[name] or ""
+	subLabel.ZIndex = 11
+	subLabel.Parent = button
+	HudChrome.Sublabel(subLabel)
+
+	-- Akzentstreifen an der Unterkante. Was er anzeigt, haengt am Knopf: bei Focus und
+	-- Area die Bereitschaft nach Special Energy, bei Punch und Jump die Abklingzeit --
+	-- sie kosten keine Energie.
+	local _, accentFill = HudChrome.AccentBar(button, ATTACK_ACCENT[name])
 
 	if keyHint then
 		local keyLabel = Instance.new("TextLabel")
 		keyLabel.Name = "KeyHint"
-		keyLabel.Size = UDim2.new(0, 26, 0, 26)
+		keyLabel.Size = UDim2.new(0, 18, 0, 18)
 		keyLabel.AnchorPoint = Vector2.new(1, 0)
-		keyLabel.Position = UDim2.new(1, -4, 0, 4)
-		keyLabel.BackgroundColor3 = Color3.new(0, 0, 0)
-		keyLabel.BackgroundTransparency = 0.35
-		keyLabel.Font = Enum.Font.FredokaOne
-		keyLabel.TextScaled = true
-		keyLabel.TextColor3 = Color3.new(1, 1, 1)
+		keyLabel.Position = UDim2.new(1, -6, 0, 6)
+		keyLabel.BackgroundTransparency = 1
 		keyLabel.Text = keyHint
 		keyLabel.ZIndex = 14
 		keyLabel.Parent = button
-		applyComicStyle(keyLabel, 6, 2)
+		HudChrome.Number(keyLabel, 12)
+		keyLabel.TextColor3 = HudChrome.Color.TextDim
+		-- Auf Beruehrungsgeraeten gibt es keine Taste, die man druecken koennte.
+		keyLabel.Visible = not (UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled)
 	end
 
 	-- "Sanduhr"-Überzug: dunkler Bereich, der schrumpft, während der Cooldown abläuft.
@@ -158,52 +191,53 @@ local function createAttackButton(name, icon, labelText, color, position, keyHin
 	cooldownLabel.Name = "CooldownLabel"
 	cooldownLabel.Size = UDim2.new(1, 0, 1, 0)
 	cooldownLabel.BackgroundTransparency = 1
-	cooldownLabel.Font = Enum.Font.LuckiestGuy
-	cooldownLabel.TextScaled = true
-	cooldownLabel.TextColor3 = Color3.new(1, 1, 1)
-	cooldownLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
-	cooldownLabel.TextStrokeTransparency = 0
 	cooldownLabel.ZIndex = 13
 	cooldownLabel.Text = ""
 	cooldownLabel.Parent = button
+	HudChrome.Number(cooldownLabel, HudChrome.TextSize.NumberLarge)
 
-	return button, cooldownOverlay, cooldownLabel
+	return button, cooldownOverlay, cooldownLabel, accentFill
 end
 
--- ===== Kleines Energie-Kosten-Label, nur für Focus/Area (Attack/Jump kosten keine
--- Special Energy). Zeigt normal "⚡25", bei zu wenig Energie stattdessen die fehlende
--- Menge in Rot ("-12 fehlen"). =====
+-- ===== Das Energie-Kosten-Label ist ENTFALLEN. =====
+-- Es zeigte "⚡25" und bei zu wenig Energie die fehlende Menge. Diese Aufgabe hat jetzt
+-- der Akzentstreifen an der Unterkante: er fuellt sich mit der Special Energy und leuchtet
+-- voll, sobald der Angriff bezahlbar ist. Das beantwortet dieselbe Frage -- kann ich
+-- jetzt? -- ohne dass man eine Zahl mit dem eigenen Energiestand vergleichen muss.
+--
+-- Die Funktion bleibt als leere Huelle, damit die beiden Aufrufstellen unten und alle
+-- Stellen, die das zurueckgegebene Label ansprechen, unveraendert weiterlaufen. Sie
+-- verschwindet, sobald die untere Zone in Scheibe 4 ohnehin umgebaut wird.
 local function addEnergyCostLabel(button)
 	local costLabel = Instance.new("TextLabel")
 	costLabel.Name = "EnergyCostLabel"
-	costLabel.Size = UDim2.new(1, 0, 0.22, 0)
-	costLabel.Position = UDim2.new(0, 0, 0.82, 0)
+	costLabel.Size = UDim2.new(0, 0, 0, 0)
 	costLabel.BackgroundTransparency = 1
-	costLabel.Font = Enum.Font.FredokaOne
-	costLabel.TextScaled = true
-	costLabel.TextColor3 = Color3.fromRGB(120, 220, 255)
-	costLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
-	costLabel.TextStrokeTransparency = 0
-	costLabel.ZIndex = 11
+	costLabel.Visible = false
 	costLabel.Text = ""
 	costLabel.Parent = button
 	return costLabel
 end
 
-local attackButton, attackOverlay, attackCooldownLabel =
+local attackButton, attackOverlay, attackCooldownLabel, attackAccent =
 	createAttackButton("Attack", "👊", "Punch", Color3.fromRGB(90, 140, 220), UDim2.new(0.5, -290, 1, -24))
-local jumpButton, jumpOverlay, jumpCooldownLabel =
+local jumpButton, jumpOverlay, jumpCooldownLabel, jumpAccent =
 	createAttackButton("Jump", "🦶", "Jump", Color3.fromRGB(90, 190, 140), UDim2.new(0.5, -180, 1, -24))
-local focusButton, focusOverlay, focusCooldownLabel =
+local focusButton, focusOverlay, focusCooldownLabel, focusAccent =
 	createAttackButton("Focus", "🔴", "Focus", Color3.fromRGB(220, 60, 60), UDim2.new(0.5, 180, 1, -24), "Q")
-local areaButton, areaOverlay, areaCooldownLabel =
+local areaButton, areaOverlay, areaCooldownLabel, areaAccent =
 	createAttackButton("Area", "💥", "Area", Color3.fromRGB(255, 150, 30), UDim2.new(0.5, 290, 1, -24), "E")
 
-local focusEnergyLabel = addEnergyCostLabel(focusButton)
-local areaEnergyLabel = addEnergyCostLabel(areaButton)
-local FOCUS_BUTTON_COLOR = focusButton.BackgroundColor3
-local AREA_BUTTON_COLOR = areaButton.BackgroundColor3
-local DESATURATED_COLOR = Color3.fromRGB(90, 90, 95)
+-- Die beiden Kosten-Labels sind leere Huellen (siehe addEnergyCostLabel) und werden nur
+-- noch angelegt, damit die Knopfstruktur unveraendert bleibt.
+addEnergyCostLabel(focusButton)
+addEnergyCostLabel(areaButton)
+
+-- ENTFALLEN: FOCUS_BUTTON_COLOR, AREA_BUTTON_COLOR und DESATURATED_COLOR. Sie merkten
+-- sich die Grundfarbe des Knopfes, um ihn bei zu wenig Energie zu entsaettigen. Nach der
+-- neuen Stilregel traegt der Grund keine Farbe mehr -- sie waeren alle drei derselbe
+-- dunkle Ton gewesen, und das Entsaettigen haette nichts mehr gezeigt. Die Aufgabe hat
+-- der Akzentstreifen uebernommen.
 
 -- ===== Sprung-Cooldown: gilt fürs SPRINGEN SELBST (Leertaste + Button gleichermaßen),
 -- keine zusätzliche Aktion. Sobald ein Sprung beginnt, wird die Sprungfähigkeit für die
@@ -385,18 +419,44 @@ local wasFocusEnergyEnough = true
 local wasAreaEnergyEnough = true
 
 -- ===== Läuft jeden Frame: aktualisiert die Sanduhr-Füllung + Cooldown-Text =====
-local function updateCooldownDisplay(overlay, label, readyAt, cooldownDuration)
+-- Fuellt den Akzentstreifen eines Special-Knopfes nach dem Energiestand. Voll und hell,
+-- sobald bezahlbar; sonst anteilig und gedaempft. Damit beantwortet der Streifen die Frage
+-- "kann ich jetzt?" schneller als eine Zahl es koennte.
+local function updateEnergyAccent(accent, currentEnergy, cost)
+	if not accent then
+		return
+	end
+	local ratio = math.clamp(currentEnergy / math.max(cost, 1), 0, 1)
+	accent.Size = UDim2.new(ratio, 0, 1, 0)
+	accent.BackgroundTransparency = ratio >= 1 and 0 or 0.5
+end
+
+-- `accent` ist der Akzentstreifen an der Unterkante und optional: bei Punch und Jump
+-- zeigt er die Abklingzeit (leer, waehrend sie laeuft, voll sobald wieder bereit). Bei
+-- Focus und Area steuert ihn stattdessen der Energiestand weiter unten -- sie kosten
+-- Energie, und das ist dort die knappere Ressource.
+local function updateCooldownDisplay(overlay, label, readyAt, cooldownDuration, accent)
 	local now = Workspace:GetServerTimeNow()
 	local remaining = readyAt - now
 
 	if remaining <= 0 then
 		overlay.Size = UDim2.new(1, 0, 0, 0)
 		label.Text = ""
+		if accent then
+			accent.Size = UDim2.new(1, 0, 1, 0)
+			accent.BackgroundTransparency = 0
+		end
 		return true
 	end
 
 	local ratio = math.clamp(remaining / math.max(cooldownDuration, 0.1), 0, 1)
 	overlay.Size = UDim2.new(1, 0, ratio, 0)
+	if accent then
+		-- Der Streifen waechst, waehrend die Abklingzeit ablaeuft -- er ist voll, wenn
+		-- der Angriff wieder bereit ist.
+		accent.Size = UDim2.new(1 - ratio, 0, 1, 0)
+		accent.BackgroundTransparency = 0.45
+	end
 	return false
 end
 
@@ -417,8 +477,8 @@ RunService.Heartbeat:Connect(function()
 	local areaCooldownDuration = isBoosted and (areaCooldownValue.Value / 2) or areaCooldownValue.Value
 	local jumpCooldownDuration = isBoosted and (jumpAttackCooldownValue.Value / 2) or jumpAttackCooldownValue.Value
 
-	local attackReady = updateCooldownDisplay(attackOverlay, attackCooldownLabel, attackReadyAt, attackCooldownValue.Value)
-	local jumpReady = updateCooldownDisplay(jumpOverlay, jumpCooldownLabel, jumpReadyAt, jumpCooldownDuration)
+	local attackReady = updateCooldownDisplay(attackOverlay, attackCooldownLabel, attackReadyAt, attackCooldownValue.Value, attackAccent)
+	local jumpReady = updateCooldownDisplay(jumpOverlay, jumpCooldownLabel, jumpReadyAt, jumpCooldownDuration, jumpAccent)
 	local focusReady = updateCooldownDisplay(focusOverlay, focusCooldownLabel, focusReadyAt, focusCooldownDuration)
 	local areaReady = updateCooldownDisplay(areaOverlay, areaCooldownLabel, areaReadyAt, areaCooldownDuration)
 
@@ -448,25 +508,13 @@ RunService.Heartbeat:Connect(function()
 	local hasEnoughFocusEnergy = currentEnergy >= focusCost
 	local hasEnoughAreaEnergy = currentEnergy >= areaCost
 
-	if hasEnoughFocusEnergy then
-		focusButton.BackgroundColor3 = FOCUS_BUTTON_COLOR
-		focusEnergyLabel.TextColor3 = Color3.fromRGB(120, 220, 255)
-		focusEnergyLabel.Text = "⚡" .. focusCost
-	else
-		focusButton.BackgroundColor3 = FOCUS_BUTTON_COLOR:Lerp(DESATURATED_COLOR, 0.6)
-		focusEnergyLabel.TextColor3 = Color3.fromRGB(255, 90, 90)
-		focusEnergyLabel.Text = "-" .. math.ceil(focusCost - currentEnergy) .. " fehlen"
-	end
-
-	if hasEnoughAreaEnergy then
-		areaButton.BackgroundColor3 = AREA_BUTTON_COLOR
-		areaEnergyLabel.TextColor3 = Color3.fromRGB(120, 220, 255)
-		areaEnergyLabel.Text = "⚡" .. areaCost
-	else
-		areaButton.BackgroundColor3 = AREA_BUTTON_COLOR:Lerp(DESATURATED_COLOR, 0.6)
-		areaEnergyLabel.TextColor3 = Color3.fromRGB(255, 90, 90)
-		areaEnergyLabel.Text = "-" .. math.ceil(areaCost - currentEnergy) .. " fehlen"
-	end
+	-- Der Akzentstreifen IST die Bereitschaftsanzeige: er fuellt sich mit der gesammelten
+	-- Energie und leuchtet voll, sobald der Angriff bezahlbar ist. Vorher stand hier eine
+	-- Zahl ("⚡25"), die man mit dem eigenen Energiestand vergleichen musste, und der
+	-- ganze Knopf wurde entsaettigt -- Letzteres geht nicht mehr, weil der Grund nach der
+	-- neuen Stilregel bei allen Knoepfen gleich dunkel ist.
+	updateEnergyAccent(focusAccent, currentEnergy, focusCost)
+	updateEnergyAccent(areaAccent, currentEnergy, areaCost)
 
 	if hasEnoughFocusEnergy and not wasFocusEnergyEnough then
 		playReadyGlow(focusButton)

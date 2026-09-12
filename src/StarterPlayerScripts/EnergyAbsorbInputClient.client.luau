@@ -8,6 +8,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
 local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
@@ -37,47 +38,81 @@ screenGui.Name = "EnergyAbsorbGui"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
+-- Aufbau wie die vier Angriffsknoepfe: gleicher dunkler Grund, gleiche Stahllinie,
+-- Symbol, Bezeichnung, Unterzeile. Der Knopf war bisher rund und cyan gefuellt -- die
+-- Farbe traegt nach der neuen Stilregel nur noch das Symbol, nicht der Grund.
+--
+-- Er bleibt vorerst an seinem Platz unten rechts. In Scheibe 4 rueckt er in die rechte
+-- Gruppe neben Focus und Area, wo er hingehoert.
 local absorbButton = Instance.new("TextButton")
 absorbButton.Name = "AbsorbButton"
-absorbButton.Size = UDim2.new(0, 90, 0, 90)
+absorbButton.Size = UDim2.new(0, 100, 0, 100)
 absorbButton.AnchorPoint = Vector2.new(1, 1)
 absorbButton.Position = UDim2.new(1, -20, 1, -140)
-absorbButton.BackgroundColor3 = Color3.fromRGB(80, 180, 255)
 absorbButton.AutoButtonColor = false
-absorbButton.Font = Enum.Font.LuckiestGuy
-absorbButton.TextScaled = true
-absorbButton.Text = "🌀"
-absorbButton.TextColor3 = Color3.new(1, 1, 1)
+absorbButton.Text = ""
 absorbButton.Parent = screenGui
+HudChrome.Panel(absorbButton, { radius = HudChrome.Radius.Panel, transparency = 0.08 })
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(1, 0)
-corner.Parent = absorbButton
-local stroke = Instance.new("UIStroke")
-stroke.Thickness = 3
-stroke.Color = Color3.new(0, 0, 0)
-stroke.Parent = absorbButton
+local iconLabel = Instance.new("TextLabel")
+iconLabel.Name = "Icon"
+iconLabel.Size = UDim2.new(1, 0, 0, 38)
+iconLabel.Position = UDim2.new(0, 0, 0, 10)
+iconLabel.BackgroundTransparency = 1
+iconLabel.Font = Enum.Font.LuckiestGuy -- Emoji, die Schrift spielt keine Rolle
+iconLabel.TextScaled = true
+iconLabel.Text = "🌀"
+iconLabel.Parent = absorbButton
 
 local label = Instance.new("TextLabel")
-label.Size = UDim2.new(1, 0, 0, 18)
-label.Position = UDim2.new(0, 0, 1, 4)
+label.Name = "NameLabel"
+label.Size = UDim2.new(1, -8, 0, 18)
+label.Position = UDim2.new(0, 4, 0, 50)
 label.BackgroundTransparency = 1
-label.Font = Enum.Font.FredokaOne
-label.TextScaled = true
-label.TextColor3 = Color3.new(1, 1, 1)
-label.TextStrokeColor3 = Color3.new(0, 0, 0)
-label.TextStrokeTransparency = 0.4
-label.Text = "Absorb"
+label.Text = "ABSORB"
 label.Parent = absorbButton
+HudChrome.Label(label)
 
+local subLabel = Instance.new("TextLabel")
+subLabel.Name = "SubLabel"
+subLabel.Size = UDim2.new(1, -8, 0, 12)
+subLabel.Position = UDim2.new(0, 4, 0, 68)
+subLabel.BackgroundTransparency = 1
+subLabel.Text = "DRAW MATTER"
+subLabel.Parent = absorbButton
+HudChrome.Sublabel(subLabel)
+
+-- Der Akzentstreifen zeigt hier keinen Vorrat -- Absorbieren kostet nichts. Er leuchtet,
+-- solange gesaugt wird, und ist sonst gedaempft. Damit sagt er dasselbe wie bei den
+-- anderen Knoepfen: laeuft gerade, oder nicht.
+local _, absorbAccent = HudChrome.AccentBar(absorbButton, HudChrome.Color.Accent)
+absorbAccent.BackgroundTransparency = 0.55
+
+-- Tastenhinweis in der Ecke, wie bei Focus und Area. Er stand vorher IN der Bezeichnung
+-- ("Absorb (X)") -- damit war die Bezeichnung je nach Eingabegeraet verschieden lang und
+-- passte nicht mehr zu den anderen Knoepfen.
+local keyLabel = Instance.new("TextLabel")
+keyLabel.Name = "KeyHint"
+keyLabel.Size = UDim2.new(0, 22, 0, 18)
+keyLabel.AnchorPoint = Vector2.new(1, 0)
+keyLabel.Position = UDim2.new(1, -6, 0, 6)
+keyLabel.BackgroundTransparency = 1
+keyLabel.Text = "X"
+keyLabel.Parent = absorbButton
+HudChrome.Number(keyLabel, 12)
+keyLabel.TextColor3 = HudChrome.Color.TextDim
+
+-- Rueckmeldung beim Druecken ueber den Akzentstreifen statt ueber den Grund. Der Grund
+-- ist nach der neuen Stilregel bei allen Knoepfen derselbe dunkle Ton -- ihn umzufaerben
+-- wuerde die Regel brechen und faende ausserdem auf dem Knopf statt an der Anzeige statt.
 local function onPressStart()
 	setAbsorbing(true)
-	absorbButton.BackgroundColor3 = Color3.fromRGB(50, 140, 220)
+	absorbAccent.BackgroundTransparency = 0
 end
 
 local function onPressEnd()
 	setAbsorbing(false)
-	absorbButton.BackgroundColor3 = Color3.fromRGB(80, 180, 255)
+	absorbAccent.BackgroundTransparency = 0.55
 end
 
 -- Reagiert auf Maus (PC) UND Touch (Mobile) gleichermassen -- ein Button für beide
@@ -136,16 +171,19 @@ UserInputService.InputEnded:Connect(function(input)
 	end
 end)
 
--- Die Beschriftung nennt die Taste des Geraets, an dem gerade gespielt wird. Auf einem
--- Beruehrungsbildschirm gibt es keine, dort steht nur der Name.
+-- Der Tastenhinweis nennt die Taste des Geraets, an dem gerade gespielt wird. Auf einem
+-- Beruehrungsbildschirm gibt es keine, dort verschwindet er ganz -- die Bezeichnung
+-- "ABSORB" bleibt in jedem Fall dieselbe.
 local function refreshAbsorbLabel()
 	local lastInput = UserInputService:GetLastInputType()
 	if lastInput == Enum.UserInputType.Touch then
-		label.Text = "Absorb"
+		keyLabel.Visible = false
 	elseif string.find(tostring(lastInput), "Gamepad") then
-		label.Text = "Absorb (L1)"
+		keyLabel.Visible = true
+		keyLabel.Text = "L1"
 	else
-		label.Text = "Absorb (X)"
+		keyLabel.Visible = true
+		keyLabel.Text = "X"
 	end
 end
 
