@@ -261,48 +261,85 @@ end
 -- ===== Player-Status-Cluster: Health + Level + XP als EIN kompakter Block, oben Mitte
 -- (neue HUD-Spezifikation) -- vorher zwei separate, deutlich grössere Frames (142px
 -- Gesamthöhe), jetzt ein einziger, ~78px hoher Cluster. Priorität: Health > Level > XP.
+-- ZWEI Felder, kein gemeinsames Gehaeuse: links die Stufe, rechts das Leben. Sie stehen
+-- dicht beieinander und gehoeren erkennbar zusammen, sind aber getrennt lesbar -- so wie
+-- in der Vorlage.
+--
+-- Die aeussere Kante jedes Feldes laeuft schraeg nach unten auf die Mitte zu. Beide
+-- Schraegen zeigen damit auf denselben Punkt: die Spielfigur in der Bildschirmmitte.
+local STATUS_HOEHE = 62
+local STATUS_SCHRAEGE = 16
+local STATUS_LUECKE = 12
+local LEVEL_BREITE = 200
+local HP_BREITE = 250
+
+-- Innenraender. Auf der schraegen Seite braucht der Inhalt mehr Abstand: unten frisst die
+-- Schraege bis zu STATUS_SCHRAEGE Pixel weg.
+local LEVEL_LINKS = 22
+local LEVEL_RECHTS = LEVEL_BREITE - 12
+local HP_LINKS = 12
+local HP_RECHTS = HP_BREITE - 18
+
 local statusCluster = Instance.new("Frame")
 statusCluster.Name = "PlayerStatusCluster"
-statusCluster.Size = UDim2.new(0, 476, 0, 62)
+statusCluster.Size = UDim2.new(0, LEVEL_BREITE + STATUS_LUECKE + HP_BREITE, 0, STATUS_HOEHE)
 statusCluster.AnchorPoint = Vector2.new(0.5, 0)
 statusCluster.Position = UDim2.new(0.5, 0, 0, 8)
+statusCluster.BackgroundTransparency = 1
 statusCluster.Parent = screenGui
-HudChrome.Panel(statusCluster, { radius = HudChrome.Radius.Panel })
 
--- Das Polster macht die Innenflaeche genau 460 x 50 gross -- die Kinder rechnen weiter
--- mit denselben Massen wie vorher, nur liegen sie jetzt in einem Gehaeuse.
-local statusPadding = Instance.new("UIPadding")
-statusPadding.PaddingLeft = UDim.new(0, 8)
-statusPadding.PaddingRight = UDim.new(0, 8)
-statusPadding.PaddingTop = UDim.new(0, 6)
-statusPadding.PaddingBottom = UDim.new(0, 6)
-statusPadding.Parent = statusCluster
+local levelField = HudChrome.SlantPanel(statusCluster, {
+	name = "LevelField",
+	width = LEVEL_BREITE,
+	height = STATUS_HOEHE,
+	slant = STATUS_SCHRAEGE,
+	side = "Left",
+})
+levelField.Position = UDim2.new(0, 0, 0, 0)
 
--- Level: klein, kompakt, ÜBER der Health-Bar (nicht mehr eigene grosse Fläche)
--- "⭐ Level 0" mit Textumriss wird zu "LV 0" -- Bezeichnung in der Beschriftungsschrift,
--- Zahl in der Ziffernschrift, wie in der Vorlage. Der Umriss faellt weg: er war noetig,
--- weil der Text frei ueber der Welt stand; jetzt liegt er auf einem Panel.
+local healthField = HudChrome.SlantPanel(statusCluster, {
+	name = "HealthField",
+	width = HP_BREITE,
+	height = STATUS_HOEHE,
+	slant = STATUS_SCHRAEGE,
+	side = "Right",
+})
+healthField.Position = UDim2.new(0, LEVEL_BREITE + STATUS_LUECKE, 0, 0)
+
+-- Die Bezeichnung ist klein und grau, die Zahl gross und fett. Beides zusammen sagt in
+-- einem Blick, was es ist und wie es steht -- ohne dass die Bezeichnung um Aufmerksamkeit
+-- mit der Zahl konkurriert.
+local levelCaption = Instance.new("TextLabel")
+levelCaption.Name = "LevelCaption"
+levelCaption.Size = UDim2.new(0, 60, 0, 14)
+levelCaption.Position = UDim2.new(0, LEVEL_LINKS, 0, 5)
+levelCaption.BackgroundTransparency = 1
+levelCaption.TextXAlignment = Enum.TextXAlignment.Left
+levelCaption.Text = "LEVEL"
+levelCaption.Parent = levelField
+HudChrome.Label(levelCaption, 13)
+levelCaption.TextColor3 = HudChrome.Color.TextSecondary
+
 local levelLabel = Instance.new("TextLabel")
 levelLabel.Name = "LevelLabel"
-levelLabel.Size = UDim2.new(0, 96, 0, 18)
-levelLabel.Position = UDim2.new(0, 0, 0, 0)
+levelLabel.Size = UDim2.new(0, 120, 0, 29)
+levelLabel.Position = UDim2.new(0, LEVEL_LINKS, 0, 19)
 levelLabel.BackgroundTransparency = 1
 levelLabel.TextXAlignment = Enum.TextXAlignment.Left
-levelLabel.Text = "LV 0"
-levelLabel.Parent = statusCluster
-HudChrome.Label(levelLabel, 16)
+levelLabel.Text = "0"
+levelLabel.Parent = levelField
+HudChrome.NumberBold(levelLabel, 28)
 
--- Health-Bar: 22px hoch, "100/100"-Text direkt IN der Bar (spart eigene Zeile)
--- Der Balkenhintergrund war dunkelrot -- also farbig, obwohl er nichts misst. Jetzt die
--- Vertiefung aus dem Baukasten; die Farbe traegt allein die Fuellung, und die misst
--- tatsaechlich etwas.
+-- Der Balken ist zum schmalen Streifen an der Unterkante geworden. Die Zahl darueber
+-- traegt die Aussage; der Balken zeigt nur noch das Verhaeltnis. Vorher war es umgekehrt,
+-- und die Zahl musste deshalb im Balken stehen -- wo sie auf gelber Fuellung unlesbar war.
 local healthFrame = Instance.new("Frame")
 healthFrame.Name = "HealthFrame"
-healthFrame.Size = UDim2.new(0.5, -8, 0, 24)
-healthFrame.Position = UDim2.new(0, 0, 0, 24)
-healthFrame.Parent = statusCluster
+healthFrame.Size = UDim2.new(0, HP_RECHTS - HP_LINKS, 0, 6)
+healthFrame.Position = UDim2.new(0, HP_LINKS, 0, 52)
+healthFrame.Parent = healthField
 HudChrome.Panel(healthFrame, {
-	radius = HudChrome.Radius.Small,
+	radius = 3,
 	fill = HudChrome.Color.PanelSunken,
 	transparency = 0,
 })
@@ -313,24 +350,45 @@ healthBarFill.Size = UDim2.new(1, 0, 1, 0)
 healthBarFill.BackgroundColor3 = Color3.fromRGB(70, 220, 90)
 healthBarFill.BorderSizePixel = 0
 healthBarFill.Parent = healthFrame
-HudChrome.Panel(healthBarFill, { radius = HudChrome.Radius.Small, fill = false, border = false })
+HudChrome.Panel(healthBarFill, { radius = 3, fill = false, border = false })
 
--- Die Zahl steht UEBER dem Balken, nicht darin. Im Balken war sie unlesbar: weisse
--- Schrift auf gruener und vor allem auf gelber Fuellung. Eine dunkle Schrift haette es
--- nicht geloest -- bei niedrigem Leben ist der Balken fast leer und dieselbe Zahl stuende
--- dann auf dem dunklen Grund. Ueber dem Balken stimmt der Kontrast in jeder Lage.
---
--- Rechtsbuendig an der Kante ihres eigenen Balkens, damit Bezeichnung links und Messung
--- rechts eine Spalte bilden.
+local healthCaption = Instance.new("TextLabel")
+healthCaption.Name = "HealthCaption"
+healthCaption.Size = UDim2.new(0, 40, 0, 14)
+healthCaption.Position = UDim2.new(0, HP_LINKS, 0, 5)
+healthCaption.BackgroundTransparency = 1
+healthCaption.TextXAlignment = Enum.TextXAlignment.Left
+healthCaption.Text = "HP"
+healthCaption.Parent = healthField
+HudChrome.Label(healthCaption, 13)
+healthCaption.TextColor3 = HudChrome.Color.TextSecondary
+
+-- Der Hoechstwert gehoert in die kleine Zeile, nicht neben die grosse Zahl: er aendert
+-- sich fast nie und darf den Blick nicht mit dem teilen, der sich staendig aendert.
+local healthMaxLabel = Instance.new("TextLabel")
+healthMaxLabel.Name = "HealthMaxLabel"
+healthMaxLabel.Size = UDim2.new(0, 140, 0, 14)
+healthMaxLabel.Position = UDim2.new(0, HP_RECHTS - 140, 0, 5)
+healthMaxLabel.BackgroundTransparency = 1
+healthMaxLabel.TextXAlignment = Enum.TextXAlignment.Right
+healthMaxLabel.Text = "/ 100"
+healthMaxLabel.Parent = healthField
+HudChrome.Number(healthMaxLabel, 12)
+healthMaxLabel.TextColor3 = HudChrome.Color.TextDim
+
+-- Die grosse, fette Zahl: der aktuelle Lebensstand. Sie steht UEBER dem Balken, nicht
+-- darin. Im Balken war sie unlesbar -- weisse Schrift auf gruener und vor allem gelber
+-- Fuellung. Eine dunkle Schrift haette es nicht geloest: bei niedrigem Leben ist der
+-- Balken fast leer, und dieselbe Zahl stuende dann auf dunklem Grund.
 local healthLabel = Instance.new("TextLabel")
 healthLabel.Name = "HealthLabel"
-healthLabel.Size = UDim2.new(0.5, -104, 0, 18)
-healthLabel.Position = UDim2.new(0, 96, 0, 0)
+healthLabel.Size = UDim2.new(0, HP_RECHTS - HP_LINKS, 0, 29)
+healthLabel.Position = UDim2.new(0, HP_LINKS, 0, 19)
 healthLabel.BackgroundTransparency = 1
-healthLabel.TextXAlignment = Enum.TextXAlignment.Right
-healthLabel.Text = "HP 100 / 100"
-healthLabel.Parent = statusCluster
-HudChrome.Number(healthLabel, 15)
+healthLabel.TextXAlignment = Enum.TextXAlignment.Left
+healthLabel.Text = "100"
+healthLabel.Parent = healthField
+HudChrome.NumberBold(healthLabel, 28)
 
 local function updateHealthBar()
 	local character = player.Character
@@ -340,15 +398,21 @@ local function updateHealthBar()
 	end
 	local ratio = math.clamp(humanoid.Health / math.max(humanoid.MaxHealth, 1), 0, 1)
 	healthBarFill.Size = UDim2.new(ratio, 0, 1, 0)
-	healthLabel.Text = "HP " .. math.floor(humanoid.Health) .. " / " .. math.floor(humanoid.MaxHealth)
+	healthLabel.Text = NumberFormat.Format(math.floor(humanoid.Health))
+	healthMaxLabel.Text = "/ " .. NumberFormat.Format(math.floor(humanoid.MaxHealth))
 
-	-- Farbverlauf grün -> gelb -> rot, je niedriger desto dramatischer
+	-- Farbverlauf grün -> gelb -> rot, je niedriger desto dramatischer. Die Zahl faerbt
+	-- erst ab der Warnstufe mit: solange es gut steht, ist Weiss die ruhigere Aussage --
+	-- und eine Farbe, die IMMER da ist, warnt vor nichts.
 	if ratio > 0.5 then
 		healthBarFill.BackgroundColor3 = Color3.fromRGB(70, 220, 90)
+		healthLabel.TextColor3 = HudChrome.Color.TextPrimary
 	elseif ratio > 0.25 then
-		healthBarFill.BackgroundColor3 = Color3.fromRGB(255, 200, 40)
+		healthBarFill.BackgroundColor3 = HudChrome.Color.Warning
+		healthLabel.TextColor3 = HudChrome.Color.Warning
 	else
-		healthBarFill.BackgroundColor3 = Color3.fromRGB(230, 60, 50)
+		healthBarFill.BackgroundColor3 = HudChrome.Color.Danger
+		healthLabel.TextColor3 = HudChrome.Color.Danger
 	end
 end
 
@@ -377,19 +441,16 @@ if player.Character then
 	connectHealthBar(player.Character)
 end
 
--- XP-Balken: steht jetzt NEBEN dem Lebensbalken, nicht mehr als duenner Streifen
--- darunter. Die Vorlage stellt beide als gleichwertige Messungen nebeneinander, und das
--- ist auch richtig: Leben und Fortschritt sind zwei Groessen, keine Haupt- und Nebensache.
---
--- Er war vorher 8 Pixel hoch, ohne Beschriftung und mit blauem Hintergrund. Jetzt gleich
--- hoch wie der Lebensbalken, mit der Zahl darin und derselben Vertiefung als Grund.
+-- Der XP-Balken liegt an derselben Stelle im Stufen-Feld wie der Lebensbalken im
+-- Leben-Feld: schmaler Streifen an der Unterkante. Gleiche Rolle, gleiche Form -- beide
+-- Felder sind damit auf einen Blick als dasselbe Bauteil zu erkennen.
 local barBackground = Instance.new("Frame")
 barBackground.Name = "BarBackground"
-barBackground.Size = UDim2.new(0.5, -8, 0, 24)
-barBackground.Position = UDim2.new(0.5, 8, 0, 24)
-barBackground.Parent = statusCluster
+barBackground.Size = UDim2.new(0, LEVEL_RECHTS - LEVEL_LINKS, 0, 6)
+barBackground.Position = UDim2.new(0, LEVEL_LINKS, 0, 52)
+barBackground.Parent = levelField
 HudChrome.Panel(barBackground, {
-	radius = HudChrome.Radius.Small,
+	radius = 3,
 	fill = HudChrome.Color.PanelSunken,
 	transparency = 0,
 })
@@ -401,19 +462,21 @@ barFill.BackgroundColor3 = Color3.fromRGB(255, 220, 60)
 barFill.BorderSizePixel = 0
 barFill.ZIndex = 2
 barFill.Parent = barBackground
-HudChrome.Panel(barFill, { radius = HudChrome.Radius.Small, fill = false, border = false })
+HudChrome.Panel(barFill, { radius = 3, fill = false, border = false })
 
--- Gleiche Begruendung wie beim Lebensbalken: die gelbe Fuellung war der schlimmste Fall
--- fuer weisse Schrift. Die Zahl steht jetzt ueber ihrem Balken, rechtsbuendig.
+-- Der Fortschritt als Zahl, rechts in der kleinen Zeile -- genau dort, wo im Leben-Feld
+-- der Hoechstwert steht. Im Gelb des Balkens darunter, damit die beiden ohne Beschriftung
+-- zusammengehoeren; das Wort "XP" spart das ein.
 local xpLabel = Instance.new("TextLabel")
 xpLabel.Name = "XpLabel"
-xpLabel.Size = UDim2.new(0.5, -8, 0, 18)
-xpLabel.Position = UDim2.new(0.5, 8, 0, 0)
+xpLabel.Size = UDim2.new(0, 120, 0, 14)
+xpLabel.Position = UDim2.new(0, LEVEL_RECHTS - 120, 0, 5)
 xpLabel.BackgroundTransparency = 1
 xpLabel.TextXAlignment = Enum.TextXAlignment.Right
-xpLabel.Text = "XP 0 / 0"
-xpLabel.Parent = statusCluster
-HudChrome.Number(xpLabel, 15)
+xpLabel.Text = "0 / 0"
+xpLabel.Parent = levelField
+HudChrome.Number(xpLabel, 12)
+xpLabel.TextColor3 = Color3.fromRGB(214, 186, 78)
 
 -- ===== Heat/Berserker-Leiste -- VERTIKAL, unten zentriert zwischen den Angriffs-Buttons
 -- (Standardangriffe links, Spezialangriffe rechts) -- gleicher Kampf-Kontext, gleiche
@@ -1934,7 +1997,7 @@ function advanceXPBar(amount)
 
 	local needed = math.max(xpNeededValue.Value, 1)
 	barFill.Size = UDim2.new(math.clamp(displayedXP / needed, 0, 1), 0, 1, 0)
-	xpLabel.Text = "XP " .. NumberFormat.Format(math.floor(displayedXP)) .. " / " .. NumberFormat.Format(needed)
+	xpLabel.Text = NumberFormat.Format(math.floor(displayedXP)) .. " / " .. NumberFormat.Format(needed)
 	flashElement(barFill, Color3.fromRGB(255, 255, 200))
 	glowFlashElement(barFill, Color3.fromRGB(255, 255, 150))
 end
@@ -1947,7 +2010,7 @@ function updateLevelBar()
 		return
 	end
 
-	levelLabel.Text = "LV " .. leaderstats.Level.Value
+	levelLabel.Text = tostring(leaderstats.Level.Value)
 
 	-- Bei einem ECHTEN Sprung (Level-Up, bei dem XP zurückgesetzt/übertragen wird, oder
 	-- Debug-Reset) sofort synchronisieren, ohne Aufleucht-Animation -- eine ausstehende
@@ -1958,7 +2021,7 @@ function updateLevelBar()
 		displayedXP = xpValue.Value
 		local needed = math.max(xpNeededValue.Value, 1)
 		barFill.Size = UDim2.new(math.clamp(displayedXP / needed, 0, 1), 0, 1, 0)
-		xpLabel.Text = "XP " .. NumberFormat.Format(math.floor(displayedXP)) .. " / " .. NumberFormat.Format(needed)
+		xpLabel.Text = NumberFormat.Format(math.floor(displayedXP)) .. " / " .. NumberFormat.Format(needed)
 		print("[Kaiju-Debug-Client] updateLevelBar SYNC: Level=", leaderstats.Level.Value, "XP=", xpValue.Value, "XPNeeded=", xpNeededValue.Value, "ratio=", displayedXP / needed)
 	end
 
@@ -2335,10 +2398,11 @@ shopFrame:GetPropertyChangedSignal("Visible"):Connect(function()
 		refreshShop()
 	end
 end)
-	-- Gedaempfter Blitz statt Cremeweiss: der Block hat jetzt ein eigenes dunkles Gehaeuse,
-	-- und eine helle Flaeche von 476 x 62 Pixeln oben in der Mitte waere beim Stufenaufstieg
-	-- ein Schlag ins Gesicht statt eines Hinweises.
-	flashElement(statusCluster, Color3.fromRGB(92, 82, 40))
+	-- Der Blitz sitzt auf dem Stufen-Feld, nicht auf dem Behaelter: der ist durchsichtig,
+	-- und flashElement faerbt Hintergruende -- es wuerde also eine sonst unsichtbare
+	-- Flaeche sichtbar machen. Gedaempftes Warmgrau statt Cremeweiss, weil das Feld dunkel
+	-- ist und eine helle Flaeche oben in der Mitte blenden wuerde.
+	flashElement(levelField, Color3.fromRGB(92, 82, 40))
 end)
 local leaderstatsFolder = player:WaitForChild("leaderstats")
 leaderstatsFolder:WaitForChild("Level"):GetPropertyChangedSignal("Value"):Connect(updateLevelBar)

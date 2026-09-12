@@ -357,4 +357,106 @@ function HudChrome.AccentBar(parent, color, height)
 	return track, fill
 end
 
+-- ===== Schraege Felder =====
+--
+-- Ein Feld, dessen AEUSSERE Kante schraeg laeuft. Zwei davon nebeneinander ergeben das
+-- Bild aus der Vorlage: beide Schraegen laufen nach unten aufeinander zu und zeigen damit
+-- auf die Mitte des Bildschirms, wo die Spielfigur steht. Das ist der Grund fuer die Form
+-- -- sie ist keine Zierde, sie richtet den Blick.
+--
+-- Roblox zeichnet keine Vielecke. Der Weg dahin fuehrt ueber einen Farbverlauf: ein
+-- UIGradient bildet seine Werte entlang einer gedrehten Achse ab, und ein harter Sprung in
+-- der Durchsichtigkeit erzeugt dadurch eine gerade Schnittkante quer durch das Rechteck.
+-- Gedreht ist diese Kante schraeg.
+--
+-- Die Alternative -- ein gedrehtes Rechteck in einem beschneidenden Rahmen -- waere
+-- naheliegender gewesen, haengt aber daran, ob ClipsDescendants gedrehte Kinder sauber
+-- beschneidet. Der Farbverlauf braucht diese Annahme nicht.
+--
+-- Wo genau der Schnitt sitzt, folgt aus der Geometrie. Die Achse zeigt in Richtung
+-- `winkel`, der Verlauf spannt sich ueber die Projektion des Rechtecks auf diese Achse,
+-- und daraus kuerzt sich der Schnittpunkt zu slant / (Breite + slant) -- unabhaengig von
+-- der Hoehe, weil der Winkel selbst schon aus Hoehe und Versatz stammt.
+--
+-- side = "Left": die linke Kante laeuft von oben links nach unten rechts ("\").
+-- side = "Right": die rechte Kante laeuft von oben rechts nach unten links ("/").
+--
+-- Gibt (frame, stroke) zurueck. Achtung beim Fuellen: die abgeschnittene Ecke ist unten
+-- aussen, Inhalt braucht dort mindestens `slant` Abstand zum Rand.
+function HudChrome.SlantPanel(parent, options)
+	options = options or {}
+	local width = options.width or 220
+	local height = options.height or 62
+	local slant = options.slant or 16
+	local side = options.side or "Left"
+
+	local frame = Instance.new("Frame")
+	frame.Name = options.name or "SlantPanel"
+	frame.Size = UDim2.new(0, width, 0, height)
+	frame.Parent = parent
+
+	local _, stroke = HudChrome.Panel(frame, {
+		radius = options.radius or HudChrome.Radius.Small,
+		fill = options.fill,
+		transparency = options.transparency,
+		border = options.border,
+	})
+
+	local winkel = math.deg(math.atan(slant / height))
+	local schnitt = math.clamp(slant / (width + slant), 0.01, 0.5)
+	-- Bei "Right" zeigt die Achse nach links: dieselbe Neigung, um 180 Grad gedreht.
+	local richtung = (side == "Right") and (180 + winkel) or -winkel
+
+	-- Der Sprung von durchsichtig auf deckend ist absichtlich nur einen Tausendstel breit
+	-- -- schmal genug, dass er als Kante wirkt, breit genug, dass Roblox ihn glaettet
+	-- statt ihn als Treppe zu zeichnen.
+	local folge = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(schnitt, 1),
+		NumberSequenceKeypoint.new(schnitt + 0.001, 0),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+
+	local verlauf = Instance.new("UIGradient")
+	verlauf.Rotation = richtung
+	verlauf.Transparency = folge
+	verlauf.Parent = frame
+
+	-- Der Rahmenstrich muss denselben Schnitt bekommen. Sonst zoege er weiter das volle
+	-- Rechteck nach -- eine Linie quer durch die Luft neben der schraegen Kante.
+	if stroke then
+		local strichVerlauf = Instance.new("UIGradient")
+		strichVerlauf.Rotation = richtung
+		strichVerlauf.Transparency = folge
+		strichVerlauf.Parent = stroke
+	end
+
+	return frame, stroke
+end
+
+-- ===== Fette Zahlen =====
+--
+-- Fuer die zwei Werte, die im Kampf zaehlen: Stufe und aktuelles Leben. Sie sind gross
+-- und fett, alles andere im selben Feld ist klein und grau -- so entscheidet die Form,
+-- was man zuerst sieht, und nicht die Farbe.
+--
+-- Enum.Font kennt keine Schnitte, nur Familien. Der fette Schnitt kommt deshalb ueber
+-- FontFace. Fehlt er in der Familie, ersetzt Roblox ihn still durch den normalen -- die
+-- Warnung unten ist der einzige Weg, das ueberhaupt zu bemerken.
+function HudChrome.NumberBold(textLabel, size)
+	HudChrome.Number(textLabel, size)
+
+	local ok, gesicht = pcall(function()
+		local basis = Font.fromEnum(HudChrome.Font.Number)
+		return Font.new(basis.Family, Enum.FontWeight.Bold)
+	end)
+	if ok and gesicht then
+		textLabel.FontFace = gesicht
+	else
+		warn("[Kaiju Debug] HudChrome: fetter Zahlenschnitt nicht verfuegbar, nehme den normalen.")
+	end
+
+	return textLabel
+end
+
 return HudChrome
