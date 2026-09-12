@@ -41,9 +41,16 @@ local ctx = {
 		Skins = require("../src/ReplicatedStorage/SkinsConfig"),
 		-- Die Asset-Spezifikationen sind für die Regeln DATEN, keine Specs -- deshalb
 		-- stehen sie hier im config-Teil, nicht in der Spec-Liste oben.
+		-- Alle fünf Guardian-Generationen. Bis die vierte und fünfte im Workshop fertig
+		-- waren, standen hier nur die ersten beiden -- die Aegis-Spezifikation fehlte
+		-- versehentlich mit. Wer hier fehlt, wird von WorkshopAssetSpec schlicht nicht
+		-- geprüft, ohne dass es auffällt.
 		WorkshopAssets = {
 			WardenIShepherd = require(WORKSHOP .. "AssetSpecification"),
 			MarshalIIRoadblock = require(WORKSHOP .. "MarshalRoadblockSpecification"),
+			AegisIIIInterceptor = require(WORKSHOP .. "AegisInterceptorSpecification"),
+			BastionIVColossus = require(WORKSHOP .. "BastionColossusSpecification"),
+			SovereignVApex = require(WORKSHOP .. "SovereignApexSpecification"),
 		},
 	},
 	-- workspace/runtime bleiben nil -- die entsprechenden Regeln werden übersprungen.

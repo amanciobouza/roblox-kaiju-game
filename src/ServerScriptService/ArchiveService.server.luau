@@ -359,6 +359,32 @@ task.spawn(function()
 	end
 end)
 
+-- ===== Debug-Knopf: alles aufdecken =====
+-- _G.SetArchiveRevealAll gibt es seit jeher und wurde ausdrücklich für diesen Zweck
+-- gebaut -- aufgerufen hat es aber nur der Daten-Reset, und zwar zum VERBERGEN. Damit war
+-- die Vorschau eines Eintrags, dem man noch nicht begegnet ist, gar nicht zu prüfen: man
+-- sah nur die Silhouette und konnte nicht unterscheiden, ob das Modell nicht baut oder
+-- der Eintrag schlicht verdeckt ist.
+--
+-- Dieselbe Berechtigung wie beim Daten-Reset: PlayerSetup veröffentlicht sie als Attribut
+-- am Spieler, damit die Erlaubnisliste an genau einer Stelle steht.
+local DebugRevealArchiveEvent = RemoteEventUtils.GetOrCreate("DebugRevealArchiveEvent")
+
+DebugRevealArchiveEvent.OnServerEvent:Connect(function(player, revealed)
+	if player:GetAttribute("MayResetData") ~= true then
+		warn("[Kaiju] Archiv-Aufdecken von " .. player.Name .. " abgelehnt -- keine Berechtigung.")
+		return
+	end
+
+	_G.SetArchiveRevealAll(player, revealed == true)
+	print(string.format(
+		"[Kaiju-Debug] Archiv für %s %s.",
+		player.Name,
+		revealed == true and "vollständig aufgedeckt" or "wieder verdeckt"
+	))
+	DebugRevealArchiveEvent:FireClient(player, revealed == true)
+end)
+
 print(string.format(
 	"[Kaiju] ArchiveService bereit -- %d Einträge, davon %d auffindbar.",
 	#ArchiveConfig.Entries, #ArchiveConfig.Detectable

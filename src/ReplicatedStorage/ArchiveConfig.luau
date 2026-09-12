@@ -224,19 +224,55 @@ ArchiveConfig.Entries = {
 				.. "depleted. At range it has the advantage -- up close it does not.",
 		},
 	},
+	-- Vierte und fünfte Generation. Sie standen hier bis zuletzt als `pending` mit den
+	-- Namen "Fourth Generation" und "Fifth Generation" -- seit sie im Asset-Workshop
+	-- fertig sind, gibt es beide wirklich.
+	--
+	-- Die Kennungen haben sich dabei geändert (`GuardianGeneration4` → `GuardianBastionColossus`).
+	-- Das ist hier ausnahmsweise gefahrlos, obwohl der Kommentar oben zu Recht sagt, dass
+	-- Kennungen niemals wechseln dürfen: ein `pending`-Eintrag hat kein `detect` und war
+	-- damit nie aufdeckbar. Es kann also keinen Speicherstand geben, in dem einer der
+	-- beiden als aufgedeckt steht.
 	{
-		id = "GuardianGeneration4",
+		id = "GuardianBastionColossus",
 		category = "Guardians",
-		name = "Fourth Generation",
+		name = "Bastion-IV Colossus",
 		hint = "Chapter II",
-		pending = true,
+		detect = { attribute = { name = "AssetName", value = "Bastion-IV Colossus" } },
+		model = { workshopAsset = "BastionColossus" },
+		profile = {
+			role = "Fourth generation, and the first that guards more than a single "
+				.. "building. Built on the Aegis chassis, but turned into a fortress "
+				.. "that walks -- it holds a whole district.",
+			strength = "A rail cannon that reaches 145 studs, two siege fists for "
+				.. "anything that gets close, and a ground slam with a radius of 42. Its "
+				.. "district shield covers everything within 150 studs and swallows "
+				.. "damage completely while it stands.",
+			weakness = "It is slow, and it announces everything: the rail cannon winds "
+				.. "up for a second and a half, the slam for a second. The shield lasts "
+				.. "eight seconds and needs twenty-eight to come back -- the gap between "
+				.. "them is your opening.",
+		},
 	},
 	{
-		id = "GuardianGeneration5",
+		id = "GuardianSovereignApex",
 		category = "Guardians",
-		name = "Fifth Generation",
+		name = "Sovereign-V Apex",
 		hint = "Chapter III",
-		pending = true,
+		detect = { attribute = { name = "AssetName", value = "Sovereign-V Apex" } },
+		model = { workshopAsset = "SovereignApex" },
+		profile = {
+			role = "Fifth generation, and the last. It guards nothing -- it hunts. It "
+				.. "finds you from 320 studs away and closes the distance faster than "
+				.. "any Guardian before it.",
+			strength = "A lance that thrusts, cuts through a 125 degree arc, and fires a "
+				.. "beam 230 studs long. Three waves of hunter drones from outside your "
+				.. "reach, and a lock that drags you down to little more than half speed "
+				.. "while its barrier holds.",
+			weakness = "Every heavy blow declares itself first: the beam winds up for "
+				.. "over a second, the drones take almost four before they strike. Read "
+				.. "the wind-up and you will not be where it aimed.",
+		},
 	},
 }
 

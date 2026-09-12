@@ -47,6 +47,7 @@ local DebugToggleSkipCollapseEvent = waitForRemote("DebugToggleSkipCollapseEvent
 local DebugStartPrologueEvent = waitForRemote("DebugStartPrologueEvent")
 local DebugRunSpecCheckEvent = waitForRemote("DebugRunSpecCheckEvent")
 local DebugStartPrologueResultEvent = waitForRemote("DebugStartPrologueResultEvent")
+local DebugRevealArchiveEvent = waitForRemote("DebugRevealArchiveEvent")
 
 player:SetAttribute("DebugMode", false)
 
@@ -86,9 +87,11 @@ backdrop.Parent = screenGui
 
 local panel = Instance.new("Frame")
 panel.Name = "DebugPanel"
--- Vorletzter Summand: Zeile für den Spec-Prüfer-Knopf.
--- Letzter Summand: drei Zeilen für den Showdown.
-panel.Size = UDim2.new(0, 340, 0, 340 + 60 + 90 + 50 + 50 + 50 + 50 + 150 + 34 + 40)
+-- Drittletzter Summand: Zeile für den Spec-Prüfer-Knopf.
+-- Vorletzter Summand: drei Zeilen für den Showdown.
+-- Letzter Summand: Zeile für den Archiv-Knopf (sitzt auf y=886 und braucht 30 Pixel plus
+-- Rand -- ohne diesen Summand endete das Fenster zwei Pixel über ihm).
+panel.Size = UDim2.new(0, 340, 0, 340 + 60 + 90 + 50 + 50 + 50 + 50 + 150 + 34 + 40 + 40)
 panel.AnchorPoint = Vector2.new(0.5, 0.5)
 panel.Position = UDim2.new(0.5, 0, 0.5, 0)
 panel.BackgroundColor3 = Color3.fromRGB(35, 32, 45)
@@ -1005,6 +1008,51 @@ telemetryButton.MouseButton1Click:Connect(function()
 		DebugTelemetryEvent:FireServer(telemetryEnabled)
 	end
 end)
+
+-- ===== Archiv vollstaendig aufdecken =====
+-- Ohne das ist eine Vorschau nicht pruefbar: ein Eintrag, dem man noch nicht begegnet ist,
+-- zeigt nur seine Silhouette, und ob dahinter ein gebautes Modell steckt oder gar nichts,
+-- sieht man nicht. Der Server kann das seit jeher (_G.SetArchiveRevealAll) -- es fehlte
+-- nur der Knopf.
+--
+-- Beide Richtungen, damit sich der Ausgangszustand wiederherstellen laesst.
+local archiveRevealed = false
+local archiveButton = Instance.new("TextButton")
+archiveButton.Name = "DebugArchiveRevealButton"
+archiveButton.Size = UDim2.new(1, -32, 0, 30)
+archiveButton.Position = UDim2.new(0, 16, 0, 886)
+archiveButton.BackgroundColor3 = Color3.fromRGB(90, 80, 130)
+archiveButton.Font = Enum.Font.FredokaOne
+archiveButton.TextScaled = true
+archiveButton.TextColor3 = Color3.new(1, 1, 1)
+archiveButton.Text = "\u{1F4D6} Archiv aufdecken"
+archiveButton.Parent = panel
+applyComicStyle(archiveButton, 8, 2)
+
+local function showArchiveState()
+	archiveButton.Text = archiveRevealed and "\u{1F4D6} Archiv wieder verdecken" or "\u{1F4D6} Archiv aufdecken"
+	archiveButton.BackgroundColor3 = archiveRevealed
+		and Color3.fromRGB(120, 100, 170)
+		or Color3.fromRGB(90, 80, 130)
+end
+
+archiveButton.MouseButton1Click:Connect(function()
+	if not DebugRevealArchiveEvent then
+		warn("[DebugPanelClient] Archiv aufdecken nicht moeglich -- DebugRevealArchiveEvent fehlt.")
+		archiveButton.Text = "\u{26A0} Kein Ereignis"
+		return
+	end
+	DebugRevealArchiveEvent:FireServer(not archiveRevealed)
+end)
+
+if DebugRevealArchiveEvent then
+	-- Der Server hat das letzte Wort: er meldet zurueck, was tatsaechlich gilt. Ohne diese
+	-- Rueckmeldung wuerde der Knopf auch dann umschalten, wenn die Berechtigung fehlt.
+	DebugRevealArchiveEvent.OnClientEvent:Connect(function(revealed)
+		archiveRevealed = revealed == true
+		showArchiveState()
+	end)
+end
 
 if DebugTelemetryEvent then
 	-- Der Server hat das letzte Wort: er meldet zurueck, was tatsaechlich gilt.
