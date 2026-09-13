@@ -24,7 +24,6 @@ local Workspace = game:GetService("Workspace")
 local ArchiveConfig = require(ReplicatedStorage:WaitForChild("ArchiveConfig"))
 local ModelPreviewUtils = require(ReplicatedStorage:WaitForChild("ModelPreviewUtils"))
 local StageModels = require(ReplicatedStorage:WaitForChild("StageModels"))
-local UiTypography = require(ReplicatedStorage:WaitForChild("UiTypography"))
 local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
 local ResponsiveGridUtils = require(ReplicatedStorage:WaitForChild("ResponsiveGridUtils"))
 
@@ -96,14 +95,14 @@ TopInsetUtils.Bind(panel)
 local counterStrip = Instance.new("TextLabel")
 counterStrip.Name = "CounterStrip"
 counterStrip.AnchorPoint = Vector2.new(1, 0)
-counterStrip.Size = UDim2.new(1, -420, 0, 26)
-counterStrip.Position = UDim2.new(1, -72, 0, 20)
+counterStrip.Size = UDim2.new(1, -460, 0, 28)
+counterStrip.Position = UDim2.new(1, -88, 0, 22)
 counterStrip.BackgroundTransparency = 1
 counterStrip.TextXAlignment = Enum.TextXAlignment.Right
 counterStrip.Text = ""
 counterStrip.ZIndex = 3
 counterStrip.Parent = schirm.header
-HudChrome.Sublabel(counterStrip, 15)
+HudChrome.MenuCaption(counterStrip, 17)
 
 -- EIN durchgehendes Raster ueber alle Kategorien hinweg. Bewusst OHNE Gruppen-
 -- ueberschriften: sie haetten jede Gruppe auf einer neuen Zeile beginnen lassen, und bei
@@ -173,7 +172,7 @@ detailHint.BackgroundTransparency = 1
 detailHint.TextXAlignment = Enum.TextXAlignment.Left
 detailHint.Text = ""
 detailHint.Parent = detailSchirm.content
-HudChrome.Sublabel(detailHint, 14)
+HudChrome.MenuCaption(detailHint)
 
 local detailText = Instance.new("ScrollingFrame")
 detailText.Size = UDim2.new(0.62, -48, 1, -24)
@@ -222,7 +221,7 @@ local function buildDataField(labelText, order)
 	local caption = Instance.new("TextLabel")
 	caption.Size = UDim2.new(1, 0, 0, 14)
 	caption.BackgroundTransparency = 1
-	UiTypography.Caption(caption, 11)
+	HudChrome.MenuCaption(caption, 14)
 	caption.TextXAlignment = Enum.TextXAlignment.Left
 	caption.TextColor3 = Color3.fromRGB(120, 120, 132)
 	caption.Text = string.upper(labelText)
@@ -233,7 +232,7 @@ local function buildDataField(labelText, order)
 	value.Size = UDim2.new(1, 0, 0, 0)
 	value.AutomaticSize = Enum.AutomaticSize.Y
 	value.BackgroundTransparency = 1
-	UiTypography.Body(value, 15)
+	HudChrome.MenuBody(value, HudChrome.MenuTextSize.Body)
 	value.TextXAlignment = Enum.TextXAlignment.Left
 	value.TextYAlignment = Enum.TextYAlignment.Top
 	value.TextColor3 = Color3.fromRGB(230, 230, 240)
@@ -546,7 +545,7 @@ local function openDetail(entry)
 		local heading = Instance.new("TextLabel")
 		heading.Size = UDim2.new(1, -8, 0, 20)
 		heading.BackgroundTransparency = 1
-		HudChrome.Label(heading, UiTypography.SubheadSize)
+		HudChrome.Label(heading, HudChrome.MenuTextSize.Section)
 		heading.TextXAlignment = Enum.TextXAlignment.Left
 		heading.TextColor3 = Color3.fromRGB(255, 205, 90)
 		heading.Text = section.heading
@@ -558,7 +557,7 @@ local function openDetail(entry)
 		body.Size = UDim2.new(1, -8, 0, 0)
 		body.AutomaticSize = Enum.AutomaticSize.Y
 		body.BackgroundTransparency = 1
-		UiTypography.Body(body)
+		HudChrome.MenuBody(body)
 		body.TextXAlignment = Enum.TextXAlignment.Left
 		body.TextYAlignment = Enum.TextYAlignment.Top
 		body.TextColor3 = Color3.fromRGB(220, 220, 230)
@@ -652,19 +651,18 @@ local function buildCard(parent, entry)
 	question.Parent = viewportHolder
 
 	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Size = UDim2.new(1, -12, 0, 26)
-	nameLabel.Position = UDim2.new(0, 6, 0, 158)
+	nameLabel.Size = UDim2.new(1, -12, 0, 28)
+	nameLabel.Position = UDim2.new(0, 6, 0, 154)
 	nameLabel.BackgroundTransparency = 1
-	HudChrome.Label(nameLabel, 15)
+	HudChrome.Label(nameLabel, HudChrome.MenuTextSize.Section)
 	nameLabel.Text = "???"
 	nameLabel.Parent = card
 
 	local hintLabel = Instance.new("TextLabel")
-	hintLabel.Size = UDim2.new(1, -12, 0, 18)
-	hintLabel.Position = UDim2.new(0, 6, 0, 186)
+	hintLabel.Size = UDim2.new(1, -12, 0, 22)
+	hintLabel.Position = UDim2.new(0, 6, 0, 184)
 	hintLabel.BackgroundTransparency = 1
-	UiTypography.Caption(hintLabel)
-	hintLabel.TextColor3 = HudChrome.Color.TextDim
+	HudChrome.MenuCaption(hintLabel)
 	hintLabel.Text = ""
 	hintLabel.Parent = card
 

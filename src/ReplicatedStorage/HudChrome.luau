@@ -574,7 +574,46 @@ end
 -- braucht keine Umrandung -- es gibt nichts, wogegen es sich abgrenzen muesste. Was es
 -- braucht, ist eine Trennung zwischen Kopf und Inhalt. Dieselbe Ueberlegung wie beim
 -- Sockel des Tachos.
-HudChrome.ScreenHeader = 64
+-- ===== Menues haben eine eigene, groessere Schriftskala =====
+--
+-- Die Groessen des HUDs sind fuer den Blick WAEHREND des Spielens gemacht: kurz hinsehen,
+-- ablesen, weiterkaempfen. Dort ist jeder Punkt Schrift auch verlorener Platz, und die
+-- Zahlen sind entsprechend knapp.
+--
+-- Im Menue gilt das Gegenteil. Man steht still, liest ganze Saetze, und Platz ist da --
+-- der Bildschirm gehoert dem Menue allein. Dieselben Groessen wirken dort zu klein, und
+-- das ist kein Widerspruch, sondern derselbe Massstab auf eine andere Lage angewandt.
+HudChrome.MenuTextSize = {
+	Title = 30, -- Ueberschrift eines Bildschirms
+	Section = 21, -- Zwischenueberschrift, Kartenname
+	Body = 18, -- Fliesstext
+	Caption = 16, -- Nebenangaben, Unterzeilen
+}
+
+-- Fliesstext im Menue: GOTHAM, nicht RobotoMono.
+--
+-- Im HUD tragen die Unterzeilen RobotoMono, weil Oswald bei 13 Punkt zu schmal wird und
+-- eine Schreibmaschinenschrift dort instrumentenhaft wirkt. Im Menue steht kein Instrument,
+-- sondern Text, den man Zeile fuer Zeile liest -- und dafuer ist eine proportionale Schrift
+-- schlicht besser zu lesen. Die Stilregel sagt das auch so: Gotham fuer Fliesstext.
+function HudChrome.MenuBody(textLabel, size)
+	textLabel.Font = HudChrome.Font.Body
+	textLabel.TextScaled = false
+	textLabel.TextSize = size or HudChrome.MenuTextSize.Body
+	textLabel.TextWrapped = true
+	textLabel.TextColor3 = HudChrome.Color.TextPrimary
+	textLabel.TextStrokeTransparency = 1
+	return textLabel
+end
+
+-- Nebenangabe im Menue: dieselbe Schrift, kleiner und zurueckgenommen.
+function HudChrome.MenuCaption(textLabel, size)
+	HudChrome.MenuBody(textLabel, size or HudChrome.MenuTextSize.Caption)
+	textLabel.TextColor3 = HudChrome.Color.TextSecondary
+	return textLabel
+end
+
+HudChrome.ScreenHeader = 72
 
 function HudChrome.Screen(parent, options)
 	options = options or {}
@@ -608,40 +647,40 @@ function HudChrome.Screen(parent, options)
 
 	local titel = Instance.new("TextLabel")
 	titel.Name = "ScreenTitle"
-	titel.Size = UDim2.new(1, -160, 0, 26)
+	titel.Size = UDim2.new(1, -180, 0, 32)
 	titel.Position = UDim2.new(0, 24, 0, 10)
 	titel.BackgroundTransparency = 1
 	titel.TextXAlignment = Enum.TextXAlignment.Left
 	titel.Text = options.title or ""
 	titel.ZIndex = 3
 	titel.Parent = kopf
-	HudChrome.Label(titel, 26)
+	HudChrome.Label(titel, HudChrome.MenuTextSize.Title)
 
 	-- Die Unterzeile gehoert zur Stilregel: alles ist zweizeilig beschriftet. Sie steht
 	-- auch dann da, wenn der Aufrufer nichts uebergibt -- dann traegt sie spaeter den
 	-- Fortschritt oder die Zaehlung, wie im Archiv.
 	local unterzeile = Instance.new("TextLabel")
 	unterzeile.Name = "ScreenSubtitle"
-	unterzeile.Size = UDim2.new(1, -160, 0, 18)
-	unterzeile.Position = UDim2.new(0, 24, 0, 38)
+	unterzeile.Size = UDim2.new(1, -180, 0, 22)
+	unterzeile.Position = UDim2.new(0, 24, 0, 44)
 	unterzeile.BackgroundTransparency = 1
 	unterzeile.TextXAlignment = Enum.TextXAlignment.Left
 	unterzeile.Text = options.subtitle or ""
 	unterzeile.ZIndex = 3
 	unterzeile.Parent = kopf
-	HudChrome.Sublabel(unterzeile, 14)
+	HudChrome.MenuCaption(unterzeile)
 
 	local schliessen = Instance.new("TextButton")
 	schliessen.Name = "CloseButton"
 	schliessen.AnchorPoint = Vector2.new(1, 0.5)
 	schliessen.Position = UDim2.new(1, -24, 0.5, 0)
-	schliessen.Size = UDim2.new(0, 34, 0, 34)
+	schliessen.Size = UDim2.new(0, 40, 0, 40)
 	schliessen.AutoButtonColor = false
 	schliessen.Text = "\u{2715}"
 	schliessen.ZIndex = 3
 	schliessen.Parent = kopf
 	HudChrome.Panel(schliessen, { radius = HudChrome.Radius.Small, fill = HudChrome.Color.Panel })
-	HudChrome.Label(schliessen, 18)
+	HudChrome.Label(schliessen, 22)
 	schliessen.TextColor3 = HudChrome.Color.TextSecondary
 
 	-- Der Inhalt liegt UNTER dem Kopf. Dass jeder Aufrufer dafuer die Kopfhoehe von Hand
