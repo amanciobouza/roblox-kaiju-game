@@ -1767,13 +1767,48 @@ end
 
 -- ===== Den Scan mit der eigenen Figur fuellen =====
 --
--- Geklont wird aus dem laufenden Charakter. Alles, was nicht zur Form gehoert, faellt weg:
--- Anhaenge, Motoren, Skripte, Aufkleber. Was bleibt, ist die reine Gestalt in Neon.
+-- Erster Versuch: die R15-Teile (RightUpperArm usw.) klonen. Das ging schief, und die
+-- Messung sagt genau warum -- die Figur hat KEIN einziges sichtbares Teil im Charakter.
+-- Sie traegt ein eigenes Modell, das erst nach dem Spawn angehaengt wird, und die
+-- R15-Teile darunter sind nur unsichtbare Knochen.
+--
+-- Daraus folgt der Aufbau hier:
+--
+--   SICHTBAR ist, was im Charakter an sichtbaren Teilen haengt, wo auch immer. Das wird
+--   geklont -- vollstaendig, ohne Namen zu raten. Die Namen des getragenen Modells kennt
+--   dieses Skript nicht und soll es auch nicht kennen muessen.
+--
+--   WOHIN geschaut wird, sagen die unsichtbaren R15-Knochen. Sie sitzen genau dort, wo das
+--   sichtbare Glied ist -- dafuer sind sie da. Sie liefern also den Zielpunkt und den
+--   Bildausschnitt, ohne selbst gezeigt zu werden.
+--
+-- Das ist der Grund, warum hier nicht ModelPreviewUtils.Fit steht: das rahmt ein GANZES
+-- Modell. Hier soll ein Ausschnitt daraus gerahmt werden.
+local SCAN_FOV = 40
+
+local function knochenBereich(character, teileNamen)
+	local minimum, maximum
+	for _, name in ipairs(teileNamen) do
+		local teil = character:FindFirstChild(name, true)
+		if teil and teil:IsA("BasePart") then
+			local halb = teil.Size * 0.5
+			local mitte = teil.Position
+			local von, bis = mitte - halb, mitte + halb
+			minimum = minimum and Vector3.new(math.min(minimum.X, von.X), math.min(minimum.Y, von.Y), math.min(minimum.Z, von.Z)) or von
+			maximum = maximum and Vector3.new(math.max(maximum.X, bis.X), math.max(maximum.Y, bis.Y), math.max(maximum.Z, bis.Z)) or bis
+		end
+	end
+	if not minimum then
+		return nil
+	end
+	return (minimum + maximum) * 0.5, maximum - minimum
+end
+
 local function baueScan(key)
 	local eintrag = statBars[key]
 	local teileNamen = SCAN_TEILE[key]
 	if not eintrag or not teileNamen then
-		return
+		return false
 	end
 
 	local altes = eintrag.scanViewport:FindFirstChildOfClass("Model")
@@ -1782,146 +1817,103 @@ local function baueScan(key)
 	end
 
 	local character = player.Character
-	if not character then
-		return
+	local wurzel = character and character:FindFirstChild("HumanoidRootPart")
+	if not character or not wurzel then
+		return false
 	end
 
+	local mitte, groesse = knochenBereich(character, teileNamen)
+	if not mitte then
+		return false -- die Knochen fehlen: dann ist es ein fremdes Rig
+	end
+
+	-- Alles Sichtbare klonen, ohne Namen zu raten.
 	local modell = Instance.new("Model")
 	modell.Name = "ScanModel"
 	local gefunden = 0
-	local uebersprungen = 0
-
-	-- UNSICHTBARE Teile ueberspringen.
-	--
-	-- Das war der Grund fuer den Wuerfel: in einem Rig mit Haut-Mesh sind die R15-Teile
-	-- oft nur unsichtbare Kaesten, an denen die Knochen haengen -- die sichtbare Form
-	-- liegt woanders. Wer sie klont und dabei auf Transparenz 0.3 setzt, macht genau diese
-	-- Kaesten sichtbar. Man sah also keinen Arm, sondern seine Huelle.
-	--
-	-- Dieselbe Ueberlegung wie beim Huellquader in ModelPreviewUtils: eine Vorschau soll
-	-- zeigen, was man SIEHT.
-	local function nimmTeil(teil)
-		if not teil or not teil:IsA("BasePart") then
-			return
-		end
-		if teil.Transparency >= 1 then
-			uebersprungen += 1
-			return
-		end
-		local klon = teil:Clone()
-		for _, kind in ipairs(klon:GetChildren()) do
-			-- SpecialMesh traegt bei alten Rigs die Form -- der muss bleiben.
-			if not kind:IsA("SpecialMesh") then
-				kind:Destroy()
-			end
-		end
-		if klon:IsA("MeshPart") then
-			klon.TextureID = "" -- kein Skin-Bild: ein Roentgenbild zeigt Form, nicht Farbe
-		end
-		klon.Anchored = true
-		klon.CanCollide = false
-		klon.CastShadow = false
-		klon.Material = Enum.Material.Neon
-		klon.Color = eintrag.color
-		klon.Transparency = 0.3
-		klon.Parent = modell
-		gefunden += 1
-	end
-
-	for _, name in ipairs(teileNamen) do
-		nimmTeil(character:FindFirstChild(name))
-	end
-
-	-- Zweiter Versuch: manche Figuren tragen ihre sichtbare Form nicht direkt im
-	-- Charakter, sondern eine Ebene tiefer. Dann ueber den ganzen Baum suchen.
-	if gefunden == 0 then
-		for _, nachfahre in ipairs(character:GetDescendants()) do
-			for _, name in ipairs(teileNamen) do
-				if nachfahre.Name == name then
-					nimmTeil(nachfahre)
+	for _, nachfahre in ipairs(character:GetDescendants()) do
+		if nachfahre:IsA("BasePart") and nachfahre.Transparency < 1 then
+			local klon = nachfahre:Clone()
+			for _, kind in ipairs(klon:GetChildren()) do
+				if not kind:IsA("SpecialMesh") then
+					kind:Destroy()
 				end
 			end
+			if klon:IsA("MeshPart") then
+				klon.TextureID = "" -- ein Roentgenbild zeigt Form, nicht Farbe
+			end
+			klon.Anchored = true
+			klon.CanCollide = false
+			klon.CastShadow = false
+			klon.Material = Enum.Material.Neon
+			klon.Color = eintrag.color
+			klon.Transparency = 0.25
+			klon.Parent = modell
+			gefunden += 1
 		end
 	end
 
-	-- Nachweis. Ohne ihn ist von aussen nicht zu unterscheiden, ob das Fenster leer bleibt,
-	-- weil es die Teile nicht gibt, weil sie unsichtbar sind, oder weil die Kamera
-	-- danebensteht.
-	print(string.format(
-		"[Kaiju Debug] Scan %s: %d Teile uebernommen, %d unsichtbare uebersprungen (gesucht: %s).",
-		key,
-		gefunden,
-		uebersprungen,
-		table.concat(teileNamen, ", ")
-	))
-
 	if gefunden == 0 then
-		-- Keine sichtbaren Teile gefunden. Dann bleibt das Fenster leer statt halb
-		-- gefuellt; Raster und Abtastlinie stehen weiter.
 		modell:Destroy()
-		return
+		return false
 	end
 
 	modell.Parent = eintrag.scanViewport
-	ModelPreviewUtils.Fit(eintrag.scanViewport, modell, eintrag.scanFrame, SCAN_ZOOM)
+
+	-- Kamera auf den Knochenbereich richten, von VORN -- also aus der Richtung, in die die
+	-- Figur schaut.
+	local kamera = eintrag.scanViewport.CurrentCamera
+	if not kamera then
+		kamera = Instance.new("Camera")
+		kamera.Parent = eintrag.scanViewport
+		eintrag.scanViewport.CurrentCamera = kamera
+	end
+	kamera.FieldOfView = SCAN_FOV
+
+	local spanne = math.max(groesse.X, groesse.Y, groesse.Z)
+	local abstand = (spanne * 0.5) / math.tan(math.rad(SCAN_FOV) * 0.5) * SCAN_ZOOM
+	kamera.CFrame = CFrame.new(mitte + wurzel.CFrame.LookVector * abstand, mitte)
+
+	return true
 end
 
--- Einmaliges Verzeichnis der sichtbaren Teile der Figur.
---
--- Es steht hier, weil die Namen der R15-Teile nur eine ANNAHME sind: ein eigenes Rig oder
--- ein Haut-Mesh kann seine Form unter ganz anderen Namen tragen. Bleibt ein Fenster leer,
--- sagt diese Liste, wie die Teile wirklich heissen -- und dann stimmt SCAN_TEILE nicht,
--- nicht die Kamera.
-local verzeichnisGezeigt = false
-local function zeigeTeileVerzeichnis(character)
-	if verzeichnisGezeigt or not character then
-		return
-	end
-	verzeichnisGezeigt = true
-
-	local sichtbare = {}
-	for _, nachfahre in ipairs(character:GetDescendants()) do
-		if nachfahre:IsA("BasePart") and nachfahre.Transparency < 1 then
-			table.insert(sichtbare, string.format(
-				"%s (%s, %.1fx%.1fx%.1f)",
-				nachfahre.Name,
-				nachfahre.ClassName,
-				nachfahre.Size.X,
-				nachfahre.Size.Y,
-				nachfahre.Size.Z
-			))
-		end
-	end
-
-	if #sichtbare == 0 then
-		warn("[Kaiju Debug] Scan-Verzeichnis: die Figur hat KEIN sichtbares Teil.")
-		return
-	end
-	print("[Kaiju Debug] Scan-Verzeichnis, sichtbare Teile der Figur (" .. #sichtbare .. "):")
-	for _, zeile in ipairs(sichtbare) do
-		print("[Kaiju Debug]   " .. zeile)
-	end
-end
-
+-- Der Scan braucht eine Figur, die schon SICHTBAR ist. Beim Spawn ist sie das nicht: die
+-- R15-Teile stehen sofort, das getragene Modell haengt sich erst danach an. Deshalb wird
+-- so lange erneut versucht, bis es klappt -- und nicht einmalig geraten.
+local scanVersuch = 0
 local function baueAlleScans()
-	zeigeTeileVerzeichnis(player.Character)
-	for key in pairs(SCAN_TEILE) do
-		baueScan(key)
-	end
+	scanVersuch += 1
+	local meinVersuch = scanVersuch
+
+	task.spawn(function()
+		for durchgang = 1, 20 do -- hoechstens zehn Sekunden
+			if scanVersuch ~= meinVersuch then
+				return -- ein neuer Charakter hat uebernommen
+			end
+			local fertig = true
+			for key in pairs(SCAN_TEILE) do
+				if not baueScan(key) then
+					fertig = false
+				end
+			end
+			if fertig then
+				print("[Kaiju Debug] Scan: Figur erfasst nach " .. durchgang .. " Versuch(en).")
+				return
+			end
+			task.wait(0.5)
+		end
+		warn("[Kaiju Debug] Scan: nach zehn Sekunden keine sichtbare Figur gefunden -- Fenster bleiben leer.")
+	end)
 end
 
 -- Der Charakter existiert beim Start des Skripts moeglicherweise noch nicht, und er wird
--- bei jedem Tod und bei jedem Skin-Wechsel ersetzt.
-player.CharacterAdded:Connect(function()
-	task.wait(0.5) -- den Gliedmassen Zeit lassen, im Charakter aufzutauchen
-	baueAlleScans()
-end)
+-- bei jedem Tod und bei jedem Skin-Wechsel ersetzt. Einen Verzug braucht es hier nicht
+-- mehr -- die Wiederholung oben wartet selbst, bis die Figur sichtbar ist.
+player.CharacterAdded:Connect(baueAlleScans)
 if player.Character then
-	task.spawn(baueAlleScans)
+	baueAlleScans()
 end
-player:GetAttributeChangedSignal("EquippedSkin"):Connect(function()
-	task.delay(0.5, baueAlleScans)
-end)
+player:GetAttributeChangedSignal("EquippedSkin"):Connect(baueAlleScans)
 
 -- Die Abtastlinien wandern. Eine Schleife fuer alle drei -- drei eigene waeren dieselbe
 -- Rechnung dreimal.
