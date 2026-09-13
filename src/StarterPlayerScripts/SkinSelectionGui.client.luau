@@ -351,144 +351,20 @@ local BALKEN_HOEHE = 10
 -- zwei Felder denselben Takt haben -- auch wenn "LEVEL" laenger ist als "HP".
 local ZAHL_VERSATZ = 56
 
--- ===== Die Kopfleiste =====
+-- ===== Warum oben KEINE Leiste steht =====
 --
--- Bisher standen oben vier lose Dinge nebeneinander: die Statusfelder in der Mitte, Geld
--- und Home rechts, der Ton-Knopf eine Zeile darunter. Vier Kanten, drei Hoehen, kein
--- Zusammenhang -- und die zweite Reihe drueckte das Ortsfeld nach unten.
+-- Es gab eine: eine durchgehende Blende ueber die ganze Breite, als Grund, auf dem
+-- Statusfelder, Geld, Home und Ton sitzen. Auf dem Rechner sass sie gut.
 --
--- Jetzt eine durchgehende Leiste ueber die ganze Breite. Sie traegt nichts selbst; sie ist
--- der Grund, auf dem die anderen sitzen. Das ist der Unterschied zwischen Anzeigen, die
--- ueber der Welt schweben, und einem Geraet, in das sie eingebaut sind -- dieselbe
--- Ueberlegung wie beim Sockel des Tachos.
+-- Auf dem Telefon nicht. Sie musste dort zwei Dinge zugleich sein -- der Grund unter den
+-- eigenen Anzeigen UND die Flaeche hinter Robloxs Systemleiste, die auf dem Telefon deutlich
+-- hoeher ist als auf dem Rechner. Das Ergebnis war ein Band ueber fast ein Drittel der
+-- Bildhoehe. Es sah aus, als bestuende der halbe Schirm aus Leiste.
 --
--- Sie liegt in einem EIGENEN ScreenGui mit DisplayOrder -1. Zwischen ScreenGuis entscheidet
--- allein die DisplayOrder, und Home und Ton bringen ihre eigenen mit: ohne das haette die
--- Leiste je nach Ladereihenfolge mal hinter, mal vor ihnen gelegen.
---
--- ===== Die Leiste ist das einzige Stueck, das den Rand des Geraets kennt =====
--- Auf dem Telefon fiel es auf: die Leiste brach links und rechts vor der Kante ab, und
--- Geld, Home und Ton lagen gar nicht auf ihr, sondern darunter.
---
--- Beides ist DERSELBE Fehler. Die Leiste hatte IgnoreGuiInset, ihre Nachbarn nicht -- sie
--- begann also bei null, waehrend Geld, Home, Ton und die Statusfelder alle um die Hoehe der
--- Roblox-Systemleiste nach unten geschoben wurden. Auf dem Rechner sind das 36 Pixel und es
--- fiel kaum auf; auf dem Telefon ist die Leiste hoeher.
---
--- Der Ausweg ist nicht, allen dasselbe Flag zu geben -- dann laegen die Knoepfe unter den
--- Roblox-Symbolen. Stattdessen bleibt die Leiste die EINZIGE Stelle mit Wissen ueber den
--- Rand: sie blutet waagerecht bis an die physische Kante aus und waechst senkrecht um genau
--- den Versatz, den ihre Nachbarn ohnehin bekommen. Dann deckt sie sich mit ihnen, ohne dass
--- irgendein anderes Skript etwas davon wissen muss. Die oberen Pixel der Leiste liegen
--- dabei HINTER der Roblox-Systemleiste -- als dunkler Grund, der deren Symbole lesbarer
--- macht.
-local HUD_KOPFLEISTE_HOEHE = 78
-
-do
-	local barGui = Instance.new("ScreenGui")
-	barGui.Name = "HudTopBarGui"
-	barGui.ResetOnSpawn = false
-	barGui.DisplayOrder = -1
-	HudChrome.FullBleed(barGui)
-	barGui.Parent = player:WaitForChild("PlayerGui")
-
-	local bar = Instance.new("Frame")
-	bar.Name = "TopBar"
-	bar.Size = UDim2.new(1, 0, 0, HUD_KOPFLEISTE_HOEHE)
-	bar.Position = UDim2.new(0, 0, 0, 0)
-	bar.BackgroundColor3 = HudChrome.Color.Panel
-	bar.BackgroundTransparency = 0.25
-	bar.BorderSizePixel = 0
-	bar.Parent = barGui
-
-	-- Nach unten dunkler. Ohne den Verlauf ist es eine graue Flaeche; mit ihm ist es eine
-	-- Blende, hinter der die Welt beginnt.
-	local verlauf = Instance.new("UIGradient")
-	verlauf.Rotation = 90
-	verlauf.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, HudChrome.Color.PanelRaised),
-		ColorSequenceKeypoint.new(1, HudChrome.Color.Panel),
-	})
-	verlauf.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0),
-		NumberSequenceKeypoint.new(0.75, 0),
-		NumberSequenceKeypoint.new(1, 0.55),
-	})
-	verlauf.Parent = bar
-
-	-- Die Lichtkante an der Unterseite macht die Leiste erst zu einer Kante. Sie ist das
-	-- einzige, was man von der Leiste wirklich SIEHT -- der Rest ist Abdunklung.
-	local kante = Instance.new("Frame")
-	kante.Name = "BarEdge"
-	kante.Size = UDim2.new(1, 0, 0, 1)
-	kante.Position = UDim2.new(0, 0, 1, -1)
-	kante.BackgroundColor3 = HudChrome.Color.BorderBright
-	kante.BackgroundTransparency = 0.55
-	kante.BorderSizePixel = 0
-	kante.Parent = bar
-
-	-- ===== Den Versatz MESSEN, nicht rechnen =====
-	--
-	-- Erster Versuch war GetGuiInset().Y. Auf dem Telefon lagen die Knoepfe danach immer
-	-- noch unter der Leiste -- der Wert stimmt also nicht mit dem ueberein, was Roblox
-	-- tatsaechlich an Versatz vergibt. Neben der Systemleiste schneidet naemlich auch der
-	-- sichere Bereich des Geraets oben ein, und GetGuiInset kennt nur die Leiste.
-	--
-	-- Statt die Summe nachzubauen, wird sie abgelesen. Ein ScreenGui ist ein LayerCollector
-	-- und hat eine AbsolutePosition: die Differenz zwischen dem randlosen barGui und dem
-	-- gewoehnlichen screenGui IST der Versatz, den alle Nachbarn bekommen -- ohne jede
-	-- Annahme darueber, woraus er sich zusammensetzt.
-	--
-	-- GetGuiInset bleibt als Untergrenze stehen, fuer den Fall, dass die Messung zu frueh
-	-- kommt und noch null meldet. Beide Zahlen stehen in der Ausgabe, sonst laesst sich
-	-- nicht unterscheiden, welche gegriffen hat.
-	local clusterGebunden = false
-
-	local function versatzAnwenden()
-		local gemessen = screenGui.AbsolutePosition.Y - barGui.AbsolutePosition.Y
-		local gerechnet = HudChrome.TopInset()
-		local versatz = math.max(gemessen, gerechnet, 0)
-		local hoehe = versatz + HUD_KOPFLEISTE_HOEHE
-
-		-- ===== Gegenprobe: enthaelt die Leiste die Statusfelder wirklich? =====
-		--
-		-- Die 78 sind fuer den Rechner gedacht, wo nichts skaliert wird. Auf dem Telefon
-		-- liegen zwischen dem Wert und dem, was auf dem Schirm steht, ZWEI UIScale-Ebenen:
-		-- die globale Verkleinerung des HUDs und die Gegenskalierung des Statusblocks. Das
-		-- Ergebnis vorherzusagen hiesse, beide nachzurechnen -- und genau solche Rechnungen
-		-- sind in dieser Sitzung mehrfach danebengegangen.
-		--
-		-- Also wird die Unterkante abgelesen und die Leiste notfalls tiefer gezogen. Die 78
-		-- bleiben die Untergrenze: auf dem Rechner sieht das Ergebnis dadurch unveraendert
-		-- aus, auf dem Telefon waechst die Leiste so weit, wie sie muss.
-		local cluster = screenGui:FindFirstChild("PlayerStatusCluster")
-		if cluster and cluster.AbsoluteSize.Y > 0 then
-			local unterkante = cluster.AbsolutePosition.Y + cluster.AbsoluteSize.Y - bar.AbsolutePosition.Y
-			hoehe = math.max(hoehe, unterkante + 18) -- 18 px Luft, wie auf dem Rechner (78 - 8 - 52)
-
-			-- Erst ab hier gibt es etwas zu beobachten: der Block entsteht spaeter in diesem
-			-- Skript, und seine Groesse steht erst, wenn beide UIScale-Ebenen gegriffen haben.
-			if not clusterGebunden then
-				clusterGebunden = true
-				cluster:GetPropertyChangedSignal("AbsoluteSize"):Connect(versatzAnwenden)
-				cluster:GetPropertyChangedSignal("AbsolutePosition"):Connect(versatzAnwenden)
-			end
-		end
-
-		bar.Size = UDim2.new(1, 0, 0, hoehe)
-	end
-
-	-- Der Versatz steht beim Start des Skripts oft noch auf null: die Kern-Oberflaeche von
-	-- Roblox baut sich erst auf. Deshalb nachziehen statt einmal fragen -- ueber die
-	-- Systemleiste, ueber die Bildgroesse (Drehen des Telefons) und ueber die gemessene
-	-- Lage selbst.
-	HudChrome.BindTopInset(versatzAnwenden)
-	screenGui:GetPropertyChangedSignal("AbsolutePosition"):Connect(versatzAnwenden)
-	screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(versatzAnwenden)
-	-- Noch einmal, sobald dieses Skript durchgelaufen ist: dann steht der Statusblock, und
-	-- die Gegenprobe oben findet ihn und haengt sich an ihn.
-	task.defer(versatzAnwenden)
-end
+-- Die Lehre ist allgemeiner: eine Flaeche, deren Hoehe von etwas Fremdem abhaengt, laesst
+-- sich nicht gestalten. Die Anzeigen stehen deshalb wieder frei -- jede traegt ihren eigenen
+-- dunklen Grund, und den Zusammenhang stiftet die gemeinsame Zeile, nicht ein Kasten
+-- darunter. Die Reihe rechts (Ton, Home, Geld) bleibt, sie war der eigentliche Gewinn.
 
 local statusCluster = Instance.new("Frame")
 statusCluster.Name = "PlayerStatusCluster"

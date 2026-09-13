@@ -173,15 +173,14 @@ local function railLageAnwenden()
 		return
 	end
 
-	-- Oberkante, die nicht unterschritten werden darf: die Unterkante der Kopfleiste. Sie
-	-- wird beim Objekt selbst abgefragt, nicht nachgerechnet -- sie kennt den Rand des
-	-- Geraets bereits. Fehlt sie noch, gilt der Systemleisten-Versatz als Notbehelf.
+	-- Oberkante, die nicht unterschritten werden darf: knapp unter Robloxs Systemleiste.
+	-- Dieses ScreenGui hat IgnoreGuiInset, beginnt also ganz oben -- ohne die Grenze liefe
+	-- die Leiste unter die Roblox-Symbole und darueber hinaus aus dem Bild.
+	--
+	-- HudChrome.TopInset misst den Versatz, statt ihn aus GetGuiInset zu rechnen: das kennt
+	-- nur die Systemleiste, nicht den sicheren Bereich des Geraets, und lag auf dem Telefon
+	-- deutlich daneben.
 	local obenPx = HudChrome.TopInset() + 8
-	local barGui = playerGui:FindFirstChild("HudTopBarGui")
-	local bar = barGui and barGui:FindFirstChild("TopBar")
-	if bar then
-		obenPx = bar.AbsoluteSize.Y + 8
-	end
 
 	local unterkantePx = screenGui.AbsolutePosition.Y + screenGui.AbsoluteSize.Y
 	local oberkantePx = screenGui.AbsolutePosition.Y + obenPx
@@ -206,6 +205,9 @@ end
 menuRail:GetPropertyChangedSignal("AbsoluteSize"):Connect(railLageAnwenden)
 screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(railLageAnwenden)
 screenGui:GetPropertyChangedSignal("AbsolutePosition"):Connect(railLageAnwenden)
+-- Und sobald der gemessene Versatz steht: beim Start des Skripts ist Robloxs
+-- Kern-Oberflaeche oft noch nicht aufgebaut, die Grenze oben waere dann null.
+HudChrome.BindTopInset(railLageAnwenden)
 task.defer(railLageAnwenden)
 
 

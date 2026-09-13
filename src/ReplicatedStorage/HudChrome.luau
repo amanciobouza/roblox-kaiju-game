@@ -568,6 +568,7 @@ end
 -- physische Kante reichen soll.
 
 local GuiService = game:GetService("GuiService")
+local Players = game:GetService("Players")
 
 -- Bis an die physische Kante, ohne jeden Einzug.
 --
@@ -592,8 +593,48 @@ end
 -- Genau dieser Wert, nicht der gepolsterte aus TopInsetUtils: hier geht es nicht darum,
 -- Abstand zur Systemleiste zu halten, sondern darum, sich mit Geschwistern zu decken, die
 -- den Versatz bereits bekommen haben.
+--
+-- ===== Warum GetGuiInset dafuer nicht genuegt =====
+-- Es kennt nur die Systemleiste von Roblox. Oben schneidet aber auch der sichere Bereich
+-- des Geraets ein, und auf dem Telefon war die Differenz gross genug, dass alles, was
+-- damit gerechnet wurde, danebenlag.
+--
+-- Deshalb wird gemessen. Zwei leere ScreenGuis, eines randlos und eines gewoehnlich: die
+-- Differenz ihrer Oberkanten IST der Versatz, ohne jede Annahme darueber, woraus er sich
+-- zusammensetzt. Sie kosten nichts -- sie haben keinen Inhalt und zeichnen nichts.
+local sondeRandlos, sondeGewoehnlich
+
+local function sondenAnlegen()
+	if sondeRandlos then
+		return true
+	end
+	local spieler = Players.LocalPlayer
+	local gui = spieler and spieler:FindFirstChildOfClass("PlayerGui")
+	if not gui then
+		return false -- auf dem Server, oder die PlayerGui steht noch nicht
+	end
+
+	sondeRandlos = Instance.new("ScreenGui")
+	sondeRandlos.Name = "HudChromeSondeRandlos"
+	sondeRandlos.ResetOnSpawn = false
+	HudChrome.FullBleed(sondeRandlos)
+	sondeRandlos.Parent = gui
+
+	sondeGewoehnlich = Instance.new("ScreenGui")
+	sondeGewoehnlich.Name = "HudChromeSondeGewoehnlich"
+	sondeGewoehnlich.ResetOnSpawn = false
+	sondeGewoehnlich.Parent = gui
+	return true
+end
+
 function HudChrome.TopInset()
-	return GuiService:GetGuiInset().Y
+	local gerechnet = GuiService:GetGuiInset().Y
+	if not sondenAnlegen() then
+		return gerechnet
+	end
+	local gemessen = sondeGewoehnlich.AbsolutePosition.Y - sondeRandlos.AbsolutePosition.Y
+	-- Die Messung kann zu frueh kommen und null melden; dann traegt die Rechnung.
+	return math.max(gemessen, gerechnet, 0)
 end
 
 -- Ruft `fn(inset)` sofort und bei jeder Aenderung.
@@ -610,6 +651,12 @@ function HudChrome.BindTopInset(fn)
 	pcall(function()
 		GuiService:GetPropertyChangedSignal("TopbarInset"):Connect(anwenden)
 	end)
+	if sondeGewoehnlich then
+		-- Das Drehen des Telefons aendert den sicheren Bereich, ohne die Systemleiste
+		-- anzufassen. Die Sonde merkt das, TopbarInset nicht.
+		sondeGewoehnlich:GetPropertyChangedSignal("AbsolutePosition"):Connect(anwenden)
+		sondeGewoehnlich:GetPropertyChangedSignal("AbsoluteSize"):Connect(anwenden)
+	end
 	-- Nachschlag: der erste Aufbau der Kern-Oberflaeche loest nicht auf allen Geraeten ein
 	-- Ereignis aus.
 	task.delay(2, anwenden)
