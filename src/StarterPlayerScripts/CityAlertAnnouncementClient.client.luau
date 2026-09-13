@@ -2,18 +2,22 @@
 -- FIX: Megacity -> MegaCity (Schreibweise an Studio-Attribut angeglichen)
 -- Ort in Studio: StarterPlayerScripts
 --
--- VORWARNUNG vor der naechsten Alarmstufe der Stadt, in der der Spieler gerade steht.
--- Sie faellt, sobald der Druck 80 Prozent der Schwelle erreicht -- also KURZ BEVOR die
--- Stufe steigt, nicht danach. Eine Warnung, die gleichzeitig mit dem Ereignis kommt, ist
--- keine Warnung, sondern ein Bericht.
+-- Der Alarm-Strang bespielt beide Register der Bildmitte (siehe HudCenterNotice):
 --
--- Fester Zeitplan (~1.5-1.8s), damit sie wirkt, ohne den Spielfluss anzuhalten:
+--   Bei 80 Prozent der Schwelle: die WARNUNG. Kurzer Alarmton, rotes Schild mit der
+--   bevorstehenden Gefahr, pulsiert und geht von selbst wieder. Sie stellt das Modul dar;
+--   hier steht nur, WANN sie faellt und WAS drinsteht.
+--
+--   Beim tatsaechlichen Stufenaufstieg: das EREIGNIS -- die grosse Sequenz unten in dieser
+--   Datei, mit dem Stufen-Sound wie bisher.
+--
+-- Fester Zeitplan (~1.5-1.8s), damit das Ereignis wirkt, ohne den Spielfluss anzuhalten:
 --
 --   0.0s  Ausloeser: kompakte Anzeige zittert, aktueller Stern pulsiert 2x, Boom-Sound
 --   0.15s Warnsignal: kurzer roter Rand-Flash, stufenspezifischer Sound startet
---   0.3s  Das Band faehrt auf: Titel der kommenden Antwort + Sterne
---   0.55s Der kommende Stern erscheint als PULSIERENDER Umriss -- eingestanzt wird er
---         nicht, denn verdient ist er noch nicht. Dazu Screen-Shake, Funken, Schockwelle.
+--   0.3s  Das Band faehrt auf: Titel der neuen Antwort + Sterne
+--   0.55s Der neue Stern wird eingestanzt (Ueberschwung 140->100 Prozent, Screen-Shake,
+--         Funken, Schockwelle), Text wechselt auf "ALERT LEVEL X"
 --   0.9s  Konsequenz: was diese Antwort bedeutet ("FIRE RESPONSE DEPLOYED" etc.)
 --   1.5s  Rueckkehr: schrumpft zur kompakten Anzeige oben rechts
 --
@@ -31,6 +35,7 @@ local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
+local HudCenterNotice = require(ReplicatedStorage:WaitForChild("HudCenterNotice"))
 
 -- Fuer die Vorwarnung wird die Schwelle der Stadt gebraucht -- der Fortschrittswert ist
 -- ein roher Punktestand und sagt ohne sie nichts.
@@ -61,6 +66,11 @@ local LEVEL_INFO = {
 	[4] = { title = "MILITARY RESPONSE", consequence = "MILITARY FORCES DEPLOYED", soundId = "rbxassetid://93574748731319" },
 	[5] = { title = "MAXIMUM ALERT", consequence = "CITY DEFENDER AWAKENED", soundId = "" },
 }
+
+-- Kurzer Alarmton fuer die WARNUNG (nicht fuer das Ereignis -- das hat den Ton seiner
+-- Stufe). Geborgt vom Barrikaden-Alarm, damit die Warnung ueberhaupt klingt; sie haette
+-- sonst keinen eigenen Ton. Wenn es einen eigenen gibt, hier eintragen.
+local WARN_SOUND_ID = "rbxassetid://910988901"
 
 local IMPACT_SOUND_ID = "" -- tiefer Boom/Impact beim Trigger (0.0s) -- Platzhalter, bitte befüllen
 local STAMP_SOUND_ID = "" -- CLANG/THOOM beim Einstanzen des neuen Sterns (0.55s) -- Platzhalter
@@ -298,6 +308,11 @@ local function showAnnouncement(cityName, newLevel, oldLevel)
 	end
 	isAnimating = true
 
+	-- Die Mitte gehoert jetzt dem Ereignis. Eine noch stehende Warnung weicht -- sie hat
+	-- dasselbe Thema, und zwei Meldungen dazu uebereinander waeren keine.
+	HudCenterNotice.SetBusy(true)
+	HudCenterNotice.ClearWarning()
+
 	local info = LEVEL_INFO[newLevel] or { title = "ALERT LEVEL " .. newLevel, consequence = "", soundId = "" }
 	local isMaxLevel = newLevel >= 5
 
@@ -346,7 +361,7 @@ local function showAnnouncement(cityName, newLevel, oldLevel)
 
 	titleLabel.Text = info.title
 	titleLabel.TextColor3 = HudChrome.Color.TextPrimary
-	levelLabel.Text = "LEVEL " .. oldLevel .. "  \u{2192}  " .. newLevel .. "   INBOUND"
+	levelLabel.Text = "LEVEL " .. oldLevel .. "  \u{2192}  " .. newLevel
 	consequenceLabel.Text = ""
 	consequenceLabel.TextTransparency = 1
 
@@ -392,20 +407,14 @@ local function showAnnouncement(cityName, newLevel, oldLevel)
 				task.wait(0.08)
 			end
 		else
-			-- Der kommende Stern wird NICHT eingestanzt -- er ist noch nicht verdient. Er
-			-- erscheint als pulsierender Umriss: das ist der Unterschied zwischen "es ist
-			-- passiert" und "es steht bevor".
+			-- Eingestanzt, mit Ueberschwung: der Stern ist jetzt verdient. Genau dieser
+			-- Moment war es, fuer den die Sequenz gebaut wurde.
 			newStar.TextColor3 = HudChrome.Color.Ready
-			newStar.TextTransparency = 0.55
+			newStar.TextTransparency = 0
 			newStar.Size = UDim2.new(0, 67, 1, 0) -- ~140% von 48
 			TweenService:Create(newStar, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
 				Size = UDim2.new(0, 48, 1, 0),
 			}):Play()
-			TweenService:Create(
-				newStar,
-				TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut, 4, true),
-				{ TextTransparency = 0.2 }
-			):Play()
 		end
 
 		playSound(STAMP_SOUND_ID, 0.9)
@@ -424,7 +433,7 @@ local function showAnnouncement(cityName, newLevel, oldLevel)
 		}):Play()
 	end
 
-	levelLabel.Text = "ALERT LEVEL " .. newLevel .. "   INBOUND"
+	levelLabel.Text = "ALERT LEVEL " .. newLevel
 	levelLabel.TextColor3 = HudChrome.Color.TextPrimary
 
 	if isMaxLevel then
@@ -472,21 +481,22 @@ local function showAnnouncement(cityName, newLevel, oldLevel)
 	end
 
 	isAnimating = false
+	HudCenterNotice.SetBusy(false)
 end
 
 -- ===== Ausloeser =====
 --
--- Zwei Dinge werden beobachtet, und sie tun Verschiedenes.
+-- Zwei Beobachtungen, zwei Register der Bildmitte.
 --
--- Der DRUCK loest die Ankuendigung aus, kurz bevor die naechste Stufe faellt. Vorher hing
--- sie am Stufenwechsel selbst -- dann kuendigte sie aber nichts an, sondern meldete etwas
--- Geschehenes. Eine Warnung, die gleichzeitig mit dem Ereignis kommt, ist keine.
+-- Der DRUCK loest die WARNUNG aus, sobald er 80 Prozent der Schwelle erreicht: kurzer
+-- Alarmton, rotes Schild, und darauf steht, was gleich kommt. Einmal je Stufe.
 --
--- Die STUFE setzt nur die Merker zurueck und meldet eine Entspannung.
+-- Der STUFENWECHSEL loest das EREIGNIS aus -- die grosse Sequenz. Sie meldet, was
+-- eingetreten ist, und spielt den Ton dieser Stufe.
 --
 -- (Nebenbei: die alte Fassung war ueberhaupt nie verdrahtet. checkCityLevel stand als
--- Funktion da und wurde von nirgends aufgerufen -- die grosse Ankuendigung hat nie
--- gespielt. Deshalb hier auch die Abonnements, die vorher fehlten.)
+-- Funktion da und wurde von nirgends aufgerufen -- die grosse Sequenz hat nie gespielt.
+-- Deshalb hier auch die Abonnements, die vorher fehlten.)
 local WARN_ANTEIL = 0.8 -- ab diesem Anteil der Schwelle wird gewarnt
 local warnedForLevel = {} -- [cityName] = Stufe, fuer die schon gewarnt wurde
 
@@ -506,11 +516,21 @@ local function checkCityLevel(cityName)
 		return
 	end
 	lastKnownLevel[cityName] = newLevel
-	-- Fuer die neue Stufe darf wieder gewarnt werden.
-	warnedForLevel[cityName] = nil
+	warnedForLevel[cityName] = nil -- fuer die neue Stufe darf wieder gewarnt werden
 
-	if newLevel < oldLevel and player:GetAttribute("CurrentCityName") == cityName then
-		-- Entspannung: keine grosse Ankuendigung, nur die kompakte Anzeige leuchtet gruen.
+	if player:GetAttribute("CurrentCityName") ~= cityName then
+		return
+	end
+
+	if newLevel > oldLevel then
+		local now = os.clock()
+		if lastAnnouncedAt[cityName] and now - lastAnnouncedAt[cityName] < COOLDOWN_SECONDS then
+			return
+		end
+		lastAnnouncedAt[cityName] = now
+		showAnnouncement(cityName, newLevel, oldLevel)
+	else
+		-- Entspannung: kein Ereignis, nur die kompakte Anzeige leuchtet gruen.
 		if _G.FlashCityAlertIndicator then
 			_G.FlashCityAlertIndicator(Color3.fromRGB(90, 220, 130))
 		end
@@ -542,21 +562,25 @@ local function checkCityPressure(cityName)
 	local maxLevelValue = cityAlertValues:FindFirstChild(cityName .. "MaxLevel")
 	local maxLevel = (maxLevelValue and maxLevelValue.Value) or config.MaxAlertLevel or 5
 	if level >= maxLevel then
-		return -- auf der Hoechststufe kommt nichts mehr
+		return -- auf der Hoechststufe kommt nichts mehr, also gibt es nichts zu warnen
 	end
 
 	if progressValue.Value / schwelle < WARN_ANTEIL then
 		return
 	end
 
-	local now = os.clock()
-	if lastAnnouncedAt[cityName] and now - lastAnnouncedAt[cityName] < COOLDOWN_SECONDS then
+	local kommend = LEVEL_INFO[level + 1]
+	if not kommend then
 		return
 	end
-	lastAnnouncedAt[cityName] = now
-	warnedForLevel[cityName] = level
 
-	showAnnouncement(cityName, level + 1, level)
+	warnedForLevel[cityName] = level
+	HudCenterNotice.Warn({
+		title = kommend.title,
+		detail = kommend.consequence ~= "" and kommend.consequence or "ALERT LEVEL " .. (level + 1) .. " INBOUND",
+		soundId = WARN_SOUND_ID,
+		volume = 0.6,
+	})
 end
 
 local function beobachte(valueObject)
@@ -565,7 +589,6 @@ local function beobachte(valueObject)
 	if stadt and not name:match("MaxLevel$") then
 		valueObject:GetPropertyChangedSignal("Value"):Connect(function()
 			checkCityLevel(stadt)
-			checkCityPressure(stadt)
 		end)
 		lastKnownLevel[stadt] = valueObject.Value
 		return
@@ -583,4 +606,6 @@ for _, valueObject in ipairs(cityAlertValues:GetChildren()) do
 end
 cityAlertValues.ChildAdded:Connect(beobachte)
 
-print("[Kaiju Debug] CityAlertAnnouncement: Vorwarnung ab " .. math.floor(WARN_ANTEIL * 100) .. " Prozent der Schwelle scharf.")
+print("[Kaiju Debug] CityAlertAnnouncement: Warnung ab "
+	.. math.floor(WARN_ANTEIL * 100)
+	.. " Prozent, grosse Meldung beim Stufenaufstieg.")
