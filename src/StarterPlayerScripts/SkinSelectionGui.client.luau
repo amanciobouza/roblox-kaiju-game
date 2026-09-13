@@ -760,13 +760,18 @@ do
 	local TICK_MINOR = 5
 	local TICK_MAJOR = 11
 	local LABEL_RADIUS = 62 -- Beschriftung der Hauptwerte
-	local BEZEL_INNER = FACE_RADIUS
+	-- Der Gehaeusering umschliesst jetzt BEIDES: Zifferblatt und Energiebogen. Vorher sass
+	-- er zwischen ihnen, und der Bogen lag frei ausserhalb -- damit gehoerte er optisch
+	-- nicht mehr zum Geraet. Ein Ring, der aussen herumlaeuft, macht aus zwei Anzeigen
+	-- eine.
+	local BEZEL_INNER = 120
 	local BEZEL_THICK = 11
 	local BEZEL_OUTER = BEZEL_INNER + BEZEL_THICK
 	local NEEDLE_LENGTH = 84
-	-- Der Energiebogen liegt aussen. Seine Masse stehen hier oben bei den uebrigen, weil
-	-- die Beschriftung sich an seiner Oberkante ausrichtet.
-	local ENERGY_ARC_INNER = 119
+	-- Der Energiebogen liegt zwischen Zifferblatt und Gehaeusering -- INNERHALB des Rings,
+	-- nicht ausserhalb. Frei ausserhalb wirkte er losgeloest, wie ein zweites Geraet, das
+	-- zufaellig dieselbe Kruemmung hat.
+	local ENERGY_ARC_INNER = 106
 	local ENERGY_ARC_THICK = 12
 
 	-- Die Zonenfarben. Gedeckter als vorher: ein Messgeraet leuchtet nicht, es zeigt an.
@@ -833,13 +838,15 @@ do
 	sockelKante.ZIndex = 6
 	sockelKante.Parent = gehaeuse
 
-	-- Vier Nieten, links und rechts je zwei -- dort, wo der Sockel an der Scheibe vorbei
-	-- sichtbar bleibt. In der Mitte waeren sie vom Instrument verdeckt.
+	-- Die Nieten sitzen im Streifen UNTERHALB der Drehachse. Oberhalb reicht der Ring jetzt
+	-- fast bis an die Kante des Sockels -- dort waeren sie verdeckt. Unterhalb ist die
+	-- ganze Breite frei, und genau dort gehoeren sie hin: es ist die Stelle, an der das
+	-- Instrument auf seiner Grundplatte verschraubt ist.
 	for _, stelle in ipairs({
-		{ x = 18, y = 11 },
-		{ x = 18, y = 27 },
-		{ x = -18, y = 11 },
-		{ x = -18, y = 27 },
+		{ x = 16, y = SOCKEL_UEBERLAPP + 12 },
+		{ x = 64, y = SOCKEL_UEBERLAPP + 12 },
+		{ x = -64, y = SOCKEL_UEBERLAPP + 12 },
+		{ x = -16, y = SOCKEL_UEBERLAPP + 12 },
 	}) do
 		local niete = Instance.new("Frame")
 		niete.Name = "HousingRivet"
@@ -1161,7 +1168,7 @@ do
 	--
 	-- Und beide sind groesser: die Stufe ist die wichtigste Aussage des Tachos, sie war
 	-- kleiner gesetzt als der Stadtname oben rechts.
-	local BOGEN_OBERKANTE = GAUGE_CENTER.Y - (ENERGY_ARC_INNER + ENERGY_ARC_THICK)
+	local BOGEN_OBERKANTE = GAUGE_CENTER.Y - BEZEL_OUTER
 
 	local stageLabel = Instance.new("TextLabel")
 	stageLabel.Name = "HeatStageLabel"
