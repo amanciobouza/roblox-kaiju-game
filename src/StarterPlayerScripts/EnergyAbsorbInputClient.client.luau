@@ -133,9 +133,14 @@ keyLabel.TextColor3 = HudChrome.Color.TextDim
 -- Seit der Knopf IN der Reihe steht, faellt es auf: die vier Angriffe bekommen im Sanctuary
 -- einen Schleier und keinen Akzentstreifen, dieser nicht. Fuenf Knoepfe, zwei Regeln.
 --
--- Gesperrt wird nichts weggenommen: im Sanctuary gibt es keine Energiequelle, das Halten
--- des Knopfes tut dort ohnehin nichts (siehe EnergyCollectionHandler). Bisher war er ein
--- Bedienelement ohne Wirkung -- jetzt sagt er das auch.
+-- Gesperrt ist er im Sanctuary ueberall dort, wo er nichts tut -- ausser beim Training des
+-- KOERPERS: das braucht ihn. Damit gilt fuer alle fuenf Knoepfe dieselbe Regel, naemlich
+-- die aus SpecialAttackClient: frei ist, was die Station gerade braucht. Arm den Schlag,
+-- Bein Sprung/Fokus/Flaeche, Koerper das Absorbieren.
+--
+-- Gefragt wird nach BodyTrainingActive, nicht nach TrainingStat: das Koerper-Training
+-- (Kreisparcours) setzt ein eigenes Attribut und laesst TrainingStat leer -- siehe
+-- TrainingHandler. Wer hier auf "Body" prueft, prueft auf etwas, das nie vorkommt.
 local lockScrim = Instance.new("Frame")
 lockScrim.Name = "LockScrim"
 lockScrim.Size = UDim2.new(1, 0, 1, 0)
@@ -151,7 +156,10 @@ lockCorner.CornerRadius = UDim.new(0, HudChrome.Radius.Panel)
 lockCorner.Parent = lockScrim
 
 local function istFrei()
-	return player:GetAttribute("CurrentZone") ~= "Sanctuary"
+	if player:GetAttribute("CurrentZone") ~= "Sanctuary" then
+		return true
+	end
+	return player:GetAttribute("BodyTrainingActive") ~= nil
 end
 
 local function updateLock()
@@ -165,6 +173,7 @@ end
 
 updateLock()
 player:GetAttributeChangedSignal("CurrentZone"):Connect(updateLock)
+player:GetAttributeChangedSignal("BodyTrainingActive"):Connect(updateLock)
 
 -- Rueckmeldung beim Druecken ueber den Akzentstreifen statt ueber den Grund. Der Grund
 -- ist nach der neuen Stilregel bei allen Knoepfen derselbe dunkle Ton -- ihn umzufaerben
