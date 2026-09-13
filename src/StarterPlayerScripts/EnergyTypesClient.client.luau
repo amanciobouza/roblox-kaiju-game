@@ -64,10 +64,10 @@ local ENERGY_CONFIG = {
 local NextWorldEventRollTime = ReplicatedStorage:WaitForChild("NextWorldEventRollTime")
 local activeEventLabel = nil -- Name des laufenden Events, nil wenn keines laeuft
 
-local EVENT_FELD_BREITE = 300
-local EVENT_FELD_HOEHE = 60
+local EVENT_FELD_BREITE = 330
+local EVENT_FELD_HOEHE = 70
 local EVENT_RAND = 12
-local EVENT_SYMBOL = 28
+local EVENT_SYMBOL = 32
 
 local eventFrame = Instance.new("Frame")
 eventFrame.Name = "WorldEventPanel"
@@ -101,51 +101,51 @@ local EVENT_TEXT_X = EVENT_RAND + EVENT_SYMBOL + 10
 
 local eventNameLabel = Instance.new("TextLabel")
 eventNameLabel.Name = "EventName"
-eventNameLabel.Size = UDim2.new(0, EVENT_FELD_BREITE - EVENT_TEXT_X - EVENT_RAND, 0, 22)
-eventNameLabel.Position = UDim2.new(0, EVENT_TEXT_X, 0, 8)
+eventNameLabel.Size = UDim2.new(0, EVENT_FELD_BREITE - EVENT_TEXT_X - EVENT_RAND, 0, 26)
+eventNameLabel.Position = UDim2.new(0, EVENT_TEXT_X, 0, 9)
 eventNameLabel.BackgroundTransparency = 1
 eventNameLabel.TextXAlignment = Enum.TextXAlignment.Left
 eventNameLabel.ZIndex = 56
 eventNameLabel.Text = "NO WORLD EVENT"
 eventNameLabel.Parent = eventFrame
-HudChrome.Label(eventNameLabel, 17)
+HudChrome.Label(eventNameLabel, 21)
 
 local eventSubLabel = Instance.new("TextLabel")
 eventSubLabel.Name = "EventSub"
-eventSubLabel.Size = UDim2.new(0, 120, 0, 18)
-eventSubLabel.Position = UDim2.new(0, EVENT_TEXT_X, 0, 32)
+eventSubLabel.Size = UDim2.new(0, 130, 0, 22)
+eventSubLabel.Position = UDim2.new(0, EVENT_TEXT_X, 0, 38)
 eventSubLabel.BackgroundTransparency = 1
 eventSubLabel.TextXAlignment = Enum.TextXAlignment.Left
 eventSubLabel.ZIndex = 56
 eventSubLabel.Text = ""
 eventSubLabel.Parent = eventFrame
-HudChrome.Number(eventSubLabel, 12)
+HudChrome.Number(eventSubLabel, 15)
 
 -- Bezeichnung und Zahl bleiben getrennte Kaesten -- in EINER Zeile, aber die Zahl sitzt
 -- fest am rechten Rand. Stuenden beide in einem Text, wanderte die Zahl mit der Laenge
 -- der Bezeichnung hin und her.
 local countdownCaption = Instance.new("TextLabel")
 countdownCaption.Name = "CountdownCaption"
-countdownCaption.Size = UDim2.new(0, 50, 0, 18)
-countdownCaption.Position = UDim2.new(1, -EVENT_RAND - 62 - 50, 0, 32)
+countdownCaption.Size = UDim2.new(0, 56, 0, 22)
+countdownCaption.Position = UDim2.new(1, -EVENT_RAND - 76 - 56, 0, 38)
 countdownCaption.BackgroundTransparency = 1
 countdownCaption.TextXAlignment = Enum.TextXAlignment.Right
 countdownCaption.ZIndex = 56
 countdownCaption.Text = "NEXT"
 countdownCaption.Parent = eventFrame
-HudChrome.Label(countdownCaption, 11)
+HudChrome.Label(countdownCaption, 14)
 countdownCaption.TextColor3 = HudChrome.Color.TextSecondary
 
 local countdownLabel = Instance.new("TextLabel")
 countdownLabel.Name = "CountdownTime"
-countdownLabel.Size = UDim2.new(0, 62, 0, 18)
-countdownLabel.Position = UDim2.new(1, -EVENT_RAND - 62, 0, 32)
+countdownLabel.Size = UDim2.new(0, 76, 0, 22)
+countdownLabel.Position = UDim2.new(1, -EVENT_RAND - 76, 0, 38)
 countdownLabel.BackgroundTransparency = 1
 countdownLabel.TextXAlignment = Enum.TextXAlignment.Right
 countdownLabel.ZIndex = 56
 countdownLabel.Text = ""
 countdownLabel.Parent = eventFrame
-HudChrome.NumberBold(countdownLabel, 17)
+HudChrome.NumberBold(countdownLabel, 21)
 
 -- Farbe je Energietyp, aus derselben Tabelle wie der Rest des Spiels.
 local function farbeFuerTyp(energyType)

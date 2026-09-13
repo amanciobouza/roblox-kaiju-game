@@ -48,7 +48,7 @@ local CITY_HOURS = {
 local MAX_ALERT_LEVEL = 5 -- so viele Segmente hat der Balken
 
 local PANEL_BREITE = 236
-local PANEL_HOEHE = 80
+local PANEL_HOEHE = 98
 local PANEL_RAND = 10
 local INNEN_BREITE = PANEL_BREITE - PANEL_RAND * 2
 
@@ -72,25 +72,25 @@ local _, alertStroke = HudChrome.Panel(alertFrame, { radius = HudChrome.Radius.S
 -- ===== Kopfzeile: Stadt und Stunde =====
 local cityNameLabel = Instance.new("TextLabel")
 cityNameLabel.Name = "CityNameLabel"
-cityNameLabel.Size = UDim2.new(0, INNEN_BREITE - 60, 0, 22)
+cityNameLabel.Size = UDim2.new(0, INNEN_BREITE - 70, 0, 26)
 cityNameLabel.Position = UDim2.new(0, PANEL_RAND, 0, 8)
 cityNameLabel.BackgroundTransparency = 1
 cityNameLabel.TextXAlignment = Enum.TextXAlignment.Left
 cityNameLabel.ZIndex = 21
 cityNameLabel.Text = ""
 cityNameLabel.Parent = alertFrame
-HudChrome.Label(cityNameLabel, 18)
+HudChrome.Label(cityNameLabel, 22)
 
 local cityHourLabel = Instance.new("TextLabel")
 cityHourLabel.Name = "CityHourLabel"
-cityHourLabel.Size = UDim2.new(0, 56, 0, 22)
-cityHourLabel.Position = UDim2.new(0, PANEL_RAND + INNEN_BREITE - 56, 0, 8)
+cityHourLabel.Size = UDim2.new(0, 66, 0, 26)
+cityHourLabel.Position = UDim2.new(0, PANEL_RAND + INNEN_BREITE - 66, 0, 8)
 cityHourLabel.BackgroundTransparency = 1
 cityHourLabel.TextXAlignment = Enum.TextXAlignment.Right
 cityHourLabel.ZIndex = 21
 cityHourLabel.Text = ""
 cityHourLabel.Parent = alertFrame
-HudChrome.Number(cityHourLabel, 13)
+HudChrome.Number(cityHourLabel, 16)
 cityHourLabel.TextColor3 = HudChrome.Color.TextDim
 
 -- ===== Alarmstufe: Sterne =====
@@ -105,22 +105,22 @@ cityHourLabel.TextColor3 = HudChrome.Color.TextDim
 -- schwerer zu lesen und versprechen etwas, das nicht kommt.
 local alertCaption = Instance.new("TextLabel")
 alertCaption.Name = "AlertCaption"
-alertCaption.Size = UDim2.new(0, 80, 0, 12)
-alertCaption.Position = UDim2.new(0, PANEL_RAND, 0, 34)
+alertCaption.Size = UDim2.new(0, 90, 0, 16)
+alertCaption.Position = UDim2.new(0, PANEL_RAND, 0, 40)
 alertCaption.BackgroundTransparency = 1
 alertCaption.TextXAlignment = Enum.TextXAlignment.Left
 alertCaption.ZIndex = 21
 alertCaption.Text = "ALERT"
 alertCaption.Parent = alertFrame
-HudChrome.Label(alertCaption, 11)
+HudChrome.Label(alertCaption, 14)
 alertCaption.TextColor3 = HudChrome.Color.TextSecondary
 
-local STERN_GROESSE = 26
+local STERN_GROESSE = 30
 
 local starsContainer = Instance.new("Frame")
 starsContainer.Name = "StarsContainer"
 starsContainer.Size = UDim2.new(0, INNEN_BREITE, 0, STERN_GROESSE)
-starsContainer.Position = UDim2.new(0, PANEL_RAND, 0, 46)
+starsContainer.Position = UDim2.new(0, PANEL_RAND, 0, 60)
 starsContainer.BackgroundTransparency = 1
 starsContainer.ZIndex = 21
 starsContainer.Parent = alertFrame
@@ -356,7 +356,7 @@ local ANTWORT_NAMEN = {
 	[5] = "MAXIMUM ALERT",
 }
 
-local WARN_HOEHE = 30
+local WARN_HOEHE = 34
 local WARN_AN = 0.80 -- ab hier erscheint sie
 local WARN_AUS = 0.72 -- und verschwindet erst hier wieder: ohne diesen Abstand flackert
 -- sie an der Schwelle, weil der Druckwert im Kampf staendig hin und her geht.
@@ -377,20 +377,20 @@ local _, warnStroke = HudChrome.Panel(warnFrame, {
 })
 
 local warnIcon = HudChrome.IconImage(warnFrame, HudChrome.Icon.Alert, HudChrome.Color.Warning)
-warnIcon.Size = UDim2.new(0, 18, 0, 18)
-warnIcon.Position = UDim2.new(0, PANEL_RAND, 0, 6)
+warnIcon.Size = UDim2.new(0, 20, 0, 20)
+warnIcon.Position = UDim2.new(0, PANEL_RAND, 0, 7)
 warnIcon.ZIndex = 21
 
 local warnLabel = Instance.new("TextLabel")
 warnLabel.Name = "WarningLabel"
-warnLabel.Size = UDim2.new(0, INNEN_BREITE - 26, 0, 18)
-warnLabel.Position = UDim2.new(0, PANEL_RAND + 26, 0, 6)
+warnLabel.Size = UDim2.new(0, INNEN_BREITE - 30, 0, 20)
+warnLabel.Position = UDim2.new(0, PANEL_RAND + 30, 0, 7)
 warnLabel.BackgroundTransparency = 1
 warnLabel.TextXAlignment = Enum.TextXAlignment.Left
 warnLabel.ZIndex = 21
 warnLabel.Text = ""
 warnLabel.Parent = warnFrame
-HudChrome.Label(warnLabel, 13)
+HudChrome.Label(warnLabel, 16)
 warnLabel.TextColor3 = HudChrome.Color.Warning
 
 -- Die Liste rueckt nach, wenn die Warnung da ist -- sonst laege sie darunter begraben.
@@ -519,21 +519,21 @@ questListLayout.Parent = questFrame
 
 local questHeader = Instance.new("TextLabel")
 questHeader.Name = "QuestHeader"
-questHeader.Size = UDim2.new(1, 0, 0, 14)
+questHeader.Size = UDim2.new(1, 0, 0, 18)
 questHeader.BackgroundTransparency = 1
 questHeader.TextXAlignment = Enum.TextXAlignment.Left
 questHeader.LayoutOrder = 0
 questHeader.ZIndex = 21
 questHeader.Text = "OBJECTIVES"
 questHeader.Parent = questFrame
-HudChrome.Label(questHeader, 11)
+HudChrome.Label(questHeader, 14)
 questHeader.TextColor3 = HudChrome.Color.TextSecondary
 
 local questRows = {} -- [taskId] = { row=, box=, boxStroke=, textLabel= }
 for index, task in ipairs(TASK_LIST) do
 	local row = Instance.new("Frame")
 	row.Name = task.id .. "Row"
-	row.Size = UDim2.new(1, 0, 0, 18)
+	row.Size = UDim2.new(1, 0, 0, 22)
 	row.BackgroundTransparency = 1
 	row.LayoutOrder = index
 	row.ZIndex = 21
@@ -541,8 +541,8 @@ for index, task in ipairs(TASK_LIST) do
 
 	local box = Instance.new("Frame")
 	box.Name = "StatusBox"
-	box.Size = UDim2.new(0, 10, 0, 10)
-	box.Position = UDim2.new(0, 0, 0.5, -5)
+	box.Size = UDim2.new(0, 12, 0, 12)
+	box.Position = UDim2.new(0, 0, 0.5, -6)
 	box.BackgroundColor3 = HudChrome.Color.PanelSunken
 	box.BorderSizePixel = 0
 	box.ZIndex = 22
@@ -560,14 +560,14 @@ for index, task in ipairs(TASK_LIST) do
 
 	local textLabel = Instance.new("TextLabel")
 	textLabel.Name = "Label"
-	textLabel.Size = UDim2.new(1, -18, 1, 0)
-	textLabel.Position = UDim2.new(0, 18, 0, 0)
+	textLabel.Size = UDim2.new(1, -22, 1, 0)
+	textLabel.Position = UDim2.new(0, 22, 0, 0)
 	textLabel.BackgroundTransparency = 1
 	textLabel.TextXAlignment = Enum.TextXAlignment.Left
 	textLabel.ZIndex = 22
 	textLabel.Text = task.label
 	textLabel.Parent = row
-	HudChrome.Number(textLabel, 12)
+	HudChrome.Number(textLabel, 15)
 	textLabel.TextColor3 = HudChrome.Color.TextSecondary
 
 	questRows[task.id] = { row = row, box = box, boxStroke = boxStroke, textLabel = textLabel }
@@ -578,7 +578,7 @@ local cityBrokenBanner = Instance.new("Frame")
 cityBrokenBanner.Name = "CityBrokenBanner"
 cityBrokenBanner.AnchorPoint = Vector2.new(1, 0)
 cityBrokenBanner.Position = UDim2.new(1, -16, 0, listenY())
-cityBrokenBanner.Size = UDim2.new(0, PANEL_BREITE, 0, 54)
+cityBrokenBanner.Size = UDim2.new(0, PANEL_BREITE, 0, 62)
 cityBrokenBanner.Visible = false
 cityBrokenBanner.ZIndex = 21
 cityBrokenBanner.Parent = screenGui
@@ -592,26 +592,26 @@ HudChrome.Panel(cityBrokenBanner, {
 
 local cityBrokenTitle = Instance.new("TextLabel")
 cityBrokenTitle.Name = "Title"
-cityBrokenTitle.Size = UDim2.new(1, -20, 0, 22)
-cityBrokenTitle.Position = UDim2.new(0, PANEL_RAND, 0, 7)
+cityBrokenTitle.Size = UDim2.new(1, -20, 0, 26)
+cityBrokenTitle.Position = UDim2.new(0, PANEL_RAND, 0, 8)
 cityBrokenTitle.BackgroundTransparency = 1
 cityBrokenTitle.TextXAlignment = Enum.TextXAlignment.Left
 cityBrokenTitle.ZIndex = 22
 cityBrokenTitle.Text = "CITY BROKEN"
 cityBrokenTitle.Parent = cityBrokenBanner
-HudChrome.Label(cityBrokenTitle, 20)
+HudChrome.Label(cityBrokenTitle, 24)
 cityBrokenTitle.TextColor3 = HudChrome.Color.Ready
 
 local cityBrokenSubtitle = Instance.new("TextLabel")
 cityBrokenSubtitle.Name = "Subtitle"
-cityBrokenSubtitle.Size = UDim2.new(1, -20, 0, 16)
-cityBrokenSubtitle.Position = UDim2.new(0, PANEL_RAND, 0, 30)
+cityBrokenSubtitle.Size = UDim2.new(1, -20, 0, 20)
+cityBrokenSubtitle.Position = UDim2.new(0, PANEL_RAND, 0, 36)
 cityBrokenSubtitle.BackgroundTransparency = 1
 cityBrokenSubtitle.TextXAlignment = Enum.TextXAlignment.Left
 cityBrokenSubtitle.ZIndex = 22
 cityBrokenSubtitle.Text = "FREE DESTRUCTION 75s"
 cityBrokenSubtitle.Parent = cityBrokenBanner
-HudChrome.Number(cityBrokenSubtitle, 13)
+HudChrome.Number(cityBrokenSubtitle, 16)
 cityBrokenSubtitle.TextColor3 = HudChrome.Color.TextSecondary
 
 local function updateQuestList()

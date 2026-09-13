@@ -306,10 +306,13 @@ end
 -- Bildschirmmitte -- also ueber der Spielfigur, auf die auch die beiden Schraegen zeigen.
 -- Bei verschieden breiten Feldern sass die Fuge daneben, und die Symmetrie, die die
 -- Schraegen aufbauen, war schon durch die Aufteilung gebrochen.
-local STATUS_HOEHE = 56
+local STATUS_HOEHE = 62
 local STATUS_SCHRAEGE = 16
 local STATUS_LUECKE = 12
-local FELD_BREITE = 240
+-- Breiter als frueher, weil der Zielwert es verlangt: "101.7k / 196.4k" sind bei 15 Punkt
+-- Ziffernschrift rund 135 Pixel. Bei 240 Pixeln Feldbreite waere er der grossen Zahl in
+-- die Quere gekommen -- eine Zahl, die man erst beim Lesen als zwei erkennt.
+local FELD_BREITE = 280
 
 -- Innenraender. Auf der SCHRAEGEN Seite braucht der Inhalt deutlich mehr Abstand als auf
 -- der geraden: unten frisst die Schraege bis zu STATUS_SCHRAEGE Pixel weg, und was nur
@@ -327,13 +330,13 @@ local HP_RECHTS = FELD_BREITE - RAND_SCHRAEG
 -- an einer Stelle, damit die vier Beschriftungen und die zwei Balken nicht einzeln
 -- nachgerechnet werden muessen.
 local ZEILE_Y = 7
-local ZEILE_HOEHE = 22
-local BALKEN_Y = 34
+local ZEILE_HOEHE = 28
+local BALKEN_Y = 41
 local BALKEN_HOEHE = 10
 
 -- Die fette Zahl beginnt in beiden Feldern gleich weit hinter der Bezeichnung, damit die
 -- zwei Felder denselben Takt haben -- auch wenn "LEVEL" laenger ist als "HP".
-local ZAHL_VERSATZ = 48
+local ZAHL_VERSATZ = 56
 
 local statusCluster = Instance.new("Frame")
 statusCluster.Name = "PlayerStatusCluster"
@@ -431,7 +434,7 @@ levelCaption.BackgroundTransparency = 1
 levelCaption.TextXAlignment = Enum.TextXAlignment.Left
 levelCaption.Text = "LEVEL"
 levelCaption.Parent = levelField
-HudChrome.Label(levelCaption, 13)
+HudChrome.Label(levelCaption, 16)
 levelCaption.TextColor3 = HudChrome.Color.TextSecondary
 
 -- Die Zahl sitzt in einem Fenster mit ClipsDescendants. Das ist die Voraussetzung dafuer,
@@ -454,7 +457,7 @@ levelLabel.BackgroundTransparency = 1
 levelLabel.TextXAlignment = Enum.TextXAlignment.Left
 levelLabel.Text = "0"
 levelLabel.Parent = levelNumberClip
-HudChrome.NumberBold(levelLabel, 19)
+HudChrome.NumberBold(levelLabel, 24)
 
 -- ===== Der Aufstieg als mechanisches Weiterruecken =====
 -- Eine Zahl, die sich einfach austauscht, ist kein Ereignis. Eine, die weiterrueckt, ist
@@ -537,7 +540,7 @@ healthCaption.BackgroundTransparency = 1
 healthCaption.TextXAlignment = Enum.TextXAlignment.Left
 healthCaption.Text = "HP"
 healthCaption.Parent = healthField
-HudChrome.Label(healthCaption, 13)
+HudChrome.Label(healthCaption, 16)
 healthCaption.TextColor3 = HudChrome.Color.TextSecondary
 
 -- Der Hoechstwert gehoert in die kleine Zeile, nicht neben die grosse Zahl: er aendert
@@ -550,7 +553,7 @@ healthMaxLabel.BackgroundTransparency = 1
 healthMaxLabel.TextXAlignment = Enum.TextXAlignment.Right
 healthMaxLabel.Text = "/ 100"
 healthMaxLabel.Parent = healthField
-HudChrome.Number(healthMaxLabel, 12)
+HudChrome.Number(healthMaxLabel, 15)
 healthMaxLabel.TextColor3 = HudChrome.Color.TextDim
 
 -- Der aktuelle Lebensstand, fett. Er steht NEBEN dem Balken, nicht darin: im Balken war
@@ -565,7 +568,7 @@ healthLabel.BackgroundTransparency = 1
 healthLabel.TextXAlignment = Enum.TextXAlignment.Left
 healthLabel.Text = "100"
 healthLabel.Parent = healthField
-HudChrome.NumberBold(healthLabel, 19)
+HudChrome.NumberBold(healthLabel, 24)
 
 -- Robloxs EIGENE Lebensanzeige abschalten. Sie blendet sich oben rechts von selbst ein,
 -- sobald das Leben unter das Maximum faellt -- also genau dann, wenn unsere eigene Anzeige
@@ -705,7 +708,7 @@ xpLabel.BackgroundTransparency = 1
 xpLabel.TextXAlignment = Enum.TextXAlignment.Right
 xpLabel.Text = "0 / 0"
 xpLabel.Parent = levelField
-HudChrome.Number(xpLabel, 12)
+HudChrome.Number(xpLabel, 15)
 xpLabel.TextColor3 = Color3.fromRGB(214, 186, 78)
 
 -- ===== Heat/Berserker-Leiste -- VERTIKAL, unten zentriert zwischen den Angriffs-Buttons
