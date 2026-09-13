@@ -12,10 +12,14 @@
 -- dahinter unscharf. Rein clientseitig -- betrifft nur die eigene Sicht.
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
+
+-- Nur wegen FullBleed fuer die Kinobalken weiter unten.
+local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
 
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
@@ -84,7 +88,9 @@ local cameraStartTime = 0
 local letterboxGui = Instance.new("ScreenGui")
 letterboxGui.Name = "TrainingLetterboxGui"
 letterboxGui.ResetOnSpawn = false
-letterboxGui.IgnoreGuiInset = true
+-- Bis an die physische Kante -- sonst enden die Balken auf dem Telefon links und rechts
+-- vor dem Rand. IgnoreGuiInset allein reicht dafuer nicht, siehe HudChrome.FullBleed.
+HudChrome.FullBleed(letterboxGui)
 letterboxGui.DisplayOrder = -10 -- weit hinten, damit HUD-Elemente (Coins, Level, Training-Panel etc.) immer davor liegen
 letterboxGui.Enabled = false
 letterboxGui.Parent = player:WaitForChild("PlayerGui")

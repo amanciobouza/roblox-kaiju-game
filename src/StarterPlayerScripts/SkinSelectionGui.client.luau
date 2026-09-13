@@ -365,6 +365,23 @@ local ZAHL_VERSATZ = 56
 -- Sie liegt in einem EIGENEN ScreenGui mit DisplayOrder -1. Zwischen ScreenGuis entscheidet
 -- allein die DisplayOrder, und Home und Ton bringen ihre eigenen mit: ohne das haette die
 -- Leiste je nach Ladereihenfolge mal hinter, mal vor ihnen gelegen.
+--
+-- ===== Die Leiste ist das einzige Stueck, das den Rand des Geraets kennt =====
+-- Auf dem Telefon fiel es auf: die Leiste brach links und rechts vor der Kante ab, und
+-- Geld, Home und Ton lagen gar nicht auf ihr, sondern darunter.
+--
+-- Beides ist DERSELBE Fehler. Die Leiste hatte IgnoreGuiInset, ihre Nachbarn nicht -- sie
+-- begann also bei null, waehrend Geld, Home, Ton und die Statusfelder alle um die Hoehe der
+-- Roblox-Systemleiste nach unten geschoben wurden. Auf dem Rechner sind das 36 Pixel und es
+-- fiel kaum auf; auf dem Telefon ist die Leiste hoeher.
+--
+-- Der Ausweg ist nicht, allen dasselbe Flag zu geben -- dann laegen die Knoepfe unter den
+-- Roblox-Symbolen. Stattdessen bleibt die Leiste die EINZIGE Stelle mit Wissen ueber den
+-- Rand: sie blutet waagerecht bis an die physische Kante aus und waechst senkrecht um genau
+-- den Versatz, den ihre Nachbarn ohnehin bekommen. Dann deckt sie sich mit ihnen, ohne dass
+-- irgendein anderes Skript etwas davon wissen muss. Die oberen Pixel der Leiste liegen
+-- dabei HINTER der Roblox-Systemleiste -- als dunkler Grund, der deren Symbole lesbarer
+-- macht.
 local HUD_KOPFLEISTE_HOEHE = 78
 
 do
@@ -372,7 +389,7 @@ do
 	barGui.Name = "HudTopBarGui"
 	barGui.ResetOnSpawn = false
 	barGui.DisplayOrder = -1
-	barGui.IgnoreGuiInset = true
+	HudChrome.FullBleed(barGui)
 	barGui.Parent = player:WaitForChild("PlayerGui")
 
 	local bar = Instance.new("Frame")
@@ -409,6 +426,16 @@ do
 	kante.BackgroundTransparency = 0.55
 	kante.BorderSizePixel = 0
 	kante.Parent = bar
+
+	-- Der Versatz steht beim Start des Skripts oft noch auf null: die Kern-Oberflaeche von
+	-- Roblox baut sich erst auf. Deshalb nachziehen statt einmal fragen.
+	HudChrome.BindTopInset(function(versatz)
+		bar.Size = UDim2.new(1, 0, 0, versatz + HUD_KOPFLEISTE_HOEHE)
+		print(string.format(
+			"[Kaiju Debug] Kopfleiste: Systemleiste %d px, Leiste damit %d px hoch.",
+			versatz, versatz + HUD_KOPFLEISTE_HOEHE
+		))
+	end)
 end
 
 local statusCluster = Instance.new("Frame")

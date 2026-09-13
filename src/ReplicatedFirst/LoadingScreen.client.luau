@@ -29,6 +29,13 @@ local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "LoadingScreenGui"
 screenGui.ResetOnSpawn = false
 screenGui.IgnoreGuiInset = true
+-- Bis an die physische Kante: der Ladebildschirm deckt ALLES ab, sonst blitzt auf dem
+-- Telefon am Rand die Szene durch. Hier steht es ausgeschrieben statt über
+-- HudChrome.FullBleed -- dieses Skript liegt in ReplicatedFirst und darf auf nichts warten,
+-- sonst kommt der Ladebildschirm zu spät.
+pcall(function()
+	screenGui.ScreenInsets = Enum.ScreenInsets.None
+end)
 screenGui.DisplayOrder = 1000 -- ganz oben, über allem anderen
 screenGui.Parent = player:WaitForChild("PlayerGui")
 

@@ -521,4 +521,67 @@ function HudChrome.NumberBold(textLabel, size)
 	return textLabel
 end
 
+-- ===== Der Rand des Geraets =====
+--
+-- Zwei verschiedene Raender schneiden in ein ScreenGui, und sie werden staendig
+-- verwechselt. Auf dem Telefon sind beide sichtbar geworden:
+--
+--   1. Der SICHERE BEREICH des Geraets -- Aussparung, runde Ecken, Wischbalken. Roblox
+--      zieht ihn links und rechts ein. Darum brach die Kopfleiste am Rand ab, und darum
+--      endeten die schwarzen Kinobalken vor der Kante.
+--   2. Die SYSTEMLEISTE von Roblox oben -- Menue, Chat, Aufnahme. Sie schiebt jedes
+--      ScreenGui nach unten.
+--
+-- `IgnoreGuiInset = true` schaltet nur den zweiten ab, nicht den ersten: es entspricht
+-- ScreenInsets = DeviceSafeInsets. Deshalb hilft es einer Flaeche nicht, die bis an die
+-- physische Kante reichen soll.
+
+local GuiService = game:GetService("GuiService")
+
+-- Bis an die physische Kante, ohne jeden Einzug.
+--
+-- Nur fuer FLAECHEN: Blenden, Balken, Abdunklungen. Nicht fuer Knoepfe und Schrift -- die
+-- laegen dann unter der Aussparung. Die Aufteilung ist genau die zwischen dem Grund und
+-- dem, was darauf sitzt: der Grund blutet aus, der Inhalt haelt Abstand.
+function HudChrome.FullBleed(screenGui)
+	-- pcall: ScreenInsets gibt es nicht in jeder Client-Version. Faellt es aus, bleibt es
+	-- beim bisherigen Verhalten -- ein Rand ist haesslich, ein Fehler waere schlimmer.
+	local ok = pcall(function()
+		screenGui.ScreenInsets = Enum.ScreenInsets.None
+	end)
+	if not ok then
+		screenGui.IgnoreGuiInset = true
+		warn("[Kaiju Debug] HudChrome: ScreenInsets nicht verfuegbar, die Flaeche haelt am sicheren Bereich.")
+	end
+	return screenGui
+end
+
+-- Der Versatz, den Roblox jedem GEWOEHNLICHEN ScreenGui oben gibt.
+--
+-- Genau dieser Wert, nicht der gepolsterte aus TopInsetUtils: hier geht es nicht darum,
+-- Abstand zur Systemleiste zu halten, sondern darum, sich mit Geschwistern zu decken, die
+-- den Versatz bereits bekommen haben.
+function HudChrome.TopInset()
+	return GuiService:GetGuiInset().Y
+end
+
+-- Ruft `fn(inset)` sofort und bei jeder Aenderung.
+--
+-- Sofort allein genuegt nicht: beim Start eines LocalScripts steht die Kern-Oberflaeche
+-- oft noch nicht, GetGuiInset liefert dann 0, und der Wert bliebe fuer immer falsch. Denselben
+-- Fehler gab es im Projekt schon einmal, siehe TopInsetUtils.
+function HudChrome.BindTopInset(fn)
+	local function anwenden()
+		fn(HudChrome.TopInset())
+	end
+
+	anwenden()
+	pcall(function()
+		GuiService:GetPropertyChangedSignal("TopbarInset"):Connect(anwenden)
+	end)
+	-- Nachschlag: der erste Aufbau der Kern-Oberflaeche loest nicht auf allen Geraeten ein
+	-- Ereignis aus.
+	task.delay(2, anwenden)
+end
+
 return HudChrome

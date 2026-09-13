@@ -28,7 +28,12 @@
 --              abgenommen und soll sich beim Vereinheitlichen nicht ändern.
 -- Der Unterschied ist reine Optik -- deshalb ein Schalter und keine zweite Datei.
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+
+-- Nur wegen FullBleed. Die Begruendung, warum IgnoreGuiInset dafuer nicht genuegt, steht
+-- dort einmal und soll nicht in jedem Aufrufer wiederholt werden.
+local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
 
 local LetterboxUtils = {}
 
@@ -68,7 +73,11 @@ function LetterboxUtils.Create(playerGui, guiName, options)
 	local gui = Instance.new("ScreenGui")
 	gui.Name = guiName
 	gui.ResetOnSpawn = false
-	gui.IgnoreGuiInset = true
+	-- Bis an die physische Kante. IgnoreGuiInset allein genuegt hier nicht: es nimmt nur die
+	-- Roblox-Systemleiste heraus, nicht den sicheren Bereich des Geraets. Auf dem Telefon
+	-- endeten die Balken deshalb links und rechts vor der Kante -- und ein Kinobalken, der
+	-- die Kante nicht erreicht, ist kein Kinobalken, sondern ein schwarzes Rechteck.
+	HudChrome.FullBleed(gui)
 	gui.DisplayOrder = options.displayOrder or DEFAULT_DISPLAY_ORDER
 	gui.Parent = playerGui
 
