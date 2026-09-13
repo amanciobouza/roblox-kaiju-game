@@ -1554,7 +1554,7 @@ local SCAN_GROESSE = 100
 -- 1.5 rahmt nicht nur das Glied, sondern laesst den Koerper drumherum mit ins Bild. Genau
 -- das soll man sehen: WO am Koerper der gescannte Teil sitzt. Ein Arm ohne Schulter ist
 -- ein Gegenstand, ein Arm am Rumpf ist ein Arm.
-local SCAN_ZOOM = 1.5
+local SCAN_ZOOM = 1.8
 
 -- Alles, was nicht zum gescannten Bereich gehoert, steht in gedaempftem Grau da. Der
 -- farbige Teil ist damit ohne Beschriftung erkennbar -- die Farbe sagt "das hier ist
@@ -1919,7 +1919,7 @@ local function baueScan(key, vorlage)
 			-- Der gescannte Bereich leuchtet in der Farbe seines Wertes, der Rest bleibt
 			-- grau und tritt noch weiter zurueck.
 			klon.Color = gehoertDazu and eintrag.color or SCAN_GRAU
-			klon.Transparency = gehoertDazu and 0.5 or 0.75
+			klon.Transparency = gehoertDazu and 0.3 or 0.6
 			klon.Parent = modell
 			if gehoertDazu then
 				gefunden += 1
@@ -1971,28 +1971,53 @@ local function baueAlleScans()
 	local meinVersuch = scanVersuch
 
 	task.spawn(function()
+		-- Teilerfolge werden BEHALTEN. Vorher wurde bei jedem Durchgang alles neu gebaut,
+		-- und ein einziger Bereich, der nie gelingt, haette die beiden anderen zwanzigmal
+		-- neu erzeugt -- und die Erfolgsmeldung waere nie gekommen, obwohl zwei Fenster
+		-- laengst standen.
+		local steht = {}
 		for durchgang = 1, 20 do -- hoechstens zehn Sekunden
 			if scanVersuch ~= meinVersuch then
 				return -- ein neuer Charakter hat uebernommen
 			end
+
 			local vorlage = holeVorlage()
-			local fertig = vorlage ~= nil
-			for key in pairs(SCAN_TEILE) do
-				if not baueScan(key, vorlage) then
-					fertig = false
+			if vorlage then
+				for key in pairs(SCAN_TEILE) do
+					if not steht[key] and baueScan(key, vorlage) then
+						steht[key] = true
+					end
 				end
 			end
-			if fertig then
+
+			local fehlend = {}
+			for key in pairs(SCAN_TEILE) do
+				if not steht[key] then
+					table.insert(fehlend, key)
+				end
+			end
+
+			if #fehlend == 0 then
 				print(string.format(
-					"[Kaiju Debug] Scan: erfasst nach %d Versuch(en) -- Vorlage: %s.",
+					"[Kaiju Debug] Scan: alle drei stehen nach %d Versuch(en) -- Vorlage: %s.",
 					durchgang,
 					(scanVorlage and scanVorlage.Name) or "getragene Figur"
 				))
 				return
 			end
+
+			if durchgang == 20 then
+				-- Benennen, WELCHER Bereich fehlt. "Es geht nicht" hilft niemandem; der
+				-- Name sagt, ob die Knochen des Bereichs im Modell fehlen oder ob dort
+				-- nichts Sichtbares liegt.
+				warn(string.format(
+					"[Kaiju Debug] Scan: nach zehn Sekunden fehlen noch %s (Vorlage: %s).",
+					table.concat(fehlend, ", "),
+					(scanVorlage and scanVorlage.Name) or "getragene Figur"
+				))
+			end
 			task.wait(0.5)
 		end
-		warn("[Kaiju Debug] Scan: nach zehn Sekunden keine sichtbare Figur gefunden -- Fenster bleiben leer.")
 	end)
 end
 
