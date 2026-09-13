@@ -1091,14 +1091,20 @@ do
 	local wordmark = Instance.new("TextLabel")
 	wordmark.Name = "GaugeWordmark"
 	wordmark.AnchorPoint = Vector2.new(0.5, 1)
-	wordmark.Size = UDim2.new(0, 180, 0, 12)
-	wordmark.Position = UDim2.new(0, GAUGE_CENTER.X, 0, GAUGE_CENTER.Y - 26)
+	wordmark.Size = UDim2.new(0, 200, 0, 24)
+	wordmark.Position = UDim2.new(0, GAUGE_CENTER.X, 0, GAUGE_CENTER.Y - 13)
 	wordmark.BackgroundTransparency = 1
 	wordmark.Text = "Amaux Bozé"
 	wordmark.ZIndex = 9
 	wordmark.Parent = heatFrame
-	HudChrome.Label(wordmark, 9)
-	wordmark.TextColor3 = HudChrome.Color.TextDim
+	-- Doppelt so gross wie vorher und eine Stufe heller. Bei 9 Punkt in TextDim war der
+	-- Name da, aber nicht lesbar -- er sah aus wie eine Verschmutzung auf dem Blatt.
+	--
+	-- Groesser geht nicht ohne Umbau: darueber beginnt bei 42 Pixeln die Ablesung, und die
+	-- Zahlen der Skala liegen auf Radius 62. Der freie Streifen ueber der Nabe ist genau
+	-- so hoch, wie er ist.
+	HudChrome.Label(wordmark, 18)
+	wordmark.TextColor3 = HudChrome.Color.TextSecondary
 
 	-- ===== Nadel =====
 	local needlePivot = Instance.new("Frame")
