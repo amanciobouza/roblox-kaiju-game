@@ -1864,7 +1864,7 @@ local function baueScan(key, vorlage)
 	local eintrag = statBars[key]
 	local teileNamen = SCAN_TEILE[key]
 	if not eintrag or not teileNamen or not vorlage then
-		return false
+		return false, "keine Vorlage"
 	end
 
 	local altes = eintrag.scanViewport:FindFirstChildOfClass("Model")
@@ -1874,7 +1874,7 @@ local function baueScan(key, vorlage)
 
 	local mitte, groesse = knochenBereich(vorlage, teileNamen)
 	if not mitte then
-		return false -- die Knochen fehlen: dann ist es ein fremdes Rig
+		return false, "keine Knochen dieses Namens im Modell"
 	end
 
 	-- Gehoert dieses Teil zum gescannten Bereich?
@@ -1883,7 +1883,15 @@ local function baueScan(key, vorlage)
 	-- weiss dieses Skript nicht. Der Knochenbereich sagt, wo der Arm ist -- was dort liegt,
 	-- ist der Arm. Der Zuschlag faengt auf, dass das sichtbare Mesh ueber seinen Knochen
 	-- hinausragt.
-	local rand = groesse * 0.35
+	--
+	-- Der Rand ist in ALLEN Richtungen gleich gross und richtet sich nach der LAENGSTEN
+	-- Kante des Bereichs. Vorher war er je Achse anteilig -- und genau daran scheiterte der
+	-- Rumpf: sein Knochen ist eine duenne Scheibe, in der Tiefe also nur ein bis zwei
+	-- Studs. Fuenfunddreissig Prozent davon sind ein paar Zentimeter, und die Rueckenplatten
+	-- sitzen weiter hinten. Sie fielen aus dem Bereich, obwohl sie offensichtlich zum Rumpf
+	-- gehoeren.
+	local randweite = math.max(groesse.X, groesse.Y, groesse.Z) * 0.3
+	local rand = Vector3.new(randweite, randweite, randweite)
 	local von = mitte - groesse * 0.5 - rand
 	local bis = mitte + groesse * 0.5 + rand
 	local function imBereich(punkt)
@@ -1929,7 +1937,7 @@ local function baueScan(key, vorlage)
 
 	if gefunden == 0 then
 		modell:Destroy()
-		return false
+		return false, "Knochen da, aber nichts Sichtbares in ihrem Bereich"
 	end
 
 	modell.Parent = eintrag.scanViewport
@@ -1982,10 +1990,16 @@ local function baueAlleScans()
 			end
 
 			local vorlage = holeVorlage()
+			local gruende = {}
 			if vorlage then
 				for key in pairs(SCAN_TEILE) do
-					if not steht[key] and baueScan(key, vorlage) then
-						steht[key] = true
+					if not steht[key] then
+						local ok, grund = baueScan(key, vorlage)
+						if ok then
+							steht[key] = true
+						else
+							gruende[key] = grund
+						end
 					end
 				end
 			end
@@ -1993,7 +2007,7 @@ local function baueAlleScans()
 			local fehlend = {}
 			for key in pairs(SCAN_TEILE) do
 				if not steht[key] then
-					table.insert(fehlend, key)
+					table.insert(fehlend, key .. " (" .. (gruende[key] or "unbekannt") .. ")")
 				end
 			end
 
