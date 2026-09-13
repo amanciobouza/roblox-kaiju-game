@@ -585,6 +585,7 @@ end
 -- das ist kein Widerspruch, sondern derselbe Massstab auf eine andere Lage angewandt.
 HudChrome.MenuTextSize = {
 	Title = 30, -- Ueberschrift eines Bildschirms
+	Heading = 26, -- Ueberschrift ueber einem Textabschnitt: Role, Strength, Weakness
 	Section = 21, -- Zwischenueberschrift, Kartenname
 	Body = 18, -- Fliesstext
 	Caption = 16, -- Nebenangaben, Unterzeilen

@@ -219,11 +219,13 @@ detailDataLayout.Parent = detailData
 -- Erzeugt ein Wertepaar: kleine Ueberschrift, darunter der Wert.
 local function buildDataField(labelText, order)
 	local caption = Instance.new("TextLabel")
-	caption.Size = UDim2.new(1, 0, 0, 14)
+	caption.Size = UDim2.new(1, 0, 0, 22)
 	caption.BackgroundTransparency = 1
-	HudChrome.MenuCaption(caption, 14)
+	-- Frueher 14 Punkt in einem 14 Pixel hohen Kaestchen und dazu ein Grau, das dunkler war
+	-- als TextSecondary. Klein, eng und blass zugleich -- jeder der drei Punkte fuer sich
+	-- haette schon gereicht.
+	HudChrome.MenuCaption(caption)
 	caption.TextXAlignment = Enum.TextXAlignment.Left
-	caption.TextColor3 = Color3.fromRGB(120, 120, 132)
 	caption.Text = string.upper(labelText)
 	caption.LayoutOrder = order
 	caption.Parent = detailData
@@ -232,10 +234,9 @@ local function buildDataField(labelText, order)
 	value.Size = UDim2.new(1, 0, 0, 0)
 	value.AutomaticSize = Enum.AutomaticSize.Y
 	value.BackgroundTransparency = 1
-	HudChrome.MenuBody(value, HudChrome.MenuTextSize.Body)
+	HudChrome.MenuBody(value)
 	value.TextXAlignment = Enum.TextXAlignment.Left
 	value.TextYAlignment = Enum.TextYAlignment.Top
-	value.TextColor3 = Color3.fromRGB(230, 230, 240)
 	value.Text = ""
 	value.LayoutOrder = order + 1
 	value.Parent = detailData
@@ -543,11 +544,15 @@ local function openDetail(entry)
 		shown += 1
 		order += 1
 		local heading = Instance.new("TextLabel")
-		heading.Size = UDim2.new(1, -8, 0, 20)
+		-- Das Kaestchen muss hoeher sein als die Schrift, sonst schneidet Roblox unten ab.
+		-- Bei 21 Punkt in 20 Pixeln fehlte genau das -- die Ueberschriften wirkten dadurch
+		-- kleiner, als sie gesetzt waren.
+		heading.Size = UDim2.new(1, -8, 0, 32)
 		heading.BackgroundTransparency = 1
-		HudChrome.Label(heading, HudChrome.MenuTextSize.Section)
+		HudChrome.Label(heading, HudChrome.MenuTextSize.Heading)
 		heading.TextXAlignment = Enum.TextXAlignment.Left
-		heading.TextColor3 = Color3.fromRGB(255, 205, 90)
+		heading.TextYAlignment = Enum.TextYAlignment.Bottom
+		heading.TextColor3 = HudChrome.Color.Ready
 		heading.Text = section.heading
 		heading.LayoutOrder = order
 		heading.Parent = detailText
@@ -560,7 +565,6 @@ local function openDetail(entry)
 		HudChrome.MenuBody(body)
 		body.TextXAlignment = Enum.TextXAlignment.Left
 		body.TextYAlignment = Enum.TextYAlignment.Top
-		body.TextColor3 = Color3.fromRGB(220, 220, 230)
 		body.Text = section.body
 		body.LayoutOrder = order
 		body.Parent = detailText
