@@ -25,7 +25,8 @@ local homeButton = Instance.new("TextButton")
 homeButton.Name = "HomeButton"
 homeButton.Size = UDim2.new(0, 44, 0, 44)
 homeButton.AnchorPoint = Vector2.new(1, 0)
-homeButton.Position = UDim2.new(1, -16, 0, 16)
+-- Zweiter Platz in der Reihe der Kopfleiste: Ton aussen, Home daneben, Geld links davon.
+homeButton.Position = UDim2.new(1, -68, 0, 16)
 homeButton.AutoButtonColor = false
 homeButton.Text = ""
 homeButton.ZIndex = 100

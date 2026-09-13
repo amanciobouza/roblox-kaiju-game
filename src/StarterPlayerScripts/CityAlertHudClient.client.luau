@@ -57,13 +57,18 @@ screenGui.Name = "CityAlertHudGui"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
--- Das Feld sitzt UNTER der Reihe aus Geld, Home und Ton -- vorher lag es auf derselben
--- Hoehe wie der Ton-Knopf und damit teilweise unter ihm.
+-- Das Feld sitzt direkt unter der Kopfleiste (78 Pixel hoch, siehe SkinSelectionGui).
+-- Frueher lag es bei 118: der Ton-Knopf hatte darueber eine zweite Reihe aufgemacht. Seit
+-- er in der Leiste steht, ist der Platz frei.
+--
+-- Die Zahl steht dreimal in dieser Datei -- Ortsfeld, Vorwarnung, Aufgabenliste. Deshalb
+-- hier eine Konstante: beim letzten Verschieben habe ich zwei von drei erwischt.
+local SPALTE_OBEN = 86
 local alertFrame = Instance.new("Frame")
 alertFrame.Name = "CityAlertFrame"
 alertFrame.Size = UDim2.new(0, PANEL_BREITE, 0, PANEL_HOEHE)
 alertFrame.AnchorPoint = Vector2.new(1, 0)
-alertFrame.Position = UDim2.new(1, -16, 0, 118)
+alertFrame.Position = UDim2.new(1, -16, 0, SPALTE_OBEN)
 alertFrame.Visible = false
 alertFrame.ZIndex = 20
 alertFrame.Parent = screenGui
@@ -368,7 +373,7 @@ local WARN_SYMBOL = 30
 -- Sie faehrt von rechts herein, statt einfach da zu sein. Das Erscheinen IST die
 -- Meldung -- ein Feld, das lautlos auftaucht, uebersieht man beim Kaempfen, weil der
 -- Blick in der Bildmitte haengt. Eine Bewegung am Rand faengt ihn.
-local WARN_Y = 118 + PANEL_HOEHE + 6
+local WARN_Y = SPALTE_OBEN + PANEL_HOEHE + 6
 local WARN_RUHE_X = -16
 local WARN_AUS_X = PANEL_BREITE + 40 -- so weit draussen, dass nichts hervorlugt
 local WARN_AN = 0.80 -- ab hier erscheint sie
@@ -484,7 +489,7 @@ end
 
 -- Die Liste rueckt nach, wenn die Warnung da ist -- sonst laege sie darunter begraben.
 local function listenY()
-	return 118 + PANEL_HOEHE + 8 + (warnFrame.Visible and (WARN_HOEHE + 6) or 0)
+	return SPALTE_OBEN + PANEL_HOEHE + 8 + (warnFrame.Visible and (WARN_HOEHE + 6) or 0)
 end
 
 local function updateWarnung()

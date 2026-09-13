@@ -78,7 +78,9 @@ muteButton.Name = "MuteButton"
 -- ergibt statt einer Ansammlung. Vorher gelb mit schwarzem Umriss und Emoji.
 muteButton.Size = UDim2.new(0, 44, 0, 44)
 muteButton.AnchorPoint = Vector2.new(1, 0)
-muteButton.Position = UDim2.new(1, -16, 0, 66)
+-- In der Kopfleiste ganz aussen, auf derselben Hoehe wie Home und Geld. Vorher stand
+-- er eine Zeile tiefer und machte damit eine zweite Reihe auf -- fuer einen Knopf.
+muteButton.Position = UDim2.new(1, -16, 0, 16)
 muteButton.AutoButtonColor = false
 muteButton.Text = ""
 muteButton.Parent = screenGui
@@ -89,6 +91,12 @@ muteIcon.Size = UDim2.new(1, -14, 1, -14)
 muteIcon.Position = UDim2.new(0, 7, 0, 7)
 
 local isMuted = false
+
+-- Die gerade laufende Lautstaerke-Bewegung des Absenkens (siehe DuckBackgroundMusic ganz
+-- unten). Hier oben deklariert, weil die Stumm-Taste sie abbrechen muss: sonst zoege eine
+-- laufende Rueckblende die Lautstaerke gleich wieder hoch, obwohl der Spieler eben erst
+-- stumm geschaltet hat.
+local activeDuckTween = nil
 
 -- Stumm wird jetzt ueber die Deckkraft des Symbols gezeigt, nicht ueber einen Wechsel
 -- des Zeichens: es gibt ein hochgeladenes Musik-Symbol, aber keines fuer "stumm", und
@@ -101,6 +109,10 @@ showMuteState()
 
 muteButton.MouseButton1Click:Connect(function()
 	isMuted = not isMuted
+	if activeDuckTween then
+		activeDuckTween:Cancel()
+		activeDuckTween = nil
+	end
 	backgroundMusic.Volume = isMuted and 0 or MUSIC_VOLUME
 	showMuteState()
 end)
@@ -152,4 +164,52 @@ end
 _G.FadeBackgroundMusicToNormalVolume = function(duration)
 	local tween = TweenService:Create(backgroundMusic, TweenInfo.new(duration or 2, Enum.EasingStyle.Sine), { Volume = MUSIC_VOLUME })
 	tween:Play()
+end
+
+-- ===== Kurzes Absenken fuer einen Klang, der vorgehen soll =====
+-- Ein Fanfaren-Klang geht in der laufenden Musik unter, wenn beide gleich laut bleiben.
+-- Statt den Klang lauter zu machen -- was ihn nur schrill macht -- tritt hier die Musik
+-- kurz zurueck: schnell runter, halten, langsam wieder hoch. Das Ohr hoert die Fanfare
+-- dann klar, ohne dass die Lautstaerke insgesamt steigt.
+--
+-- Genutzt vom LevelUpFeedbackClient beim Stufenaufstieg.
+local DUCK_FACTOR = 0.3 -- auf 30% der normalen Lautstaerke
+local DUCK_FADE_DOWN = 0.15 -- schnell zurueckweichen, damit der Klang die Luecke trifft
+local DUCK_HOLD_DEFAULT = 1.2
+local DUCK_FADE_UP = 0.9 -- langsam zurueckkommen, sonst wirkt es wie ein Aussetzer
+
+-- Sitzungsnummer nach dem Muster der Kameraschleifen: kommt waehrend einer laufenden
+-- Absenkung eine zweite, gehoert die Rueckblende der NEUEREN. Ohne das wuerde die
+-- Rueckblende der ersten mitten in die zweite Absenkung hineinfahren.
+local duckSession = 0
+
+_G.DuckBackgroundMusic = function(holdSeconds)
+	if isMuted or not backgroundMusic.IsPlaying then
+		return
+	end
+
+	duckSession += 1
+	local session = duckSession
+
+	if activeDuckTween then
+		activeDuckTween:Cancel()
+	end
+	activeDuckTween = TweenService:Create(
+		backgroundMusic,
+		TweenInfo.new(DUCK_FADE_DOWN, Enum.EasingStyle.Sine),
+		{ Volume = MUSIC_VOLUME * DUCK_FACTOR }
+	)
+	activeDuckTween:Play()
+
+	task.delay(DUCK_FADE_DOWN + (holdSeconds or DUCK_HOLD_DEFAULT), function()
+		if session ~= duckSession or isMuted then
+			return
+		end
+		activeDuckTween = TweenService:Create(
+			backgroundMusic,
+			TweenInfo.new(DUCK_FADE_UP, Enum.EasingStyle.Sine),
+			{ Volume = MUSIC_VOLUME }
+		)
+		activeDuckTween:Play()
+	end)
 end

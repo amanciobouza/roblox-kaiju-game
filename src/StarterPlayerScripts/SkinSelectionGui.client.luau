@@ -226,7 +226,10 @@ local coinsFrame = Instance.new("Frame")
 coinsFrame.Name = "CoinsFrame"
 coinsFrame.Size = UDim2.new(0, 168, 0, 44)
 coinsFrame.AnchorPoint = Vector2.new(1, 0)
-coinsFrame.Position = UDim2.new(1, -68, 0, 16) -- gleiche Oberkante wie der Home-Knopf daneben
+-- Die Reihe rechts, von aussen nach innen: Ton (-16), Home (-68), Geld (-120).
+-- Der Ton-Knopf stand vorher eine Zeile tiefer und hat dort eine zweite Reihe
+-- aufgemacht -- fuer einen einzigen Knopf.
+coinsFrame.Position = UDim2.new(1, -120, 0, 16)
 coinsFrame.Parent = screenGui
 HudChrome.Panel(coinsFrame, { radius = HudChrome.Radius.Small })
 
@@ -347,6 +350,66 @@ local BALKEN_HOEHE = 10
 -- Die fette Zahl beginnt in beiden Feldern gleich weit hinter der Bezeichnung, damit die
 -- zwei Felder denselben Takt haben -- auch wenn "LEVEL" laenger ist als "HP".
 local ZAHL_VERSATZ = 56
+
+-- ===== Die Kopfleiste =====
+--
+-- Bisher standen oben vier lose Dinge nebeneinander: die Statusfelder in der Mitte, Geld
+-- und Home rechts, der Ton-Knopf eine Zeile darunter. Vier Kanten, drei Hoehen, kein
+-- Zusammenhang -- und die zweite Reihe drueckte das Ortsfeld nach unten.
+--
+-- Jetzt eine durchgehende Leiste ueber die ganze Breite. Sie traegt nichts selbst; sie ist
+-- der Grund, auf dem die anderen sitzen. Das ist der Unterschied zwischen Anzeigen, die
+-- ueber der Welt schweben, und einem Geraet, in das sie eingebaut sind -- dieselbe
+-- Ueberlegung wie beim Sockel des Tachos.
+--
+-- Sie liegt in einem EIGENEN ScreenGui mit DisplayOrder -1. Zwischen ScreenGuis entscheidet
+-- allein die DisplayOrder, und Home und Ton bringen ihre eigenen mit: ohne das haette die
+-- Leiste je nach Ladereihenfolge mal hinter, mal vor ihnen gelegen.
+local HUD_KOPFLEISTE_HOEHE = 78
+
+do
+	local barGui = Instance.new("ScreenGui")
+	barGui.Name = "HudTopBarGui"
+	barGui.ResetOnSpawn = false
+	barGui.DisplayOrder = -1
+	barGui.IgnoreGuiInset = true
+	barGui.Parent = player:WaitForChild("PlayerGui")
+
+	local bar = Instance.new("Frame")
+	bar.Name = "TopBar"
+	bar.Size = UDim2.new(1, 0, 0, HUD_KOPFLEISTE_HOEHE)
+	bar.Position = UDim2.new(0, 0, 0, 0)
+	bar.BackgroundColor3 = HudChrome.Color.Panel
+	bar.BackgroundTransparency = 0.25
+	bar.BorderSizePixel = 0
+	bar.Parent = barGui
+
+	-- Nach unten dunkler. Ohne den Verlauf ist es eine graue Flaeche; mit ihm ist es eine
+	-- Blende, hinter der die Welt beginnt.
+	local verlauf = Instance.new("UIGradient")
+	verlauf.Rotation = 90
+	verlauf.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, HudChrome.Color.PanelRaised),
+		ColorSequenceKeypoint.new(1, HudChrome.Color.Panel),
+	})
+	verlauf.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(0.75, 0),
+		NumberSequenceKeypoint.new(1, 0.55),
+	})
+	verlauf.Parent = bar
+
+	-- Die Lichtkante an der Unterseite macht die Leiste erst zu einer Kante. Sie ist das
+	-- einzige, was man von der Leiste wirklich SIEHT -- der Rest ist Abdunklung.
+	local kante = Instance.new("Frame")
+	kante.Name = "BarEdge"
+	kante.Size = UDim2.new(1, 0, 0, 1)
+	kante.Position = UDim2.new(0, 0, 1, -1)
+	kante.BackgroundColor3 = HudChrome.Color.BorderBright
+	kante.BackgroundTransparency = 0.55
+	kante.BorderSizePixel = 0
+	kante.Parent = bar
+end
 
 local statusCluster = Instance.new("Frame")
 statusCluster.Name = "PlayerStatusCluster"
@@ -1544,7 +1607,7 @@ end)
 local SPALTE_BREITE = 300
 local SPALTE_X = -16
 local SPALTE_RAND = 10
-local KRAFT_Y = 224 -- unter dem Ortsfeld (118 + 98 + 8)
+local KRAFT_Y = 192 -- unter dem Ortsfeld (86 + 98 + 8)
 local KRAFT_ZEILE = 108
 local SCAN_GROESSE = 100
 
