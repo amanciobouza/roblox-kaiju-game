@@ -125,6 +125,19 @@ local RAIL_PADDING = 8
 -- würde doppelt skalieren.
 local RAIL_BOTTOM_MARGIN = UserInputService.TouchEnabled and 300 or 24
 
+-- ...aber nur, SOLANGE die Leiste damit ins Bild passt.
+--
+-- Auf dem Telefon tat sie das nicht: acht Symbole brauchen 408 Pixel, und zwischen den 300
+-- unten und der Roblox-Systemleiste oben war nicht so viel Platz. Die Leiste waechst nach
+-- oben, also lief das oberste Symbol oben aus dem Bild -- abgeschnitten, nicht verschoben,
+-- weil nichts es aufgehalten haette.
+--
+-- Der untere Abstand ist damit kein fester Wert mehr, sondern eine Obergrenze. Passt es,
+-- bleibt er bei 300. Passt es nicht, rueckt die Leiste so weit nach unten wie noetig -- bis
+-- zu diesem Boden, der den Steuerknueppel unten links noch freihaelt. Reicht auch das
+-- nicht, bleibt sie am Boden stehen und meldet es, statt still abzuschneiden.
+local RAIL_BOTTOM_MIN = UserInputService.TouchEnabled and 150 or 24
+
 local menuRail = Instance.new("Frame")
 menuRail.Name = "MenuRail"
 menuRail.AnchorPoint = Vector2.new(0, 1)
@@ -140,6 +153,60 @@ railLayout.SortOrder = Enum.SortOrder.LayoutOrder
 railLayout.Padding = UDim.new(0, RAIL_PADDING)
 railLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
 railLayout.Parent = menuRail
+
+-- ===== Den Ueberstand messen, nicht vorhersagen =====
+--
+-- Wie hoch die Leiste auf dem Schirm wirklich ist, haengt an ResponsiveHudScale und damit
+-- am Geraet. Die Rechnung nachzubauen ginge -- und ist in dieser Sitzung mehrfach
+-- danebengegangen. Also wird abgelesen.
+--
+-- Der Umrechnungsfaktor kommt aus der Leiste selbst: sie ist genau RAIL_ICON_SIZE breit
+-- angelegt, ihre gemessene Breite geteilt durch diesen Wert IST die wirksame Skalierung.
+-- Damit lassen sich gemessene Pixel in die Versatz-Einheiten zurueckrechnen, in denen die
+-- Position steht.
+local railGemeldet = false
+
+local function railLageAnwenden()
+	local skala = menuRail.AbsoluteSize.X / RAIL_ICON_SIZE
+	local hoehePx = menuRail.AbsoluteSize.Y
+	if skala <= 0 or hoehePx <= 0 then
+		return
+	end
+
+	-- Oberkante, die nicht unterschritten werden darf: die Unterkante der Kopfleiste. Sie
+	-- wird beim Objekt selbst abgefragt, nicht nachgerechnet -- sie kennt den Rand des
+	-- Geraets bereits. Fehlt sie noch, gilt der Systemleisten-Versatz als Notbehelf.
+	local obenPx = HudChrome.TopInset() + 8
+	local barGui = playerGui:FindFirstChild("HudTopBarGui")
+	local bar = barGui and barGui:FindFirstChild("TopBar")
+	if bar then
+		obenPx = bar.AbsoluteSize.Y + 8
+	end
+
+	local unterkantePx = screenGui.AbsolutePosition.Y + screenGui.AbsoluteSize.Y
+	local oberkantePx = screenGui.AbsolutePosition.Y + obenPx
+
+	-- So viel Abstand nach unten bleibt hoechstens, wenn die Oberkante gehalten werden soll.
+	local moeglich = (unterkantePx - oberkantePx - hoehePx) / skala
+	local abstand = math.clamp(moeglich, RAIL_BOTTOM_MIN, RAIL_BOTTOM_MARGIN)
+	menuRail.Position = UDim2.new(0, 16, 1, -abstand)
+
+	if moeglich < RAIL_BOTTOM_MIN and not railGemeldet then
+		railGemeldet = true
+		warn(string.format(
+			"[Kaiju Debug] Navigationsleiste: %d Symbole passen nicht ins Bild -- es fehlen %d px.",
+			#menuRail:GetChildren() - 1, math.ceil((RAIL_BOTTOM_MIN - moeglich) * skala)
+		))
+	end
+end
+
+-- Die Knoepfe entstehen erst weiter unten, die Hoehe steht also noch nicht. AutomaticSize
+-- meldet sich, sobald sie steht -- und noch einmal bei jeder Aenderung der Bildgroesse,
+-- also beim Drehen des Telefons.
+menuRail:GetPropertyChangedSignal("AbsoluteSize"):Connect(railLageAnwenden)
+screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(railLageAnwenden)
+screenGui:GetPropertyChangedSignal("AbsolutePosition"):Connect(railLageAnwenden)
+task.defer(railLageAnwenden)
 
 
 local NAV_BUTTONS = {

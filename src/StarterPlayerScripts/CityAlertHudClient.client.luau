@@ -48,7 +48,12 @@ screenGui.Parent = playerGui
 --
 -- Die Zahl steht dreimal in dieser Datei -- Ortsfeld, Vorwarnung, Aufgabenliste. Deshalb
 -- hier eine Konstante: beim letzten Verschieben habe ich zwei von drei erwischt.
-local SPALTE_OBEN = 86
+--
+-- Sie kommt inzwischen aus HudChrome, weil sich auch das Weltevent-Feld in diese Spalte
+-- eingereiht hat: Ort, Weltevent, Vorwarnung, Aufgabenliste. Zwei Skripte, die dieselbe
+-- Spalte fuellen, muessen dieselbe Rechnung benutzen -- sonst sitzt beim naechsten
+-- Verschieben wieder eines von beiden falsch.
+local SPALTE_OBEN = HudChrome.Spalte.Oben
 local alertFrame = Instance.new("Frame")
 alertFrame.Name = "CityAlertFrame"
 alertFrame.Size = UDim2.new(0, PANEL_BREITE, 0, PANEL_HOEHE)
@@ -359,7 +364,9 @@ local WARN_SYMBOL = 30
 -- Sie faehrt von rechts herein, statt einfach da zu sein. Das Erscheinen IST die
 -- Meldung -- ein Feld, das lautlos auftaucht, uebersieht man beim Kaempfen, weil der
 -- Blick in der Bildmitte haengt. Eine Bewegung am Rand faengt ihn.
-local WARN_Y = SPALTE_OBEN + PANEL_HOEHE + 6
+-- Unter dem Weltevent-Feld, nicht mehr direkt unter dem Ortsfeld: das Feld hat sich
+-- dazwischengeschoben, seit es die untere Bildkante fuer die Angriffsknoepfe geraeumt hat.
+local WARN_Y = HudChrome.SpalteNachEventY() - 2
 local WARN_RUHE_X = -16
 local WARN_AUS_X = PANEL_BREITE + 40 -- so weit draussen, dass nichts hervorlugt
 local WARN_AN = 0.80 -- ab hier erscheint sie
@@ -474,8 +481,9 @@ local function zeigeWarnung(sichtbar)
 end
 
 -- Die Liste rueckt nach, wenn die Warnung da ist -- sonst laege sie darunter begraben.
+-- Das Weltevent-Feld steht immer, also geht es als fester Betrag in die Rechnung ein.
 local function listenY()
-	return SPALTE_OBEN + PANEL_HOEHE + 8 + (warnFrame.Visible and (WARN_HOEHE + 6) or 0)
+	return HudChrome.SpalteNachEventY() + (warnFrame.Visible and (WARN_HOEHE + 6) or 0)
 end
 
 local function updateWarnung()

@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
 local ComicStyleUtils = require(ReplicatedStorage:WaitForChild("ComicStyleUtils"))
 local ModelPreviewUtils = require(ReplicatedStorage:WaitForChild("ModelPreviewUtils"))
+local StageModels = require(ReplicatedStorage:WaitForChild("StageModels"))
 local UiTypography = require(ReplicatedStorage:WaitForChild("UiTypography"))
 local SkinsConfig = require(ReplicatedStorage:WaitForChild("SkinsConfig"))
 local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
@@ -64,16 +65,24 @@ local ENERGY_CONFIG = {
 local NextWorldEventRollTime = ReplicatedStorage:WaitForChild("NextWorldEventRollTime")
 local activeEventLabel = nil -- Name des laufenden Events, nil wenn keines laeuft
 
+-- ===== Warum das Feld nicht mehr unten rechts sitzt =====
+-- Dort lag es auf dem Angriffsknopf "AREA" -- auf dem Rechner ging das gerade noch auf, auf
+-- dem Telefon deckte es ihn zur Haelfte zu. Die untere Bildkante gehoert den Knoepfen, mit
+-- denen man spielt; ein Feld, das man nur liest, hat dort nichts verloren.
+--
+-- Es gehoert in die rechte Spalte: dort steht, was GERADE GILT -- Ort, Alarm, Vorwarnung.
+-- Ein laufendes Weltevent ist genau das. Die Hoehe der Spalte fuehrt HudChrome, damit die
+-- drei Skripte, die hineinschreiben, sich nicht gegenseitig verschieben.
 local EVENT_FELD_BREITE = 330
-local EVENT_FELD_HOEHE = 70
+local EVENT_FELD_HOEHE = HudChrome.Spalte.EventHoehe
 local EVENT_RAND = 12
 local EVENT_SYMBOL = 32
 
 local eventFrame = Instance.new("Frame")
 eventFrame.Name = "WorldEventPanel"
 eventFrame.Size = UDim2.new(0, EVENT_FELD_BREITE, 0, EVENT_FELD_HOEHE)
-eventFrame.AnchorPoint = Vector2.new(1, 1)
-eventFrame.Position = UDim2.new(1, -16, 1, -16)
+eventFrame.AnchorPoint = Vector2.new(1, 0)
+eventFrame.Position = UDim2.new(1, HudChrome.Spalte.Rand, 0, HudChrome.SpalteEventY())
 eventFrame.ZIndex = 55
 eventFrame.Parent = screenGui
 local _, eventStroke = HudChrome.Panel(eventFrame, { radius = HudChrome.Radius.Small })
@@ -184,6 +193,18 @@ RunService.Heartbeat:Connect(function()
 	countdownCaption.Text = activeEventLabel and "ENDS" or "NEXT"
 	countdownLabel.Text = formatCountdown(remaining)
 end)
+
+-- Im Sanctuary verschwindet das Feld.
+--
+-- Dort kaempft niemand, ein Weltevent aendert also nichts an dem, was man gerade tut. Und
+-- die rechte Spalte gehoert im Sanctuary ganz dem Trainingsblock: der reicht von der
+-- Kopfleiste bis knapp ueber den Absorb-Knopf und liesse dem Feld keinen Platz.
+local function zeigeEventFeld()
+	eventFrame.Visible = player:GetAttribute("CurrentZone") ~= "Sanctuary"
+end
+
+player:GetAttributeChangedSignal("CurrentZone"):Connect(zeigeEventFeld)
+zeigeEventFeld()
 
 -- ===== Musik pro Welt-Event =====
 -- Sanftes Überblenden: die NORMALE Hintergrundmusik (aus BackgroundMusicClient.lua) wird
@@ -434,6 +455,23 @@ local FACTIONS = {
 -- breiten Bildschirmen nicht auseinanderlaufen.
 local CARD_GAP = 14
 local CARD_MIN_WIDTH = 270
+
+-- ===== Masse der Fraktionskarte =====
+-- Das Vorschaufeld ist von 320 auf 400 gewachsen: die Figuren sind breite, gebückte
+-- Gestalten mit Schweif und stehen zudem leicht gedreht (siehe ANSICHT_DREHUNG) -- im alten
+-- Feld sassen sie eingeklemmt.
+--
+-- Alles darunter richtet sich jetzt NACH dieser Zahl, statt eigene feste Werte zu führen.
+-- Vorher stand in jeder Zeile eine ausgerechnete Position; wer das Feld vergrösserte,
+-- musste vier Zahlen von Hand nachziehen und merkte den Fehler erst im Spiel.
+local VORSCHAU_HOEHE = 400
+local VORSCHAU_UNTEN = 8 + VORSCHAU_HOEHE
+
+-- Wie weit die Figur aus der Frontalen gedreht steht. Frontal wirkt eine Figur flach wie
+-- ein Wappen; eine leichte Drehung zeigt Schulter und Flanke und macht die Silhouette
+-- lesbar. Die Kamera rahmt über die Diagonale der Grundfläche (siehe ModelPreviewUtils),
+-- die Drehung kann also nichts anschneiden.
+local ANSICHT_DREHUNG = 25
 local CARD_MAX_WIDTH = 460
 
 local cardRow = Instance.new("Frame")
@@ -464,6 +502,31 @@ local avatarPack = Workspace:FindFirstChild("R15AvatarPack")
 local function buildViewport(container, factionKey)
 	local skins = SkinsConfig.GetSkinsByFaction(factionKey)
 	local firstSkin = skins[1]
+
+	-- Die erste Stufe der Fraktion, und zwar als ECHTES Modell, sobald es eines gibt.
+	-- Heute trifft das nur auf den Kaiju zu (Primal Beast); Jaeger und Ronin haben noch
+	-- gar keine Skins und bekommen weiterhin das Fragezeichen.
+	if firstSkin then
+		local realModel = StageModels.BuildPreview(factionKey, firstSkin.Id)
+		if realModel then
+			local realViewport = ModelPreviewUtils.CreateViewport(container, 71)
+			local okReal = pcall(function()
+				realModel.Parent = realViewport
+				ModelPreviewUtils.Fit(realViewport, realModel, container)
+				-- NACH dem Einpassen drehen, und vorn multipliziert: Fit hat das Modell
+				-- mittig in den Ursprung gesetzt, eine vorn multiplizierte Drehung dreht
+				-- also um die Mitte. Hinten multipliziert wäre es der Pivot, und die Figur
+				-- würde im Rahmen kreisen statt sich zu drehen.
+				realModel:PivotTo(CFrame.Angles(0, math.rad(ANSICHT_DREHUNG), 0) * realModel:GetPivot())
+			end)
+			if okReal then
+				print(string.format("[Kaiju-Debug] Fraktionsvorschau %s zeigt das Modell \"%s\".", factionKey, firstSkin.Name))
+				return
+			end
+			realViewport:Destroy()
+		end
+	end
+
 	local template = avatarPack and avatarPack:FindFirstChildWhichIsA("Model")
 	if not firstSkin or not template then
 		ModelPreviewUtils.ShowPlaceholder(container, 71)
@@ -477,6 +540,7 @@ local function buildViewport(container, factionKey)
 		previewModel:ScaleTo(firstSkin.Scale or 1)
 		previewModel.Parent = viewport
 		ModelPreviewUtils.Fit(viewport, previewModel, container)
+		previewModel:PivotTo(CFrame.Angles(0, math.rad(ANSICHT_DREHUNG), 0) * previewModel:GetPivot())
 	end)
 	if not ok then
 		viewport:Destroy()
@@ -513,7 +577,7 @@ for index, faction in ipairs(FACTIONS) do
 
 	-- 3D-Vorschau (rotierendes Modell)
 	local viewportContainer = Instance.new("Frame")
-	viewportContainer.Size = UDim2.new(1, -16, 0, 320)
+	viewportContainer.Size = UDim2.new(1, -16, 0, VORSCHAU_HOEHE)
 	viewportContainer.Position = UDim2.new(0, 8, 0, 8)
 	viewportContainer.BackgroundTransparency = 1
 	viewportContainer.ZIndex = 71
@@ -523,7 +587,7 @@ for index, faction in ipairs(FACTIONS) do
 
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.Size = UDim2.new(1, -8, 0, 30)
-	nameLabel.Position = UDim2.new(0, 4, 0, 332)
+	nameLabel.Position = UDim2.new(0, 4, 0, VORSCHAU_UNTEN + 4)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.Font = Enum.Font.LuckiestGuy
 	nameLabel.TextScaled = true
@@ -534,7 +598,7 @@ for index, faction in ipairs(FACTIONS) do
 
 	local subtitleLabel = Instance.new("TextLabel")
 	subtitleLabel.Size = UDim2.new(1, -16, 0, 20)
-	subtitleLabel.Position = UDim2.new(0, 8, 0, 366)
+	subtitleLabel.Position = UDim2.new(0, 8, 0, VORSCHAU_UNTEN + 38)
 	subtitleLabel.BackgroundTransparency = 1
 	UiTypography.Body(subtitleLabel, 14)
 	subtitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -560,7 +624,7 @@ for index, faction in ipairs(FACTIONS) do
 	-- Fortschritts-Container: nur für gesperrte Fraktionen sichtbar/befüllt.
 	local progressContainer = Instance.new("Frame")
 	progressContainer.Size = UDim2.new(1, -16, 0, 108)
-	progressContainer.Position = UDim2.new(0, 8, 0, 480)
+	progressContainer.Position = UDim2.new(0, 8, 0, VORSCHAU_UNTEN + 152)
 	progressContainer.BackgroundTransparency = 1
 	progressContainer.ZIndex = 71
 	progressContainer.Visible = (faction.key ~= "Kaiju")

@@ -521,6 +521,37 @@ function HudChrome.NumberBold(textLabel, size)
 	return textLabel
 end
 
+-- ===== Die rechte Spalte =====
+--
+-- Drei Skripte schreiben in dieselbe Spalte: das Ortsfeld mit Alarmsternen und Vorwarnung
+-- (CityAlertHudClient), das Weltevent-Feld (EnergyTypesClient) und der Trainingsblock
+-- (SkinSelectionGui). Solange jedes seine eigene Zahl fuehrte, verschob ein Umbau an einer
+-- Stelle stillschweigend die anderen -- beim Hochruecken der Spalte stand die 118 dreimal
+-- da, und ich hatte zuerst zwei von drei erwischt.
+--
+-- Deshalb stehen die Masse, ueber die sich die drei einig sein muessen, hier. Die Reihenfolge
+-- von oben nach unten: Ort, Weltevent, Vorwarnung, Aufgabenliste. Der Trainingsblock ersetzt
+-- im Sanctuary die ganze Spalte, dort ist alles andere ausgeblendet.
+HudChrome.Spalte = {
+	Oben = 86, -- unter der Kopfleiste
+	Rand = -16, -- Abstand zum rechten Bildrand
+	Luft = 8, -- zwischen zwei Feldern
+	OrtHoehe = 98, -- Ortsfeld mit Alarmsternen
+	EventHoehe = 70, -- Weltevent-Feld
+}
+
+-- Oberkante des Weltevent-Felds.
+function HudChrome.SpalteEventY()
+	local s = HudChrome.Spalte
+	return s.Oben + s.OrtHoehe + s.Luft
+end
+
+-- Oberkante von allem, was UNTER dem Weltevent-Feld folgt.
+function HudChrome.SpalteNachEventY()
+	local s = HudChrome.Spalte
+	return HudChrome.SpalteEventY() + s.EventHoehe + s.Luft
+end
+
 -- ===== Der Rand des Geraets =====
 --
 -- Zwei verschiedene Raender schneiden in ein ScreenGui, und sie werden staendig
