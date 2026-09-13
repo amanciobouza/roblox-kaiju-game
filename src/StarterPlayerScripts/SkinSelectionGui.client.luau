@@ -1539,9 +1539,11 @@ local KRAFT_Y = 224 -- unter dem Ortsfeld (118 + 98 + 8)
 local KRAFT_ZEILE = 108
 local SCAN_GROESSE = 100
 
--- Kameraabstand im Scanfenster. KLEINER heisst NAEHER -- der Wert ist in
--- ModelPreviewUtils ein Faktor auf den Abstand, nicht auf die Groesse.
-local SCAN_ZOOM = 0.55
+-- Kameraabstand im Scanfenster: ein Faktor auf den Abstand, nicht auf die Groesse --
+-- KLEINER heisst also NAEHER. Bei 0.55 stand die Kamera im Glied; man sah eine Flaeche,
+-- kein Teil. Bei 1.05 passt das Glied ins Fenster und hat noch etwas Luft darum, so wie
+-- ein Praeparat unter einem Geraet.
+local SCAN_ZOOM = 1.05
 
 local statsRowFrame = Instance.new("Frame")
 statsRowFrame.Name = "StatsRowFrame"
@@ -1847,7 +1849,11 @@ local function baueScan(key)
 			klon.CastShadow = false
 			klon.Material = Enum.Material.Neon
 			klon.Color = eintrag.color
-			klon.Transparency = 0.25
+			-- Deutlich durchsichtiger: ein Roentgenbild zeigt das Innere MIT, nicht die
+			-- Oberflaeche davor. Bei 0.25 war es eine bemalte Figur, bei 0.55 sieht man
+			-- durch sie hindurch -- und ueberlappende Teile summieren sich zu den
+			-- dichteren Stellen auf, genau wie bei einer echten Durchleuchtung.
+			klon.Transparency = 0.55
 			klon.Parent = modell
 			gefunden += 1
 		end
