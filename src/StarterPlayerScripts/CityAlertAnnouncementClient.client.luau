@@ -2,21 +2,27 @@
 -- FIX: Megacity -> MegaCity (Schreibweise an Studio-Attribut angeglichen)
 -- Ort in Studio: StarterPlayerScripts
 --
--- "ALERT ESCALATION"-Sequenz bei einem ECHTEN Alert-Level-Aufstieg der Stadt, in der
--- sich der Spieler gerade befindet. Läuft nach einem festen Zeitplan (~1.5-1.8s
--- Gesamtdauer), damit sie spektakulär wirkt, ohne den Spielfluss zu unterbrechen:
+-- VORWARNUNG vor der naechsten Alarmstufe der Stadt, in der der Spieler gerade steht.
+-- Sie faellt, sobald der Druck 80 Prozent der Schwelle erreicht -- also KURZ BEVOR die
+-- Stufe steigt, nicht danach. Eine Warnung, die gleichzeitig mit dem Ereignis kommt, ist
+-- keine Warnung, sondern ein Bericht.
 --
---   0.0s  Trigger: kompakte Anzeige zittert, aktueller Stern pulsiert 2x, Boom-Sound
---   0.15s Warnsignal: kurzer roter/oranger Rand-Flash, stufenspezifischer Sound startet
---   0.3s  HUD fliegt vergrössert ins Zentrum: "CITY ALERT" + Sterne (neuer Stern zunächst
---         als dunkler Umriss)
---   0.55s Eskalation: neuer Stern wird "eingestanzt" (Overshoot 140%->100%, Screen-Shake,
---         Partikel, Shockwave-Ring), Text wechselt zu "ALERT LEVEL X"
---   0.9s  Konsequenz: kurzer Text erscheint ("FIRE RESPONSE DEPLOYED" etc.)
---   1.5s  Rückkehr: schrumpft zurück zur kompakten Anzeige oben rechts
+-- Fester Zeitplan (~1.5-1.8s), damit sie wirkt, ohne den Spielfluss anzuhalten:
 --
--- Level 5 bricht bewusst das Muster: kurzer Hitstop-artiger Break, alle Sterne schlagen
--- fast nacheinander ein, "MAXIMUM ALERT" füllt kurz die Bildschirmbreite.
+--   0.0s  Ausloeser: kompakte Anzeige zittert, aktueller Stern pulsiert 2x, Boom-Sound
+--   0.15s Warnsignal: kurzer roter Rand-Flash, stufenspezifischer Sound startet
+--   0.3s  Das Band faehrt auf: Titel der kommenden Antwort + Sterne
+--   0.55s Der kommende Stern erscheint als PULSIERENDER Umriss -- eingestanzt wird er
+--         nicht, denn verdient ist er noch nicht. Dazu Screen-Shake, Funken, Schockwelle.
+--   0.9s  Konsequenz: was diese Antwort bedeutet ("FIRE RESPONSE DEPLOYED" etc.)
+--   1.5s  Rueckkehr: schrumpft zur kompakten Anzeige oben rechts
+--
+-- Stufe 5 bricht bewusst das Muster: kurzer Hitstop, alle Sterne nacheinander,
+-- "MAXIMUM ALERT" waechst kurz an.
+--
+-- Das Band ist ein durchlaessiges rotes Feld ohne Rahmen, das an beiden Enden ausblendet.
+-- Bewusst KEIN Panel: ein Kasten mit Rand liest sich als weitere Anzeige, die man abhakt.
+-- Das Band liest sich als Stoerung im Bild.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -26,9 +32,14 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
 
+-- Fuer die Vorwarnung wird die Schwelle der Stadt gebraucht -- der Fortschrittswert ist
+-- ein roher Punktestand und sagt ohne sie nichts.
+local cityAlertConfigModule = ReplicatedStorage:WaitForChild("CityAlertConfig", 10)
+local CityAlertConfig = cityAlertConfigModule and require(cityAlertConfigModule)
+
 local cityAlertValues = ReplicatedStorage:WaitForChild("CityAlertValues", 10)
-if not cityAlertValues then
-	warn("[CityAlertAnnouncementClient] CityAlertValues nicht gefunden (Timeout) -- Ankündigung bleibt deaktiviert.")
+if not cityAlertValues or not CityAlertConfig then
+	warn("[CityAlertAnnouncementClient] CityAlertValues oder CityAlertConfig nicht gefunden (Timeout) -- Ankuendigung bleibt deaktiviert.")
 	return
 end
 
@@ -89,15 +100,30 @@ local banner = Instance.new("Frame")
 banner.Name = "AnnouncementBanner"
 banner.AnchorPoint = Vector2.new(0.5, 0.5)
 banner.Position = UDim2.new(0.5, 0, 0.35, 0)
-banner.Size = UDim2.new(0, 560, 0, 182)
+banner.Size = UDim2.new(0, 720, 0, 182)
+banner.BackgroundColor3 = HudChrome.Color.Danger
+banner.BackgroundTransparency = 1
+banner.BorderSizePixel = 0
+banner.Visible = false
 banner.ZIndex = 41
 banner.Parent = screenGui
-HudChrome.Panel(banner, { radius = HudChrome.Radius.Panel })
 
--- Die Ankuendigung faehrt aus dem Nichts auf, deshalb startet sie unsichtbar. HudChrome
--- setzt beim Anlegen einen sichtbaren Grund -- der wird hier bewusst wieder zurueckgenommen.
-banner.BackgroundTransparency = 1
-banner.Visible = false
+-- KEIN Feld mit Rahmen. Das war der erste Versuch, und er machte aus der Ankuendigung
+-- "noch eine Anzeige mit Bedeutung" -- etwas, das man liest und abhakt.
+--
+-- Stattdessen ein durchlaessiges rotes Band, das an beiden Enden ins Nichts auslaeuft.
+-- Ohne Kante gibt es nichts, was als Kasten gelesen werden koennte; was bleibt, ist eine
+-- Stoerung im Bild. Der Verlauf macht genau das: deckend in der Mitte, an den Raendern
+-- durchsichtig.
+local bannerVerlauf = Instance.new("UIGradient")
+bannerVerlauf.Rotation = 0
+bannerVerlauf.Transparency = NumberSequence.new({
+	NumberSequenceKeypoint.new(0, 1),
+	NumberSequenceKeypoint.new(0.22, 0),
+	NumberSequenceKeypoint.new(0.78, 0),
+	NumberSequenceKeypoint.new(1, 1),
+})
+bannerVerlauf.Parent = banner
 
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Name = "TitleLabel"
@@ -264,6 +290,8 @@ local function screenShake(intensity, duration)
 	end)
 end
 
+-- Angekuendigt wird, was KOMMT -- nicht, was passiert ist. newLevel ist deshalb die
+-- Stufe, auf die es zulaeuft, und oldLevel die, auf der die Stadt noch steht.
 local function showAnnouncement(cityName, newLevel, oldLevel)
 	if isAnimating then
 		return
@@ -318,7 +346,7 @@ local function showAnnouncement(cityName, newLevel, oldLevel)
 
 	titleLabel.Text = info.title
 	titleLabel.TextColor3 = HudChrome.Color.TextPrimary
-	levelLabel.Text = "LEVEL " .. oldLevel .. "  \u{2192}  " .. newLevel
+	levelLabel.Text = "LEVEL " .. oldLevel .. "  \u{2192}  " .. newLevel .. "   INBOUND"
 	consequenceLabel.Text = ""
 	consequenceLabel.TextTransparency = 1
 
@@ -333,7 +361,7 @@ local function showAnnouncement(cityName, newLevel, oldLevel)
 
 	TweenService:Create(banner, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
 		Size = originalSize,
-		BackgroundTransparency = 0.1,
+		BackgroundTransparency = 0.45,
 	}):Play()
 	TweenService:Create(titleLabel, TweenInfo.new(0.2), { TextTransparency = 0 }):Play()
 	TweenService:Create(levelLabel, TweenInfo.new(0.2), { TextTransparency = 0 }):Play()
@@ -364,12 +392,20 @@ local function showAnnouncement(cityName, newLevel, oldLevel)
 				task.wait(0.08)
 			end
 		else
-			newStar.TextColor3 = Color3.fromRGB(255, 210, 80)
-			newStar.TextTransparency = 0
+			-- Der kommende Stern wird NICHT eingestanzt -- er ist noch nicht verdient. Er
+			-- erscheint als pulsierender Umriss: das ist der Unterschied zwischen "es ist
+			-- passiert" und "es steht bevor".
+			newStar.TextColor3 = HudChrome.Color.Ready
+			newStar.TextTransparency = 0.55
 			newStar.Size = UDim2.new(0, 67, 1, 0) -- ~140% von 48
 			TweenService:Create(newStar, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
 				Size = UDim2.new(0, 48, 1, 0),
 			}):Play()
+			TweenService:Create(
+				newStar,
+				TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut, 4, true),
+				{ TextTransparency = 0.2 }
+			):Play()
 		end
 
 		playSound(STAMP_SOUND_ID, 0.9)
@@ -388,8 +424,8 @@ local function showAnnouncement(cityName, newLevel, oldLevel)
 		}):Play()
 	end
 
-	levelLabel.Text = "ALERT LEVEL " .. newLevel
-	levelLabel.TextColor3 = HudChrome.Color.Danger
+	levelLabel.Text = "ALERT LEVEL " .. newLevel .. "   INBOUND"
+	levelLabel.TextColor3 = HudChrome.Color.TextPrimary
 
 	if isMaxLevel then
 		-- Die Hoechststufe laesst den Titel kurz anwachsen.
@@ -438,6 +474,22 @@ local function showAnnouncement(cityName, newLevel, oldLevel)
 	isAnimating = false
 end
 
+-- ===== Ausloeser =====
+--
+-- Zwei Dinge werden beobachtet, und sie tun Verschiedenes.
+--
+-- Der DRUCK loest die Ankuendigung aus, kurz bevor die naechste Stufe faellt. Vorher hing
+-- sie am Stufenwechsel selbst -- dann kuendigte sie aber nichts an, sondern meldete etwas
+-- Geschehenes. Eine Warnung, die gleichzeitig mit dem Ereignis kommt, ist keine.
+--
+-- Die STUFE setzt nur die Merker zurueck und meldet eine Entspannung.
+--
+-- (Nebenbei: die alte Fassung war ueberhaupt nie verdrahtet. checkCityLevel stand als
+-- Funktion da und wurde von nirgends aufgerufen -- die grosse Ankuendigung hat nie
+-- gespielt. Deshalb hier auch die Abonnements, die vorher fehlten.)
+local WARN_ANTEIL = 0.8 -- ab diesem Anteil der Schwelle wird gewarnt
+local warnedForLevel = {} -- [cityName] = Stufe, fuer die schon gewarnt wurde
+
 local function checkCityLevel(cityName)
 	local levelValue = cityAlertValues:FindFirstChild(cityName .. "Level")
 	if not levelValue then
@@ -450,13 +502,50 @@ local function checkCityLevel(cityName)
 		lastKnownLevel[cityName] = newLevel
 		return
 	end
-
 	if newLevel == oldLevel then
 		return
 	end
 	lastKnownLevel[cityName] = newLevel
+	-- Fuer die neue Stufe darf wieder gewarnt werden.
+	warnedForLevel[cityName] = nil
 
+	if newLevel < oldLevel and player:GetAttribute("CurrentCityName") == cityName then
+		-- Entspannung: keine grosse Ankuendigung, nur die kompakte Anzeige leuchtet gruen.
+		if _G.FlashCityAlertIndicator then
+			_G.FlashCityAlertIndicator(Color3.fromRGB(90, 220, 130))
+		end
+	end
+end
+
+local function checkCityPressure(cityName)
 	if player:GetAttribute("CurrentCityName") ~= cityName then
+		return
+	end
+
+	local levelValue = cityAlertValues:FindFirstChild(cityName .. "Level")
+	local progressValue = cityAlertValues:FindFirstChild(cityName .. "Progress")
+	local config = CityAlertConfig.GetCityConfig(cityName)
+	if not levelValue or not progressValue or not config then
+		return
+	end
+
+	local schwelle = config.AlertThresholdLevel2
+	if not schwelle or schwelle <= 0 then
+		return
+	end
+
+	local level = math.max(levelValue.Value, 0)
+	if warnedForLevel[cityName] == level then
+		return
+	end
+
+	local maxLevelValue = cityAlertValues:FindFirstChild(cityName .. "MaxLevel")
+	local maxLevel = (maxLevelValue and maxLevelValue.Value) or config.MaxAlertLevel or 5
+	if level >= maxLevel then
+		return -- auf der Hoechststufe kommt nichts mehr
+	end
+
+	if progressValue.Value / schwelle < WARN_ANTEIL then
 		return
 	end
 
@@ -465,13 +554,33 @@ local function checkCityLevel(cityName)
 		return
 	end
 	lastAnnouncedAt[cityName] = now
+	warnedForLevel[cityName] = level
 
-	if newLevel > oldLevel then
-		showAnnouncement(cityName, newLevel, oldLevel)
-	else
-		-- De-Eskalation: keine grosse Ankündigung, nur die kompakte Anzeige leuchtet grün auf.
-		if _G.FlashCityAlertIndicator then
-			_G.FlashCityAlertIndicator(Color3.fromRGB(90, 220, 130))
-		end
+	showAnnouncement(cityName, level + 1, level)
+end
+
+local function beobachte(valueObject)
+	local name = valueObject.Name
+	local stadt = name:match("^(.-)Level$")
+	if stadt and not name:match("MaxLevel$") then
+		valueObject:GetPropertyChangedSignal("Value"):Connect(function()
+			checkCityLevel(stadt)
+			checkCityPressure(stadt)
+		end)
+		lastKnownLevel[stadt] = valueObject.Value
+		return
+	end
+	local druckStadt = name:match("^(.-)Progress$")
+	if druckStadt then
+		valueObject:GetPropertyChangedSignal("Value"):Connect(function()
+			checkCityPressure(druckStadt)
+		end)
 	end
 end
+
+for _, valueObject in ipairs(cityAlertValues:GetChildren()) do
+	beobachte(valueObject)
+end
+cityAlertValues.ChildAdded:Connect(beobachte)
+
+print("[Kaiju Debug] CityAlertAnnouncement: Vorwarnung ab " .. math.floor(WARN_ANTEIL * 100) .. " Prozent der Schwelle scharf.")
