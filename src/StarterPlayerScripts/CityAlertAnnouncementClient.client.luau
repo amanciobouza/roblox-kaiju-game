@@ -11,7 +11,8 @@
 --   der rechten Spalte (CityAlertHudClient). Eine Warnung unterbricht nicht, sie meldet
 --   sich -- die Mitte bleibt dem vorbehalten, was schon eingetreten ist.
 --
--- Fester Zeitplan (~1.5-1.8s), damit das Ereignis wirkt, ohne den Spielfluss anzuhalten:
+-- Fester Zeitplan. Das Band steht ab dem Auffahren BANNER_STANDZEIT Sekunden -- lang
+-- genug, um beide Zeilen wirklich zu lesen, und kurz genug, dass es nicht im Weg steht:
 --
 --   0.0s  Ausloeser: kompakte Anzeige zittert, aktueller Stern pulsiert 2x, Boom-Sound
 --   0.15s Warnsignal: kurzer roter Rand-Flash, stufenspezifischer Sound startet
@@ -19,7 +20,7 @@
 --   0.55s Der neue Stern wird eingestanzt (Ueberschwung 140->100 Prozent, Screen-Shake,
 --         Funken, Schockwelle), Text wechselt auf "ALERT LEVEL X"
 --   0.9s  Konsequenz: was diese Antwort bedeutet ("FIRE RESPONSE DEPLOYED" etc.)
---   1.5s  Rueckkehr: schrumpft zur kompakten Anzeige oben rechts
+--   3.3s  Rueckkehr: schrumpft zur kompakten Anzeige oben rechts
 --
 -- Stufe 5 bricht bewusst das Muster: kurzer Hitstop, alle Sterne nacheinander,
 -- "MAXIMUM ALERT" waechst kurz an.
@@ -70,6 +71,17 @@ local STAMP_SOUND_ID = "" -- CLANG/THOOM beim Einstanzen des neuen Sterns (0.55s
 -- dasselbe Bild, aber ohne dass die Groesse davon abhaengt, wie hoch gerade ein Kasten ist.
 local TITEL_GROESSE = 30
 local TITEL_GROESSE_MAX = 42
+
+-- Wie lange die Meldung steht, gerechnet ab dem Auffahren.
+--
+-- Vorher waren es 1.2 Sekunden: die Konsequenzzeile erschien bei 0.9 und war 0.6 Sekunden
+-- spaeter schon wieder unterwegs in die Ecke. Der Text war fertig aufgebaut, als er bereits
+-- wegflog -- lesen konnte man ihn nicht, man konnte nur bemerken, dass etwas da war.
+--
+-- Die Wartezeit unten leitet sich daraus ab, statt selbst eine Zahl zu sein: das Band
+-- faehrt bei 0.3 auf, die Konsequenz erscheint bei 0.9 -- ab dort bleiben also
+-- STANDZEIT minus 0.6 Sekunden.
+local BANNER_STANDZEIT = 3.0
 
 local COOLDOWN_SECONDS = 5 -- verhindert Spam, falls der Fortschritt durch Zerfall/Eskalation hin- und herpendelt
 
@@ -433,9 +445,9 @@ local function showAnnouncement(cityName, newLevel, oldLevel)
 		TweenService:Create(consequenceLabel, TweenInfo.new(0.25), { TextTransparency = 0 }):Play()
 	end
 
-	task.wait(0.6)
+	task.wait(BANNER_STANDZEIT - 0.6)
 
-	-- ===== 1.5s -- Rückkehr: schrumpft zurück zur kompakten Anzeige oben rechts. =====
+	-- ===== Rueckkehr: schrumpft zurueck zur kompakten Anzeige oben rechts. =====
 	local flyTarget = UDim2.new(1, -110, 0, 100)
 	local flyTween = TweenService:Create(banner, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
 		Position = flyTarget,
