@@ -1789,33 +1789,75 @@ local function baueScan(key)
 	local modell = Instance.new("Model")
 	modell.Name = "ScanModel"
 	local gefunden = 0
+	local uebersprungen = 0
+
+	-- UNSICHTBARE Teile ueberspringen.
+	--
+	-- Das war der Grund fuer den Wuerfel: in einem Rig mit Haut-Mesh sind die R15-Teile
+	-- oft nur unsichtbare Kaesten, an denen die Knochen haengen -- die sichtbare Form
+	-- liegt woanders. Wer sie klont und dabei auf Transparenz 0.3 setzt, macht genau diese
+	-- Kaesten sichtbar. Man sah also keinen Arm, sondern seine Huelle.
+	--
+	-- Dieselbe Ueberlegung wie beim Huellquader in ModelPreviewUtils: eine Vorschau soll
+	-- zeigen, was man SIEHT.
+	local function nimmTeil(teil)
+		if not teil or not teil:IsA("BasePart") then
+			return
+		end
+		if teil.Transparency >= 1 then
+			uebersprungen += 1
+			return
+		end
+		local klon = teil:Clone()
+		for _, kind in ipairs(klon:GetChildren()) do
+			-- SpecialMesh traegt bei alten Rigs die Form -- der muss bleiben.
+			if not kind:IsA("SpecialMesh") then
+				kind:Destroy()
+			end
+		end
+		if klon:IsA("MeshPart") then
+			klon.TextureID = "" -- kein Skin-Bild: ein Roentgenbild zeigt Form, nicht Farbe
+		end
+		klon.Anchored = true
+		klon.CanCollide = false
+		klon.CastShadow = false
+		klon.Material = Enum.Material.Neon
+		klon.Color = eintrag.color
+		klon.Transparency = 0.3
+		klon.Parent = modell
+		gefunden += 1
+	end
+
 	for _, name in ipairs(teileNamen) do
-		local teil = character:FindFirstChild(name)
-		if teil and teil:IsA("BasePart") then
-			local klon = teil:Clone()
-			for _, kind in ipairs(klon:GetChildren()) do
-				-- SpecialMesh traegt bei alten Rigs die Form -- der muss bleiben.
-				if not kind:IsA("SpecialMesh") then
-					kind:Destroy()
+		nimmTeil(character:FindFirstChild(name))
+	end
+
+	-- Zweiter Versuch: manche Figuren tragen ihre sichtbare Form nicht direkt im
+	-- Charakter, sondern eine Ebene tiefer. Dann ueber den ganzen Baum suchen.
+	if gefunden == 0 then
+		for _, nachfahre in ipairs(character:GetDescendants()) do
+			for _, name in ipairs(teileNamen) do
+				if nachfahre.Name == name then
+					nimmTeil(nachfahre)
 				end
 			end
-			if klon:IsA("MeshPart") then
-				klon.TextureID = "" -- kein Skin-Bild: ein Roentgenbild zeigt Form, nicht Farbe
-			end
-			klon.Anchored = true
-			klon.CanCollide = false
-			klon.CastShadow = false
-			klon.Material = Enum.Material.Neon
-			klon.Color = eintrag.color
-			klon.Transparency = 0.3
-			klon.Parent = modell
-			gefunden += 1
 		end
 	end
 
+	-- Nachweis. Ohne ihn ist von aussen nicht zu unterscheiden, ob das Fenster leer bleibt,
+	-- weil es die Teile nicht gibt, weil sie unsichtbar sind, oder weil die Kamera
+	-- danebensteht.
+	print(string.format(
+		"[Kaiju Debug] Scan %s: %d Teile uebernommen, %d unsichtbare uebersprungen (gesucht: %s).",
+		key,
+		gefunden,
+		uebersprungen,
+		table.concat(teileNamen, ", ")
+	))
+
 	if gefunden == 0 then
-		-- Keine passenden Teile -- z.B. bei einem Rig, das anders benannt ist. Dann bleibt
-		-- das Fenster leer statt halb gefuellt; Raster und Abtastlinie stehen weiter.
+		-- Keine sichtbaren Teile gefunden. Dann bleibt das Fenster leer statt halb
+		-- gefuellt; Raster und Abtastlinie stehen weiter.
 		modell:Destroy()
 		return
 	end
@@ -1824,7 +1866,45 @@ local function baueScan(key)
 	ModelPreviewUtils.Fit(eintrag.scanViewport, modell, eintrag.scanFrame, SCAN_ZOOM)
 end
 
+-- Einmaliges Verzeichnis der sichtbaren Teile der Figur.
+--
+-- Es steht hier, weil die Namen der R15-Teile nur eine ANNAHME sind: ein eigenes Rig oder
+-- ein Haut-Mesh kann seine Form unter ganz anderen Namen tragen. Bleibt ein Fenster leer,
+-- sagt diese Liste, wie die Teile wirklich heissen -- und dann stimmt SCAN_TEILE nicht,
+-- nicht die Kamera.
+local verzeichnisGezeigt = false
+local function zeigeTeileVerzeichnis(character)
+	if verzeichnisGezeigt or not character then
+		return
+	end
+	verzeichnisGezeigt = true
+
+	local sichtbare = {}
+	for _, nachfahre in ipairs(character:GetDescendants()) do
+		if nachfahre:IsA("BasePart") and nachfahre.Transparency < 1 then
+			table.insert(sichtbare, string.format(
+				"%s (%s, %.1fx%.1fx%.1f)",
+				nachfahre.Name,
+				nachfahre.ClassName,
+				nachfahre.Size.X,
+				nachfahre.Size.Y,
+				nachfahre.Size.Z
+			))
+		end
+	end
+
+	if #sichtbare == 0 then
+		warn("[Kaiju Debug] Scan-Verzeichnis: die Figur hat KEIN sichtbares Teil.")
+		return
+	end
+	print("[Kaiju Debug] Scan-Verzeichnis, sichtbare Teile der Figur (" .. #sichtbare .. "):")
+	for _, zeile in ipairs(sichtbare) do
+		print("[Kaiju Debug]   " .. zeile)
+	end
+end
+
 local function baueAlleScans()
+	zeigeTeileVerzeichnis(player.Character)
 	for key in pairs(SCAN_TEILE) do
 		baueScan(key)
 	end
