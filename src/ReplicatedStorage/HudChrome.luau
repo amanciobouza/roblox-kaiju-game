@@ -552,6 +552,38 @@ function HudChrome.SpalteNachEventY()
 	return HudChrome.SpalteEventY() + s.EventHoehe + s.Luft
 end
 
+-- ===== Die untere Reihe =====
+--
+-- Unten steht der Tacho in der Bildmitte, links und rechts davon die Knoepfe. Sie kommen
+-- aus ZWEI Skripten -- die vier Angriffe aus SpecialAttackClient, das Absorbieren aus
+-- EnergyAbsorbInputClient -- und standen deshalb nicht in einer Reihe: der Absorb-Knopf
+-- schwebte darueber und lag auf dem Trainingsfeld.
+--
+-- Die Reihenfolge nach aussen hin ist nicht beliebig. Rechts vom Tacho stehen die drei
+-- Knoepfe, die die Spezialenergie betreffen -- dieselbe Energie, die der cyanfarbene Bogen
+-- am Tacho zeigt: erst der, der sie FUELLT, dann die beiden, die sie ausgeben, der
+-- teurere weiter aussen. Links die beiden, die nichts kosten und immer gehen.
+HudChrome.Reihe = {
+	Breite = 128,
+	Hoehe = 104,
+	Innen = 210, -- Mitte des innersten Knopfes, Abstand zur Bildmitte
+	Abstand = 140, -- Mitte zu Mitte
+	Grundlinie = -24, -- Unterkante ueber dem unteren Bildrand
+}
+
+-- Mitte des n-ten Knopfes, von der Bildmitte aus gezaehlt. n = 1 steht direkt neben dem
+-- Tacho, n = 2 daneben; negatives n ist die linke Seite.
+function HudChrome.ReiheX(n)
+	local r = HudChrome.Reihe
+	local betrag = r.Innen + (math.abs(n) - 1) * r.Abstand
+	return n < 0 and -betrag or betrag
+end
+
+-- Fertige Lage fuer einen Knopf der Reihe.
+function HudChrome.ReihePlatz(n)
+	return UDim2.new(0.5, HudChrome.ReiheX(n), 1, HudChrome.Reihe.Grundlinie)
+end
+
 -- ===== Der Rand des Geraets =====
 --
 -- Zwei verschiedene Raender schneiden in ein ScreenGui, und sie werden staendig

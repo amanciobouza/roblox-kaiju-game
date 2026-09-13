@@ -42,13 +42,20 @@ screenGui.Parent = playerGui
 -- Symbol, Bezeichnung, Unterzeile. Der Knopf war bisher rund und cyan gefuellt -- die
 -- Farbe traegt nach der neuen Stilregel nur noch das Symbol, nicht der Grund.
 --
--- Er bleibt vorerst an seinem Platz unten rechts. In Scheibe 4 rueckt er in die rechte
--- Gruppe neben Focus und Area, wo er hingehoert.
+-- Er steht jetzt IN der Reihe, direkt rechts neben dem Tacho.
+--
+-- Vorher schwebte er darueber, an der rechten Bildkante -- eine zweite Hoehe fuer einen
+-- einzigen Knopf, und auf dem Telefon lag er obendrein auf dem Trainingsfeld. Dass er aus
+-- einem anderen Skript kommt als die vier Angriffe, war der Grund; die Reihe hatte keine
+-- gemeinsame Stelle, an der beide haetten nachsehen koennen. Jetzt hat sie eine.
+--
+-- Der Platz direkt am Tacho ist kein Zufall: dort laeuft der cyanfarbene Bogen, und dieser
+-- Knopf ist der, der ihn fuellt. Nach aussen folgen die beiden, die ihn ausgeben.
 local absorbButton = Instance.new("TextButton")
 absorbButton.Name = "AbsorbButton"
-absorbButton.Size = UDim2.new(0, 128, 0, 104)
-absorbButton.AnchorPoint = Vector2.new(1, 1)
-absorbButton.Position = UDim2.new(1, -20, 1, -140)
+absorbButton.Size = UDim2.new(0, HudChrome.Reihe.Breite, 0, HudChrome.Reihe.Hoehe)
+absorbButton.AnchorPoint = Vector2.new(0.5, 1)
+absorbButton.Position = HudChrome.ReihePlatz(1)
 absorbButton.AutoButtonColor = false
 absorbButton.Text = ""
 absorbButton.Parent = screenGui
@@ -121,10 +128,51 @@ keyLabel.Parent = absorbButton
 HudChrome.Number(keyLabel, 12)
 keyLabel.TextColor3 = HudChrome.Color.TextDim
 
+-- ===== Im Sanctuary gesperrt, wie die vier daneben =====
+--
+-- Seit der Knopf IN der Reihe steht, faellt es auf: die vier Angriffe bekommen im Sanctuary
+-- einen Schleier und keinen Akzentstreifen, dieser nicht. Fuenf Knoepfe, zwei Regeln.
+--
+-- Gesperrt wird nichts weggenommen: im Sanctuary gibt es keine Energiequelle, das Halten
+-- des Knopfes tut dort ohnehin nichts (siehe EnergyCollectionHandler). Bisher war er ein
+-- Bedienelement ohne Wirkung -- jetzt sagt er das auch.
+local lockScrim = Instance.new("Frame")
+lockScrim.Name = "LockScrim"
+lockScrim.Size = UDim2.new(1, 0, 1, 0)
+lockScrim.BackgroundColor3 = HudChrome.Color.PanelSunken
+lockScrim.BackgroundTransparency = 0.35
+lockScrim.BorderSizePixel = 0
+lockScrim.Visible = false
+lockScrim.ZIndex = 14
+lockScrim.Parent = absorbButton
+
+local lockCorner = Instance.new("UICorner")
+lockCorner.CornerRadius = UDim.new(0, HudChrome.Radius.Panel)
+lockCorner.Parent = lockScrim
+
+local function istFrei()
+	return player:GetAttribute("CurrentZone") ~= "Sanctuary"
+end
+
+local function updateLock()
+	local frei = istFrei()
+	lockScrim.Visible = not frei
+	absorbAccent.Parent.Visible = frei
+	if not frei and isAbsorbing then
+		setAbsorbing(false) -- nicht mitten im Saugen gesperrt stehen bleiben
+	end
+end
+
+updateLock()
+player:GetAttributeChangedSignal("CurrentZone"):Connect(updateLock)
+
 -- Rueckmeldung beim Druecken ueber den Akzentstreifen statt ueber den Grund. Der Grund
 -- ist nach der neuen Stilregel bei allen Knoepfen derselbe dunkle Ton -- ihn umzufaerben
 -- wuerde die Regel brechen und faende ausserdem auf dem Knopf statt an der Anzeige statt.
 local function onPressStart()
+	if not istFrei() then
+		return
+	end
 	setAbsorbing(true)
 	absorbAccent.BackgroundTransparency = 0
 end

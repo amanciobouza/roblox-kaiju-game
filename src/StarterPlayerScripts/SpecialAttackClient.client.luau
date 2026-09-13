@@ -143,7 +143,7 @@ local function createAttackButton(name, _legacyIcon, labelText, _legacyColor, po
 	-- Platz ist da, die Gruppen stehen weit auseinander.
 	local button = Instance.new("TextButton")
 	button.Name = name .. "Button"
-	button.Size = UDim2.new(0, 128, 0, 104)
+	button.Size = UDim2.new(0, HudChrome.Reihe.Breite, 0, HudChrome.Reihe.Hoehe)
 	button.Position = position
 	button.AnchorPoint = Vector2.new(0.5, 1)
 	button.AutoButtonColor = false
@@ -275,33 +275,28 @@ end
 -- voll, sobald der Angriff bezahlbar ist. Das beantwortet dieselbe Frage -- kann ich
 -- jetzt? -- ohne dass man eine Zahl mit dem eigenen Energiestand vergleichen muss.
 --
--- Die Funktion bleibt als leere Huelle, damit die beiden Aufrufstellen unten und alle
--- Stellen, die das zurueckgegebene Label ansprechen, unveraendert weiterlaufen. Sie
--- verschwindet, sobald die untere Zone in Scheibe 4 ohnehin umgebaut wird.
-local function addEnergyCostLabel(button)
-	local costLabel = Instance.new("TextLabel")
-	costLabel.Name = "EnergyCostLabel"
-	costLabel.Size = UDim2.new(0, 0, 0, 0)
-	costLabel.BackgroundTransparency = 1
-	costLabel.Visible = false
-	costLabel.Text = ""
-	costLabel.Parent = button
-	return costLabel
-end
+-- Die Funktion stand hier noch als leere Huelle und ist mit dem Umbau der unteren Zone
+-- entfallen -- sie legte zwei unsichtbare Labels der Groesse null an, die niemand mehr
+-- las.
 
+-- ===== Die Reihe =====
+--
+-- Links vom Tacho steht, was nichts kostet und immer geht. Rechts, was die Spezialenergie
+-- betrifft -- dieselbe, die der cyanfarbene Bogen am Tacho zeigt. Direkt neben dem Tacho
+-- der Knopf, der sie FUELLT (Absorb, in EnergyAbsorbInputClient), dann die beiden, die sie
+-- ausgeben, der teurere weiter aussen.
+--
+-- Die Lagen kommen aus HudChrome, weil der Absorb-Knopf aus einem anderen Skript kommt und
+-- sich sonst nicht in dieselbe Reihe stellen laesst. Genau daran ist es vorher gescheitert:
+-- er schwebte ueber der Reihe und lag auf dem Trainingsfeld.
 local attackButton, attackOverlay, attackCooldownLabel, attackAccent =
-	createAttackButton("Attack", "👊", "Punch", Color3.fromRGB(90, 140, 220), UDim2.new(0.5, -350, 1, -24))
+	createAttackButton("Attack", "👊", "Punch", Color3.fromRGB(90, 140, 220), HudChrome.ReihePlatz(-2))
 local jumpButton, jumpOverlay, jumpCooldownLabel, jumpAccent =
-	createAttackButton("Jump", "🦶", "Jump", Color3.fromRGB(90, 190, 140), UDim2.new(0.5, -210, 1, -24))
+	createAttackButton("Jump", "🦶", "Jump", Color3.fromRGB(90, 190, 140), HudChrome.ReihePlatz(-1))
 local focusButton, focusOverlay, focusCooldownLabel, focusAccent =
-	createAttackButton("Focus", "🔴", "Focus", Color3.fromRGB(220, 60, 60), UDim2.new(0.5, 210, 1, -24), "Q")
+	createAttackButton("Focus", "🔴", "Focus", Color3.fromRGB(220, 60, 60), HudChrome.ReihePlatz(2), "Q")
 local areaButton, areaOverlay, areaCooldownLabel, areaAccent =
-	createAttackButton("Area", "💥", "Area", Color3.fromRGB(255, 150, 30), UDim2.new(0.5, 350, 1, -24), "E")
-
--- Die beiden Kosten-Labels sind leere Huellen (siehe addEnergyCostLabel) und werden nur
--- noch angelegt, damit die Knopfstruktur unveraendert bleibt.
-addEnergyCostLabel(focusButton)
-addEnergyCostLabel(areaButton)
+	createAttackButton("Area", "💥", "Area", Color3.fromRGB(255, 150, 30), HudChrome.ReihePlatz(3), "E")
 
 -- ENTFALLEN: FOCUS_BUTTON_COLOR, AREA_BUTTON_COLOR und DESATURATED_COLOR. Sie merkten
 -- sich die Grundfarbe des Knopfes, um ihn bei zu wenig Energie zu entsaettigen. Nach der
@@ -407,17 +402,48 @@ end
 -- Damit das aufgeht, macht der Kampf-Adapter für Fokus und Fläche KEINEN Schaden -- sonst
 -- zählte jeder Spezialangriff doppelt (siehe KaijuStageOneCombatAdapter). Beim Nahkampf
 -- ist es umgekehrt: dort gehört dem Rig auch die Trefferermittlung.
+-- ===== Spielt das Rig seinen eigenen Effekt gerade AB? =====
+-- Es führt "FocusPhase" und "AreaPhase" am Modell. Läuft dort etwas, gehört das Bild ihm
+-- und der alte Effekt des Spiels bleibt aus. Läuft nichts, muss der alte her.
+--
+-- Diese Unterscheidung ist nötig, weil das Rig einen Angriff auch ABLEHNEN kann. Der Fokus
+-- etwa verlangt ein Gebäude in Sicht -- im Sanctuary gibt es keines, er meldet "No target"
+-- und spielt gar nichts. Vorher habe ich den alten Strahl schon dann abgeschaltet, wenn nur
+-- ein Kaiju-Modell an der Figur hing. An der Trainingsstation blieb dadurch beides aus.
+local RIG_PHASE_IDLE = { ["Idle"] = true, ["No target"] = true }
+
+local function rigEffectRunning(attackerPlayer, attributeName)
+	local model = StageModels.FindEquipped(attackerPlayer and attackerPlayer.Character)
+	if not model then
+		return false
+	end
+	local phase = model:GetAttribute(attributeName)
+	return phase ~= nil and not RIG_PHASE_IDLE[phase]
+end
+
 local function playKaijuSpecial(remoteName)
 	local model = StageModels.FindEquipped(player.Character)
 	local remote = model and model:FindFirstChild(remoteName)
 	if remote and remote:IsA("RemoteEvent") then
 		remote:FireServer()
+		return
 	end
+	-- Gemeldet statt verschwiegen: bleibt die Animation aus, soll man hier sehen koennen,
+	-- ob die Anfrage ueberhaupt losging.
+	print(string.format("[Kaiju Debug] %s nicht gesendet -- %s.", remoteName,
+		model and "Modell ohne dieses Ereignis" or "kein Kaiju-Modell an der Figur"))
 end
 
 -- Reicht die Energie? Der Server prüft das ohnehin und lehnt sonst ab -- aber die Animation
 -- läuft lokal los und wüsste nichts davon. Ohne diese Prüfung holte die Figur sichtbar aus,
 -- und es passierte nichts.
+--
+-- ACHTUNG: dieselbe Prüfung war beim FLÄCHENangriff die Ursache dafür, dass auf dem
+-- langsameren Rechner Schaden ohne Animation ankam -- das replizierte Attribut hinkte dem
+-- Server hinterher. Die Fläche wartet deshalb auf die Bestätigung des Servers (siehe
+-- AreaAttackEffectEvent). Beim Fokus bleibt es vorerst bei der lokalen Prüfung, weil er
+-- seine Effekte tickweise schickt und damit keinen einzelnen Startpunkt hat; zeigt sich
+-- dort derselbe Aussetzer, gehört er auf denselben Weg.
 local function hasEnergyFor(cost)
 	return (player:GetAttribute("SpecialEnergy") or 0) >= cost
 end
@@ -432,13 +458,21 @@ local function triggerFocus()
 	end
 end
 
+-- Die Fläche wird NICHT hier ausgeloest, sondern erst, wenn der Server den Angriff
+-- angenommen hat -- siehe den Handler von AreaAttackEffectEvent weiter unten.
+--
+-- Hier stand einmal dieselbe Energiepruefung wie beim Fokus. Sie hat im Mehrspielertest
+-- genau das kaputt gemacht, was sie verhindern sollte: auf dem langsameren Rechner war das
+-- replizierte Attribut "SpecialEnergy" nicht auf dem Stand des Servers, die Pruefung schlug
+-- fehl -- und der Spieler bekam den Schaden, aber keine Animation.
+--
+-- Der Server weiss als Einziger sicher, ob der Angriff zustande kommt. Also fragt der
+-- Client nicht mehr, sondern wartet auf dessen Meldung. Nebenbei sitzt die Bewegung damit
+-- exakt auf dem Beginn der Aufladung statt ein paar Zehntel daneben.
 local function triggerArea()
 	local readyAt = player:GetAttribute("AreaAttackReadyAt") or 0
 	if Workspace:GetServerTimeNow() >= readyAt then
 		AreaAttackEvent:FireServer()
-		if hasEnergyFor(areaEnergyCostValue.Value) then
-			playKaijuSpecial("RequestArea")
-		end
 	end
 end
 
@@ -706,6 +740,25 @@ FocusAttackEffectEvent.OnClientEvent:Connect(function(attackerPlayer, startPos, 
 	if attackerPlayer == player and focusChargeSound.Playing then
 		focusChargeSound:Stop()
 	end
+
+	-- ===== Trägt der Angreifer ein Kaiju-Modell, gehört ihm der Strahl allein =====
+	-- Dieselbe Aufteilung wie beim Flächenangriff: das Rig lädt am Maul auf und schickt
+	-- seinen eigenen Strahl los. Der alte rote daneben wären zwei Strahlen aus derselben
+	-- Figur, mit verschiedenen Ansatzpunkten und verschiedenen Farben.
+	--
+	-- Der Schaden bleibt davon unberührt -- den führt weiter der SpecialAttackHandler,
+	-- hier wird nur nicht gezeichnet.
+	--
+	-- Geprüft wird am ANGREIFER, nicht am eigenen Spieler: das Ereignis geht an alle, und
+	-- Zuschauer sollen dasselbe sehen wie er.
+	--
+	-- Und geprüft wird, ob das Rig gerade WIRKLICH etwas spielt -- nicht bloss, ob ein
+	-- Modell hängt. Lehnt es den Fokus ab (kein Gebäude in Sicht, etwa an der
+	-- Trainingsstation), soll der alte Strahl einspringen statt beides ausfallen zu lassen.
+	if rigEffectRunning(attackerPlayer, "FocusPhase") then
+		return
+	end
+
 	updateFocusBeam(attackerPlayer, startPos, endPos)
 end)
 
@@ -736,6 +789,28 @@ end)
 -- Aufladende Ladung, die nach kurzer Zeit explodiert
 AreaAttackEffectEvent.OnClientEvent:Connect(function(attackerPlayer, position, chargeTime, radius)
 	radius = radius or 50
+
+	-- ===== Trägt der Angreifer ein Kaiju-Modell, gehört ihm das Bild allein =====
+	-- Das Rig bäumt sich auf, stützt sich ab und entlädt über die Rückenplatten eine cyane
+	-- Druckwelle (KaijuStageOneCombatAdapter.areaImpact). Liefe die alte gelbe Ladekugel
+	-- daneben weiter, wären es zwei Angriffe an einer Stelle -- verschiedene Farben,
+	-- verschiedene Zeitpunkte, dieselbe Taste.
+	--
+	-- Geprüft wird am ANGREIFER, nicht am eigenen Spieler: das Ereignis geht an alle, und
+	-- Zuschauer sollen dasselbe sehen wie er.
+	-- Die Bewegung des Rigs anstossen -- jetzt, wo feststeht, dass der Server den Angriff
+	-- angenommen hat. Nur der Angreifer selbst darf sein Ereignis ausloesen; es ist
+	-- besitzergeprueft, ein fremder Aufruf liefe ohnehin ins Leere.
+	if attackerPlayer == player and StageModels.FindEquipped(player.Character) then
+		playKaijuSpecial("RequestArea")
+	end
+
+	-- Die alte Ladekugel bleibt aus, SOBALD das Rig wirklich auflädt. Weil das einen Moment
+	-- braucht, wird gleich noch einmal nachgesehen -- läuft es dann, ist die Kugel schon
+	-- weg, bevor sie auffällt; lehnt das Rig ab, bleibt sie stehen.
+	if rigEffectRunning(attackerPlayer, "AreaPhase") then
+		return
+	end
 
 	local chargePart = Instance.new("Part")
 	chargePart.Name = "AreaAttackCharge"
