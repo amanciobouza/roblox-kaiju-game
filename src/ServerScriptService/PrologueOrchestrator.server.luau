@@ -74,10 +74,10 @@ local startPrologueInternal
 local PROLOGUE_CITY_NAME = "PrologueCity"
 
 -- ===== Power-Fantasy-Stats (Phase 2) =====
--- Der Prolog-Kaiju nutzt den ECHTEN grössten Skin (Radiant Apex, Level 50) statt eigener,
+-- Der Prolog-Kaiju nutzt einen ECHTEN Skin der Reihe statt eigener,
 -- willkürlicher Werte -- vermittelt so die tatsächliche Endgame-Power, die man sich im
 -- normalen Spiel erarbeiten würde, statt einer künstlich überhöhten Fantasie-Zahl.
-local PROLOGUE_SKIN_ID = 2 -- Adult Kaiju (ab Level 20 freigeschaltet, passt zu PROLOGUE_LEVEL=25) -- siehe SkinsConfig.lua
+local PROLOGUE_SKIN_ID = 2 -- Rift Stalker (ab Level 20 freigeschaltet, passt zu PROLOGUE_LEVEL=25) -- siehe SkinsConfig.lua
 local PROLOGUE_LEVEL = 25
 local PROLOGUE_DAMAGE = 2000 -- fester Schaden-Wert (statt Multiplikator auf Adult-Kaiju-Basis-Schaden)
 
@@ -127,7 +127,7 @@ local function findPrologueSpawn()
 end
 
 -- Setzt den Charakter auf die Power-Fantasy-Werte -- überschreibt bewusst die normalen,
--- Setzt den Charakter auf den ECHTEN grössten Skin (Radiant Apex) + Level 50 -- läuft
+-- Setzt den Charakter auf den Prolog-Skin (Rift Stalker) + Prolog-Level -- läuft
 -- über den normalen applySkinToCharacter()-Mechanismus (Scale, Health, BaseWalkSpeed,
 -- Boden-Stabilisierung, Sprungkraft -- alles automatisch dabei, keine Duplikation nötig).
 -- Nur "Damage" wird hier zusätzlich manuell gesetzt, da das normalerweise aus
@@ -473,8 +473,31 @@ end
 
 local SnapCameraToSeaEvent = RemoteEventUtils.GetOrCreate("SnapCameraToSeaEvent")
 
+-- ===== Der Vorspann =====
+-- Er steht ganz vorn, auf der Schwarzblende, bevor das Ticken einsetzt und lange vor
+-- "THE CITY WILL SOON BE BROKEN." -- also in dem Fenster, in dem man bisher nur die
+-- Explosionen der Stadt hörte und nichts sah.
+--
+-- Der Klang läuft dabei weiter: der Vorspann steht auf einem schwarzen Bild, unter dem
+-- die Stadt schon brennt. Genau das macht ihn -- eine ruhige Zeile über einem Geräusch,
+-- das nichts Ruhiges hat.
+--
+-- Die Sperrung des Untertitels steht als Leerzeichen im Text. Roblox kennt keine
+-- Laufweite, und "PRESENTS" ohne Sperrung sieht neben dem grossen Namen gedrungen aus.
+local PRESENTER_NAME = "Amaux Bozé"
+local PRESENTER_SUB = "P R E S E N T S"
+
 local function playColdOpen(player)
 	local partOneSteps = { { type = "fadeIn", duration = 0.1 } } -- startet bereits schwarz, minimal für sauberen Übergang
+
+	table.insert(partOneSteps, {
+		type = "presenterCard",
+		name = PRESENTER_NAME,
+		sub = PRESENTER_SUB,
+	})
+	-- Ein Atemzug Schwarz, bevor das Ticken einsetzt. Ohne ihn ginge der Vorspann direkt in
+	-- den ersten Schlag über, und beides verlöre seine Wirkung.
+	table.insert(partOneSteps, { type = "wait", duration = 0.6 })
 
 	for _, step in ipairs(buildTickSteps(3, 0.7)) do
 		table.insert(partOneSteps, step)
@@ -576,25 +599,74 @@ local function playTutorialChecklist(player, character)
 	ShowTutorialChecklistEvent:FireClient(player, TUTORIAL_TARGETS)
 	sendUpdate()
 
-	-- Punch: jeder Angriffs-Aufruf DIESES Spielers zählt (deckelt bei TUTORIAL_TARGETS,
-	-- weitere Angriffe erhöhen nicht mehr sinnlos weiter).
-	table.insert(connections, TutorialAttackEvent.OnServerEvent:Connect(function(attackingPlayer)
+	-- ===== Punch =====
+	--
+	-- Es gibt inzwischen ZWEI Wege, auf denen ein Schlag beim Server ankommt:
+	--
+	--   AttackEvent            der bisherige Weg
+	--   <Modell>.RequestAttack der Weg der Buehnenmodelle -- AttackClient schickt den
+	--                          Schlag dorthin, SOBALD das getragene Modell diesen Remote
+	--                          mitbringt, und feuert AttackEvent dann gar nicht mehr
+	--
+	-- Das Tutorial hing nur am ersten. Sobald ein Modell mit eigenem Remote getragen wird,
+	-- zaehlte kein einziger Schlag mehr -- die Checkliste blieb bei 0 stehen und der Prolog
+	-- lief in seine 120-Sekunden-Notbremse.
+	--
+	-- Deshalb hier BEIDE Quellen. Der Remote wird im Charakter gesucht statt ueber das
+	-- Buehnenmodell-Modul: so haengt der Prolog nicht daran, wie jenes Modul gerade heisst
+	-- oder aufgebaut ist.
+	local function zaehlePunch(attackingPlayer)
 		if attackingPlayer == player and progress.Punch < TUTORIAL_TARGETS.Punch then
 			progress.Punch += 1
 			sendUpdate()
 			checkComplete()
 		end
+	end
+
+	table.insert(connections, TutorialAttackEvent.OnServerEvent:Connect(zaehlePunch))
+
+	local function lauscheAufModellSchlag(aktuellerCharakter)
+		if not aktuellerCharakter then
+			return
+		end
+		for _, nachfahre in ipairs(aktuellerCharakter:GetDescendants()) do
+			if nachfahre:IsA("RemoteEvent") and nachfahre.Name == "RequestAttack" then
+				table.insert(connections, nachfahre.OnServerEvent:Connect(zaehlePunch))
+			end
+		end
+	end
+	lauscheAufModellSchlag(character)
+
+	-- ===== Sprung =====
+	--
+	-- Ueber den Humanoid-Zustandswechsel -- das greift unabhaengig davon, ob der Sprung von
+	-- Tastatur, Knopf oder Touch kam.
+	--
+	-- ABER: die Verbindung haengt an GENAU DIESEM Humanoid. Wird der Charakter waehrend des
+	-- Tutorials ersetzt -- und das tun Skin- und Modellwechsel -- zeigt sie auf eine Leiche
+	-- und zaehlt nie wieder. Deshalb wird sie bei jedem neuen Charakter neu gelegt.
+	local function lauscheAufSprung(aktuellerHumanoid)
+		if not aktuellerHumanoid then
+			return
+		end
+		table.insert(connections, aktuellerHumanoid.StateChanged:Connect(function(_, newState)
+			if newState == Enum.HumanoidStateType.Jumping and progress.Jump < TUTORIAL_TARGETS.Jump then
+				progress.Jump += 1
+				sendUpdate()
+				checkComplete()
+			end
+		end))
+	end
+	lauscheAufSprung(humanoid)
+
+	table.insert(connections, player.CharacterAdded:Connect(function(neuerCharakter)
+		local neuerHumanoid = neuerCharakter:WaitForChild("Humanoid", 5)
+		lauscheAufSprung(neuerHumanoid)
+		task.wait(0.5) -- dem Modell Zeit geben, seine Remotes anzuhaengen
+		lauscheAufModellSchlag(neuerCharakter)
 	end))
 
-	-- Sprung: über den Humanoid-Zustandswechsel zu "Jumping" -- funktioniert
-	-- unabhängig davon, ob der Sprung über Tastatur/Button/Touch ausgelöst wurde.
-	table.insert(connections, humanoid.StateChanged:Connect(function(_, newState)
-		if newState == Enum.HumanoidStateType.Jumping and progress.Jump < TUTORIAL_TARGETS.Jump then
-			progress.Jump += 1
-			sendUpdate()
-			checkComplete()
-		end
-	end))
+	print("[Kaiju Debug] Tutorial-Checkliste scharf: Punch ueber AttackEvent und RequestAttack, Sprung ueber den Humanoid.")
 
 	-- Absorb: summiert die tatsächlich absorbierte Menge auf, statt nur zu zählen, wie
 	-- oft aktiviert wurde -- der Spieler muss die Taste GEDRÜCKT HALTEN, um die Schwelle
@@ -824,7 +896,7 @@ local function triggerTheFall(player)
 	end
 	local equippedSkin = player:FindFirstChild("EquippedSkin")
 	if equippedSkin then
-		equippedSkin.Value = 0 -- kleinster Skin ("Baby Kaiju", Id 0 in SkinsConfig.lua)
+		equippedSkin.Value = 0 -- kleinster Skin ("Primal Beast", Id 0 in SkinsConfig.lua)
 	end
 
 	-- ArmPower/LegPower/BodyPower ebenfalls auf die Starter-Werte zurücksetzen -- diese
@@ -891,7 +963,7 @@ local function triggerTheFall(player)
 		leaderstats.Level.Value = 0
 	end
 	if equippedSkin then
-		equippedSkin.Value = 0 -- kleinster Skin ("Baby Kaiju", Id 0 in SkinsConfig.lua)
+		equippedSkin.Value = 0 -- kleinster Skin ("Primal Beast", Id 0 in SkinsConfig.lua)
 	end
 	resetPowerStats()
 
