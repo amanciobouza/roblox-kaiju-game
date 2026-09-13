@@ -218,6 +218,53 @@ ClaimGiftEvent.OnServerEvent:Connect(function(player, giftNumber)
 	grantGift(player, giftNumber)
 end)
 
+-- ===== Debug: die Sitzungsdauer vorstellen =====
+--
+-- Ohne das dauert jeder Test an den Geschenken echte zwei Stunden. Der Regler im
+-- Debug-Panel schiebt SessionStartTime zurueck; damit ist "seit wann spielst du" fuer alle
+-- Beteiligten gleichzeitig verstellt -- den Countdown im Bildschirm, die Bahn, die Meldung
+-- beim Bereitwerden und die Pruefung hier unten beim Abholen.
+--
+-- Das ist der Grund, warum der Regler NICHT im Client sitzen kann. Die Pruefung, ob ein
+-- Geschenk bereit ist, steht auf dem Server (oben in ClaimGiftEvent); ein Client, der nur
+-- seine eigene Anzeige vorstellt, saehe zwoelf bereite Geschenke und bekaeme keines davon.
+--
+-- Absichtlich OHNE Rechteprüfung, wie die uebrigen Debug-Ereignisse in diesem Projekt: das
+-- Panel ist ein Werkzeug fuer die Entwicklung. Vor einer Veroeffentlichung muessen sie alle
+-- zusammen abgesichert oder entfernt werden.
+local DebugSetSessionTimeEvent = Instance.new("RemoteEvent")
+DebugSetSessionTimeEvent.Name = "DebugSetSessionTimeEvent"
+DebugSetSessionTimeEvent.Parent = ReplicatedStorage
+
+-- Gemeldet wird hoechstens jede halbe Sekunde. Der Regler feuert beim Ziehen mit jedem
+-- Bild -- ohne Bremse stuenden in der Ausgabe hundert Zeilen pro Zug, und die eine, die
+-- man lesen will, waere darin nicht zu finden.
+local letzteMeldung = {} -- [player] = os.clock() der letzten Zeile
+
+DebugSetSessionTimeEvent.OnServerEvent:Connect(function(player, seconds)
+	if type(seconds) ~= "number" or seconds ~= seconds then
+		return -- kein Wert oder NaN
+	end
+	seconds = math.clamp(seconds, 0, TOTAL_DURATION)
+	player:SetAttribute("SessionStartTime", Workspace:GetServerTimeNow() - seconds)
+
+	local jetzt = os.clock()
+	if (letzteMeldung[player] or 0) + 0.5 <= jetzt then
+		letzteMeldung[player] = jetzt
+		print(string.format(
+			"[Kaiju Debug] Sitzungsdauer fuer %s auf %d:%02d:%02d gestellt.",
+			player.Name,
+			math.floor(seconds / 3600),
+			math.floor(seconds % 3600 / 60),
+			math.floor(seconds % 60)
+		))
+	end
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+	letzteMeldung[player] = nil
+end)
+
 Players.PlayerAdded:Connect(function(player)
 	local claimedFolder = Instance.new("Folder")
 	claimedFolder.Name = "ClaimedGifts"

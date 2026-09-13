@@ -1,12 +1,21 @@
--- VERSION: 2026-08-26 #14
--- FEATURE: Debug-Panel schliesst + DebugMode deaktiviert sich bei Prolog-Start
+-- VERSION: 2026-09-13 #15
+-- UMBAU: Fenster rechts statt mittig, Knöpfe in zwei Spalten, Zeilen über UIListLayout
 -- Ort in Studio: StarterPlayer > StarterPlayerScripts
 -- Zentraler Debug-Modus-Schalter + alle Debug-Werkzeuge in EINEM Fenster:
 -- Ein kleiner Auslöse-Button sitzt mittig rechts am Bildschirmrand. Klick darauf öffnet
--- ein zentrales Fenster (Debug-Modus-Umschalter, Level-Regler, Stadt-Alert-Regler,
--- Welt-Event-Würfel, Spielerdaten-Reset) mit einem Schliessen-Button. Andere Debug-
--- Scripts (z.B. RadiusDebugClient.lua) hören weiterhin einfach auf Änderungen des
+-- das Fenster am rechten Bildschirmrand (Debug-Modus-Umschalter, Level-Regler,
+-- Stadt-Alert-Regler, Welt-Event-Würfel, Showdown-Steuerung, Spielerdaten-Reset). Andere
+-- Debug-Scripts (z.B. RadiusDebugClient.lua) hören weiterhin einfach auf Änderungen des
 -- "DebugMode"-Attributs.
+--
+-- ===== Aufbau des Fensters =====
+-- Die Zeilen stapeln sich über ein UIListLayout und eine LayoutOrder-Tabelle (ORDER),
+-- NICHT über ausgerechnete y-Positionen. Der vorherige Aufbau hatte jede Position von
+-- Hand gesetzt und die Fensterhöhe aus einer Kette von Summanden gebildet -- wer einen
+-- Knopf einfügte, musste alles darunter neu rechnen und den Summanden nachtragen.
+--
+-- Knöpfe liegen paarweise nebeneinander (createButtonRow + halbeBreite). Wird einer der
+-- beiden unsichtbar, rückt der andere von selbst nach links.
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -48,6 +57,7 @@ local DebugStartPrologueEvent = waitForRemote("DebugStartPrologueEvent")
 local DebugRunSpecCheckEvent = waitForRemote("DebugRunSpecCheckEvent")
 local DebugStartPrologueResultEvent = waitForRemote("DebugStartPrologueResultEvent")
 local DebugRevealArchiveEvent = waitForRemote("DebugRevealArchiveEvent")
+local DebugSetSessionTimeEvent = waitForRemote("DebugSetSessionTimeEvent")
 
 player:SetAttribute("DebugMode", false)
 
@@ -74,7 +84,17 @@ openButton.Text = "🛠️"
 openButton.Parent = screenGui
 applyComicStyle(openButton, 12, 3)
 
--- ===== Zentrales Debug-Fenster + abgedunkelter Hintergrund =====
+-- ===== Debug-Fenster am RECHTEN Bildschirmrand + abgedunkelter Hintergrund =====
+-- Rechts statt mittig: in der Mitte verdeckte das Fenster genau das, was man beim Testen
+-- ansehen will -- die eigene Figur und die Stadt. Am Rand bleibt die Spielsicht frei, und
+-- der Weg vom Ausloese-Knopf (sitzt ebenfalls rechts) zum Fenster ist kurz.
+local PANEL_BREITE = 400
+local PANEL_RAND = 14
+local KOPF_HOEHE = 52 -- Titelzeile und Schliessen-Knopf stehen fest ueber dem Inhalt
+local SPALTEN_LUECKE = 8
+local ZEILEN_LUECKE = 8
+local INHALT_EINZUG = 8 -- laesst den Rollbalken frei, sonst liegt er auf den Knoepfen
+
 local backdrop = Instance.new("TextButton")
 backdrop.Name = "DebugBackdrop"
 backdrop.Size = UDim2.new(1, 0, 1, 0)
@@ -87,21 +107,21 @@ backdrop.Parent = screenGui
 
 local panel = Instance.new("Frame")
 panel.Name = "DebugPanel"
--- Drittletzter Summand: Zeile für den Spec-Prüfer-Knopf.
--- Vorletzter Summand: drei Zeilen für den Showdown.
--- Letzter Summand: Zeile für den Archiv-Knopf (sitzt auf y=886 und braucht 30 Pixel plus
--- Rand -- ohne diesen Summand endete das Fenster zwei Pixel über ihm).
-panel.Size = UDim2.new(0, 340, 0, 340 + 60 + 90 + 50 + 50 + 50 + 50 + 150 + 34 + 40 + 40)
-panel.AnchorPoint = Vector2.new(0.5, 0.5)
-panel.Position = UDim2.new(0.5, 0, 0.5, 0)
+-- Die Hoehe wird NICHT mehr von Hand aus Summanden zusammengerechnet. Das war eine
+-- stille Fehlerquelle: jeder neue Knopf verlangte einen weiteren Summanden, und wer ihn
+-- vergass, bekam einen Knopf, der unterhalb der Fensterkante verschwand. Sie folgt jetzt
+-- dem Inhalt und ist durch die Bildschirmhoehe gedeckelt -- siehe updatePanelHeight.
+panel.Size = UDim2.new(0, PANEL_BREITE, 0, 400)
+panel.AnchorPoint = Vector2.new(1, 0.5)
+panel.Position = UDim2.new(1, -12, 0.5, 0)
 panel.BackgroundColor3 = Color3.fromRGB(35, 32, 45)
 panel.Visible = false
 panel.Parent = screenGui
 applyComicStyle(panel, 16, 3)
 
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, -70, 0, 32)
-titleLabel.Position = UDim2.new(0, 16, 0, 12)
+titleLabel.Size = UDim2.new(1, -70, 0, 30)
+titleLabel.Position = UDim2.new(0, PANEL_RAND, 0, 10)
 titleLabel.BackgroundTransparency = 1
 titleLabel.Font = Enum.Font.LuckiestGuy
 titleLabel.TextScaled = true
@@ -112,9 +132,9 @@ titleLabel.Parent = panel
 
 local closeButton = Instance.new("TextButton")
 closeButton.Name = "CloseButton"
-closeButton.Size = UDim2.new(0, 36, 0, 36)
+closeButton.Size = UDim2.new(0, 34, 0, 34)
 closeButton.AnchorPoint = Vector2.new(1, 0)
-closeButton.Position = UDim2.new(1, -12, 0, 12)
+closeButton.Position = UDim2.new(1, -PANEL_RAND, 0, 9)
 closeButton.BackgroundColor3 = Color3.fromRGB(220, 70, 70)
 closeButton.Font = Enum.Font.FredokaOne
 closeButton.TextScaled = true
@@ -123,9 +143,137 @@ closeButton.Text = "X"
 closeButton.Parent = panel
 applyComicStyle(closeButton, 8, 2)
 
+-- ===== Der rollbare Inhaltsbereich =====
+-- Rollbar, weil das Fenster auch auf einem Telefon noch bedienbar sein muss: dort ist der
+-- Bildschirm niedriger als der Inhalt lang ist, und ohne Rollbalken waeren die unteren
+-- Werkzeuge schlicht nicht erreichbar.
+local content = Instance.new("ScrollingFrame")
+content.Name = "Content"
+content.Position = UDim2.new(0, PANEL_RAND, 0, KOPF_HOEHE)
+content.Size = UDim2.new(1, -PANEL_RAND * 2, 1, -KOPF_HOEHE - PANEL_RAND)
+content.BackgroundTransparency = 1
+content.BorderSizePixel = 0
+content.ScrollBarThickness = 6
+content.ScrollBarImageColor3 = Color3.fromRGB(120, 120, 145)
+content.ScrollingDirection = Enum.ScrollingDirection.Y
+content.CanvasSize = UDim2.new()
+content.AutomaticCanvasSize = Enum.AutomaticSize.Y
+content.Parent = panel
+
+-- Alle Zeilen stapeln sich ueber LayoutOrder, nicht ueber ausgerechnete y-Werte. Damit
+-- verschiebt das Einfuegen einer Zeile nicht mehr alles darunter.
+local contentLayout = Instance.new("UIListLayout")
+contentLayout.FillDirection = Enum.FillDirection.Vertical
+contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+contentLayout.Padding = UDim.new(0, ZEILEN_LUECKE)
+contentLayout.Parent = content
+
+-- ===== Die Reihenfolge der Zeilen =====
+-- Bewusst mit Luecken nummeriert, damit sich etwas dazwischenschieben laesst, ohne alles
+-- neu zu zaehlen. Und bewusst als Tabelle: die Reihenfolge im Fenster haengt damit NICHT
+-- davon ab, in welcher Reihenfolge die Elemente im Quelltext entstehen -- der
+-- Prolog-Reset zum Beispiel wird weit oben gebaut und sitzt ganz unten.
+local ORDER = {
+	Modus = 10,
+
+	SpielerKopf = 20,
+	LevelRegler = 30,
+	Fraktion = 40,
+
+	StadtKopf = 50,
+	AlertRegler = 60,
+	AlertAnzeige = 70,
+	Reroll = 80,
+	SitzungRegler = 85, -- Zeitregler, deshalb bei den anderen Reglern statt beim Spieler
+
+	SchalterKopf = 90,
+	SchalterA = 100, -- Partikel | Einsturz ueberspringen
+	SchalterB = 110, -- Telemetrie | Archiv
+	SchalterC = 120, -- Prolog starten | Spec-Pruefung
+
+	ShowdownKopf = 130,
+	ShowdownA = 140, -- erzwingen | Kurzdauer
+	ShowdownB = 150, -- Shot waehlen | Shot ausloesen
+	ShowdownC = 160, -- beenden
+
+	GefahrKopf = 170,
+	Gefahr = 180, -- Reset | auch Prolog zuruecksetzen
+}
+
+-- Die Breite, die ein Element in der Spalte hat -- einmal voll, einmal halb. Zwei halbe
+-- plus die Luecke ergeben genau eine volle Zeile.
+local function volleBreite(hoehe)
+	return UDim2.new(1, -INHALT_EINZUG, 0, hoehe)
+end
+
+local function halbeBreite()
+	return UDim2.new(0.5, -SPALTEN_LUECKE / 2, 1, 0)
+end
+
+-- Eine Zeile, in die zwei Knoepfe nebeneinander passen. Ist einer davon unsichtbar (z.B.
+-- weil die Berechtigung fehlt), rueckt der andere von selbst nach links -- deshalb
+-- UIListLayout und keine festen Spalten-Positionen.
+local function createButtonRow(order, hoehe)
+	local row = Instance.new("Frame")
+	row.Name = "ButtonRow"
+	row.Size = volleBreite(hoehe or 40)
+	row.LayoutOrder = order
+	row.BackgroundTransparency = 1
+	row.Parent = content
+
+	local layout = Instance.new("UIListLayout")
+	layout.FillDirection = Enum.FillDirection.Horizontal
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Padding = UDim.new(0, SPALTEN_LUECKE)
+	layout.Parent = row
+
+	return row
+end
+
+-- Gruppen-Ueberschrift. Bei fuenfzehn Werkzeugen in zwei Spalten ist die Beschriftung
+-- allein zu wenig: erst die Gruppen machen aus einem Knopffeld eine Ordnung.
+local function createGroupCaption(text, order)
+	local caption = Instance.new("TextLabel")
+	caption.Name = "Caption"
+	caption.Size = volleBreite(16)
+	caption.LayoutOrder = order
+	caption.BackgroundTransparency = 1
+	caption.Font = Enum.Font.FredokaOne
+	caption.TextSize = 13
+	caption.TextColor3 = Color3.fromRGB(150, 150, 175)
+	caption.TextXAlignment = Enum.TextXAlignment.Left
+	caption.Text = text
+	caption.Parent = content
+	return caption
+end
+
+-- Die Fensterhoehe folgt dem Inhalt, hoechstens aber bis kurz unter den Bildschirmrand.
+-- Unsichtbare Zeilen zaehlt das UIListLayout nicht mit: schaltet man den Debug-Modus aus,
+-- schrumpft das Fenster von selbst auf das, was uebrig bleibt.
+local function updatePanelHeight()
+	local inhalt = contentLayout.AbsoluteContentSize.Y
+	local maximum = math.max(screenGui.AbsoluteSize.Y - 24, 220)
+	panel.Size = UDim2.new(0, PANEL_BREITE, 0, math.min(KOPF_HOEHE + inhalt + PANEL_RAND, maximum))
+end
+
+contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updatePanelHeight)
+screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(updatePanelHeight)
+updatePanelHeight()
+
 local function setDebugWindowOpen(open)
 	panel.Visible = open
 	backdrop.Visible = open
+	-- Der Ausloese-Knopf sitzt am selben Rand wie das Fenster und laege sonst darunter.
+	-- Bei offenem Fenster wird er ohnehin nicht gebraucht -- es gibt den Schliessen-Knopf
+	-- und den abgedunkelten Hintergrund.
+	openButton.Visible = not open
+	if open then
+		updatePanelHeight()
+		-- Und noch einmal im naechsten Durchlauf: solange das Fenster verborgen war, kann
+		-- das Layout seine Inhaltsgroesse noch nicht neu berechnet haben. Ohne den zweiten
+		-- Aufruf blitzt beim Oeffnen kurz die alte Hoehe auf.
+		task.defer(updatePanelHeight)
+	end
 end
 
 openButton.MouseButton1Click:Connect(function()
@@ -140,10 +288,10 @@ end)
 
 -- ===== Debug-Modus-Umschalter (Checkbox + Beschriftung) =====
 local checkboxRow = Instance.new("Frame")
-checkboxRow.Size = UDim2.new(1, -32, 0, 34)
-checkboxRow.Position = UDim2.new(0, 16, 0, 54)
+checkboxRow.Size = volleBreite(34)
+checkboxRow.LayoutOrder = ORDER.Modus
 checkboxRow.BackgroundTransparency = 1
-checkboxRow.Parent = panel
+checkboxRow.Parent = content
 
 local checkbox = Instance.new("TextButton")
 checkbox.Name = "Checkbox"
@@ -178,13 +326,13 @@ label.Parent = checkboxRow
 
 -- ===== Generische Schieberegler-Komponente -- wird für Level UND Stadt-Alert genutzt,
 -- statt denselben Aufbau doppelt zu duplizieren. =====
-local function createSlider(yPosition, initialLabelText, onRatioChanged)
+local function createSlider(order, initialLabelText, onRatioChanged)
 	local row = Instance.new("Frame")
-	row.Size = UDim2.new(1, -32, 0, 40)
-	row.Position = UDim2.new(0, 16, 0, yPosition)
+	row.Size = volleBreite(40)
+	row.LayoutOrder = order
 	row.BackgroundTransparency = 1
 	row.Visible = false
-	row.Parent = panel
+	row.Parent = content
 
 	local sliderLabel = Instance.new("TextLabel")
 	sliderLabel.Name = "SliderLabel"
@@ -288,8 +436,14 @@ local function createSlider(yPosition, initialLabelText, onRatioChanged)
 	return row, resetVisualOnly
 end
 
+local spielerCaption = createGroupCaption("SPIELER", ORDER.SpielerKopf)
+createGroupCaption("STADT & WELT", ORDER.StadtKopf)
+createGroupCaption("SCHALTER", ORDER.SchalterKopf)
+createGroupCaption("SHOWDOWN", ORDER.ShowdownKopf)
+local gefahrCaption = createGroupCaption("GEFAEHRLICH", ORDER.GefahrKopf)
+
 -- ===== Level-Schieberegler: setzt Level + alle drei Skill-Werte (auf deren Cap) =====
-local levelSliderRow, resetLevelSliderVisual = createSlider(96, "Level: 0", function(ratio, sliderLabel)
+local levelSliderRow, resetLevelSliderVisual = createSlider(ORDER.LevelRegler, "Level: 0", function(ratio, sliderLabel)
 	local currentLevel = math.floor(ratio * MAX_DEBUG_LEVEL + 0.5)
 	sliderLabel.Text = "Level: " .. currentLevel
 	if DebugSetLevelEvent then
@@ -303,7 +457,7 @@ end)
 -- gerundeter diskreter Wert für Label + Server). Vorher: stufenloser Prozent-Regler, der
 -- ausserdem bei Level 3 gedeckelt war -- Level 4/5 waren darüber gar nicht erreichbar.
 local MAX_DEBUG_ALERT_LEVEL = 5
-local cityAlertSliderRow = createSlider(148, "City Alert Level: 0", function(ratio, sliderLabel)
+local cityAlertSliderRow = createSlider(ORDER.AlertRegler, "City Alert Level: 0", function(ratio, sliderLabel)
 	local level = math.floor(ratio * MAX_DEBUG_ALERT_LEVEL + 0.5)
 	sliderLabel.Text = "City Alert Level: " .. level
 	if DebugSetCityAlertEvent then
@@ -312,19 +466,49 @@ local cityAlertSliderRow = createSlider(148, "City Alert Level: 0", function(rat
 end)
 
 
+-- ===== Sitzungsdauer-Regler: stellt die gespielte Zeit vor =====
+--
+-- Die zwoelf Zeitgeschenke verteilen sich ueber zwei Stunden -- ohne diesen Regler dauert
+-- jeder Test an ihnen genau so lange.
+--
+-- Er stellt NICHT die Anzeige vor, sondern SessionStartTime auf dem Server. Das ist der
+-- Unterschied, auf den es ankommt: die Pruefung, ob ein Geschenk abholbar ist, steht im
+-- GiftHandler. Ein Regler, der nur den Client vorstellte, zeigte zwoelf bereite Geschenke
+-- und bekaeme keines davon.
+--
+-- Die Skala ist nicht linear, sondern folgt der Kurve der Geschenke selbst
+-- (SPACING_EXPONENT 1.8 im GiftHandler). Linear laegen die ersten vier Geschenke auf den
+-- ersten vierzehn Prozent des Reglers und waeren kaum einzeln zu treffen; so liegt jedes
+-- Geschenk ungefaehr ein Zwoelftel auseinander.
+local SITZUNG_MAX = 7200 -- zwei Stunden, wie TOTAL_DURATION im GiftHandler
+local SITZUNG_KURVE = 1.8 -- wie SPACING_EXPONENT dort
+
+local function formatSitzung(seconds)
+	seconds = math.max(math.floor(seconds), 0)
+	return string.format("%d:%02d:%02d", math.floor(seconds / 3600), math.floor(seconds % 3600 / 60), seconds % 60)
+end
+
+local sessionSliderRow = createSlider(ORDER.SitzungRegler, "Session: 0:00:00", function(ratio, sliderLabel)
+	local seconds = math.floor(SITZUNG_MAX * ratio ^ SITZUNG_KURVE)
+	sliderLabel.Text = "Session: " .. formatSitzung(seconds)
+	if DebugSetSessionTimeEvent then
+		DebugSetSessionTimeEvent:FireServer(seconds)
+	end
+end)
+
 -- ===== Welt-Event-Reroll-Button: löst sofort einen neuen Würfelwurf aus (gleiche
 -- Wahrscheinlichkeiten wie der reguläre 15-Minuten-Timer) =====
 local rerollButton = Instance.new("TextButton")
 rerollButton.Name = "RerollWorldEventButton"
-rerollButton.Size = UDim2.new(1, -32, 0, 36)
-rerollButton.Position = UDim2.new(0, 16, 0, 200)
+rerollButton.Size = volleBreite(36)
+rerollButton.LayoutOrder = ORDER.Reroll
 rerollButton.BackgroundColor3 = Color3.fromRGB(90, 70, 140)
 rerollButton.Font = Enum.Font.FredokaOne
 rerollButton.TextScaled = true
 rerollButton.TextColor3 = Color3.new(1, 1, 1)
 rerollButton.Text = "🎲 Roll World Event"
 rerollButton.Visible = false
-rerollButton.Parent = panel
+rerollButton.Parent = content
 applyComicStyle(rerollButton, 10, 2)
 
 rerollButton.MouseButton1Click:Connect(function()
@@ -336,11 +520,11 @@ end)
 -- ===== Fraktions-Umschalter: sofortiger Wechsel ohne Freischalt-Prüfung =====
 local factionRow = Instance.new("Frame")
 factionRow.Name = "FactionSwitchRow"
-factionRow.Size = UDim2.new(1, -32, 0, 60)
-factionRow.Position = UDim2.new(0, 16, 0, 246)
+factionRow.Size = volleBreite(60)
+factionRow.LayoutOrder = ORDER.Fraktion
 factionRow.BackgroundTransparency = 1
 factionRow.Visible = false
-factionRow.Parent = panel
+factionRow.Parent = content
 
 local factionRowLabel = Instance.new("TextLabel")
 factionRowLabel.Size = UDim2.new(1, 0, 0, 16)
@@ -372,7 +556,9 @@ local FACTION_DEBUG_BUTTONS = {
 for _, factionConfig in ipairs(FACTION_DEBUG_BUTTONS) do
 	local factionButton = Instance.new("TextButton")
 	factionButton.Name = factionConfig.key .. "DebugButton"
-	factionButton.Size = UDim2.new(0, 96, 1, 0)
+	-- Drittelbreite statt fester 96 Pixel: die drei Knoepfe fuellen die Zeile jetzt aus,
+	-- statt links zu kleben und rechts eine Luecke zu lassen.
+	factionButton.Size = UDim2.new(1 / 3, -4, 1, 0)
 	factionButton.BackgroundColor3 = factionConfig.color
 	factionButton.Font = Enum.Font.FredokaOne
 	factionButton.TextScaled = true
@@ -390,10 +576,10 @@ end
 -- damit man exakt nachvollziehen kann, wann Level 1 bzw. Level 2 erreicht wird. =====
 local alertDebugFrame = Instance.new("Frame")
 alertDebugFrame.Name = "AlertDebugFrame"
-alertDebugFrame.Size = UDim2.new(1, -32, 0, 84)
-alertDebugFrame.Position = UDim2.new(0, 16, 0, 316)
+alertDebugFrame.Size = volleBreite(84)
+alertDebugFrame.LayoutOrder = ORDER.AlertAnzeige
 alertDebugFrame.BackgroundColor3 = Color3.fromRGB(25, 22, 32)
-alertDebugFrame.Parent = panel
+alertDebugFrame.Parent = content
 applyComicStyle(alertDebugFrame, 10, 2)
 
 local alertDebugLabel = Instance.new("TextLabel")
@@ -507,17 +693,22 @@ task.spawn(function()
 end)
 
 -- ===== Spielerdaten-Reset: zweiter Klick (innert 3s) löst den echten Reset aus =====
+-- Die beiden Reset-Knoepfe teilen sich eine Zeile und stehen ganz unten, abgesetzt unter
+-- der Ueberschrift GEFAEHRLICH: sie sind die einzigen im Fenster, die Fortschritt
+-- vernichten. Neben einem Knopf zu liegen, den man staendig antippt, waere falsch.
+local gefahrRow = createButtonRow(ORDER.Gefahr, 40)
+
 local resetButton = Instance.new("TextButton")
 resetButton.Name = "DebugResetButton"
-resetButton.Size = UDim2.new(1, -32, 0, 40)
-resetButton.Position = UDim2.new(0, 16, 0, 316 + 90)
+resetButton.Size = halbeBreite()
+resetButton.LayoutOrder = 1
 resetButton.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
 resetButton.Font = Enum.Font.FredokaOne
 resetButton.TextScaled = true
 resetButton.TextColor3 = Color3.new(1, 1, 1)
 resetButton.Text = "🔄 Debug Reset"
 resetButton.AutoButtonColor = true
-resetButton.Parent = panel
+resetButton.Parent = gefahrRow
 applyComicStyle(resetButton, 10, 2)
 
 local awaitingConfirm = false
@@ -587,17 +778,14 @@ end)
 -- den mehrminuetigen Prolog mitzuspielen oder ihn nie testen zu koennen.
 local resetPrologueButton = Instance.new("TextButton")
 resetPrologueButton.Name = "DebugResetPrologueButton"
-resetPrologueButton.Size = UDim2.new(1, -32, 0, 26)
--- ANS ENDE, nicht unter den Reset-Knopf: dort sitzt bereits die naechste Zeile (456).
--- Der Abstand ist hier sogar erwuenscht -- der Prolog-Reset kostet mehrere Minuten
--- Wiederholung und soll nicht neben dem Knopf liegen, den man staendig antippt.
-resetPrologueButton.Position = UDim2.new(0, 16, 0, 806)
+resetPrologueButton.Size = halbeBreite()
+resetPrologueButton.LayoutOrder = 2
 resetPrologueButton.BackgroundColor3 = Color3.fromRGB(120, 60, 90)
 resetPrologueButton.Font = Enum.Font.FredokaOne
 resetPrologueButton.TextScaled = true
 resetPrologueButton.TextColor3 = Color3.new(1, 1, 1)
-resetPrologueButton.Text = "⏮ Auch Prolog zuruecksetzen"
-resetPrologueButton.Parent = panel
+resetPrologueButton.Text = "⏮ Auch Prolog"
+resetPrologueButton.Parent = gefahrRow
 applyComicStyle(resetPrologueButton, 8, 2)
 
 local prologueAwaitingConfirm = false
@@ -605,7 +793,7 @@ local prologueConfirmTimer = nil
 
 local function resetPrologueButtonIdle()
 	prologueAwaitingConfirm = false
-	resetPrologueButton.Text = "⏮ Auch Prolog zuruecksetzen"
+	resetPrologueButton.Text = "⏮ Auch Prolog"
 	resetPrologueButton.BackgroundColor3 = Color3.fromRGB(120, 60, 90)
 end
 
@@ -647,6 +835,10 @@ local function refreshResetVisibility()
 	local allowed = player:GetAttribute("MayResetData") == true
 	resetButton.Visible = allowed
 	resetPrologueButton.Visible = allowed
+	-- Die Ueberschrift und die leere Zeile gehen mit: eine Gruppe ohne Inhalt ist kein
+	-- Hinweis, sondern eine Luecke, vor der man nach dem fehlenden Knopf sucht.
+	gefahrCaption.Visible = allowed
+	gefahrRow.Visible = allowed
 end
 player:GetAttributeChangedSignal("MayResetData"):Connect(refreshResetVisibility)
 refreshResetVisibility()
@@ -687,17 +879,19 @@ local function setAllParticlesEnabled(enabled)
 	end
 end
 
+local schalterRowA = createButtonRow(ORDER.SchalterA, 40)
+
 local particleToggleButton = Instance.new("TextButton")
 particleToggleButton.Name = "ParticleToggleButton"
-particleToggleButton.Size = UDim2.new(1, -32, 0, 40)
-particleToggleButton.Position = UDim2.new(0, 16, 0, 316 + 90 + 50)
+particleToggleButton.Size = halbeBreite()
+particleToggleButton.LayoutOrder = 1
 particleToggleButton.BackgroundColor3 = Color3.fromRGB(60, 140, 90)
 particleToggleButton.Font = Enum.Font.FredokaOne
 particleToggleButton.TextScaled = true
 particleToggleButton.TextColor3 = Color3.new(1, 1, 1)
 particleToggleButton.Text = "✨ Particles: ON"
 particleToggleButton.AutoButtonColor = true
-particleToggleButton.Parent = panel
+particleToggleButton.Parent = schalterRowA
 applyComicStyle(particleToggleButton, 10, 2)
 
 particleToggleButton.MouseButton1Click:Connect(function()
@@ -732,15 +926,17 @@ local skipCollapseEnabled = false
 
 local skipCollapseButton = Instance.new("TextButton")
 skipCollapseButton.Name = "SkipCollapseAnimationButton"
-skipCollapseButton.Size = UDim2.new(1, -32, 0, 40)
-skipCollapseButton.Position = UDim2.new(0, 16, 0, 316 + 90 + 50 + 50)
+skipCollapseButton.Size = halbeBreite()
+skipCollapseButton.LayoutOrder = 2
 skipCollapseButton.BackgroundColor3 = Color3.fromRGB(90, 90, 140)
 skipCollapseButton.Font = Enum.Font.FredokaOne
 skipCollapseButton.TextScaled = true
 skipCollapseButton.TextColor3 = Color3.new(1, 1, 1)
-skipCollapseButton.Text = "🏚️ Skip Collapse Anim: OFF"
+-- Kuerzer beschriftet als vorher: auf halber Breite bliebe von "Skip Collapse Anim: OFF"
+-- bei TextScaled nur noch eine Zeile Ameisenschrift uebrig.
+skipCollapseButton.Text = "🏚️ Einsturz: OFF"
 skipCollapseButton.AutoButtonColor = true
-skipCollapseButton.Parent = panel
+skipCollapseButton.Parent = schalterRowA
 applyComicStyle(skipCollapseButton, 10, 2)
 
 skipCollapseButton.MouseButton1Click:Connect(function()
@@ -750,10 +946,10 @@ skipCollapseButton.MouseButton1Click:Connect(function()
 	end
 
 	if skipCollapseEnabled then
-		skipCollapseButton.Text = "🏚️ Skip Collapse Anim: ON"
+		skipCollapseButton.Text = "🏚️ Einsturz: ON"
 		skipCollapseButton.BackgroundColor3 = Color3.fromRGB(60, 90, 140)
 	else
-		skipCollapseButton.Text = "🏚️ Skip Collapse Anim: OFF"
+		skipCollapseButton.Text = "🏚️ Einsturz: OFF"
 		skipCollapseButton.BackgroundColor3 = Color3.fromRGB(90, 90, 140)
 	end
 end)
@@ -761,17 +957,19 @@ end)
 -- ===== Prolog manuell starten (Debug) =====
 -- Praktisch zum Testen/Iterieren am Playable Prologue, ohne jedes Mal einen komplett
 -- neuen Account/Speicher zu brauchen.
+local schalterRowC = createButtonRow(ORDER.SchalterC, 40)
+
 local startPrologueButton = Instance.new("TextButton")
 startPrologueButton.Name = "StartPrologueButton"
-startPrologueButton.Size = UDim2.new(1, -32, 0, 40)
-startPrologueButton.Position = UDim2.new(0, 16, 0, 316 + 90 + 50 + 50 + 50)
+startPrologueButton.Size = halbeBreite()
+startPrologueButton.LayoutOrder = 1
 startPrologueButton.BackgroundColor3 = Color3.fromRGB(140, 90, 60)
 startPrologueButton.Font = Enum.Font.FredokaOne
 startPrologueButton.TextScaled = true
 startPrologueButton.TextColor3 = Color3.new(1, 1, 1)
 startPrologueButton.Text = "🎬 Start Prologue"
 startPrologueButton.AutoButtonColor = true
-startPrologueButton.Parent = panel
+startPrologueButton.Parent = schalterRowC
 applyComicStyle(startPrologueButton, 10, 2)
 
 local startPrologueButtonLocked = false
@@ -820,8 +1018,12 @@ local function updateCheckboxVisual()
 	checkbox.BackgroundColor3 = isOn and Color3.fromRGB(60, 140, 70) or Color3.fromRGB(80, 80, 90)
 	levelSliderRow.Visible = isOn
 	cityAlertSliderRow.Visible = isOn
+	sessionSliderRow.Visible = isOn
 	rerollButton.Visible = isOn
 	factionRow.Visible = isOn
+	-- Die Ueberschrift SPIELER geht mit: unter ihr steht sonst nichts. Die Ueberschrift
+	-- STADT & WELT bleibt -- die Alert-Anzeige darunter ist auch ohne Debug-Modus nuetzlich.
+	spielerCaption.Visible = isOn
 end
 
 local function toggleDebugMode()
@@ -865,15 +1067,15 @@ end)
 -- Log, nicht hier im Panel.
 local specCheckButton = Instance.new("TextButton")
 specCheckButton.Name = "RunSpecCheckButton"
-specCheckButton.Size = UDim2.new(1, -32, 0, 40)
-specCheckButton.Position = UDim2.new(0, 16, 0, 316 + 90 + 50 + 50 + 50 + 50)
+specCheckButton.Size = halbeBreite()
+specCheckButton.LayoutOrder = 2
 specCheckButton.BackgroundColor3 = Color3.fromRGB(70, 110, 100)
 specCheckButton.Font = Enum.Font.FredokaOne
 specCheckButton.TextScaled = true
 specCheckButton.TextColor3 = Color3.new(1, 1, 1)
 specCheckButton.Text = "📋 Spec-Prüfung"
 specCheckButton.AutoButtonColor = true
-specCheckButton.Parent = panel
+specCheckButton.Parent = schalterRowC
 applyComicStyle(specCheckButton, 10, 2)
 
 specCheckButton.MouseButton1Click:Connect(function()
@@ -887,7 +1089,7 @@ specCheckButton.MouseButton1Click:Connect(function()
 	DebugRunSpecCheckEvent:FireServer()
 	-- Kurze Rückmeldung am Knopf: das Ergebnis steht im Server-Log, nicht hier -- ohne
 	-- diesen Hinweis klickt man sonst mehrfach und glaubt, es passiere nichts.
-	specCheckButton.Text = "📋 läuft -- siehe Output"
+	specCheckButton.Text = "📋 läuft, siehe Output"
 	task.delay(3, function()
 		specCheckButton.Text = "📋 Spec-Prüfung"
 	end)
@@ -909,25 +1111,29 @@ updateCheckboxVisual()
 -- ist -- FireServer ginge dann ins Leere, ohne Fehlermeldung.
 local DebugShowdownEvent = waitForRemote("DebugShowdownEvent")
 
-local SHOWDOWN_ROW_Y = 656
+local showdownRowA = createButtonRow(ORDER.ShowdownA, 40)
+local showdownRowB = createButtonRow(ORDER.ShowdownB, 40)
+local showdownRowC = createButtonRow(ORDER.ShowdownC, 40)
 
-local function makeShowdownButton(name, text, xScale, xOffset, widthScale, widthOffset, rowOffset, color)
+-- Statt Position und Breite von Hand: die Zeile bestimmt, wo der Knopf sitzt, und die
+-- Reihenfolge innerhalb der Zeile, ob links oder rechts.
+local function makeShowdownButton(name, text, row, spalte, color)
 	local button = Instance.new("TextButton")
 	button.Name = name
-	button.Size = UDim2.new(widthScale, widthOffset, 0, 40)
-	button.Position = UDim2.new(xScale, xOffset, 0, SHOWDOWN_ROW_Y + rowOffset)
+	button.Size = halbeBreite()
+	button.LayoutOrder = spalte
 	button.BackgroundColor3 = color
 	button.Font = Enum.Font.FredokaOne
 	button.TextScaled = true
 	button.TextColor3 = Color3.new(1, 1, 1)
 	button.Text = text
-	button.Parent = panel
+	button.Parent = row
 	applyComicStyle(button, 10, 2)
 	return button
 end
 
 local forceShowdownButton = makeShowdownButton(
-	"ForceShowdownButton", "⚔️ Showdown erzwingen", 0, 16, 1, -32, 0, Color3.fromRGB(150, 70, 70))
+	"ForceShowdownButton", "⚔️ Erzwingen", showdownRowA, 1, Color3.fromRGB(150, 70, 70))
 forceShowdownButton.MouseButton1Click:Connect(function()
 	if DebugShowdownEvent then
 		DebugShowdownEvent:FireServer("Force")
@@ -939,14 +1145,14 @@ local SHOWDOWN_SHOT_NAMES = { "FocusLaser", "AreaAttack", "WarningPulse", "Conta
 local shotIndex = 1
 
 local shotPickButton = makeShowdownButton(
-	"ShowdownShotPickButton", "🎬 " .. SHOWDOWN_SHOT_NAMES[1], 0, 16, 0.6, -20, 50, Color3.fromRGB(80, 80, 120))
+	"ShowdownShotPickButton", "🎬 " .. SHOWDOWN_SHOT_NAMES[1], showdownRowB, 1, Color3.fromRGB(80, 80, 120))
 shotPickButton.MouseButton1Click:Connect(function()
 	shotIndex = shotIndex % #SHOWDOWN_SHOT_NAMES + 1
 	shotPickButton.Text = "🎬 " .. SHOWDOWN_SHOT_NAMES[shotIndex]
 end)
 
 local shotFireButton = makeShowdownButton(
-	"ShowdownShotFireButton", "▶ Shot", 0.6, 4, 0.4, -20, 50, Color3.fromRGB(70, 130, 90))
+	"ShowdownShotFireButton", "▶ Shot", showdownRowB, 2, Color3.fromRGB(70, 130, 90))
 shotFireButton.MouseButton1Click:Connect(function()
 	if DebugShowdownEvent then
 		DebugShowdownEvent:FireServer("Shot", SHOWDOWN_SHOT_NAMES[shotIndex])
@@ -954,7 +1160,7 @@ shotFireButton.MouseButton1Click:Connect(function()
 end)
 
 local showdownEndButton = makeShowdownButton(
-	"ShowdownEndButton", "⏹ Showdown beenden", 0, 16, 0.6, -20, 100, Color3.fromRGB(90, 90, 140))
+	"ShowdownEndButton", "⏹ Beenden", showdownRowC, 1, Color3.fromRGB(90, 90, 140))
 showdownEndButton.MouseButton1Click:Connect(function()
 	if DebugShowdownEvent then
 		DebugShowdownEvent:FireServer("End")
@@ -963,7 +1169,7 @@ end)
 
 local shortDurationEnabled = false
 local shortDurationButton = makeShowdownButton(
-	"ShowdownShortDurationButton", "⏱️ 3s: OFF", 0.6, 4, 0.4, -20, 100, Color3.fromRGB(90, 90, 140))
+	"ShowdownShortDurationButton", "⏱️ 3s: OFF", showdownRowA, 2, Color3.fromRGB(90, 90, 140))
 shortDurationButton.MouseButton1Click:Connect(function()
 	shortDurationEnabled = not shortDurationEnabled
 	if DebugShowdownEvent then
@@ -981,17 +1187,19 @@ end)
 -- hundert Zeilen im Ausgabefenster, die jede andere Meldung verdecken.
 local DebugTelemetryEvent = waitForRemote("DebugTelemetryEvent")
 
+local schalterRowB = createButtonRow(ORDER.SchalterB, 34)
+
 local telemetryEnabled = true
 local telemetryButton = Instance.new("TextButton")
 telemetryButton.Name = "DebugTelemetryButton"
-telemetryButton.Size = UDim2.new(1, -32, 0, 30)
-telemetryButton.Position = UDim2.new(0, 16, 0, 846)
+telemetryButton.Size = halbeBreite()
+telemetryButton.LayoutOrder = 1
 telemetryButton.BackgroundColor3 = Color3.fromRGB(70, 110, 90)
 telemetryButton.Font = Enum.Font.FredokaOne
 telemetryButton.TextScaled = true
 telemetryButton.TextColor3 = Color3.new(1, 1, 1)
 telemetryButton.Text = "📊 Telemetrie: AN"
-telemetryButton.Parent = panel
+telemetryButton.Parent = schalterRowB
 applyComicStyle(telemetryButton, 8, 2)
 
 local function showTelemetryState()
@@ -1019,18 +1227,18 @@ end)
 local archiveRevealed = false
 local archiveButton = Instance.new("TextButton")
 archiveButton.Name = "DebugArchiveRevealButton"
-archiveButton.Size = UDim2.new(1, -32, 0, 30)
-archiveButton.Position = UDim2.new(0, 16, 0, 886)
+archiveButton.Size = halbeBreite()
+archiveButton.LayoutOrder = 2
 archiveButton.BackgroundColor3 = Color3.fromRGB(90, 80, 130)
 archiveButton.Font = Enum.Font.FredokaOne
 archiveButton.TextScaled = true
 archiveButton.TextColor3 = Color3.new(1, 1, 1)
 archiveButton.Text = "\u{1F4D6} Archiv aufdecken"
-archiveButton.Parent = panel
+archiveButton.Parent = schalterRowB
 applyComicStyle(archiveButton, 8, 2)
 
 local function showArchiveState()
-	archiveButton.Text = archiveRevealed and "\u{1F4D6} Archiv wieder verdecken" or "\u{1F4D6} Archiv aufdecken"
+	archiveButton.Text = archiveRevealed and "\u{1F4D6} Archiv verdecken" or "\u{1F4D6} Archiv aufdecken"
 	archiveButton.BackgroundColor3 = archiveRevealed
 		and Color3.fromRGB(120, 100, 170)
 		or Color3.fromRGB(90, 80, 130)
