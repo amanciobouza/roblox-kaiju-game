@@ -10,7 +10,16 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
 local ComicStyleUtils = require(ReplicatedStorage:WaitForChild("ComicStyleUtils"))
 local ModelPreviewUtils = require(ReplicatedStorage:WaitForChild("ModelPreviewUtils"))
-local StageModels = require(ReplicatedStorage:WaitForChild("StageModels"))
+-- Nur fuer die Scanfenster: es weiss als einzige Stelle, welches Modell eine Figuren-Stufe
+-- darstellt. Der Zugriff ist abgesichert, weil das Modul noch entsteht -- fehlt es, fallen
+-- die Scans auf die getragene Figur zurueck statt auszufallen.
+local okStageModels, StageModels = pcall(function()
+	return require(ReplicatedStorage:WaitForChild("StageModels", 5))
+end)
+if not okStageModels then
+	StageModels = nil
+	warn("[Kaiju Debug] StageModels nicht verfuegbar -- die Scans zeigen die getragene Figur.")
+end
 local UiTypography = require(ReplicatedStorage:WaitForChild("UiTypography"))
 local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
 local applyComicStyle = ComicStyleUtils.Apply
@@ -1806,10 +1815,48 @@ local function knochenBereich(character, teileNamen)
 	return (minimum + maximum) * 0.5, maximum - minimum
 end
 
-local function baueScan(key)
+-- Woher der Scan seine Gestalt nimmt.
+--
+-- NICHT aus der getragenen Figur: die ist noch der alte Avatar, solange der Umbau auf die
+-- Stufenmodelle laeuft. Der Scan soll zeigen, was die Stufe WIRKLICH ist -- und das weiss
+-- StageModels.
+--
+-- Gebaut wird einmal und dann geklont. Ein Modell kann nur in EINEM ViewportFrame haengen,
+-- drei Fenster brauchen also drei Kopien -- aber nur einen Bau.
+local scanVorlage = nil
+local scanVorlageSkin = nil
+
+local function holeVorlage()
+	local ausgeruestet = player:FindFirstChild("EquippedSkin")
+	local skinId = (ausgeruestet and ausgeruestet.Value) or 0
+
+	if scanVorlage and scanVorlage.Parent and scanVorlageSkin == skinId then
+		return scanVorlage
+	end
+
+	if scanVorlage then
+		scanVorlage:Destroy()
+		scanVorlage = nil
+	end
+
+	if StageModels and StageModels.BuildPreview then
+		local ok, modell = pcall(StageModels.BuildPreview, "Kaiju", skinId)
+		if ok and modell then
+			modell.Parent = script -- irgendwo ausserhalb des Bildes ablegen, nur als Vorlage
+			scanVorlage = modell
+			scanVorlageSkin = skinId
+			return scanVorlage
+		end
+	end
+
+	-- Rueckfall: die getragene Figur. Besser ein alter Scan als gar keiner.
+	return player.Character
+end
+
+local function baueScan(key, vorlage)
 	local eintrag = statBars[key]
 	local teileNamen = SCAN_TEILE[key]
-	if not eintrag or not teileNamen then
+	if not eintrag or not teileNamen or not vorlage then
 		return false
 	end
 
@@ -1818,13 +1865,7 @@ local function baueScan(key)
 		altes:Destroy()
 	end
 
-	local character = player.Character
-	local wurzel = character and character:FindFirstChild("HumanoidRootPart")
-	if not character or not wurzel then
-		return false
-	end
-
-	local mitte, groesse = knochenBereich(character, teileNamen)
+	local mitte, groesse = knochenBereich(vorlage, teileNamen)
 	if not mitte then
 		return false -- die Knochen fehlen: dann ist es ein fremdes Rig
 	end
@@ -1833,7 +1874,7 @@ local function baueScan(key)
 	local modell = Instance.new("Model")
 	modell.Name = "ScanModel"
 	local gefunden = 0
-	for _, nachfahre in ipairs(character:GetDescendants()) do
+	for _, nachfahre in ipairs(vorlage:GetDescendants()) do
 		if nachfahre:IsA("BasePart") and nachfahre.Transparency < 1 then
 			local klon = nachfahre:Clone()
 			for _, kind in ipairs(klon:GetChildren()) do
@@ -1849,10 +1890,9 @@ local function baueScan(key)
 			klon.CastShadow = false
 			klon.Material = Enum.Material.Neon
 			klon.Color = eintrag.color
-			-- Deutlich durchsichtiger: ein Roentgenbild zeigt das Innere MIT, nicht die
-			-- Oberflaeche davor. Bei 0.25 war es eine bemalte Figur, bei 0.55 sieht man
-			-- durch sie hindurch -- und ueberlappende Teile summieren sich zu den
-			-- dichteren Stellen auf, genau wie bei einer echten Durchleuchtung.
+			-- Deutlich durchsichtig: ein Roentgenbild zeigt das Innere MIT, nicht die
+			-- Oberflaeche davor. Ueberlappende Teile summieren sich zu den dichteren
+			-- Stellen auf, genau wie bei einer echten Durchleuchtung.
 			klon.Transparency = 0.55
 			klon.Parent = modell
 			gefunden += 1
@@ -1866,8 +1906,14 @@ local function baueScan(key)
 
 	modell.Parent = eintrag.scanViewport
 
-	-- Kamera auf den Knochenbereich richten, von VORN -- also aus der Richtung, in die die
-	-- Figur schaut.
+	-- Kamera auf den Knochenbereich richten, von VORN.
+	--
+	-- Die Blickrichtung kommt aus der Wurzel der Vorlage, wenn es eine gibt. Sonst gilt die
+	-- Roblox-Konvention: die Vorderseite eines Modells zeigt entlang -Z -- dieselbe
+	-- Annahme, auf der auch ModelPreviewUtils.Fit beruht.
+	local wurzel = vorlage:FindFirstChild("HumanoidRootPart", true)
+	local nachVorn = wurzel and wurzel.CFrame.LookVector or Vector3.new(0, 0, -1)
+
 	local kamera = eintrag.scanViewport.CurrentCamera
 	if not kamera then
 		kamera = Instance.new("Camera")
@@ -1878,7 +1924,7 @@ local function baueScan(key)
 
 	local spanne = math.max(groesse.X, groesse.Y, groesse.Z)
 	local abstand = (spanne * 0.5) / math.tan(math.rad(SCAN_FOV) * 0.5) * SCAN_ZOOM
-	kamera.CFrame = CFrame.new(mitte + wurzel.CFrame.LookVector * abstand, mitte)
+	kamera.CFrame = CFrame.new(mitte + nachVorn * abstand, mitte)
 
 	return true
 end
@@ -1896,14 +1942,19 @@ local function baueAlleScans()
 			if scanVersuch ~= meinVersuch then
 				return -- ein neuer Charakter hat uebernommen
 			end
-			local fertig = true
+			local vorlage = holeVorlage()
+			local fertig = vorlage ~= nil
 			for key in pairs(SCAN_TEILE) do
-				if not baueScan(key) then
+				if not baueScan(key, vorlage) then
 					fertig = false
 				end
 			end
 			if fertig then
-				print("[Kaiju Debug] Scan: Figur erfasst nach " .. durchgang .. " Versuch(en).")
+				print(string.format(
+					"[Kaiju Debug] Scan: erfasst nach %d Versuch(en) -- Vorlage: %s.",
+					durchgang,
+					(scanVorlage and scanVorlage.Name) or "getragene Figur"
+				))
 				return
 			end
 			task.wait(0.5)
@@ -2862,7 +2913,11 @@ local function buildSkinPreview(container, skin, revealed)
 
 	-- Erst nach einem ECHTEN Modell fragen. Der Primal Beast hat eines; die übrigen Stufen
 	-- noch nicht, dort bleibt es beim Avatar in Skin-Grösse (siehe StageModels).
-	local realModel = StageModels.BuildPreview(skin.Faction or "Kaiju", skin.Id)
+	-- Abgesichert wie an der anderen Fundstelle: das Modul wird oben per pcall geholt und
+	-- kann nil sein. Ohne die Pruefung faellt die ganze Vorschau aus, statt auf den Avatar
+	-- zurueckzugehen.
+	local realModel = StageModels and StageModels.BuildPreview
+		and StageModels.BuildPreview(skin.Faction or "Kaiju", skin.Id) or nil
 	if realModel then
 		local viewport = ModelPreviewUtils.CreateViewport(container, 2)
 		local okReal = pcall(function()
