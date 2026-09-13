@@ -24,6 +24,7 @@ local Workspace = game:GetService("Workspace")
 local ArchiveConfig = require(ReplicatedStorage:WaitForChild("ArchiveConfig"))
 local ComicStyleUtils = require(ReplicatedStorage:WaitForChild("ComicStyleUtils"))
 local ModelPreviewUtils = require(ReplicatedStorage:WaitForChild("ModelPreviewUtils"))
+local StageModelPreview = require(ReplicatedStorage:WaitForChild("StageModelPreview"))
 local UiTypography = require(ReplicatedStorage:WaitForChild("UiTypography"))
 local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
 local ResponsiveGridUtils = require(ReplicatedStorage:WaitForChild("ResponsiveGridUtils"))
@@ -61,19 +62,12 @@ gui.DisplayOrder = 100
 gui.IgnoreGuiInset = true
 gui.Parent = playerGui
 
--- Die Meldung braucht ein EIGENES ScreenGui mit hoher DisplayOrder. Innerhalb desselben
--- ScreenGui haette ein hoeherer ZIndex nichts genuetzt: die HUD-Elemente, die sie verdeckt
--- haben, liegen in ANDEREN ScreenGuis, und zwischen ScreenGuis entscheidet allein die
--- DisplayOrder. Deshalb auch nicht im Archiv-Gui, das darf ruhig unten bleiben.
-local toastGui = Instance.new("ScreenGui")
-toastGui.Name = "ArchiveToastGui"
-toastGui.ResetOnSpawn = false
--- Ueber HUD und Hauptmenue (90), aber UNTER den Panels und den Story-Einblendungen
--- (beide 100): waehrend eines geoeffneten Bildschirms oder einer Kinosequenz hat die
--- Meldung nichts im Vordergrund verloren.
-toastGui.DisplayOrder = 95
-toastGui.IgnoreGuiInset = true
-toastGui.Parent = playerGui
+-- Die Aufdeck-Meldung hat hier kein eigenes ScreenGui mehr: sie laeuft ueber HudToast, und
+-- das bringt seins mit. Die Ueberlegung von damals gilt dort weiter -- die Meldung muss in
+-- einem EIGENEN ScreenGui liegen, weil zwischen ScreenGuis allein die DisplayOrder
+-- entscheidet und ein hoeherer ZIndex im Archiv-Gui nichts genuetzt haette.
+local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
+local HudToast = require(ReplicatedStorage:WaitForChild("HudToast"))
 
 local panel = Instance.new("Frame")
 panel.Name = "ArchivePanel"
@@ -815,46 +809,21 @@ end)
 local toastQueue = {}
 local toastRunning = false
 
--- Mittig statt am oberen Rand: dort lag sie unter den uebrigen HUD-Elementen. Etwas
--- oberhalb der Bildmitte, damit sie die Figur nicht verdeckt, der man gerade begegnet.
+-- Sie stand in der Bildmitte bei 0.34 -- also genau dort, wo die Alarmmeldung auffaehrt.
+-- Zwei Meldungen uebereinander, und ausgerechnet die wichtigere darunter.
+--
+-- Jetzt uebernimmt HudToast: oben links, hereinfahrend, nacheinander. Die Warteschlange
+-- hier bleibt trotzdem stehen -- sie faengt den Fall ab, dass mehrere Guardians auf einmal
+-- aufgedeckt werden, und HudToast reiht sie dann seinerseits auf.
 local function showToast(text)
-	local toast = Instance.new("TextLabel")
-	toast.AnchorPoint = Vector2.new(0.5, 0.5)
-	toast.Size = UDim2.new(0, 380, 0, 56)
-	toast.Position = UDim2.new(0.5, 0, 0.34, 0)
-	toast.BackgroundColor3 = Color3.fromRGB(180, 140, 80)
-	toast.Font = Enum.Font.FredokaOne
-	toast.TextScaled = true
-	toast.TextColor3 = Color3.fromRGB(255, 255, 255)
-	toast.TextStrokeTransparency = 0.5
-	toast.Text = text
-	toast.Parent = toastGui
-	ComicStyleUtils.Apply(toast, 14, 4)
-
-	-- Aus der Mitte heraus aufziehen statt von oben hereinfahren -- ein Einflug haette
-	-- wieder durch den Bereich gefuehrt, in dem die anderen HUD-Elemente liegen.
-	local scale = Instance.new("UIScale")
-	scale.Scale = 0.6
-	scale.Parent = toast
-	toast.TextTransparency = 1
-	toast.BackgroundTransparency = 1
-
-	TweenService:Create(scale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-		Scale = 1,
-	}):Play()
-	TweenService:Create(toast, TweenInfo.new(0.25), {
-		TextTransparency = 0,
-		BackgroundTransparency = 0,
-	}):Play()
-
-	task.wait(2.4)
-	TweenService:Create(toast, TweenInfo.new(0.35), {
-		TextTransparency = 1,
-		BackgroundTransparency = 1,
-	}):Play()
-	TweenService:Create(scale, TweenInfo.new(0.35), { Scale = 0.85 }):Play()
-	task.wait(0.4)
-	toast:Destroy()
+	HudToast.Show({
+		title = "ARCHIV",
+		detail = text,
+		image = HudChrome.Icon.Guardian,
+	})
+	-- So lange, wie eine Meldung braucht -- sonst schiebt die Warteschlange hier alles auf
+	-- einmal nach und HudToast bekommt fuenf Eintraege in derselben Sekunde.
+	task.wait(3.6)
 end
 
 local function queueToast(text)

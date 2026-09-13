@@ -34,6 +34,9 @@ local MAX_ACHIEVEMENT_COLUMNS = 3
 -- ebenfalls brauchen, steht sie in ReplicatedStorage.ResponsiveGridUtils -- einmal statt
 -- dreimal.
 
+local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
+local HudToast = require(ReplicatedStorage:WaitForChild("HudToast"))
+
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "NavigationGui"
 screenGui.ResetOnSpawn = false
@@ -722,40 +725,14 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
--- ===== Freischaltungs-Toast: kurze Benachrichtigung, sobald ein Achievement live
--- freigeschaltet wird (auch wenn das Panel gerade nicht offen ist). =====
-local achievementToast = Instance.new("Frame")
-achievementToast.Name = "AchievementToast"
-achievementToast.AnchorPoint = Vector2.new(0.5, 0)
-achievementToast.Position = UDim2.new(0.5, 0, 0, -70)
-achievementToast.Size = UDim2.new(0, 320, 0, 60)
-achievementToast.BackgroundColor3 = Color3.fromRGB(255, 250, 210)
-achievementToast.Visible = false
-achievementToast.ZIndex = 50
-achievementToast.Parent = screenGui
-applyComicStyle(achievementToast, 14, 3)
-
-local toastIcon = Instance.new("TextLabel")
-toastIcon.Size = UDim2.new(0, 44, 0, 44)
-toastIcon.Position = UDim2.new(0, 8, 0, 8)
-toastIcon.BackgroundTransparency = 1
-toastIcon.Font = Enum.Font.FredokaOne
-toastIcon.TextScaled = true
-toastIcon.ZIndex = 51
-toastIcon.Parent = achievementToast
-
-local toastText = Instance.new("TextLabel")
-toastText.Size = UDim2.new(1, -60, 1, -12)
-toastText.Position = UDim2.new(0, 56, 0, 6)
-toastText.BackgroundTransparency = 1
-toastText.Font = Enum.Font.FredokaOne
-toastText.TextScaled = true
-toastText.TextXAlignment = Enum.TextXAlignment.Left
-toastText.TextColor3 = Color3.fromRGB(235, 235, 245)
-toastText.ZIndex = 51
-toastText.Parent = achievementToast
-
-local toastShowing = false
+-- ===== Freischaltungs-Meldung =====
+--
+-- Sie stand oben mittig bei y 20 -- also genau auf den Level- und HP-Feldern, die dort von
+-- y 8 bis 70 liegen. Im Moment des Erfolgs verdeckte sie die Lebensanzeige.
+--
+-- Jetzt uebernimmt HudToast: oben links, hereinfahrend, nacheinander. Dort steht sie
+-- niemandem im Weg, und sie sieht aus wie die Archiv-Meldung, weil sie dasselbe ist -- eine
+-- Belohnung, kein Ereignis im Kampf.
 achievementUnlockedEvent.OnClientEvent:Connect(function(achievementId)
 	-- Laempchen am Menuepunkt. Nicht setzen, waehrend das Panel offen ist -- wer gerade
 	-- hinsieht, braucht keinen Hinweis darauf, hinzusehen.
@@ -770,31 +747,18 @@ achievementUnlockedEvent.OnClientEvent:Connect(function(achievementId)
 			_G.SetNavBadge("Faction", true)
 		end
 	end
+
 	local achievement = AchievementsConfig.ById[achievementId]
 	if not achievement then
 		return
 	end
-	toastIcon.Text = achievement.icon
-	toastText.Text = "🏆 Erfolg freigeschaltet!\n" .. achievement.name
 
-	if toastShowing then
-		return
-	end
-	toastShowing = true
-	achievementToast.Visible = true
-	TweenService:Create(achievementToast, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-		Position = UDim2.new(0.5, 0, 0, 20),
-	}):Play()
-	task.delay(3, function()
-		local slideOut = TweenService:Create(achievementToast, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-			Position = UDim2.new(0.5, 0, 0, -70),
-		})
-		slideOut:Play()
-		slideOut.Completed:Connect(function()
-			achievementToast.Visible = false
-			toastShowing = false
-		end)
-	end)
+	HudToast.Show({
+		title = "ERFOLG FREIGESCHALTET",
+		detail = achievement.name,
+		glyph = achievement.icon,
+		color = HudChrome.Color.Ready,
+	})
 end)
 
 -- ===== Anbindung an bestehende/andere Panels =====
