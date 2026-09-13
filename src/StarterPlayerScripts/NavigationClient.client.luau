@@ -104,112 +104,151 @@ local function unscalePanel(panel)
 	rebind()
 end
 
--- ===== Menüleiste unten links =====
--- Ersetzt den früheren Hamburger-Knopf samt zentriertem Overlay. Die Punkte kleben jetzt
--- dauerhaft am Rand: ein Knopf, der eine ohnehin schmale Leiste versteckt, spart kaum
--- Fläche und kostet einen Handgriff.
+-- ===== Ein Knopf statt acht =====
 --
--- Nur Symbole, keine Beschriftung -- die Symbole sind eingeführt und unterscheidbar, und
--- eine Beschriftung beim Darüberfahren würde ausgerechnet auf dem Handy versagen, wo der
--- Platz knapp ist.
-local RAIL_ICON_SIZE = 44
-local RAIL_PADDING = 8
-
--- Auf Touch-Geräten sitzt Robloxs EIGENER Steuerknüppel unten links, und der Daumen
--- wandert beim Laufen darüber hinaus. Die Leiste beginnt dort deutlich höher. Lieber
--- etwas zu hoch als ein Knopf, den man beim Laufen versehentlich trifft -- der Fehler
--- geht damit in die harmlose Richtung.
+-- Hier stand eine Leiste aus acht Symbolen am linken Rand. Der Gedanke dahinter war
+-- richtig: ein Knopf, der eine ohnehin schmale Leiste versteckt, spart kaum Flaeche und
+-- kostet einen Handgriff.
 --
--- Um kleine Bildschirme muss sich das hier NICHT kümmern: ResponsiveHudScale hängt an
--- jedes ScreenGui eine UIScale (Referenz 1280x720, Minimum 0.55). Eigenes Verkleinern
--- würde doppelt skalieren.
-local RAIL_BOTTOM_MARGIN = UserInputService.TouchEnabled and 300 or 24
-
--- ...aber nur, SOLANGE die Leiste damit ins Bild passt.
+-- Auf dem Telefon stimmte die Voraussetzung nicht. Acht Knoepfe brauchen 408 Pixel, und so
+-- viel Hoehe gibt es dort zwischen Robloxs Systemleiste und dem Steuerknueppel nicht -- der
+-- oberste lief aus dem Bild. Klemmen liess sich das beheben, aber dann war der linke Rand
+-- zur Haelfte von Menuepunkten belegt: viel Platz fuer das Nebensaechlichste im ganzen HUD.
 --
--- Auf dem Telefon tat sie das nicht: acht Symbole brauchen 408 Pixel, und zwischen den 300
--- unten und der Roblox-Systemleiste oben war nicht so viel Platz. Die Leiste waechst nach
--- oben, also lief das oberste Symbol oben aus dem Bild -- abgeschnitten, nicht verschoben,
--- weil nichts es aufgehalten haette.
+-- Also doch ein Knopf und ein Menue dahinter. Der Unterschied zur frueheren Fassung: das
+-- Menue zeigt BESCHRIFTETE Kacheln. Die acht Symbole mussten sich vorher allein erklaeren,
+-- weil in einer 44 Pixel breiten Leiste kein Text Platz hat -- im Menue ist er da.
+local MENU_KNOPF = 52
+local MENU_UNTEN = UserInputService.TouchEnabled and 150 or 24
+
+local menuButton = Instance.new("TextButton")
+menuButton.Name = "MenuButton"
+menuButton.AnchorPoint = Vector2.new(0, 1)
+menuButton.Position = UDim2.new(0, 16, 1, -MENU_UNTEN)
+menuButton.Size = UDim2.new(0, MENU_KNOPF, 0, MENU_KNOPF)
+menuButton.AutoButtonColor = false
+menuButton.Text = ""
+menuButton.ZIndex = 4
+menuButton.Parent = screenGui
+local _, menuStroke = HudChrome.Panel(menuButton, { radius = HudChrome.Radius.Small })
+
+local menuIcon = HudChrome.IconImage(menuButton, HudChrome.Icon.Menu)
+menuIcon.Size = UDim2.new(1, -16, 1, -16)
+menuIcon.Position = UDim2.new(0, 8, 0, 8)
+menuIcon.ZIndex = 5
+
+-- Ein Laempchen fuer alle acht.
 --
--- Der untere Abstand ist damit kein fester Wert mehr, sondern eine Obergrenze. Passt es,
--- bleibt er bei 300. Passt es nicht, rueckt die Leiste so weit nach unten wie noetig -- bis
--- zu diesem Boden, der den Steuerknueppel unten links noch freihaelt. Reicht auch das
--- nicht, bleibt sie am Boden stehen und meldet es, statt still abzuschneiden.
-local RAIL_BOTTOM_MIN = UserInputService.TouchEnabled and 150 or 24
+-- Ohne das waere das Verstecken ein echter Verlust: man saehe nicht mehr, dass irgendwo
+-- etwas wartet, und muesste das Menue auf Verdacht oeffnen. So sagt der Knopf weiterhin
+-- "da ist was", nur nicht mehr, wo -- das steht drin.
+local menuBadge = Instance.new("Frame")
+menuBadge.Name = "Badge"
+menuBadge.AnchorPoint = Vector2.new(1, 0)
+menuBadge.Size = UDim2.new(0, 14, 0, 14)
+menuBadge.Position = UDim2.new(1, 2, 0, -2)
+menuBadge.BackgroundColor3 = HudChrome.Color.Danger
+menuBadge.BorderSizePixel = 0
+menuBadge.Visible = false
+menuBadge.ZIndex = 6
+menuBadge.Parent = menuButton
+local menuBadgeCorner = Instance.new("UICorner")
+menuBadgeCorner.CornerRadius = UDim.new(1, 0)
+menuBadgeCorner.Parent = menuBadge
 
-local menuRail = Instance.new("Frame")
-menuRail.Name = "MenuRail"
-menuRail.AnchorPoint = Vector2.new(0, 1)
-menuRail.Position = UDim2.new(0, 16, 1, -RAIL_BOTTOM_MARGIN)
-menuRail.Size = UDim2.new(0, RAIL_ICON_SIZE, 0, 0)
-menuRail.AutomaticSize = Enum.AutomaticSize.Y
-menuRail.BackgroundTransparency = 1
-menuRail.Parent = screenGui
+-- ===== Das Menue =====
+local KACHEL_BREITE = 148
+local KACHEL_HOEHE = 84
+local KACHEL_LUECKE = 12
+local MENU_SPALTEN = 4
+local MENU_RAND = 20
+local MENU_KOPF = 52
 
-local railLayout = Instance.new("UIListLayout")
-railLayout.FillDirection = Enum.FillDirection.Vertical
-railLayout.SortOrder = Enum.SortOrder.LayoutOrder
-railLayout.Padding = UDim.new(0, RAIL_PADDING)
-railLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
-railLayout.Parent = menuRail
+-- Der Schleier ist selbst ein Knopf: ein Klick daneben schliesst. Das ist auf dem Telefon
+-- der natuerlichere Weg als das kleine X zu treffen -- und das X bleibt trotzdem, weil man
+-- am Rechner nicht darauf kommt, ins Leere zu klicken.
+local menuOverlay = Instance.new("TextButton")
+menuOverlay.Name = "MenuOverlay"
+menuOverlay.Size = UDim2.new(1, 0, 1, 0)
+menuOverlay.BackgroundColor3 = HudChrome.Color.PanelSunken
+menuOverlay.BackgroundTransparency = 0.3
+menuOverlay.BorderSizePixel = 0
+menuOverlay.AutoButtonColor = false
+menuOverlay.Text = ""
+menuOverlay.Visible = false
+menuOverlay.ZIndex = 40
+menuOverlay.Parent = screenGui
+unscalePanel(menuOverlay)
 
--- ===== Den Ueberstand messen, nicht vorhersagen =====
---
--- Wie hoch die Leiste auf dem Schirm wirklich ist, haengt an ResponsiveHudScale und damit
--- am Geraet. Die Rechnung nachzubauen ginge -- und ist in dieser Sitzung mehrfach
--- danebengegangen. Also wird abgelesen.
---
--- Der Umrechnungsfaktor kommt aus der Leiste selbst: sie ist genau RAIL_ICON_SIZE breit
--- angelegt, ihre gemessene Breite geteilt durch diesen Wert IST die wirksame Skalierung.
--- Damit lassen sich gemessene Pixel in die Versatz-Einheiten zurueckrechnen, in denen die
--- Position steht.
-local railGemeldet = false
+local menuPanel = Instance.new("Frame")
+menuPanel.Name = "MenuPanel"
+menuPanel.AnchorPoint = Vector2.new(0.5, 0.5)
+menuPanel.Position = UDim2.new(0.5, 0, 0.5, 0)
+menuPanel.Size = UDim2.new(
+	0, MENU_SPALTEN * KACHEL_BREITE + (MENU_SPALTEN - 1) * KACHEL_LUECKE + MENU_RAND * 2,
+	0, MENU_KOPF + 2 * KACHEL_HOEHE + KACHEL_LUECKE + MENU_RAND
+)
+-- Active: sonst reicht ein Klick auf das Panel bis zum Schleier darunter durch und
+-- schliesst das Menue, sobald man danebentrifft.
+menuPanel.Active = true
+menuPanel.ZIndex = 41
+menuPanel.Parent = menuOverlay
+HudChrome.Panel(menuPanel, { radius = HudChrome.Radius.Panel, transparency = 0 })
 
-local function railLageAnwenden()
-	local skala = menuRail.AbsoluteSize.X / RAIL_ICON_SIZE
-	local hoehePx = menuRail.AbsoluteSize.Y
-	if skala <= 0 or hoehePx <= 0 then
-		return
-	end
+local menuTitle = Instance.new("TextLabel")
+menuTitle.Name = "MenuTitle"
+menuTitle.Size = UDim2.new(0, 200, 0, 24)
+menuTitle.Position = UDim2.new(0, MENU_RAND, 0, 14)
+menuTitle.BackgroundTransparency = 1
+menuTitle.TextXAlignment = Enum.TextXAlignment.Left
+menuTitle.Text = "SYSTEMS"
+menuTitle.ZIndex = 42
+menuTitle.Parent = menuPanel
+HudChrome.Label(menuTitle, 20)
 
-	-- Oberkante, die nicht unterschritten werden darf: knapp unter Robloxs Systemleiste.
-	-- Dieses ScreenGui hat IgnoreGuiInset, beginnt also ganz oben -- ohne die Grenze liefe
-	-- die Leiste unter die Roblox-Symbole und darueber hinaus aus dem Bild.
-	--
-	-- HudChrome.TopInset misst den Versatz, statt ihn aus GetGuiInset zu rechnen: das kennt
-	-- nur die Systemleiste, nicht den sicheren Bereich des Geraets, und lag auf dem Telefon
-	-- deutlich daneben.
-	local obenPx = HudChrome.TopInset() + 8
+local menuClose = Instance.new("TextButton")
+menuClose.Name = "CloseButton"
+menuClose.AnchorPoint = Vector2.new(1, 0)
+menuClose.Position = UDim2.new(1, -MENU_RAND, 0, 12)
+menuClose.Size = UDim2.new(0, 28, 0, 28)
+menuClose.AutoButtonColor = false
+menuClose.Text = "\u{2715}"
+menuClose.ZIndex = 42
+menuClose.Parent = menuPanel
+HudChrome.Panel(menuClose, { radius = HudChrome.Radius.Small, fill = HudChrome.Color.PanelRaised })
+HudChrome.Label(menuClose, 16)
+menuClose.TextColor3 = HudChrome.Color.TextSecondary
 
-	local unterkantePx = screenGui.AbsolutePosition.Y + screenGui.AbsoluteSize.Y
-	local oberkantePx = screenGui.AbsolutePosition.Y + obenPx
+local menuGrid = Instance.new("Frame")
+menuGrid.Name = "MenuGrid"
+menuGrid.Position = UDim2.new(0, MENU_RAND, 0, MENU_KOPF)
+menuGrid.Size = UDim2.new(1, -MENU_RAND * 2, 0, 2 * KACHEL_HOEHE + KACHEL_LUECKE)
+menuGrid.BackgroundTransparency = 1
+menuGrid.ZIndex = 42
+menuGrid.Parent = menuPanel
 
-	-- So viel Abstand nach unten bleibt hoechstens, wenn die Oberkante gehalten werden soll.
-	local moeglich = (unterkantePx - oberkantePx - hoehePx) / skala
-	local abstand = math.clamp(moeglich, RAIL_BOTTOM_MIN, RAIL_BOTTOM_MARGIN)
-	menuRail.Position = UDim2.new(0, 16, 1, -abstand)
+local gridLayout = Instance.new("UIGridLayout")
+gridLayout.CellSize = UDim2.new(0, KACHEL_BREITE, 0, KACHEL_HOEHE)
+gridLayout.CellPadding = UDim2.new(0, KACHEL_LUECKE, 0, KACHEL_LUECKE)
+gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+gridLayout.Parent = menuGrid
 
-	if moeglich < RAIL_BOTTOM_MIN and not railGemeldet then
-		railGemeldet = true
-		warn(string.format(
-			"[Kaiju Debug] Navigationsleiste: %d Symbole passen nicht ins Bild -- es fehlen %d px.",
-			#menuRail:GetChildren() - 1, math.ceil((RAIL_BOTTOM_MIN - moeglich) * skala)
-		))
-	end
+-- Der offene Zustand steht am Rand des Knopfes, wie bei jedem anderen Knopf im HUD.
+local function setMenuOpen(open)
+	menuOverlay.Visible = open
+	menuStroke.Color = open and HudChrome.Color.BorderBright or HudChrome.Color.Border
+	menuStroke.Thickness = open and 2 or HudChrome.BorderThickness
 end
 
--- Die Knoepfe entstehen erst weiter unten, die Hoehe steht also noch nicht. AutomaticSize
--- meldet sich, sobald sie steht -- und noch einmal bei jeder Aenderung der Bildgroesse,
--- also beim Drehen des Telefons.
-menuRail:GetPropertyChangedSignal("AbsoluteSize"):Connect(railLageAnwenden)
-screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(railLageAnwenden)
-screenGui:GetPropertyChangedSignal("AbsolutePosition"):Connect(railLageAnwenden)
--- Und sobald der gemessene Versatz steht: beim Start des Skripts ist Robloxs
--- Kern-Oberflaeche oft noch nicht aufgebaut, die Grenze oben waere dann null.
-HudChrome.BindTopInset(railLageAnwenden)
-task.defer(railLageAnwenden)
-
+menuButton.MouseButton1Click:Connect(function()
+	setMenuOpen(not menuOverlay.Visible)
+end)
+menuOverlay.MouseButton1Click:Connect(function()
+	setMenuOpen(false)
+end)
+menuClose.MouseButton1Click:Connect(function()
+	setMenuOpen(false)
+end)
 
 local NAV_BUTTONS = {
 	-- Beschriftung "Skins", Schluessel weiterhin "Monster": der Schluessel steht so im
@@ -268,6 +307,7 @@ local function togglePanel(key)
 	end
 
 	closeActivePanel()
+	setMenuOpen(false) -- das Menue hat seine Aufgabe erfuellt, sobald ein Punkt offen ist
 	setPanelVisible(key, true)
 	activePanelKey = key
 	markiereOffenenPunkt(key)
@@ -298,16 +338,17 @@ end
 -- Geteilte Funktion, die JEDES Panel bei seinem eigenen "X"-Schliessen-Button aufrufen
 -- kann, um zum Menü zurückzukehren -- ersetzt den früheren separaten "← Back"-Button.
 -- Panels rufen dies zusätzlich zu ihrem eigenen "panel.Visible = false" auf.
--- HINWEIS ZUM NAMEN: es gibt kein Menü mehr, zu dem zurückgekehrt werden könnte -- die
--- Funktion schliesst das Panel und gibt frei ins Spiel. Der Name bleibt trotzdem, weil ihn
--- fünf andere Dateien aufrufen (Archiv, Geschenke, Fraktion, Talente, Skin-Shop); sie
--- umzubenennen hiesse, fünf Systeme anzufassen, um einen Namen zu verbessern.
+-- Der Name stimmt wieder: seit es ein Menue gibt, fuehrt das Schliessen eines Panels
+-- dorthin zurueck -- und nicht ins Spiel. Wer ins Spiel will, schliesst das Menue mit
+-- einem zweiten Griff; wer den naechsten Punkt ansehen will, ist schon da. Solange die
+-- Punkte am Rand klebten, ging das nicht, und der Name war eine Zeit lang gelogen.
 _G.NavReturnToMenu = function()
 	local closingKey = activePanelKey
 	closeActivePanel()
 	if closingKey then
 		flashNavButton(closingKey)
 	end
+	setMenuOpen(true)
 end
 
 -- Kurzer Hinweis ohne Panel -- fuer Punkte, hinter denen noch nichts steht.
@@ -317,9 +358,12 @@ local function showNavNotice(text)
 		activeNavNotice:Destroy()
 	end
 	local notice = Instance.new("TextLabel")
-	notice.AnchorPoint = Vector2.new(0, 1)
 	notice.Size = UDim2.new(0, 260, 0, 40)
-	notice.Position = UDim2.new(0, 16 + RAIL_ICON_SIZE + 12, 1, -RAIL_BOTTOM_MARGIN)
+	-- Unten in der Mitte und ueber dem Schleier: der Zettel erscheint, waehrend das Menue
+	-- offen ist, und laege sonst dahinter.
+	notice.AnchorPoint = Vector2.new(0.5, 1)
+	notice.Position = UDim2.new(0.5, 0, 1, -MENU_UNTEN)
+	notice.ZIndex = 60
 	notice.Text = text
 	notice.Parent = screenGui
 	HudChrome.Panel(notice, { radius = HudChrome.Radius.Small })
@@ -344,51 +388,65 @@ local UNBUILT_KEYS = { Pets = true }
 
 local navBadges = {}
 
+-- Eine Kachel je Punkt: Symbol oben, Beschriftung darunter. Genau das, was in der Leiste
+-- nicht ging -- dort war Platz fuer 44 Pixel und sonst nichts.
 for index, config in ipairs(NAV_BUTTONS) do
 	local unbuilt = UNBUILT_KEYS[config.key] == true
 
 	local button = Instance.new("TextButton")
 	button.Name = config.key .. "NavButton"
-	-- UMGEKEHRTE Reihenfolge: die Leiste waechst nach oben, der erste Punkt soll aber
-	-- unten sitzen. Dort ist der Abstand zum Bildschirmrand fest -- er bleibt an
-	-- derselben Stelle, egal wie viele Punkte es gibt.
-	button.LayoutOrder = #NAV_BUTTONS - index + 1
-	button.Size = UDim2.new(0, RAIL_ICON_SIZE, 0, RAIL_ICON_SIZE)
+	-- Natuerliche Reihenfolge: das Raster laeuft von links oben nach rechts unten. Die
+	-- Leiste musste sie umdrehen, weil sie nach oben wuchs.
+	button.LayoutOrder = index
 	button.AutoButtonColor = false
 	button.Text = ""
-	button.Parent = menuRail
+	button.ZIndex = 43
+	button.Parent = menuGrid
 
-	-- Alle acht Knoepfe sehen gleich aus: dunkles Feld, Stahlrand, Symbol. Die bunten
-	-- Flaechen sind weg.
+	-- Alle Kacheln sehen gleich aus: dunkles Feld, Stahlrand, Symbol, Beschriftung.
 	--
 	-- Nach der Stilregel bedeutet Farbe im HUD eine MESSUNG. Acht verschiedene Farben, die
-	-- nur Menuepunkte auseinanderhalten, sind genau das nicht -- und sie haben die Leiste
-	-- zum lautesten Element im Bild gemacht, obwohl sie das Nebensaechlichste zeigt. Die
-	-- Symbole unterscheiden die Punkte ohnehin; Farbe bleibt dem Laempchen und dem offenen
-	-- Punkt vorbehalten.
-	local _, buttonStroke = HudChrome.Panel(button, { radius = HudChrome.Radius.Small })
+	-- nur Menuepunkte auseinanderhalten, sind genau das nicht. Farbe bleibt dem Laempchen
+	-- und dem offenen Punkt vorbehalten.
+	local _, buttonStroke = HudChrome.Panel(button, {
+		radius = HudChrome.Radius.Small,
+		fill = HudChrome.Color.PanelRaised,
+	})
 	navStrokes[config.key] = buttonStroke
 
 	local icon = Instance.new("TextLabel")
-	icon.Size = UDim2.new(1, -10, 1, -10)
-	icon.Position = UDim2.new(0, 5, 0, 5)
+	icon.Name = "Icon"
+	icon.Size = UDim2.new(1, 0, 0, 38)
+	icon.Position = UDim2.new(0, 0, 0, 10)
 	icon.BackgroundTransparency = 1
 	icon.Font = Enum.Font.GothamBold
 	icon.TextScaled = true
 	icon.Text = config.icon
 	icon.TextTransparency = unbuilt and 0.6 or 0
+	icon.ZIndex = 44
 	icon.Parent = button
+
+	local caption = Instance.new("TextLabel")
+	caption.Name = "Caption"
+	caption.Size = UDim2.new(1, -12, 0, 22)
+	caption.Position = UDim2.new(0, 6, 0, 54)
+	caption.BackgroundTransparency = 1
+	caption.Text = config.label
+	caption.ZIndex = 44
+	caption.Parent = button
+	HudChrome.Label(caption, 15)
+	caption.TextColor3 = unbuilt and HudChrome.Color.TextDim or HudChrome.Color.TextPrimary
 
 	-- Das Laempchen: klein, in der oberen rechten Ecke, standardmaessig aus.
 	local badge = Instance.new("Frame")
 	badge.Name = "Badge"
 	badge.AnchorPoint = Vector2.new(1, 0)
 	badge.Size = UDim2.new(0, 12, 0, 12)
-	badge.Position = UDim2.new(1, 1, 0, -1)
+	badge.Position = UDim2.new(1, -6, 0, 6)
 	badge.BackgroundColor3 = HudChrome.Color.Danger
 	badge.BorderSizePixel = 0
 	badge.Visible = false
-	badge.ZIndex = 3
+	badge.ZIndex = 45
 	badge.Parent = button
 	local badgeCorner = Instance.new("UICorner")
 	badgeCorner.CornerRadius = UDim.new(1, 0)
@@ -436,6 +494,18 @@ local function applyBadge(key, on)
 	if badge then
 		badge.Visible = on == true
 	end
+
+	-- Das Laempchen am Menue-Knopf leuchtet, sobald IRGENDEINES der acht leuchtet. Ohne das
+	-- waere das Verstecken ein echter Verlust: die Laempchen sind der einzige Hinweis, dass
+	-- irgendwo etwas wartet, und hinter einem geschlossenen Menue saehe man sie nie.
+	local irgendeines = false
+	for _, anderes in pairs(navBadges) do
+		if anderes.Visible then
+			irgendeines = true
+			break
+		end
+	end
+	menuBadge.Visible = irgendeines
 end
 
 -- [key] = { [itemId] = true } -- WELCHE Eintraege ungesehen sind. Das Laempchen sagt nur,
