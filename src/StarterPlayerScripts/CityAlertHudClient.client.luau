@@ -340,12 +340,15 @@ end
 
 updateAlertHud() -- initialer Zustand beim Start
 
--- ===== Vorwarnung: "gleich kommt etwas, und zwar DAS" =====
+-- ===== Vorwarnung =====
 --
--- Sie ersetzt nicht die geloeschte Druckanzeige, sie macht etwas anderes. Der Balken lief
--- mit und liess mitzaehlen; die Vorwarnung ist ein EREIGNIS mit einem Namen. Man erfaehrt,
--- dass eine Eskalation naht und welche Antwort sie bringt -- aber nicht, wann genau. Die
--- Spanne zwischen "sie erscheint" und "es passiert" bleibt unbestimmt.
+-- Sie steht in der rechten Spalte, direkt unter dem Stadtfeld -- NICHT in der Bildmitte.
+-- Die Mitte gehoert den Ereignissen (siehe HudCenterNotice); eine Warnung unterbricht
+-- nicht, sie meldet sich. Deshalb dieselbe Anatomie wie die Welt-Event-Info unten rechts:
+-- Symbol, Name, Unterzeile. Wer die eine lesen kann, kann auch die andere.
+--
+-- Sie sagt, DASS eine Eskalation naht und WELCHE Antwort sie bringt -- aber nicht, wann
+-- genau. Die Spanne zwischen "sie erscheint" und "es passiert" bleibt unbestimmt.
 --
 -- Die Namen sind dieselben wie in der grossen Ankuendigung (CityAlertAnnouncementClient),
 -- damit die Warnung und das, was dann kommt, erkennbar dasselbe meinen.
@@ -356,7 +359,12 @@ local ANTWORT_NAMEN = {
 	[5] = "MAXIMUM ALERT",
 }
 
-local WARN_HOEHE = 34
+-- Kurzer Alarmton beim Erscheinen. Vom Barrikaden-Alarm geborgt, damit die Warnung
+-- ueberhaupt klingt -- ein eigener gehoert an diese Stelle.
+local WARN_SOUND_ID = "rbxassetid://910988901"
+
+local WARN_HOEHE = 66
+local WARN_SYMBOL = 30
 local WARN_AN = 0.80 -- ab hier erscheint sie
 local WARN_AUS = 0.72 -- und verschwindet erst hier wieder: ohne diesen Abstand flackert
 -- sie an der Schwelle, weil der Druckwert im Kampf staendig hin und her geht.
@@ -377,21 +385,41 @@ local _, warnStroke = HudChrome.Panel(warnFrame, {
 })
 
 local warnIcon = HudChrome.IconImage(warnFrame, HudChrome.Icon.Alert, HudChrome.Color.Warning)
-warnIcon.Size = UDim2.new(0, 20, 0, 20)
-warnIcon.Position = UDim2.new(0, PANEL_RAND, 0, 7)
+warnIcon.Size = UDim2.new(0, WARN_SYMBOL, 0, WARN_SYMBOL)
+warnIcon.Position = UDim2.new(0, PANEL_RAND, 0.5, -WARN_SYMBOL / 2)
 warnIcon.ZIndex = 21
+
+local WARN_TEXT_X = PANEL_RAND + WARN_SYMBOL + 10
 
 local warnLabel = Instance.new("TextLabel")
 warnLabel.Name = "WarningLabel"
-warnLabel.Size = UDim2.new(0, INNEN_BREITE - 30, 0, 20)
-warnLabel.Position = UDim2.new(0, PANEL_RAND + 30, 0, 7)
+warnLabel.Size = UDim2.new(0, PANEL_BREITE - WARN_TEXT_X - PANEL_RAND, 0, 24)
+warnLabel.Position = UDim2.new(0, WARN_TEXT_X, 0, 10)
 warnLabel.BackgroundTransparency = 1
 warnLabel.TextXAlignment = Enum.TextXAlignment.Left
 warnLabel.ZIndex = 21
 warnLabel.Text = ""
 warnLabel.Parent = warnFrame
-HudChrome.Label(warnLabel, 16)
+HudChrome.Label(warnLabel, 19)
 warnLabel.TextColor3 = HudChrome.Color.Warning
+
+local warnSubLabel = Instance.new("TextLabel")
+warnSubLabel.Name = "WarningSubLabel"
+warnSubLabel.Size = UDim2.new(0, PANEL_BREITE - WARN_TEXT_X - PANEL_RAND, 0, 20)
+warnSubLabel.Position = UDim2.new(0, WARN_TEXT_X, 0, 36)
+warnSubLabel.BackgroundTransparency = 1
+warnSubLabel.TextXAlignment = Enum.TextXAlignment.Left
+warnSubLabel.ZIndex = 21
+warnSubLabel.Text = ""
+warnSubLabel.Parent = warnFrame
+HudChrome.Number(warnSubLabel, 14)
+warnSubLabel.TextColor3 = HudChrome.Color.TextSecondary
+
+local warnSound = Instance.new("Sound")
+warnSound.Name = "AlertWarningSound"
+warnSound.SoundId = WARN_SOUND_ID
+warnSound.Volume = 0.6
+warnSound.Parent = screenGui
 
 -- Die Liste rueckt nach, wenn die Warnung da ist -- sonst laege sie darunter begraben.
 local function listenY()
@@ -443,11 +471,18 @@ local function updateWarnung()
 
 	if sichtbar then
 		local naechste = math.min(level + 1, maxLevel)
-		warnLabel.Text = (ANTWORT_NAMEN[naechste] or "ALERT") .. " INBOUND"
+		warnLabel.Text = ANTWORT_NAMEN[naechste] or "ALERT"
+		warnSubLabel.Text = "ALERT LEVEL " .. naechste .. " INBOUND"
 	end
 
 	if sichtbar ~= warSichtbar then
 		warnFrame.Visible = sichtbar
+		-- Der Ton nur beim ERSCHEINEN, nicht bei jedem Durchlauf. Die Funktion laeuft bei
+		-- jeder Aenderung des Druckwerts, und der aendert sich im Kampf staendig.
+		if sichtbar and warnSound.SoundId ~= "" then
+			warnSound.TimePosition = 0
+			warnSound:Play()
+		end
 	end
 end
 

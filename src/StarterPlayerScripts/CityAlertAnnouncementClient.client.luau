@@ -2,14 +2,14 @@
 -- FIX: Megacity -> MegaCity (Schreibweise an Studio-Attribut angeglichen)
 -- Ort in Studio: StarterPlayerScripts
 --
--- Der Alarm-Strang bespielt beide Register der Bildmitte (siehe HudCenterNotice):
+-- Der Alarm-Strang teilt sich auf (siehe HudCenterNotice fuer die Regel dahinter):
 --
---   Bei 80 Prozent der Schwelle: die WARNUNG. Kurzer Alarmton, rotes Schild mit der
---   bevorstehenden Gefahr, pulsiert und geht von selbst wieder. Sie stellt das Modul dar;
---   hier steht nur, WANN sie faellt und WAS drinsteht.
+--   Diese Datei macht nur noch EINES: das Ereignis. Die grosse Sequenz beim
+--   tatsaechlichen Stufenaufstieg, mit dem Stufen-Sound wie bisher.
 --
---   Beim tatsaechlichen Stufenaufstieg: das EREIGNIS -- die grosse Sequenz unten in dieser
---   Datei, mit dem Stufen-Sound wie bisher.
+--   Die Vorwarnung bei 80 Prozent liegt NICHT hier und nicht in der Bildmitte, sondern in
+--   der rechten Spalte (CityAlertHudClient). Eine Warnung unterbricht nicht, sie meldet
+--   sich -- die Mitte bleibt dem vorbehalten, was schon eingetreten ist.
 --
 -- Fester Zeitplan (~1.5-1.8s), damit das Ereignis wirkt, ohne den Spielfluss anzuhalten:
 --
@@ -37,14 +37,9 @@ local playerGui = player:WaitForChild("PlayerGui")
 local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
 local HudCenterNotice = require(ReplicatedStorage:WaitForChild("HudCenterNotice"))
 
--- Fuer die Vorwarnung wird die Schwelle der Stadt gebraucht -- der Fortschrittswert ist
--- ein roher Punktestand und sagt ohne sie nichts.
-local cityAlertConfigModule = ReplicatedStorage:WaitForChild("CityAlertConfig", 10)
-local CityAlertConfig = cityAlertConfigModule and require(cityAlertConfigModule)
-
 local cityAlertValues = ReplicatedStorage:WaitForChild("CityAlertValues", 10)
-if not cityAlertValues or not CityAlertConfig then
-	warn("[CityAlertAnnouncementClient] CityAlertValues oder CityAlertConfig nicht gefunden (Timeout) -- Ankuendigung bleibt deaktiviert.")
+if not cityAlertValues then
+	warn("[CityAlertAnnouncementClient] CityAlertValues nicht gefunden (Timeout) -- Ankuendigung bleibt deaktiviert.")
 	return
 end
 
@@ -66,11 +61,6 @@ local LEVEL_INFO = {
 	[4] = { title = "MILITARY RESPONSE", consequence = "MILITARY FORCES DEPLOYED", soundId = "rbxassetid://93574748731319" },
 	[5] = { title = "MAXIMUM ALERT", consequence = "CITY DEFENDER AWAKENED", soundId = "" },
 }
-
--- Kurzer Alarmton fuer die WARNUNG (nicht fuer das Ereignis -- das hat den Ton seiner
--- Stufe). Geborgt vom Barrikaden-Alarm, damit die Warnung ueberhaupt klingt; sie haette
--- sonst keinen eigenen Ton. Wenn es einen eigenen gibt, hier eintragen.
-local WARN_SOUND_ID = "rbxassetid://910988901"
 
 local IMPACT_SOUND_ID = "" -- tiefer Boom/Impact beim Trigger (0.0s) -- Platzhalter, bitte befüllen
 local STAMP_SOUND_ID = "" -- CLANG/THOOM beim Einstanzen des neuen Sterns (0.55s) -- Platzhalter
@@ -123,17 +113,10 @@ banner.Parent = screenGui
 --
 -- Stattdessen ein durchlaessiges rotes Band, das an beiden Enden ins Nichts auslaeuft.
 -- Ohne Kante gibt es nichts, was als Kasten gelesen werden koennte; was bleibt, ist eine
--- Stoerung im Bild. Der Verlauf macht genau das: deckend in der Mitte, an den Raendern
--- durchsichtig.
-local bannerVerlauf = Instance.new("UIGradient")
-bannerVerlauf.Rotation = 0
-bannerVerlauf.Transparency = NumberSequence.new({
-	NumberSequenceKeypoint.new(0, 1),
-	NumberSequenceKeypoint.new(0.22, 0),
-	NumberSequenceKeypoint.new(0.78, 0),
-	NumberSequenceKeypoint.new(1, 1),
-})
-bannerVerlauf.Parent = banner
+-- Stoerung im Bild. Die Form kommt aus HudCenterNotice -- dort steht, wie die Bildmitte
+-- spricht, und sie soll an einer Stelle stehen.
+HudCenterNotice.ApplyBandLook(banner)
+banner.BackgroundTransparency = 1 -- faehrt erst bei der Ankuendigung auf
 
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Name = "TitleLabel"
@@ -308,10 +291,9 @@ local function showAnnouncement(cityName, newLevel, oldLevel)
 	end
 	isAnimating = true
 
-	-- Die Mitte gehoert jetzt dem Ereignis. Eine noch stehende Warnung weicht -- sie hat
-	-- dasselbe Thema, und zwei Meldungen dazu uebereinander waeren keine.
+	-- Die Mitte gehoert jetzt dieser Meldung. Die Sperre haelt spaetere Meldungen (Mutation,
+	-- Stadt gebrochen) davon ab, mitten hinein zu schreiben.
 	HudCenterNotice.SetBusy(true)
-	HudCenterNotice.ClearWarning()
 
 	local info = LEVEL_INFO[newLevel] or { title = "ALERT LEVEL " .. newLevel, consequence = "", soundId = "" }
 	local isMaxLevel = newLevel >= 5
@@ -488,18 +470,13 @@ end
 --
 -- Zwei Beobachtungen, zwei Register der Bildmitte.
 --
--- Der DRUCK loest die WARNUNG aus, sobald er 80 Prozent der Schwelle erreicht: kurzer
--- Alarmton, rotes Schild, und darauf steht, was gleich kommt. Einmal je Stufe.
---
 -- Der STUFENWECHSEL loest das EREIGNIS aus -- die grosse Sequenz. Sie meldet, was
--- eingetreten ist, und spielt den Ton dieser Stufe.
+-- eingetreten ist, und spielt den Ton dieser Stufe. Der Druckwert wird hier nicht mehr
+-- beobachtet; die Vorwarnung sitzt in der rechten Spalte und hoert selbst darauf.
 --
 -- (Nebenbei: die alte Fassung war ueberhaupt nie verdrahtet. checkCityLevel stand als
 -- Funktion da und wurde von nirgends aufgerufen -- die grosse Sequenz hat nie gespielt.
 -- Deshalb hier auch die Abonnements, die vorher fehlten.)
-local WARN_ANTEIL = 0.8 -- ab diesem Anteil der Schwelle wird gewarnt
-local warnedForLevel = {} -- [cityName] = Stufe, fuer die schon gewarnt wurde
-
 local function checkCityLevel(cityName)
 	local levelValue = cityAlertValues:FindFirstChild(cityName .. "Level")
 	if not levelValue then
@@ -516,7 +493,6 @@ local function checkCityLevel(cityName)
 		return
 	end
 	lastKnownLevel[cityName] = newLevel
-	warnedForLevel[cityName] = nil -- fuer die neue Stufe darf wieder gewarnt werden
 
 	if player:GetAttribute("CurrentCityName") ~= cityName then
 		return
@@ -537,52 +513,6 @@ local function checkCityLevel(cityName)
 	end
 end
 
-local function checkCityPressure(cityName)
-	if player:GetAttribute("CurrentCityName") ~= cityName then
-		return
-	end
-
-	local levelValue = cityAlertValues:FindFirstChild(cityName .. "Level")
-	local progressValue = cityAlertValues:FindFirstChild(cityName .. "Progress")
-	local config = CityAlertConfig.GetCityConfig(cityName)
-	if not levelValue or not progressValue or not config then
-		return
-	end
-
-	local schwelle = config.AlertThresholdLevel2
-	if not schwelle or schwelle <= 0 then
-		return
-	end
-
-	local level = math.max(levelValue.Value, 0)
-	if warnedForLevel[cityName] == level then
-		return
-	end
-
-	local maxLevelValue = cityAlertValues:FindFirstChild(cityName .. "MaxLevel")
-	local maxLevel = (maxLevelValue and maxLevelValue.Value) or config.MaxAlertLevel or 5
-	if level >= maxLevel then
-		return -- auf der Hoechststufe kommt nichts mehr, also gibt es nichts zu warnen
-	end
-
-	if progressValue.Value / schwelle < WARN_ANTEIL then
-		return
-	end
-
-	local kommend = LEVEL_INFO[level + 1]
-	if not kommend then
-		return
-	end
-
-	warnedForLevel[cityName] = level
-	HudCenterNotice.Warn({
-		title = kommend.title,
-		detail = kommend.consequence ~= "" and kommend.consequence or "ALERT LEVEL " .. (level + 1) .. " INBOUND",
-		soundId = WARN_SOUND_ID,
-		volume = 0.6,
-	})
-end
-
 local function beobachte(valueObject)
 	local name = valueObject.Name
 	local stadt = name:match("^(.-)Level$")
@@ -593,12 +523,6 @@ local function beobachte(valueObject)
 		lastKnownLevel[stadt] = valueObject.Value
 		return
 	end
-	local druckStadt = name:match("^(.-)Progress$")
-	if druckStadt then
-		valueObject:GetPropertyChangedSignal("Value"):Connect(function()
-			checkCityPressure(druckStadt)
-		end)
-	end
 end
 
 for _, valueObject in ipairs(cityAlertValues:GetChildren()) do
@@ -606,6 +530,4 @@ for _, valueObject in ipairs(cityAlertValues:GetChildren()) do
 end
 cityAlertValues.ChildAdded:Connect(beobachte)
 
-print("[Kaiju Debug] CityAlertAnnouncement: Warnung ab "
-	.. math.floor(WARN_ANTEIL * 100)
-	.. " Prozent, grosse Meldung beim Stufenaufstieg.")
+print("[Kaiju Debug] CityAlertAnnouncement: grosse Meldung beim Stufenaufstieg scharf.")
