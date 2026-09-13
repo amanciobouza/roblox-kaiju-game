@@ -1549,10 +1549,17 @@ local KRAFT_ZEILE = 108
 local SCAN_GROESSE = 100
 
 -- Kameraabstand im Scanfenster: ein Faktor auf den Abstand, nicht auf die Groesse --
--- KLEINER heisst also NAEHER. Bei 0.55 stand die Kamera im Glied; man sah eine Flaeche,
--- kein Teil. Bei 1.05 passt das Glied ins Fenster und hat noch etwas Luft darum, so wie
--- ein Praeparat unter einem Geraet.
-local SCAN_ZOOM = 1.05
+-- KLEINER heisst also NAEHER.
+--
+-- 1.5 rahmt nicht nur das Glied, sondern laesst den Koerper drumherum mit ins Bild. Genau
+-- das soll man sehen: WO am Koerper der gescannte Teil sitzt. Ein Arm ohne Schulter ist
+-- ein Gegenstand, ein Arm am Rumpf ist ein Arm.
+local SCAN_ZOOM = 1.5
+
+-- Alles, was nicht zum gescannten Bereich gehoert, steht in gedaempftem Grau da. Der
+-- farbige Teil ist damit ohne Beschriftung erkennbar -- die Farbe sagt "das hier ist
+-- gemeint", und der graue Rest gibt ihm seinen Ort.
+local SCAN_GRAU = Color3.fromRGB(72, 78, 88)
 
 local statsRowFrame = Instance.new("Frame")
 statsRowFrame.Name = "StatsRowFrame"
@@ -1870,12 +1877,28 @@ local function baueScan(key, vorlage)
 		return false -- die Knochen fehlen: dann ist es ein fremdes Rig
 	end
 
+	-- Gehoert dieses Teil zum gescannten Bereich?
+	--
+	-- Geprueft wird die LAGE, nicht der Name: wie das getragene Modell seine Teile nennt,
+	-- weiss dieses Skript nicht. Der Knochenbereich sagt, wo der Arm ist -- was dort liegt,
+	-- ist der Arm. Der Zuschlag faengt auf, dass das sichtbare Mesh ueber seinen Knochen
+	-- hinausragt.
+	local rand = groesse * 0.35
+	local von = mitte - groesse * 0.5 - rand
+	local bis = mitte + groesse * 0.5 + rand
+	local function imBereich(punkt)
+		return punkt.X >= von.X and punkt.X <= bis.X
+			and punkt.Y >= von.Y and punkt.Y <= bis.Y
+			and punkt.Z >= von.Z and punkt.Z <= bis.Z
+	end
+
 	-- Alles Sichtbare klonen, ohne Namen zu raten.
 	local modell = Instance.new("Model")
 	modell.Name = "ScanModel"
 	local gefunden = 0
 	for _, nachfahre in ipairs(vorlage:GetDescendants()) do
 		if nachfahre:IsA("BasePart") and nachfahre.Transparency < 1 then
+			local gehoertDazu = imBereich(nachfahre.Position)
 			local klon = nachfahre:Clone()
 			for _, kind in ipairs(klon:GetChildren()) do
 				if not kind:IsA("SpecialMesh") then
@@ -1889,13 +1912,18 @@ local function baueScan(key, vorlage)
 			klon.CanCollide = false
 			klon.CastShadow = false
 			klon.Material = Enum.Material.Neon
-			klon.Color = eintrag.color
 			-- Deutlich durchsichtig: ein Roentgenbild zeigt das Innere MIT, nicht die
 			-- Oberflaeche davor. Ueberlappende Teile summieren sich zu den dichteren
 			-- Stellen auf, genau wie bei einer echten Durchleuchtung.
-			klon.Transparency = 0.55
+			--
+			-- Der gescannte Bereich leuchtet in der Farbe seines Wertes, der Rest bleibt
+			-- grau und tritt noch weiter zurueck.
+			klon.Color = gehoertDazu and eintrag.color or SCAN_GRAU
+			klon.Transparency = gehoertDazu and 0.5 or 0.75
 			klon.Parent = modell
-			gefunden += 1
+			if gehoertDazu then
+				gefunden += 1
+			end
 		end
 	end
 
@@ -1906,13 +1934,18 @@ local function baueScan(key, vorlage)
 
 	modell.Parent = eintrag.scanViewport
 
-	-- Kamera auf den Knochenbereich richten, von VORN.
+	-- Kamera auf den Knochenbereich richten, von der SEITE.
 	--
-	-- Die Blickrichtung kommt aus der Wurzel der Vorlage, wenn es eine gibt. Sonst gilt die
-	-- Roblox-Konvention: die Vorderseite eines Modells zeigt entlang -Z -- dieselbe
+	-- Von vorn ueberdeckt der Rumpf die Arme und die Ruecken-Platten sind gar nicht zu
+	-- sehen. Von der Seite steht jedes der drei Teile frei: der Arm neben dem Koerper, das
+	-- Bein darunter, und der Ruecken im Profil. Das ist auch die Ansicht, in der ein
+	-- Roentgenbild ueblicherweise gemacht wird.
+	--
+	-- Die Richtung kommt aus der Wurzel der Vorlage, wenn es eine gibt. Sonst gilt die
+	-- Roblox-Konvention: die Vorderseite zeigt entlang -Z, rechts ist damit +X -- dieselbe
 	-- Annahme, auf der auch ModelPreviewUtils.Fit beruht.
 	local wurzel = vorlage:FindFirstChild("HumanoidRootPart", true)
-	local nachVorn = wurzel and wurzel.CFrame.LookVector or Vector3.new(0, 0, -1)
+	local zurSeite = wurzel and wurzel.CFrame.RightVector or Vector3.new(1, 0, 0)
 
 	local kamera = eintrag.scanViewport.CurrentCamera
 	if not kamera then
@@ -1924,7 +1957,7 @@ local function baueScan(key, vorlage)
 
 	local spanne = math.max(groesse.X, groesse.Y, groesse.Z)
 	local abstand = (spanne * 0.5) / math.tan(math.rad(SCAN_FOV) * 0.5) * SCAN_ZOOM
-	kamera.CFrame = CFrame.new(mitte + nachVorn * abstand, mitte)
+	kamera.CFrame = CFrame.new(mitte + zurSeite * abstand, mitte)
 
 	return true
 end
