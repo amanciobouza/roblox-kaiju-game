@@ -1525,16 +1525,27 @@ end)
 --
 -- Die Farbe ist die des jeweiligen Wertes, nicht Cyan: Cyan gehoert im ganzen HUD allein
 -- der Special Energy. So bleiben die drei ausserdem auf einen Blick auseinanderzuhalten.
-local SPALTE_BREITE = 236 -- dieselbe wie das Ortsfeld darueber (CityAlertHudClient)
+-- Das Feld ist breiter als die uebrige rechte Spalte und deutlich hoeher. Das ist
+-- Absicht: im Sanctuary IST das Training die Hauptsache, und es soll dort dasselbe Gewicht
+-- haben wie sonst die Angriffsreihe unten. Ein Streifen am Rand machte eine Nebensache
+-- daraus.
+--
+-- Die Scanfenster sind entsprechend gross -- bei 44 Pixeln war das Glied ein Farbfleck.
+-- Erst ab dieser Groesse ist zu erkennen, WAS da gescannt wird.
+local SPALTE_BREITE = 300
 local SPALTE_X = -16
 local SPALTE_RAND = 10
 local KRAFT_Y = 224 -- unter dem Ortsfeld (118 + 98 + 8)
-local KRAFT_ZEILE = 54
-local SCAN_GROESSE = 44
+local KRAFT_ZEILE = 108
+local SCAN_GROESSE = 100
+
+-- Kameraabstand im Scanfenster. KLEINER heisst NAEHER -- der Wert ist in
+-- ModelPreviewUtils ein Faktor auf den Abstand, nicht auf die Groesse.
+local SCAN_ZOOM = 0.55
 
 local statsRowFrame = Instance.new("Frame")
 statsRowFrame.Name = "StatsRowFrame"
-statsRowFrame.Size = UDim2.new(0, SPALTE_BREITE, 0, 32 + KRAFT_ZEILE * 3 - 6 + 10)
+statsRowFrame.Size = UDim2.new(0, SPALTE_BREITE, 0, 34 + KRAFT_ZEILE * 3 - 8 + 12)
 statsRowFrame.AnchorPoint = Vector2.new(1, 0)
 statsRowFrame.Position = UDim2.new(1, SPALTE_X, 0, KRAFT_Y)
 statsRowFrame.Parent = screenGui
@@ -1543,13 +1554,13 @@ HudChrome.Panel(statsRowFrame, { radius = HudChrome.Radius.Small })
 -- Der Titel war vorher da, aber unsichtbar: er wurde gebaut und nie eingehaengt.
 local statsPanelTitle = Instance.new("TextLabel")
 statsPanelTitle.Name = "PanelTitle"
-statsPanelTitle.Size = UDim2.new(0, 120, 0, 18)
+statsPanelTitle.Size = UDim2.new(0, 160, 0, 20)
 statsPanelTitle.Position = UDim2.new(0, SPALTE_RAND, 0, 8)
 statsPanelTitle.BackgroundTransparency = 1
 statsPanelTitle.TextXAlignment = Enum.TextXAlignment.Left
 statsPanelTitle.Text = "TRAINING"
 statsPanelTitle.Parent = statsRowFrame
-HudChrome.Label(statsPanelTitle, 14)
+HudChrome.Label(statsPanelTitle, 16)
 statsPanelTitle.TextColor3 = HudChrome.Color.TextSecondary
 
 -- Der Abbruch-Knopf sitzt in der Kopfzeile dieses Feldes, nicht mehr in einem eigenen
@@ -1557,7 +1568,7 @@ statsPanelTitle.TextColor3 = HudChrome.Color.TextSecondary
 -- denselben Wert wie die Zeile darueber, nur ein zweites Mal.
 local leaveTrainingButton = Instance.new("TextButton")
 leaveTrainingButton.Name = "LeaveTrainingButton"
-leaveTrainingButton.Size = UDim2.new(0, 26, 0, 22)
+leaveTrainingButton.Size = UDim2.new(0, 30, 0, 26)
 leaveTrainingButton.AnchorPoint = Vector2.new(1, 0)
 leaveTrainingButton.Position = UDim2.new(1, -SPALTE_RAND, 0, 6)
 leaveTrainingButton.AutoButtonColor = false
@@ -1605,7 +1616,7 @@ local STAT_BAR_CONFIG = {
 }
 
 for index, config in ipairs(STAT_BAR_CONFIG) do
-	local oben = 32 + (index - 1) * KRAFT_ZEILE
+	local oben = 34 + (index - 1) * KRAFT_ZEILE
 	local textX = SPALTE_RAND + SCAN_GROESSE + 8
 	local textBreite = SPALTE_BREITE - textX - SPALTE_RAND
 
@@ -1676,11 +1687,11 @@ for index, config in ipairs(STAT_BAR_CONFIG) do
 			winkel.BorderSizePixel = 0
 			winkel.ZIndex = 5
 			if richtung == "waagerecht" then
-				winkel.Size = UDim2.new(0, 9, 0, 2)
+				winkel.Size = UDim2.new(0, 16, 0, 2)
 			else
-				winkel.Size = UDim2.new(0, 2, 0, 9)
+				winkel.Size = UDim2.new(0, 2, 0, 16)
 			end
-			winkel.Position = UDim2.new(ex, ex == 0 and 2 or -2, ey, ey == 0 and 2 or -2)
+			winkel.Position = UDim2.new(ex, ex == 0 and 4 or -4, ey, ey == 0 and 4 or -4)
 			winkel.Parent = scanFrame
 		end
 	end
@@ -1688,29 +1699,29 @@ for index, config in ipairs(STAT_BAR_CONFIG) do
 	-- --- Die Ablesung daneben ---
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.Name = config.key .. "Name"
-	nameLabel.Size = UDim2.new(0, 90, 0, 18)
-	nameLabel.Position = UDim2.new(0, textX, 0, oben)
+	nameLabel.Size = UDim2.new(0, 110, 0, 24)
+	nameLabel.Position = UDim2.new(0, textX, 0, oben + 14)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 	nameLabel.Text = config.label
 	nameLabel.Parent = statsRowFrame
-	HudChrome.Label(nameLabel, 15)
+	HudChrome.Label(nameLabel, 20)
 	nameLabel.TextColor3 = config.color
 
 	local label = Instance.new("TextLabel")
 	label.Name = config.key .. "Value"
-	label.Size = UDim2.new(0, textBreite - 90, 0, 18)
-	label.Position = UDim2.new(0, textX + 90, 0, oben)
+	label.Size = UDim2.new(0, textBreite, 0, 24)
+	label.Position = UDim2.new(0, textX, 0, oben + 40)
 	label.BackgroundTransparency = 1
-	label.TextXAlignment = Enum.TextXAlignment.Right
+	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.Text = "0 / 0"
 	label.Parent = statsRowFrame
-	HudChrome.Number(label, 14)
+	HudChrome.NumberBold(label, 19)
 
 	local statBackground = Instance.new("Frame")
 	statBackground.Name = config.key .. "Track"
-	statBackground.Size = UDim2.new(0, textBreite, 0, 8)
-	statBackground.Position = UDim2.new(0, textX, 0, oben + 21)
+	statBackground.Size = UDim2.new(0, textBreite, 0, 10)
+	statBackground.Position = UDim2.new(0, textX, 0, oben + 68)
 	statBackground.BackgroundColor3 = HudChrome.Color.PanelSunken
 	statBackground.BorderSizePixel = 0
 	statBackground.Parent = statsRowFrame
@@ -1733,13 +1744,13 @@ for index, config in ipairs(STAT_BAR_CONFIG) do
 
 	local effectLabel = Instance.new("TextLabel")
 	effectLabel.Name = config.key .. "Effect"
-	effectLabel.Size = UDim2.new(0, textBreite, 0, 14)
-	effectLabel.Position = UDim2.new(0, textX, 0, oben + 31)
+	effectLabel.Size = UDim2.new(0, textBreite, 0, 16)
+	effectLabel.Position = UDim2.new(0, textX, 0, oben + 82)
 	effectLabel.BackgroundTransparency = 1
 	effectLabel.TextXAlignment = Enum.TextXAlignment.Left
 	effectLabel.Text = config.effect
 	effectLabel.Parent = statsRowFrame
-	HudChrome.Number(effectLabel, 11)
+	HudChrome.Number(effectLabel, 13)
 	effectLabel.TextColor3 = HudChrome.Color.TextDim
 
 	statBars[config.key] = {
@@ -1810,7 +1821,7 @@ local function baueScan(key)
 	end
 
 	modell.Parent = eintrag.scanViewport
-	ModelPreviewUtils.Fit(eintrag.scanViewport, modell, eintrag.scanFrame, 0.8)
+	ModelPreviewUtils.Fit(eintrag.scanViewport, modell, eintrag.scanFrame, SCAN_ZOOM)
 end
 
 local function baueAlleScans()
@@ -2144,7 +2155,7 @@ local STAT_DISPLAY_NAMES = {
 
 local TRAIN_BREITE = SPALTE_BREITE
 local TRAIN_RAND = SPALTE_RAND
-local BOOST_Y = KRAFT_Y + 32 + KRAFT_ZEILE * 3 - 6 + 10 + 8
+local BOOST_Y = KRAFT_Y + 34 + KRAFT_ZEILE * 3 - 8 + 12 + 8
 
 -- ===== Boost-Anzeige =====
 -- Eigenes Feld, weil der Boost-Fortschritt bestehen bleibt, auch wenn man gerade an keiner
