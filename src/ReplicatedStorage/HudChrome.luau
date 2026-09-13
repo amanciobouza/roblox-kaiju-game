@@ -174,6 +174,23 @@ HudChrome.EnergyIcon = {
 	Spirit = "",
 }
 
+-- ===== Symbole der Zeitgeschenke =====
+--
+-- Sechs Sorten, nicht zwoelf Geschenke: die zwoelf Stationen verteilen sich auf diese
+-- sechs, und mehrere davon kommen mehrfach vor. Wer zwoelf Bilder anlegte, malte dasselbe
+-- Ding sechsmal doppelt.
+--
+-- Noch nicht hochgeladen. Leer heisst: der Bildschirm nimmt das Emoji, das der Server
+-- ohnehin mitschickt. Sobald eine ID hier steht, wird sie ueberall benutzt.
+HudChrome.GiftIcon = {
+	Coins = "",
+	XP = "",
+	Evolution = "",
+	CoinsBoost = "",
+	DamageBoost = "",
+	MegaBoost = "",
+}
+
 function HudChrome.IconImage(parent, assetId, tint)
 	local image = Instance.new("ImageLabel")
 	image.Name = "Icon"

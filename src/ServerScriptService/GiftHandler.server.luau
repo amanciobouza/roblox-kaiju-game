@@ -109,6 +109,10 @@ local giftIconsFolder = Instance.new("Folder")
 giftIconsFolder.Name = "GiftIcons"
 giftIconsFolder.Parent = ReplicatedStorage
 
+local giftTypesFolder = Instance.new("Folder")
+giftTypesFolder.Name = "GiftTypes"
+giftTypesFolder.Parent = ReplicatedStorage
+
 for n, gift in ipairs(GIFTS) do
 	local desc = Instance.new("StringValue")
 	desc.Name = "Gift" .. n
@@ -119,6 +123,17 @@ for n, gift in ipairs(GIFTS) do
 	icon.Name = "Gift" .. n
 	icon.Value = iconForGift(gift)
 	icon.Parent = giftIconsFolder
+
+	-- Die SORTE, nicht nur ihr Emoji.
+	--
+	-- Bisher bekam der Client ausschliesslich das Zeichen, und damit konnte er ueber das
+	-- Geschenk nichts wissen -- ein Emoji ist Text, kein Typ. Sobald die sechs Bilder da
+	-- sind (HudChrome.GiftIcon), braucht er aber genau diese Unterscheidung, um das
+	-- richtige zu waehlen. Das Emoji bleibt daneben stehen und traegt so lange weiter.
+	local kind = Instance.new("StringValue")
+	kind.Name = "Gift" .. n
+	kind.Value = gift.type
+	kind.Parent = giftTypesFolder
 end
 
 -- Aktiviert die Belohnung von Geschenk n für den Spieler.
