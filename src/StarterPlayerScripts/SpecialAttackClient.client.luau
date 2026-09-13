@@ -9,6 +9,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
+local StageModels = require(ReplicatedStorage:WaitForChild("StageModels"))
 local ComicStyleUtils = require(ReplicatedStorage:WaitForChild("ComicStyleUtils"))
 local applyComicStyle = ComicStyleUtils.Apply
 local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
@@ -32,6 +33,19 @@ local function isSpecialAttacksBlocked()
 		return true
 	end
 	return false
+end
+
+-- Ist dieser Knopf gerade benutzbar? Die eine Wahrheit fuer Anzeige UND Eingabe -- sonst
+-- sieht ein Knopf gesperrt aus und feuert trotzdem, oder umgekehrt.
+--
+-- Steht bewusst HIER OBEN und nicht bei der Sperrlogik weiter unten: die Klick- und
+-- Tastenhandler kommen rund dreihundert Zeilen frueher, und ein Name, der erst danach
+-- deklariert wird, loest in Lua auf eine globale nil auf -- lautlos.
+local function istFrei(stat)
+	if player:GetAttribute("CurrentZone") ~= "Sanctuary" then
+		return true
+	end
+	return player:GetAttribute("TrainingStat") == stat
 end
 
 local AttackEvent = RemoteEventUtils.GetOrCreate("AttackEvent")
@@ -234,6 +248,24 @@ local function createAttackButton(name, _legacyIcon, labelText, _legacyColor, po
 	cooldownLabel.Parent = button
 	HudChrome.Number(cooldownLabel, HudChrome.TextSize.NumberLarge)
 
+	-- Schleier fuer den GESPERRTEN Zustand. Er liegt ueber allem ausser der
+	-- Abklingzeit-Zahl: ein gesperrter Knopf soll erkennbar da, aber erkennbar nicht
+	-- benutzbar sein. Ihn auszublenden waere die einfachere Loesung und die schlechtere --
+	-- ein Knopf, der verschwindet und wiederkommt, laesst einen jedes Mal neu suchen.
+	local lockScrim = Instance.new("Frame")
+	lockScrim.Name = "LockScrim"
+	lockScrim.Size = UDim2.new(1, 0, 1, 0)
+	lockScrim.BackgroundColor3 = HudChrome.Color.PanelSunken
+	lockScrim.BackgroundTransparency = 0.35
+	lockScrim.BorderSizePixel = 0
+	lockScrim.Visible = false
+	lockScrim.ZIndex = 14
+	lockScrim.Parent = button
+
+	local lockCorner = Instance.new("UICorner")
+	lockCorner.CornerRadius = UDim.new(0, HudChrome.Radius.Panel)
+	lockCorner.Parent = lockScrim
+
 	return button, cooldownOverlay, cooldownLabel, accentFill
 end
 
@@ -364,10 +396,39 @@ local function triggerJump()
 	end
 end
 
+-- ===== Die Spezialangriff-Animationen der Figur =====
+-- Trägt der Spieler ein Kaiju-Modell, soll es seine EIGENE Bewegung für Fokus und Fläche
+-- zeigen, statt reglos dazustehen, während der Effekt aus dem Nichts kommt.
+--
+-- Angestossen wird sie ZUSÄTZLICH, nicht anstelle: Energiekosten, Cooldown, Schaden,
+-- Effekte, Talentboni und die Freischaltung bleiben komplett beim SpecialAttackHandler des
+-- Spiels. Das Rig steuert nur das Bild bei.
+--
+-- Damit das aufgeht, macht der Kampf-Adapter für Fokus und Fläche KEINEN Schaden -- sonst
+-- zählte jeder Spezialangriff doppelt (siehe KaijuStageOneCombatAdapter). Beim Nahkampf
+-- ist es umgekehrt: dort gehört dem Rig auch die Trefferermittlung.
+local function playKaijuSpecial(remoteName)
+	local model = StageModels.FindEquipped(player.Character)
+	local remote = model and model:FindFirstChild(remoteName)
+	if remote and remote:IsA("RemoteEvent") then
+		remote:FireServer()
+	end
+end
+
+-- Reicht die Energie? Der Server prüft das ohnehin und lehnt sonst ab -- aber die Animation
+-- läuft lokal los und wüsste nichts davon. Ohne diese Prüfung holte die Figur sichtbar aus,
+-- und es passierte nichts.
+local function hasEnergyFor(cost)
+	return (player:GetAttribute("SpecialEnergy") or 0) >= cost
+end
+
 local function triggerFocus()
 	local readyAt = player:GetAttribute("FocusAttackReadyAt") or 0
 	if Workspace:GetServerTimeNow() >= readyAt then
 		FocusAttackEvent:FireServer()
+		if hasEnergyFor(focusEnergyCostValue.Value) then
+			playKaijuSpecial("RequestFocus")
+		end
 	end
 end
 
@@ -375,6 +436,9 @@ local function triggerArea()
 	local readyAt = player:GetAttribute("AreaAttackReadyAt") or 0
 	if Workspace:GetServerTimeNow() >= readyAt then
 		AreaAttackEvent:FireServer()
+		if hasEnergyFor(areaEnergyCostValue.Value) then
+			playKaijuSpecial("RequestArea")
+		end
 	end
 end
 
@@ -398,21 +462,26 @@ end)
 -- Fokus/Fläche: während des BEIN-Trainings funktionieren sie tatsächlich (kürzerer
 -- Cooldown, Fokus zielt aufs "LaserTarget"), aber OHNE echten Schaden -- siehe
 -- SpecialAttackHandler.lua. Bei Arm/Körper-Training weiterhin komplett gesperrt.
-attackButton.MouseButton1Click:Connect(triggerAttack)
+attackButton.MouseButton1Click:Connect(function()
+	if not istFrei("Arm") then
+		return
+	end
+	triggerAttack()
+end)
 jumpButton.MouseButton1Click:Connect(function()
-	if isSpecialAttacksBlocked() then
+	if isSpecialAttacksBlocked() or not istFrei("Leg") then
 		return
 	end
 	triggerJump()
 end)
 focusButton.MouseButton1Click:Connect(function()
-	if isSpecialAttacksBlocked() then
+	if isSpecialAttacksBlocked() or not istFrei("Leg") then
 		return
 	end
 	triggerFocus()
 end)
 areaButton.MouseButton1Click:Connect(function()
-	if isSpecialAttacksBlocked() then
+	if isSpecialAttacksBlocked() or not istFrei("Leg") then
 		return
 	end
 	triggerArea()
@@ -424,8 +493,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then
 		return
 	end
-	if isSpecialAttacksBlocked() then
-		return -- gerade an Arm-/Körper-Station am Trainieren -- Tasten gehen ans Training, nicht an Spezialangriffe
+	if isSpecialAttacksBlocked() or not istFrei("Leg") then
+		return -- an einer Arm-/Koerper-Station oder im Sanctuary ohne Bein-Training:
+		-- die Tasten gehoeren dort dem Training, nicht den Spezialangriffen
 	end
 
 	if input.KeyCode == Enum.KeyCode.Q or input.KeyCode == Enum.KeyCode.ButtonX then
@@ -716,24 +786,38 @@ AreaAttackEffectEvent.OnClientEvent:Connect(function(attackerPlayer, position, c
 	end)
 end)
 
--- ===== HUD in der Sanctuary-Zone ausblenden (dort ist ohnehin kein Kampf möglich) --
--- AUSNAHME: Während des Arm-Trainings soll der Schlag-Button sichtbar bleiben (Cooldown-
--- Anzeige), während des Bein-Trainings sollen Sprung/Fokus/Fläche trotzdem sichtbar sein
--- -- so sieht der Spieler direkt, was er gerade trainiert/einsetzt.
-local function updateHudVisibility()
-	local zone = player:GetAttribute("CurrentZone")
-	local trainingStat = player:GetAttribute("TrainingStat")
-	local visible = zone ~= "Sanctuary"
-	local armTrainingVisible = visible or trainingStat == "Arm"
-	local legTrainingVisible = visible or trainingStat == "Leg"
+-- ===== Gesperrt statt ausgeblendet =====
+--
+-- Frueher verschwanden die Knoepfe im Sanctuary. Das HUD wechselte damit beim Betreten
+-- sein Gesicht -- und wer aus dem Training zurueckkam, musste sich neu zurechtfinden.
+--
+-- Jetzt bleiben alle vier stehen, und im Sanctuary sind sie GESPERRT: ein Schleier
+-- darueber, kein Akzentstreifen, kein Klick. Freigeschaltet wird nur, was die Station
+-- gerade braucht -- Arm-Training den Schlag, Bein-Training Sprung, Fokus und Flaeche.
+-- So zeigt das HUD im Sanctuary genau das, was dort moeglich ist, ohne seine Form zu
+-- aendern.
+local KNOEPFE = {
+	{ button = attackButton, accent = attackAccent, stat = "Arm" },
+	{ button = jumpButton, accent = jumpAccent, stat = "Leg" },
+	{ button = focusButton, accent = focusAccent, stat = "Leg" },
+	{ button = areaButton, accent = areaAccent, stat = "Leg" },
+}
 
-	attackButton.Visible = armTrainingVisible
-	jumpButton.Visible = legTrainingVisible
-	focusButton.Visible = legTrainingVisible
-	areaButton.Visible = legTrainingVisible
+local function updateHudLock()
+	for _, eintrag in ipairs(KNOEPFE) do
+		local frei = istFrei(eintrag.stat)
+		local scrim = eintrag.button:FindFirstChild("LockScrim")
+		if scrim then
+			scrim.Visible = not frei
+		end
+		if eintrag.accent then
+			eintrag.accent.Parent.Visible = frei
+		end
+		eintrag.button.AutoButtonColor = false
+	end
 end
 
-updateHudVisibility()
-player:GetAttributeChangedSignal("CurrentZone"):Connect(updateHudVisibility)
-player:GetAttributeChangedSignal("TrainingStat"):Connect(updateHudVisibility)
-player:GetAttributeChangedSignal("BodyTrainingActive"):Connect(updateHudVisibility)
+updateHudLock()
+player:GetAttributeChangedSignal("CurrentZone"):Connect(updateHudLock)
+player:GetAttributeChangedSignal("TrainingStat"):Connect(updateHudLock)
+player:GetAttributeChangedSignal("BodyTrainingActive"):Connect(updateHudLock)

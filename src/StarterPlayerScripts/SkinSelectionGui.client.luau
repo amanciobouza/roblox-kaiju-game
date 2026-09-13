@@ -649,15 +649,14 @@ local function updateHealthBar()
 	end
 end
 
--- Lebensanzeige in der Sanctuary-Zone ausblenden -- dort ist ohnehin kein Kampf/Schaden
--- möglich (analog zu den Angriffs-Buttons in SpecialAttackClient.lua). Blendet jetzt den
--- GESAMTEN Cluster aus (Health+Level+XP gehören zusammen), nicht mehr nur Health separat.
-local function updateHealthFrameVisibility()
-	local zone = player:GetAttribute("CurrentZone")
-	statusCluster.Visible = zone ~= "Sanctuary"
-end
-updateHealthFrameVisibility()
-player:GetAttributeChangedSignal("CurrentZone"):Connect(updateHealthFrameVisibility)
+-- Die Statusfelder bleiben ueberall stehen, auch im Sanctuary.
+--
+-- Frueher verschwanden sie dort, weil "kein Kampf, keine Lebensanzeige". Das HUD wechselte
+-- damit beim Betreten sein Gesicht, und wer zurueckkam, musste sich neu zurechtfinden. Ein
+-- HUD, das seine Form behaelt und stattdessen zeigt, was gerade NICHT geht, ist ruhiger --
+-- dieselbe Ueberlegung wie bei den Angriffsknoepfen, die dort jetzt gesperrt statt
+-- unsichtbar sind.
+statusCluster.Visible = true
 
 local function connectHealthBar(character)
 	local humanoid = character:WaitForChild("Humanoid", 5)
@@ -1516,62 +1515,49 @@ end)
 
 -- ===== Die drei Kraftwerte: Bein, Arm, Koerper =====
 --
--- Sie stehen jetzt OBEN MITTE, nicht mehr oben links. Zwei Gruende:
+-- Sie stehen in der RECHTEN SPALTE, unter dem Ortsfeld. Oben Mitte ging nicht mehr: dort
+-- stehen jetzt auch im Sanctuary die Level- und HP-Felder, seit das HUD dort seine Form
+-- behaelt.
 --
--- Erstens war die linke Spalte inzwischen belegt -- dort liegen die Belohnungs-Meldungen
--- (y 16 bis 80) und darunter das Forschungsfeld (ab y 96). Das Panel sass mitten darin.
+-- Die rechte Spalte ist der richtige Platz -- sie zeigt, WAS GERADE GILT, und im Sanctuary
+-- ist das die Ausbildung. Die Spalte ist dort ohnehin frei: keine Alarmstufe, keine
+-- Vorwarnung, keine Aufgabenliste.
 --
--- Zweitens ist oben Mitte der richtige Platz: dort steht der EIGENE ZUSTAND, und genau das
--- sind diese Werte. Es kollidiert auch nichts, denn die Level-/HP-Felder, die dort sonst
--- stehen, sind im Sanctuary ausgeblendet -- und nur dort ist dieses Panel sichtbar. Die
--- beiden schliessen sich gegenseitig aus.
+-- Deshalb auch senkrecht statt nebeneinander: die Spalte ist 236 Pixel breit, drei
+-- Werte nebeneinander waeren je 76 Pixel -- zu schmal fuer Name, Zahl und Wirkung.
 --
 -- Die Obergrenze kommt aus den Spieler-Attributen StatCap/ArmStatCap/LegStatCap, NICHT aus
 -- einer Formel im Client -- der Server rechnet sie ueber eine Kurve.
-local KRAFT_BREITE = 380
-local KRAFT_HOEHE = 92
-local KRAFT_RAND = 8
-local KRAFT_SPALTE = 116
+local SPALTE_BREITE = 236 -- dieselbe wie das Ortsfeld daruber (CityAlertHudClient)
+local SPALTE_X = -16
+local SPALTE_RAND = 10
+local KRAFT_Y = 224 -- unter dem Ortsfeld (118 + 98 + 8)
+local KRAFT_ZEILE = 46
 
 local statsRowFrame = Instance.new("Frame")
 statsRowFrame.Name = "StatsRowFrame"
-statsRowFrame.Size = UDim2.new(0, KRAFT_BREITE, 0, KRAFT_HOEHE)
-statsRowFrame.AnchorPoint = Vector2.new(0.5, 0)
-statsRowFrame.Position = UDim2.new(0.5, 0, 0, 8)
+statsRowFrame.Size = UDim2.new(0, SPALTE_BREITE, 0, 34 + KRAFT_ZEILE * 3 - 6 + 10)
+statsRowFrame.AnchorPoint = Vector2.new(1, 0)
+statsRowFrame.Position = UDim2.new(1, SPALTE_X, 0, KRAFT_Y)
 statsRowFrame.Parent = screenGui
-HudChrome.Panel(statsRowFrame, { radius = HudChrome.Radius.Panel })
+HudChrome.Panel(statsRowFrame, { radius = HudChrome.Radius.Small })
 
 -- Der Titel war vorher da, aber unsichtbar: er wurde gebaut und nie eingehaengt
 -- (statsPanelTitle.Parent fehlte). Ein Panel ohne Ueberschrift stand damit besonders im
 -- Sanctuary ohne jeden Zusammenhang herum.
 local statsPanelTitle = Instance.new("TextLabel")
 statsPanelTitle.Name = "PanelTitle"
-statsPanelTitle.Size = UDim2.new(1, -16, 0, 20)
-statsPanelTitle.Position = UDim2.new(0, KRAFT_RAND, 0, 6)
+statsPanelTitle.Size = UDim2.new(1, -SPALTE_RAND * 2, 0, 18)
+statsPanelTitle.Position = UDim2.new(0, SPALTE_RAND, 0, 8)
 statsPanelTitle.BackgroundTransparency = 1
 statsPanelTitle.TextXAlignment = Enum.TextXAlignment.Left
 statsPanelTitle.Text = "TRAINING"
 statsPanelTitle.Parent = statsRowFrame
-HudChrome.Label(statsPanelTitle, 16)
+HudChrome.Label(statsPanelTitle, 14)
 statsPanelTitle.TextColor3 = HudChrome.Color.TextSecondary
 
-local statsRow = Instance.new("Frame")
-statsRow.Name = "StatsRow"
-statsRow.Size = UDim2.new(1, -KRAFT_RAND * 2, 0, 52)
-statsRow.Position = UDim2.new(0, KRAFT_RAND, 0, 30)
-statsRow.BackgroundTransparency = 1
-statsRow.Parent = statsRowFrame
-
-local statsRowLayout = Instance.new("UIListLayout")
-statsRowLayout.FillDirection = Enum.FillDirection.Horizontal
-statsRowLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-statsRowLayout.Padding = UDim.new(0, 8)
-statsRowLayout.SortOrder = Enum.SortOrder.LayoutOrder
-statsRowLayout.Parent = statsRow
-
 -- Ordnet den Trainings-Stat-Typ (wie er in "TrainingStat" steht, z.B. "Arm") derselben
--- Farbe zu, die auch der kleine Balken oben hat -- damit der grosse Trainings-Balken
--- farblich zum jeweils trainierten Wert passt.
+-- Farbe zu, die auch der Wert oben hat.
 local STAT_COLOR_BY_TYPE = {
 	Arm = Color3.fromRGB(220, 90, 220),
 	Leg = Color3.fromRGB(255, 150, 60),
@@ -1587,8 +1573,6 @@ local isAnimatingStat = {} -- [key] = true, waehrend eine Flug-Animation fuer di
 local updateLevelBar
 local advanceXPBar
 
--- Die Emoji sind raus. Der Wert steht jetzt rechts in derselben Zeile wie sein Name, so
--- wie in den Level- und HP-Feldern auch -- Bezeichnung links, Messung rechts.
 local STAT_BAR_CONFIG = {
 	{ key = "ArmPower", label = "ARM", short = "Arm", color = Color3.fromRGB(220, 90, 220), effect = "BASE DAMAGE" },
 	{ key = "LegPower", label = "BEIN", short = "Bein", color = Color3.fromRGB(255, 150, 60), effect = "BONUS DAMAGE" },
@@ -1596,41 +1580,37 @@ local STAT_BAR_CONFIG = {
 }
 
 for index, config in ipairs(STAT_BAR_CONFIG) do
-	local column = Instance.new("Frame")
-	column.Name = config.key .. "Column"
-	column.Size = UDim2.new(0, KRAFT_SPALTE, 1, 0)
-	column.LayoutOrder = index
-	column.BackgroundTransparency = 1
-	column.Parent = statsRow
+	local oben = 34 + (index - 1) * KRAFT_ZEILE
+	local innen = SPALTE_BREITE - SPALTE_RAND * 2
 
 	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Name = "Name"
-	nameLabel.Size = UDim2.new(0, 58, 0, 18)
-	nameLabel.Position = UDim2.new(0, 0, 0, 0)
+	nameLabel.Name = config.key .. "Name"
+	nameLabel.Size = UDim2.new(0, 90, 0, 18)
+	nameLabel.Position = UDim2.new(0, SPALTE_RAND, 0, oben)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 	nameLabel.Text = config.label
-	nameLabel.Parent = column
-	HudChrome.Label(nameLabel, 14)
+	nameLabel.Parent = statsRowFrame
+	HudChrome.Label(nameLabel, 15)
 	nameLabel.TextColor3 = config.color
 
 	local label = Instance.new("TextLabel")
-	label.Name = "Value"
-	label.Size = UDim2.new(0, KRAFT_SPALTE - 58, 0, 18)
-	label.Position = UDim2.new(0, 58, 0, 0)
+	label.Name = config.key .. "Value"
+	label.Size = UDim2.new(0, innen - 90, 0, 18)
+	label.Position = UDim2.new(0, SPALTE_RAND + 90, 0, oben)
 	label.BackgroundTransparency = 1
 	label.TextXAlignment = Enum.TextXAlignment.Right
 	label.Text = "0 / 0"
-	label.Parent = column
-	HudChrome.Number(label, 13)
+	label.Parent = statsRowFrame
+	HudChrome.Number(label, 14)
 
 	local statBackground = Instance.new("Frame")
-	statBackground.Name = "Background"
-	statBackground.Size = UDim2.new(1, 0, 0, 8)
-	statBackground.Position = UDim2.new(0, 0, 0, 22)
+	statBackground.Name = config.key .. "Track"
+	statBackground.Size = UDim2.new(0, innen, 0, 8)
+	statBackground.Position = UDim2.new(0, SPALTE_RAND, 0, oben + 20)
 	statBackground.BackgroundColor3 = HudChrome.Color.PanelSunken
 	statBackground.BorderSizePixel = 0
-	statBackground.Parent = column
+	statBackground.Parent = statsRowFrame
 
 	local statBackgroundCorner = Instance.new("UICorner")
 	statBackgroundCorner.CornerRadius = UDim.new(0, 4)
@@ -1650,14 +1630,13 @@ for index, config in ipairs(STAT_BAR_CONFIG) do
 
 	-- Wirkungs-Zeile: wofuer der Wert gut ist. Ohne sie sind es drei Balken ohne Grund.
 	local effectLabel = Instance.new("TextLabel")
-	effectLabel.Name = "EffectLabel"
-	effectLabel.Size = UDim2.new(1, 0, 0, 14)
-	effectLabel.Position = UDim2.new(0, 0, 0, 34)
+	effectLabel.Name = config.key .. "Effect"
+	effectLabel.Size = UDim2.new(0, innen, 0, 14)
+	effectLabel.Position = UDim2.new(0, SPALTE_RAND, 0, oben + 30)
 	effectLabel.BackgroundTransparency = 1
 	effectLabel.TextXAlignment = Enum.TextXAlignment.Left
-	effectLabel.TextTruncate = Enum.TextTruncate.AtEnd
 	effectLabel.Text = config.effect
-	effectLabel.Parent = column
+	effectLabel.Parent = statsRowFrame
 	HudChrome.Number(effectLabel, 11)
 	effectLabel.TextColor3 = HudChrome.Color.TextDim
 
@@ -1672,11 +1651,10 @@ local function updateZoneBasedHudVisibility()
 	local isSanctuary = player:GetAttribute("CurrentZone") == "Sanctuary"
 	local isTraining = player:GetAttribute("TrainingStat") ~= nil or player:GetAttribute("BodyTrainingActive") == true
 	statsRowFrame.Visible = isSanctuary
-	-- Ausnahme: Heat/Berserker-Tacho bleibt auch in Sanctuary sichtbar, solange irgendeine
-	-- Trainingsstation aktiv ist (Arm/Bein/Körper) -- Berserker (inkl. Bonus-Schaden) soll
-	-- überall genauso nutzbar/sichtbar sein wie im echten Kampf, unabhängig davon, dass
-	-- manche Stationen in Sanctuary stehen.
-	heatFrame.Visible = (not isSanctuary) or isTraining
+	-- Der Tacho steht ueberall. Hitze entsteht auch beim Training, und der Berserker wirkt
+	-- dort genauso -- ein Instrument, das je nach Ort verschwindet, waere ein Instrument,
+	-- dem man nicht traut.
+	heatFrame.Visible = true
 end
 
 player:GetAttributeChangedSignal("TrainingStat"):Connect(updateZoneBasedHudVisibility)
@@ -1956,41 +1934,45 @@ local STAT_DISPLAY_NAMES = {
 	Body = "KOERPER",
 }
 
-local TRAIN_BREITE = 440
-local TRAIN_RAND = 12
-local TRAIN_X_KNOPF = 44
+-- Beide Felder stehen unter den Kraftwerten in derselben Spalte -- alles, was mit dem
+-- Training zu tun hat, an einer Stelle statt verteilt ueber zwei Bildschirmhaelften.
+local TRAIN_BREITE = SPALTE_BREITE
+local TRAIN_RAND = SPALTE_RAND
+local TRAIN_X_KNOPF = 36
+local TRAIN_Y = KRAFT_Y + 34 + KRAFT_ZEILE * 3 - 6 + 10 + 8
+local BOOST_Y = TRAIN_Y + 62 + 8
 
 local trainingFrame = Instance.new("Frame")
 trainingFrame.Name = "TrainingFrame"
 trainingFrame.Size = UDim2.new(0, TRAIN_BREITE, 0, 62)
-trainingFrame.AnchorPoint = Vector2.new(0.5, 0)
-trainingFrame.Position = UDim2.new(0.5, 0, 0, 108)
+trainingFrame.AnchorPoint = Vector2.new(1, 0)
+trainingFrame.Position = UDim2.new(1, SPALTE_X, 0, TRAIN_Y)
 trainingFrame.Visible = false
 trainingFrame.Parent = screenGui
 HudChrome.Panel(trainingFrame, { radius = HudChrome.Radius.Small })
 
 local trainingTitle = Instance.new("TextLabel")
 trainingTitle.Name = "TrainingTitle"
-trainingTitle.Size = UDim2.new(0, 240, 0, 22)
+trainingTitle.Size = UDim2.new(0, 120, 0, 22)
 trainingTitle.Position = UDim2.new(0, TRAIN_RAND, 0, 8)
 trainingTitle.BackgroundTransparency = 1
 trainingTitle.TextXAlignment = Enum.TextXAlignment.Left
 trainingTitle.Text = "TRAINING"
 trainingTitle.Parent = trainingFrame
-HudChrome.Label(trainingTitle, 18)
+HudChrome.Label(trainingTitle, 15)
 
 -- Der Wert steht NEBEN dem Balken, nicht darin. Im Balken stand er auf der Fuellung --
 -- weisse Schrift auf Gruen -- und war damit genauso schlecht zu lesen wie es die HP-Zahl
 -- vorher war.
 local trainingBarLabel = Instance.new("TextLabel")
 trainingBarLabel.Name = "TrainingBarLabel"
-trainingBarLabel.Size = UDim2.new(0, 150, 0, 22)
-trainingBarLabel.Position = UDim2.new(1, -TRAIN_RAND - TRAIN_X_KNOPF - 8 - 150, 0, 8)
+trainingBarLabel.Size = UDim2.new(0, 100, 0, 22)
+trainingBarLabel.Position = UDim2.new(1, -TRAIN_RAND - TRAIN_X_KNOPF - 8 - 100, 0, 8)
 trainingBarLabel.BackgroundTransparency = 1
 trainingBarLabel.TextXAlignment = Enum.TextXAlignment.Right
 trainingBarLabel.Text = ""
 trainingBarLabel.Parent = trainingFrame
-HudChrome.NumberBold(trainingBarLabel, 18)
+HudChrome.NumberBold(trainingBarLabel, 15)
 
 local trainingBarBackground = Instance.new("Frame")
 trainingBarBackground.Name = "TrainingBarBackground"
@@ -2046,8 +2028,8 @@ end)
 local boostFrame = Instance.new("Frame")
 boostFrame.Name = "BoostFrame"
 boostFrame.Size = UDim2.new(0, TRAIN_BREITE, 0, 52)
-boostFrame.AnchorPoint = Vector2.new(0.5, 0)
-boostFrame.Position = UDim2.new(0.5, 0, 0, 178)
+boostFrame.AnchorPoint = Vector2.new(1, 0)
+boostFrame.Position = UDim2.new(1, SPALTE_X, 0, BOOST_Y)
 boostFrame.Visible = false
 boostFrame.Parent = screenGui
 HudChrome.Panel(boostFrame, { radius = HudChrome.Radius.Small })
