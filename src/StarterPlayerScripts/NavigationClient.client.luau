@@ -158,6 +158,19 @@ local NAV_BUTTONS = {
 }
 
 local navButtons = {} -- [key] = TextButton
+local navStrokes = {} -- [key] = UIStroke des Knopfes, fuer die Hervorhebung des offenen Punktes
+
+-- Der offene Punkt traegt einen hellen Rand. Das ersetzt, was vorher die Flaechenfarbe
+-- geleistet hat -- nur zeigt es jetzt etwas, das sich tatsaechlich aendert, statt acht
+-- feste Farben.
+local function markiereOffenenPunkt(offenerKey)
+	for key, stroke in pairs(navStrokes) do
+		if stroke then
+			stroke.Color = (key == offenerKey) and HudChrome.Color.BorderBright or HudChrome.Color.Border
+			stroke.Thickness = (key == offenerKey) and 2 or HudChrome.BorderThickness
+		end
+	end
+end
 local panels = {} -- [key] = GuiObject (das zugehörige Panel, extern gesetzt via registerPanel)
 local activePanelKey = nil
 
@@ -175,6 +188,7 @@ local function closeActivePanel()
 	if activePanelKey then
 		setPanelVisible(activePanelKey, false)
 		activePanelKey = nil
+		markiereOffenenPunkt(nil)
 	end
 end
 
@@ -187,6 +201,7 @@ local function togglePanel(key)
 	closeActivePanel()
 	setPanelVisible(key, true)
 	activePanelKey = key
+	markiereOffenenPunkt(key)
 
 	-- Ein Blick genuegt: das Laempchen ist mit dem Oeffnen quittiert. Ausnahme sind die
 	-- Geschenke -- was ABHOLBAR ist, soll leuchten, bis es abgeholt wurde; sonst oeffnet
@@ -236,13 +251,11 @@ local function showNavNotice(text)
 	notice.AnchorPoint = Vector2.new(0, 1)
 	notice.Size = UDim2.new(0, 260, 0, 40)
 	notice.Position = UDim2.new(0, 16 + RAIL_ICON_SIZE + 12, 1, -RAIL_BOTTOM_MARGIN)
-	notice.BackgroundColor3 = Color3.fromRGB(58, 58, 66)
-	notice.Font = Enum.Font.FredokaOne
-	notice.TextScaled = true
-	notice.TextColor3 = Color3.fromRGB(230, 230, 240)
 	notice.Text = text
 	notice.Parent = screenGui
-	applyComicStyle(notice, 10, 3)
+	HudChrome.Panel(notice, { radius = HudChrome.Radius.Small })
+	HudChrome.Label(notice, 16)
+	notice.TextColor3 = HudChrome.Color.TextSecondary
 	activeNavNotice = notice
 	task.delay(2, function()
 		if notice.Parent then
@@ -272,20 +285,29 @@ for index, config in ipairs(NAV_BUTTONS) do
 	-- derselben Stelle, egal wie viele Punkte es gibt.
 	button.LayoutOrder = #NAV_BUTTONS - index + 1
 	button.Size = UDim2.new(0, RAIL_ICON_SIZE, 0, RAIL_ICON_SIZE)
-	button.BackgroundColor3 = unbuilt and Color3.fromRGB(58, 58, 66) or config.color
-	button.AutoButtonColor = not unbuilt
+	button.AutoButtonColor = false
 	button.Text = ""
 	button.Parent = menuRail
-	applyComicStyle(button, 12, 3)
+
+	-- Alle acht Knoepfe sehen gleich aus: dunkles Feld, Stahlrand, Symbol. Die bunten
+	-- Flaechen sind weg.
+	--
+	-- Nach der Stilregel bedeutet Farbe im HUD eine MESSUNG. Acht verschiedene Farben, die
+	-- nur Menuepunkte auseinanderhalten, sind genau das nicht -- und sie haben die Leiste
+	-- zum lautesten Element im Bild gemacht, obwohl sie das Nebensaechlichste zeigt. Die
+	-- Symbole unterscheiden die Punkte ohnehin; Farbe bleibt dem Laempchen und dem offenen
+	-- Punkt vorbehalten.
+	local _, buttonStroke = HudChrome.Panel(button, { radius = HudChrome.Radius.Small })
+	navStrokes[config.key] = buttonStroke
 
 	local icon = Instance.new("TextLabel")
-	icon.Size = UDim2.new(1, -8, 1, -8)
-	icon.Position = UDim2.new(0, 4, 0, 4)
+	icon.Size = UDim2.new(1, -10, 1, -10)
+	icon.Position = UDim2.new(0, 5, 0, 5)
 	icon.BackgroundTransparency = 1
-	icon.Font = Enum.Font.LuckiestGuy
+	icon.Font = Enum.Font.GothamBold
 	icon.TextScaled = true
 	icon.Text = config.icon
-	icon.TextTransparency = unbuilt and 0.55 or 0
+	icon.TextTransparency = unbuilt and 0.6 or 0
 	icon.Parent = button
 
 	-- Das Laempchen: klein, in der oberen rechten Ecke, standardmaessig aus.
@@ -294,7 +316,7 @@ for index, config in ipairs(NAV_BUTTONS) do
 	badge.AnchorPoint = Vector2.new(1, 0)
 	badge.Size = UDim2.new(0, 12, 0, 12)
 	badge.Position = UDim2.new(1, 1, 0, -1)
-	badge.BackgroundColor3 = Color3.fromRGB(235, 45, 45)
+	badge.BackgroundColor3 = HudChrome.Color.Danger
 	badge.BorderSizePixel = 0
 	badge.Visible = false
 	badge.ZIndex = 3
@@ -1102,6 +1124,7 @@ _G.OpenHelpPanel = function(sectionId)
 	closeActivePanel()
 	setPanelVisible("Help", true)
 	activePanelKey = "Help"
+	markiereOffenenPunkt("Help")
 	if sectionId and helpSectionFrames[sectionId] then
 		task.defer(function()
 			helpScroll.CanvasPosition = Vector2.new(0, helpSectionFrames[sectionId].Position.Y.Offset)
