@@ -180,15 +180,16 @@ HudChrome.EnergyIcon = {
 -- sechs, und mehrere davon kommen mehrfach vor. Wer zwoelf Bilder anlegte, malte dasselbe
 -- Ding sechsmal doppelt.
 --
--- Noch nicht hochgeladen. Leer heisst: der Bildschirm nimmt das Emoji, das der Server
--- ohnehin mitschickt. Sobald eine ID hier steht, wird sie ueberall benutzt.
+-- Die Schluessel sind die TYPEN aus GiftHandler, nicht die Beschriftungen: "XP" heisst
+-- dort so, auch wenn das Bild "XP Boost" gezeichnet ist. Wer hier umbenennt, bricht die
+-- Zuordnung still -- der Bildschirm faellt dann wortlos auf das Emoji zurueck.
 HudChrome.GiftIcon = {
-	Coins = "",
-	XP = "",
-	Evolution = "",
-	CoinsBoost = "",
-	DamageBoost = "",
-	MegaBoost = "",
+	Coins = "rbxassetid://90818354899235",
+	XP = "rbxassetid://110300343896143",
+	Evolution = "rbxassetid://135223583855951",
+	CoinsBoost = "rbxassetid://98720807266046",
+	DamageBoost = "rbxassetid://97430318788181",
+	MegaBoost = "rbxassetid://73202136279847",
 }
 
 function HudChrome.IconImage(parent, assetId, tint)
@@ -219,9 +220,17 @@ local function preloadIcons()
 
 	local liste = {}
 	local namen = {}
-	for name, assetId in pairs(HudChrome.Icon) do
-		table.insert(liste, assetId)
-		namen[assetId] = name
+	-- Alle Sammlungen, nicht nur HudChrome.Icon. Die Geschenksymbole erscheinen genau
+	-- einmal je Sitzung und ausgerechnet in dem Moment, in dem etwas bereit wird -- dort
+	-- ein leeres Feld zu sehen waere die schlechteste Stelle dafuer. Die Energietypen sind
+	-- noch leer und fallen von selbst heraus.
+	for _, sammlung in ipairs({ HudChrome.Icon, HudChrome.GiftIcon, HudChrome.EnergyIcon }) do
+		for name, assetId in pairs(sammlung) do
+			if assetId ~= "" then
+				table.insert(liste, assetId)
+				namen[assetId] = name
+			end
+		end
 	end
 
 	-- PreloadAsync meldet je Datei zurueck, OB sie geladen wurde -- genau das wird hier
