@@ -25,25 +25,10 @@ if not cityAlertValues or not cityAlertConfigModule then
 end
 local CityAlertConfig = require(cityAlertConfigModule)
 
-local CITY_DISPLAY_NAMES = {
-	Village = "Village",
-	SmallTown = "Small Town",
-	City = "City",
-	LargeCity = "Large City",
-	MegaCity = "Megacity",
-}
-
--- Jede Stadt hat eine Uhrzeit, und die Uhrzeit ist das Koordinatensystem der Welt: es
--- sind dieselben Indizes wie auf dem Zifferblatt im Sanctuary, wo jede Stunde eine
--- Portalbucht ist. Wer "04:00" liest, weiss danach, wo Small Town auf der Karte liegt --
--- das leistet kein Stadtname.
-local CITY_HOURS = {
-	Village = "02:00",
-	SmallTown = "04:00",
-	City = "06:00",
-	LargeCity = "08:00",
-	MegaCity = "10:00",
-}
+-- Anzeigename und Stunde kommen aus CityIdentity. Hier standen sie einmal als eigene
+-- Tabellen -- und dieselben Tabellen noch einmal in der Alarm-Ansage. Beim Umbenennen aller
+-- fuenf Staedte waere sicher nur eine der beiden gefunden worden.
+local CityIdentity = require(ReplicatedStorage:WaitForChild("CityIdentity"))
 
 local MAX_ALERT_LEVEL = 5 -- so viele Segmente hat der Balken
 
@@ -220,17 +205,18 @@ end
 local lastShownLevel = nil
 
 local function updateAlertHud()
-	-- Sanctuary-Sonderfall: zeigt "Sanctuary" als Ortsname an (konsistent mit den echten
-	-- Staedtenamen), statt die ganze Anzeige auszublenden. Alarmbalken und Fortschritt
-	-- bleiben versteckt, da dort ohnehin kein Alert-System greift.
+	-- Im Sanctuary verschwindet das Ortsfeld ganz.
+	--
+	-- Frueher stand dort "Sanctuary / 12:00" ohne Sterne und ohne Unterzeile -- ein leerer
+	-- Kasten, der nur Platz belegte. Die Absicht war Beschriftungs-Gleichklang mit den echten
+	-- Staedten; im Sanctuary gibt es aber gar kein Alert-System, also auch nichts zu melden.
+	--
+	-- Der frei werdende Platz ist der eigentliche Gewinn: die rechte Spalte beginnt im
+	-- Sanctuary direkt unter der Kopfleiste, und die drei Kraftfelder ruecken um die volle
+	-- Feldhoehe nach oben, statt unten in die Angriffsknoepfe und das Weltevent-Feld zu
+	-- laufen. Siehe KRAFT_Y in SkinSelectionGui.
 	if player:GetAttribute("CurrentZone") == "Sanctuary" then
-		alertFrame.Visible = true
-		cityNameLabel.Text = "Sanctuary"
-		cityHourLabel.Text = "12:00"
-		alertCaption.Visible = false
-		for _, star in ipairs(starLabels) do
-			star.Visible = false
-		end
+		alertFrame.Visible = false
 		currentStarCount = 0
 		lastShownMaxLevel = nil
 		lastShownLevel = nil
@@ -263,8 +249,8 @@ local function updateAlertHud()
 	local rawMaxLevel = (maxLevelValue and maxLevelValue.Value) or (config and config.MaxAlertLevel) or MAX_ALERT_LEVEL
 	local maxLevel = math.clamp(rawMaxLevel, 0, MAX_ALERT_LEVEL)
 
-	cityNameLabel.Text = CITY_DISPLAY_NAMES[cityName] or cityName
-	cityHourLabel.Text = CITY_HOURS[cityName] or ""
+	cityNameLabel.Text = CityIdentity.DisplayName(cityName)
+	cityHourLabel.Text = CityIdentity.Hour(cityName)
 
 	local farbe = alarmFarbe(math.max(level, 1), maxLevel)
 

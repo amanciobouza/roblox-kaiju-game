@@ -427,15 +427,40 @@ do
 	kante.BorderSizePixel = 0
 	kante.Parent = bar
 
-	-- Der Versatz steht beim Start des Skripts oft noch auf null: die Kern-Oberflaeche von
-	-- Roblox baut sich erst auf. Deshalb nachziehen statt einmal fragen.
-	HudChrome.BindTopInset(function(versatz)
+	-- ===== Den Versatz MESSEN, nicht rechnen =====
+	--
+	-- Erster Versuch war GetGuiInset().Y. Auf dem Telefon lagen die Knoepfe danach immer
+	-- noch unter der Leiste -- der Wert stimmt also nicht mit dem ueberein, was Roblox
+	-- tatsaechlich an Versatz vergibt. Neben der Systemleiste schneidet naemlich auch der
+	-- sichere Bereich des Geraets oben ein, und GetGuiInset kennt nur die Leiste.
+	--
+	-- Statt die Summe nachzubauen, wird sie abgelesen. Ein ScreenGui ist ein LayerCollector
+	-- und hat eine AbsolutePosition: die Differenz zwischen dem randlosen barGui und dem
+	-- gewoehnlichen screenGui IST der Versatz, den alle Nachbarn bekommen -- ohne jede
+	-- Annahme darueber, woraus er sich zusammensetzt.
+	--
+	-- GetGuiInset bleibt als Untergrenze stehen, fuer den Fall, dass die Messung zu frueh
+	-- kommt und noch null meldet. Beide Zahlen stehen in der Ausgabe, sonst laesst sich
+	-- nicht unterscheiden, welche gegriffen hat.
+	local function versatzAnwenden()
+		local gemessen = screenGui.AbsolutePosition.Y - barGui.AbsolutePosition.Y
+		local gerechnet = HudChrome.TopInset()
+		local versatz = math.max(gemessen, gerechnet, 0)
+
 		bar.Size = UDim2.new(1, 0, 0, versatz + HUD_KOPFLEISTE_HOEHE)
 		print(string.format(
-			"[Kaiju Debug] Kopfleiste: Systemleiste %d px, Leiste damit %d px hoch.",
-			versatz, versatz + HUD_KOPFLEISTE_HOEHE
+			"[Kaiju Debug] Kopfleiste: gemessen %d px, GetGuiInset %d px, Leiste %d px hoch.",
+			gemessen, gerechnet, versatz + HUD_KOPFLEISTE_HOEHE
 		))
-	end)
+	end
+
+	-- Der Versatz steht beim Start des Skripts oft noch auf null: die Kern-Oberflaeche von
+	-- Roblox baut sich erst auf. Deshalb nachziehen statt einmal fragen -- ueber die
+	-- Systemleiste, ueber die Bildgroesse (Drehen des Telefons) und ueber die gemessene
+	-- Lage selbst.
+	HudChrome.BindTopInset(versatzAnwenden)
+	screenGui:GetPropertyChangedSignal("AbsolutePosition"):Connect(versatzAnwenden)
+	screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(versatzAnwenden)
 end
 
 local statusCluster = Instance.new("Frame")
@@ -1634,7 +1659,11 @@ end)
 local SPALTE_BREITE = 300
 local SPALTE_X = -16
 local SPALTE_RAND = 10
-local KRAFT_Y = 192 -- unter dem Ortsfeld (86 + 98 + 8)
+-- Direkt unter der Kopfleiste. Vorher stand hier 192 -- Platz fuer das Ortsfeld darueber.
+-- Das faellt im Sanctuary jetzt weg (siehe CityAlertHudClient): es zeigte dort nur
+-- "Sanctuary / 12:00" ohne Sterne, also einen leeren Kasten. Die 106 Pixel fehlten unten,
+-- wo der Block sonst in die Angriffsknoepfe und das Weltevent-Feld lief.
+local KRAFT_Y = 86
 local KRAFT_ZEILE = 108
 local SCAN_GROESSE = 100
 
@@ -3324,7 +3353,8 @@ local function refreshShop()
 	local order = 0
 	for _, faction in ipairs(SkinsConfig.Factions) do
 		local skins = SkinsConfig.GetSkinsByFaction(faction.Key)
-		local pendingCount = faction.PendingCount or 0
+		local pendingStages = faction.PendingStages or {}
+		local pendingCount = #pendingStages
 		if #skins == 0 and pendingCount == 0 then
 			continue -- eine Fraktion ohne Skins und ohne vorgesehene Plaetze zeigt nichts
 		end
@@ -3393,7 +3423,9 @@ local function refreshShop()
 			button.TextScaled = true
 			button.TextColor3 = Color3.fromRGB(200, 200, 210)
 			button.BackgroundColor3 = Color3.fromRGB(52, 52, 62)
-			button.Text = string.format("? %s %d - %s", faction.Label, index, faction.Chapter)
+			-- Der geplante Name statt "Jaeger 3". Das Fragezeichen bleibt davor: der Platz ist
+			-- weiterhin leer, er hat nur schon einen Namen.
+			button.Text = string.format("? %s - %s", pendingStages[index] or faction.Label, faction.Chapter)
 			button.LayoutOrder = order
 			button.Parent = shopScroll
 			applyComicStyle(button, 14, 3)
