@@ -431,6 +431,19 @@ warnSound.Parent = screenGui
 -- und Ausfahrt, wenn der Druckwert nahe der Schwelle pendelt.
 local warnTween = nil
 
+-- Zu welcher Stufe die STEHENDE Warnung gehoert. Sie ist der Kern der Regel unten: eine
+-- Warnung gilt fuer genau eine Eskalation, nicht fuer einen Druckbereich.
+local warnLevel = nil
+
+-- Der Punktestand, ab dem eine Stufe gilt. Stufe 0 und 1 haben keine eigene Schwelle --
+-- Stufe 1 entsteht aus einem Ereignis, nicht aus Druck.
+local function schwelleFuer(config, level)
+	if level <= 1 then
+		return 0
+	end
+	return config["AlertThresholdLevel" .. level]
+end
+
 local function zeigeWarnung(sichtbar)
 	if warnTween then
 		warnTween:Cancel()
@@ -508,14 +521,33 @@ local function updateWarnung()
 		return
 	end
 
-	local schwelle = config.AlertThresholdLevel2
-	if not schwelle or schwelle <= 0 then
+	-- Die Warnung gehoert zu EINER Stufe. Steigt die Stufe, hat sie sich erledigt -- auch
+	-- wenn der Druckwert hoch bleibt, denn der Server setzt ihn bei einer Eskalation NICHT
+	-- zurueck (nur ResetCityAlert nach CITY BROKEN tut das).
+	--
+	-- Ohne diese Regel blieb die Warnung nach dem Aufstieg stehen und zeigte prompt die
+	-- uebernaechste Stufe an -- gemeldet nach dem Aufstieg von 1 auf 2.
+	if warnLevel ~= nil and warnLevel ~= level then
+		warnLevel = nil
 		if warnFrame.Visible then
 			zeigeWarnung(false)
 		end
 		return
 	end
-	local ratio = math.clamp(progressValue.Value / schwelle, 0, 1)
+
+	-- Der Druck wird gegen die Spanne zur NAECHSTEN Stufe gerechnet, nicht mehr stur gegen
+	-- die Schwelle von Stufe 2. Die Schwellen sind absolute Punktestaende (Village: 50 und
+	-- 225) -- auf Stufe 2 lag der Wert damit immer ueber 50, das Verhaeltnis immer bei 1,
+	-- und die Warnung konnte gar nicht mehr verschwinden.
+	local unten = schwelleFuer(config, level) or 0
+	local oben = schwelleFuer(config, level + 1)
+	if not oben or oben <= unten then
+		if warnFrame.Visible then
+			zeigeWarnung(false)
+		end
+		return
+	end
+	local ratio = math.clamp((progressValue.Value - unten) / (oben - unten), 0, 1)
 
 	local warSichtbar = warnFrame.Visible
 	local sichtbar
@@ -534,6 +566,7 @@ local function updateWarnung()
 	-- Nur beim WECHSEL faehrt sie -- die Funktion laeuft bei jeder Aenderung des
 	-- Druckwerts, und der aendert sich im Kampf staendig.
 	if sichtbar ~= warSichtbar then
+		warnLevel = sichtbar and level or nil
 		zeigeWarnung(sichtbar)
 	end
 end
