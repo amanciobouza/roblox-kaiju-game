@@ -22,9 +22,8 @@ local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local ArchiveConfig = require(ReplicatedStorage:WaitForChild("ArchiveConfig"))
-local ComicStyleUtils = require(ReplicatedStorage:WaitForChild("ComicStyleUtils"))
 local ModelPreviewUtils = require(ReplicatedStorage:WaitForChild("ModelPreviewUtils"))
-local StageModelPreview = require(ReplicatedStorage:WaitForChild("StageModelPreview"))
+local StageModels = require(ReplicatedStorage:WaitForChild("StageModels"))
 local UiTypography = require(ReplicatedStorage:WaitForChild("UiTypography"))
 local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
 local ResponsiveGridUtils = require(ReplicatedStorage:WaitForChild("ResponsiveGridUtils"))
@@ -69,68 +68,42 @@ gui.Parent = playerGui
 local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
 local HudToast = require(ReplicatedStorage:WaitForChild("HudToast"))
 
-local panel = Instance.new("Frame")
-panel.Name = "ArchivePanel"
 -- Vollbild statt zentriertem Rahmen: das Raster lebt davon, moeglichst viele Karten auf
 -- einmal zu zeigen. Bei 480 Pixeln Breite passten vier je Reihe, bei voller Breite das
 -- Drei- bis Vierfache -- und die Gruppen bleiben als Ganzes sichtbar.
-panel.Size = UDim2.new(1, 0, 1, 0)
-panel.Position = UDim2.new(0, 0, 0, 0)
-panel.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
-panel.Visible = false
-panel.Parent = gui
-ComicStyleUtils.Apply(panel, 0, 3)
+--
+-- Kopf, Titel, Unterzeile und Schliessen-Knopf kommen aus HudChrome.Screen. Sie standen
+-- hier einzeln, mit FredokaOne, einem roten X und einem Titel, der mit einem Emoji begann --
+-- und in jedem anderen Menue noch einmal, jedes Mal etwas anders.
+local schirm = HudChrome.Screen(gui, {
+	name = "ArchivePanel",
+	title = "ARCHIVE",
+	subtitle = "",
+})
+local panel = schirm.panel
+local progressLabel = schirm.subtitle
+local closeButton = schirm.close
 
 -- Inhalt unter der Roblox-Systemleiste hervorholen. IgnoreGuiInset zieht die
 -- Zeichenflaeche bewusst DARUNTER, damit oben kein Streifen mit Sicht auf die Welt bleibt --
 -- das gilt aber nur fuer den Hintergrund. Das Polster wird nachgezogen, siehe TopInsetUtils.
 TopInsetUtils.Bind(panel)
 
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(0, 260, 0, 40)
-title.Position = UDim2.new(0, 24, 0, 12)
-title.BackgroundTransparency = 1
-title.Font = Enum.Font.FredokaOne
-title.TextScaled = true
-title.TextXAlignment = Enum.TextXAlignment.Left
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.Text = "📔 Archive"
-title.Parent = panel
-
-local progressLabel = Instance.new("TextLabel")
-progressLabel.Size = UDim2.new(0, 120, 0, 20)
-progressLabel.Position = UDim2.new(0, 26, 0, 50)
-progressLabel.BackgroundTransparency = 1
-progressLabel.Font = Enum.Font.Gotham
-progressLabel.TextScaled = true
-progressLabel.TextXAlignment = Enum.TextXAlignment.Left
-progressLabel.TextColor3 = Color3.fromRGB(170, 170, 180)
-progressLabel.Text = ""
-progressLabel.Parent = panel
-
-local closeButton = Instance.new("TextButton")
-closeButton.Size = UDim2.new(0, 36, 0, 36)
-closeButton.Position = UDim2.new(1, -54, 0, 14)
-closeButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-closeButton.Font = Enum.Font.FredokaOne
-closeButton.TextScaled = true
-closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeButton.Text = "X"
-closeButton.Parent = panel
-ComicStyleUtils.Apply(closeButton, 10, 3)
-
 -- Zaehler je Gruppe. Ohne Ueberschriften braucht die Aufteilung einen anderen Platz --
 -- und die Information "wie viel fehlt wo" ist der halbe Sinn der Sammlung.
+--
+-- Rechts im Kopf, auf Hoehe des Titels: links steht, WO man ist, rechts, WIE WEIT.
 local counterStrip = Instance.new("TextLabel")
-counterStrip.Size = UDim2.new(1, -300, 0, 26)
-counterStrip.Position = UDim2.new(0, 290, 0, 22)
+counterStrip.Name = "CounterStrip"
+counterStrip.AnchorPoint = Vector2.new(1, 0)
+counterStrip.Size = UDim2.new(1, -420, 0, 26)
+counterStrip.Position = UDim2.new(1, -72, 0, 20)
 counterStrip.BackgroundTransparency = 1
-counterStrip.Font = Enum.Font.Gotham
-counterStrip.TextSize = 16
-counterStrip.TextXAlignment = Enum.TextXAlignment.Left
-counterStrip.TextColor3 = Color3.fromRGB(200, 200, 212)
+counterStrip.TextXAlignment = Enum.TextXAlignment.Right
 counterStrip.Text = ""
-counterStrip.Parent = panel
+counterStrip.ZIndex = 3
+counterStrip.Parent = schirm.header
+HudChrome.Sublabel(counterStrip, 15)
 
 -- EIN durchgehendes Raster ueber alle Kategorien hinweg. Bewusst OHNE Gruppen-
 -- ueberschriften: sie haetten jede Gruppe auf einer neuen Zeile beginnen lassen, und bei
@@ -140,14 +113,16 @@ counterStrip.Parent = panel
 -- Die Reihenfolge folgt trotzdem den Kategorien aus dem Config -- das Raster liest sich
 -- weiter als Eskalation, vom Verkehrshelikopter bis zu den Figuren.
 local scroll = Instance.new("ScrollingFrame")
-scroll.Size = UDim2.new(1, -48, 1, -96)
-scroll.Position = UDim2.new(0, 24, 0, 80)
+-- Im Inhaltsbereich: die Kopfhoehe ist dort bereits abgezogen, sie muss hier nicht mehr
+-- eingerechnet werden. Genau diese Handrechnung stand im Bestand in jedem Menue anders.
+scroll.Size = UDim2.new(1, -48, 1, -24)
+scroll.Position = UDim2.new(0, 24, 0, 12)
 scroll.BackgroundTransparency = 1
 scroll.BorderSizePixel = 0
 scroll.ScrollBarThickness = 6
 scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-scroll.Parent = panel
+scroll.Parent = schirm.content
 
 local scrollLayout = Instance.new("UIGridLayout")
 scrollLayout.CellSize = CARD_SIZE
@@ -163,69 +138,52 @@ ResponsiveGridUtils.Bind(scroll, scrollLayout, 7, CARD_SIZE.X.Offset, CARD_SIZE.
 
 -- ===== Steckbrief: eigener Vollbild-Bereich, Rückweg ins Raster =====
 
-local detail = Instance.new("Frame")
-detail.Name = "ArchiveDetail"
-detail.Size = UDim2.new(1, 0, 1, 0)
-detail.Position = UDim2.new(0, 0, 0, 0)
-detail.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
-detail.Visible = false
-detail.Parent = gui
-ComicStyleUtils.Apply(detail, 0, 3)
+-- Derselbe Baukasten wie der Hauptbildschirm. Der Unterschied ist die Bedeutung des
+-- Knopfes oben rechts: hier fuehrt er nicht aus dem Archiv heraus, sondern ins Raster
+-- zurueck. Der Pfeil sagt das, das Kreuz sagte es nicht.
+local detailSchirm = HudChrome.Screen(gui, {
+	name = "ArchiveDetail",
+	title = "",
+	subtitle = "",
+})
+local detail = detailSchirm.panel
+local detailTitle = detailSchirm.title
+local detailBack = detailSchirm.close
+detailBack.Text = "\u{2190}"
 
 -- Inhalt unter der Roblox-Systemleiste hervorholen. IgnoreGuiInset zieht die
 -- Zeichenflaeche bewusst DARUNTER, damit oben kein Streifen mit Sicht auf die Welt bleibt --
 -- das gilt aber nur fuer den Hintergrund. Das Polster wird nachgezogen, siehe TopInsetUtils.
 TopInsetUtils.Bind(detail)
 
-local detailBack = Instance.new("TextButton")
-detailBack.Size = UDim2.new(0, 36, 0, 36)
-detailBack.Position = UDim2.new(0, 24, 0, 14)
-detailBack.BackgroundColor3 = Color3.fromRGB(70, 70, 82)
-detailBack.Font = Enum.Font.FredokaOne
-detailBack.TextScaled = true
-detailBack.TextColor3 = Color3.fromRGB(255, 255, 255)
-detailBack.Text = "←"
-detailBack.Parent = detail
-ComicStyleUtils.Apply(detailBack, 10, 3)
-
-local detailTitle = Instance.new("TextLabel")
--- Relativ statt fester 420 Pixel: auf einem Telefon lief der Titel sonst rechts aus dem
--- Bild, weil er bei 72 Pixeln beginnt und 420 breit war -- zusammen 492 von 640.
-detailTitle.Size = UDim2.new(1, -92, 0, 40)
-detailTitle.Position = UDim2.new(0, 72, 0, 14)
-detailTitle.BackgroundTransparency = 1
-detailTitle.Font = Enum.Font.FredokaOne
-detailTitle.TextScaled = true
-detailTitle.TextXAlignment = Enum.TextXAlignment.Left
-detailTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-detailTitle.Text = ""
-detailTitle.Parent = detail
-
 local detailViewportHolder = Instance.new("Frame")
-detailViewportHolder.Size = UDim2.new(0.38, -32, 1, -140)
-detailViewportHolder.Position = UDim2.new(0, 24, 0, 64)
-detailViewportHolder.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
-detailViewportHolder.Parent = detail
-ComicStyleUtils.Apply(detailViewportHolder, 12, 3)
+detailViewportHolder.Size = UDim2.new(0.38, -32, 1, -76)
+detailViewportHolder.Position = UDim2.new(0, 24, 0, 12)
+detailViewportHolder.Parent = detailSchirm.content
+HudChrome.Panel(detailViewportHolder, {
+	radius = HudChrome.Radius.Panel,
+	fill = HudChrome.Color.PanelSunken,
+	transparency = 0,
+})
 
 local detailHint = Instance.new("TextLabel")
 detailHint.Size = UDim2.new(0.38, -32, 0, 28)
-detailHint.Position = UDim2.new(0, 24, 1, -70)
+detailHint.Position = UDim2.new(0, 24, 1, -34)
 detailHint.BackgroundTransparency = 1
-UiTypography.Caption(detailHint, UiTypography.BodySize)
-detailHint.TextColor3 = Color3.fromRGB(170, 170, 180)
+detailHint.TextXAlignment = Enum.TextXAlignment.Left
 detailHint.Text = ""
-detailHint.Parent = detail
+detailHint.Parent = detailSchirm.content
+HudChrome.Sublabel(detailHint, 14)
 
 local detailText = Instance.new("ScrollingFrame")
-detailText.Size = UDim2.new(0.62, -48, 1, -88)
-detailText.Position = UDim2.new(0.38, 8, 0, 64)
+detailText.Size = UDim2.new(0.62, -48, 1, -24)
+detailText.Position = UDim2.new(0.38, 8, 0, 12)
 detailText.BackgroundTransparency = 1
 detailText.BorderSizePixel = 0
 detailText.ScrollBarThickness = 5
 detailText.AutomaticCanvasSize = Enum.AutomaticSize.Y
 detailText.CanvasSize = UDim2.new(0, 0, 0, 0)
-detailText.Parent = detail
+detailText.Parent = detailSchirm.content
 
 local detailTextLayout = Instance.new("UIListLayout")
 detailTextLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -239,10 +197,13 @@ detailTextLayout.Parent = detailText
 -- zum Eintrag, statt leer zu bleiben.
 local detailData = Instance.new("Frame")
 detailData.Name = "DetailData"
-detailData.BackgroundColor3 = Color3.fromRGB(22, 22, 27)
 detailData.Visible = false
-detailData.Parent = detail
-ComicStyleUtils.Apply(detailData, 12, 2)
+detailData.Parent = detailSchirm.content
+HudChrome.Panel(detailData, {
+	radius = HudChrome.Radius.Panel,
+	fill = HudChrome.Color.PanelRaised,
+	transparency = 0,
+})
 
 local detailDataPadding = Instance.new("UIPadding")
 detailDataPadding.PaddingTop = UDim.new(0, 12)
@@ -333,12 +294,12 @@ local function layoutDetail()
 	detailHint.Size = UDim2.new(0, modelWidth, 0, 28)
 
 	x += modelWidth + DETAIL_GAP
-	detailText.Position = UDim2.new(0, x, 0, 64)
-	detailText.Size = UDim2.new(0, textWidth, 1, -88)
+	detailText.Position = UDim2.new(0, x, 0, 12)
+	detailText.Size = UDim2.new(0, textWidth, 1, -24)
 
 	if dataWidth > 0 then
 		x += textWidth + DETAIL_GAP
-		detailData.Position = UDim2.new(0, x, 0, 64)
+		detailData.Position = UDim2.new(0, x, 0, 12)
 		detailData.Size = UDim2.new(0, dataWidth, 0, 0)
 		detailData.AutomaticSize = Enum.AutomaticSize.Y
 	end
@@ -405,7 +366,14 @@ local function resolveModel(entry)
 	end
 
 	local model = nil
-	if source.workshopAsset then
+	-- Figuren zuerst: hat die Stufe ein echtes Modell, gewinnt es. Sonst fällt es auf
+	-- avatarScale zurück, das derselbe Eintrag mitliefert.
+	if source.figure then
+		model = StageModels.BuildPreview(source.figure.faction, source.figure.skinId)
+	end
+	if model then
+		-- schon gebaut
+	elseif source.workshopAsset then
 		model = buildWorkshopModel(source.workshopAsset)
 	elseif source.avatarScale then
 		model = buildAvatarModel(source.avatarScale)
@@ -538,7 +506,7 @@ local function openDetail(entry)
 	end
 	detailDataProgress.Text = string.format("%d of %d discovered", revealedCount, #siblings)
 	layoutDetail()
-	-- NUR den alten Viewport entfernen, nicht alle Kinder: ComicStyleUtils hat dem Rahmen
+	-- NUR den alten Viewport entfernen, nicht alle Kinder: HudChrome.Panel hat dem Rahmen
 	-- eine UICorner und eine UIStroke gegeben, und ClearAllChildren haette die mit
 	-- weggeraeumt -- ab dem zweiten Steckbrief waere der Rahmen unformatiert gewesen.
 	for _, child in ipairs(detailViewportHolder:GetChildren()) do
@@ -578,7 +546,7 @@ local function openDetail(entry)
 		local heading = Instance.new("TextLabel")
 		heading.Size = UDim2.new(1, -8, 0, 20)
 		heading.BackgroundTransparency = 1
-		UiTypography.Subhead(heading)
+		HudChrome.Label(heading, UiTypography.SubheadSize)
 		heading.TextXAlignment = Enum.TextXAlignment.Left
 		heading.TextColor3 = Color3.fromRGB(255, 205, 90)
 		heading.Text = section.heading
@@ -652,14 +620,18 @@ local function buildCard(parent, entry)
 	card.Text = ""
 	card.AutoButtonColor = true
 	card.Parent = parent
-	ComicStyleUtils.Apply(card, 10, 3)
+	HudChrome.Panel(card, { radius = HudChrome.Radius.Panel, fill = HudChrome.Color.PanelRaised })
 
 	local viewportHolder = Instance.new("Frame")
 	viewportHolder.Size = UDim2.new(1, -12, 0, 148)
 	viewportHolder.Position = UDim2.new(0, 6, 0, 6)
 	viewportHolder.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
 	viewportHolder.Parent = card
-	ComicStyleUtils.Apply(viewportHolder, 8, 2)
+	HudChrome.Panel(viewportHolder, {
+		radius = HudChrome.Radius.Small,
+		fill = HudChrome.Color.PanelSunken,
+		transparency = 0,
+	})
 
 	-- Klein und zurueckhaltend: es soll die Silhouette KENNZEICHNEN, nicht verdecken.
 	-- Formatfuellend und deckend war es der Hauptgrund, warum vom Umriss nichts zu sehen
@@ -669,21 +641,21 @@ local function buildCard(parent, entry)
 	question.Size = UDim2.new(0, 38, 0, 38)
 	question.Position = UDim2.new(1, -4, 1, -2)
 	question.BackgroundTransparency = 1
-	question.Font = Enum.Font.FredokaOne
 	question.TextScaled = true
-	question.TextColor3 = Color3.fromRGB(255, 255, 255)
 	question.TextTransparency = 0.45
 	question.TextStrokeTransparency = 0.75
 	question.Text = "?"
 	question.ZIndex = 5
+	HudChrome.Label(question)
+	question.TextColor3 = HudChrome.Color.TextSecondary
+	question.TextScaled = true
 	question.Parent = viewportHolder
 
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.Size = UDim2.new(1, -12, 0, 26)
 	nameLabel.Position = UDim2.new(0, 6, 0, 158)
 	nameLabel.BackgroundTransparency = 1
-	UiTypography.Subhead(nameLabel, 15)
-	nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	HudChrome.Label(nameLabel, 15)
 	nameLabel.Text = "???"
 	nameLabel.Parent = card
 
@@ -692,7 +664,7 @@ local function buildCard(parent, entry)
 	hintLabel.Position = UDim2.new(0, 6, 0, 186)
 	hintLabel.BackgroundTransparency = 1
 	UiTypography.Caption(hintLabel)
-	hintLabel.TextColor3 = Color3.fromRGB(160, 160, 172)
+	hintLabel.TextColor3 = HudChrome.Color.TextDim
 	hintLabel.Text = ""
 	hintLabel.Parent = card
 
@@ -703,15 +675,13 @@ local function buildCard(parent, entry)
 	newFlag.AnchorPoint = Vector2.new(0, 0)
 	newFlag.Size = UDim2.new(0, 40, 0, 16)
 	newFlag.Position = UDim2.new(0, 4, 0, 4)
-	newFlag.BackgroundColor3 = Color3.fromRGB(235, 45, 45)
-	newFlag.Font = Enum.Font.FredokaOne
-	newFlag.TextScaled = true
-	newFlag.TextColor3 = Color3.fromRGB(255, 255, 255)
 	newFlag.Text = "NEW"
 	newFlag.Visible = false
 	newFlag.ZIndex = 6
 	newFlag.Parent = card
-	ComicStyleUtils.Apply(newFlag, 6, 2)
+	HudChrome.Panel(newFlag, { radius = HudChrome.Radius.Small, fill = HudChrome.Color.Danger })
+	HudChrome.Label(newFlag, 12)
+	newFlag.TextColor3 = Color3.new(1, 1, 1)
 
 	local record = {
 		entry = entry,

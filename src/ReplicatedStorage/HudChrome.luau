@@ -552,6 +552,117 @@ function HudChrome.SpalteNachEventY()
 	return HudChrome.SpalteEventY() + s.EventHoehe + s.Luft
 end
 
+-- ===== Menue-Bildschirme =====
+--
+-- Die Menues -- Archiv, Talente, Geschenke, Skins, Fraktion, Achievements, Hilfe -- bauen
+-- alle dasselbe: ein Vollbild-Feld, ein Titel oben links, ein Schliessen-Knopf oben rechts,
+-- darunter der Inhalt. Und jedes hat es einzeln erfunden: FredokaOne hier, LuckiestGuy
+-- dort, Titel mal bei 12 mal bei 14 Pixeln, der Schliessen-Knopf mal 36 mal 40 Pixel.
+--
+-- Genau dieselbe Streuung war der Grund fuer HudChrome im HUD, und dort war der Ausweg
+-- nicht "die richtige Zahl aufschreiben", sondern ein FERTIGES REZEPT. Also auch hier:
+-- wer einen Menue-Bildschirm will, bekommt einen; die Zahlen dahinter stehen an einer
+-- Stelle.
+--
+-- Zwei Abweichungen vom Comic-Bestand sind Absicht:
+--
+-- Der Schliessen-Knopf ist NICHT mehr rot. Rot ist Danger und bedeutet nach Regel 2 eine
+-- Messung -- Schaden, Alarm. Ein Fenster zu schliessen ist keine Gefahr, und ein roter
+-- Knopf an dieser Stelle sagt in dieser Sprache etwas Falsches.
+--
+-- Der Kopf traegt eine Lichtkante nach unten statt eines Rahmens rundherum. Ein Vollbild
+-- braucht keine Umrandung -- es gibt nichts, wogegen es sich abgrenzen muesste. Was es
+-- braucht, ist eine Trennung zwischen Kopf und Inhalt. Dieselbe Ueberlegung wie beim
+-- Sockel des Tachos.
+HudChrome.ScreenHeader = 64
+
+function HudChrome.Screen(parent, options)
+	options = options or {}
+
+	local panel = Instance.new("Frame")
+	panel.Name = options.name or "MenuScreen"
+	panel.Size = UDim2.new(1, 0, 1, 0)
+	panel.Position = UDim2.new(0, 0, 0, 0)
+	panel.BackgroundColor3 = HudChrome.Color.Panel
+	panel.BorderSizePixel = 0
+	panel.Visible = false
+	panel.Parent = parent
+
+	local kopf = Instance.new("Frame")
+	kopf.Name = "Header"
+	kopf.Size = UDim2.new(1, 0, 0, HudChrome.ScreenHeader)
+	kopf.BackgroundColor3 = HudChrome.Color.PanelRaised
+	kopf.BorderSizePixel = 0
+	kopf.ZIndex = 2
+	kopf.Parent = panel
+
+	local kante = Instance.new("Frame")
+	kante.Name = "HeaderEdge"
+	kante.Size = UDim2.new(1, 0, 0, 1)
+	kante.Position = UDim2.new(0, 0, 1, -1)
+	kante.BackgroundColor3 = HudChrome.Color.BorderBright
+	kante.BackgroundTransparency = 0.5
+	kante.BorderSizePixel = 0
+	kante.ZIndex = 3
+	kante.Parent = kopf
+
+	local titel = Instance.new("TextLabel")
+	titel.Name = "ScreenTitle"
+	titel.Size = UDim2.new(1, -160, 0, 26)
+	titel.Position = UDim2.new(0, 24, 0, 10)
+	titel.BackgroundTransparency = 1
+	titel.TextXAlignment = Enum.TextXAlignment.Left
+	titel.Text = options.title or ""
+	titel.ZIndex = 3
+	titel.Parent = kopf
+	HudChrome.Label(titel, 26)
+
+	-- Die Unterzeile gehoert zur Stilregel: alles ist zweizeilig beschriftet. Sie steht
+	-- auch dann da, wenn der Aufrufer nichts uebergibt -- dann traegt sie spaeter den
+	-- Fortschritt oder die Zaehlung, wie im Archiv.
+	local unterzeile = Instance.new("TextLabel")
+	unterzeile.Name = "ScreenSubtitle"
+	unterzeile.Size = UDim2.new(1, -160, 0, 18)
+	unterzeile.Position = UDim2.new(0, 24, 0, 38)
+	unterzeile.BackgroundTransparency = 1
+	unterzeile.TextXAlignment = Enum.TextXAlignment.Left
+	unterzeile.Text = options.subtitle or ""
+	unterzeile.ZIndex = 3
+	unterzeile.Parent = kopf
+	HudChrome.Sublabel(unterzeile, 14)
+
+	local schliessen = Instance.new("TextButton")
+	schliessen.Name = "CloseButton"
+	schliessen.AnchorPoint = Vector2.new(1, 0.5)
+	schliessen.Position = UDim2.new(1, -24, 0.5, 0)
+	schliessen.Size = UDim2.new(0, 34, 0, 34)
+	schliessen.AutoButtonColor = false
+	schliessen.Text = "\u{2715}"
+	schliessen.ZIndex = 3
+	schliessen.Parent = kopf
+	HudChrome.Panel(schliessen, { radius = HudChrome.Radius.Small, fill = HudChrome.Color.Panel })
+	HudChrome.Label(schliessen, 18)
+	schliessen.TextColor3 = HudChrome.Color.TextSecondary
+
+	-- Der Inhalt liegt UNTER dem Kopf. Dass jeder Aufrufer dafuer die Kopfhoehe von Hand
+	-- abzieht, war die haeufigste Abweichung im Bestand -- mal 60, mal 70, mal 80.
+	local inhalt = Instance.new("Frame")
+	inhalt.Name = "Content"
+	inhalt.Position = UDim2.new(0, 0, 0, HudChrome.ScreenHeader)
+	inhalt.Size = UDim2.new(1, 0, 1, -HudChrome.ScreenHeader)
+	inhalt.BackgroundTransparency = 1
+	inhalt.Parent = panel
+
+	return {
+		panel = panel,
+		header = kopf,
+		content = inhalt,
+		title = titel,
+		subtitle = unterzeile,
+		close = schliessen,
+	}
+end
+
 -- ===== Die untere Reihe =====
 --
 -- Unten steht der Tacho in der Bildmitte, links und rechts davon die Knoepfe. Sie kommen
