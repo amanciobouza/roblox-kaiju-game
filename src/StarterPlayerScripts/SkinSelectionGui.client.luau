@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
 local ComicStyleUtils = require(ReplicatedStorage:WaitForChild("ComicStyleUtils"))
 local ModelPreviewUtils = require(ReplicatedStorage:WaitForChild("ModelPreviewUtils"))
+local StageModels = require(ReplicatedStorage:WaitForChild("StageModels"))
 local UiTypography = require(ReplicatedStorage:WaitForChild("UiTypography"))
 local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
 local applyComicStyle = ComicStyleUtils.Apply
@@ -1513,45 +1514,51 @@ MeltdownExplosionEvent.OnClientEvent:Connect(function()
 	}):Play()
 end)
 
--- ===== 3 Kraft-Balken NEBENEINANDER: Bein/Arm/Körper =====
--- Die Obergrenze kommt aus den Spieler-Attributen StatCap/ArmStatCap/LegStatCap (siehe
--- unten), NICHT aus einer Formel im Client -- der Server rechnet sie über eine Kurve.
--- Eigener kleiner Frame, direkt unter dem kompakten Player-Status-Cluster -- im HUD-
--- Redesign nicht explizit erwähnt, bekommt aber trotzdem einen aufgeräumten Platz statt
--- im (jetzt nicht mehr vorhandenen) grossen alten levelFrame zu stecken.
+-- ===== Die drei Kraftwerte: Bein, Arm, Koerper =====
+--
+-- Sie stehen jetzt OBEN MITTE, nicht mehr oben links. Zwei Gruende:
+--
+-- Erstens war die linke Spalte inzwischen belegt -- dort liegen die Belohnungs-Meldungen
+-- (y 16 bis 80) und darunter das Forschungsfeld (ab y 96). Das Panel sass mitten darin.
+--
+-- Zweitens ist oben Mitte der richtige Platz: dort steht der EIGENE ZUSTAND, und genau das
+-- sind diese Werte. Es kollidiert auch nichts, denn die Level-/HP-Felder, die dort sonst
+-- stehen, sind im Sanctuary ausgeblendet -- und nur dort ist dieses Panel sichtbar. Die
+-- beiden schliessen sich gegenseitig aus.
+--
+-- Die Obergrenze kommt aus den Spieler-Attributen StatCap/ArmStatCap/LegStatCap, NICHT aus
+-- einer Formel im Client -- der Server rechnet sie ueber eine Kurve.
+local KRAFT_BREITE = 380
+local KRAFT_HOEHE = 92
+local KRAFT_RAND = 8
+local KRAFT_SPALTE = 116
+
 local statsRowFrame = Instance.new("Frame")
 statsRowFrame.Name = "StatsRowFrame"
-statsRowFrame.Size = UDim2.new(0, 360, 0, 108) -- höher als vorher: Platz für Titel + Wirkungs-Zeile pro Stat
-statsRowFrame.AnchorPoint = Vector2.new(0, 0)
-statsRowFrame.Position = UDim2.new(0, 16, 0, 14) -- links oben, NICHT mehr oben mittig (Platz für den Trainings-Balken dort)
-statsRowFrame.BackgroundColor3 = Color3.fromRGB(20, 24, 34)
-statsRowFrame.BackgroundTransparency = 0.15 -- sichtbarer Rahmen statt "schwebender" nackter Balken
+statsRowFrame.Size = UDim2.new(0, KRAFT_BREITE, 0, KRAFT_HOEHE)
+statsRowFrame.AnchorPoint = Vector2.new(0.5, 0)
+statsRowFrame.Position = UDim2.new(0.5, 0, 0, 8)
 statsRowFrame.Parent = screenGui
+HudChrome.Panel(statsRowFrame, { radius = HudChrome.Radius.Panel })
 
-local statsPanelCorner = Instance.new("UICorner")
-statsPanelCorner.CornerRadius = UDim.new(0, 14)
-statsPanelCorner.Parent = statsRowFrame
-
--- Titel-Header: macht auf einen Blick klar, WAS das ist (vorher: nackte Balken ohne
--- jeden Kontext, besonders auffällig in Sanctuary, wo sonst kein HUD drumherum steht).
+-- Der Titel war vorher da, aber unsichtbar: er wurde gebaut und nie eingehaengt
+-- (statsPanelTitle.Parent fehlte). Ein Panel ohne Ueberschrift stand damit besonders im
+-- Sanctuary ohne jeden Zusammenhang herum.
 local statsPanelTitle = Instance.new("TextLabel")
 statsPanelTitle.Name = "PanelTitle"
-statsPanelTitle.Size = UDim2.new(1, -16, 0, 22)
-statsPanelTitle.Position = UDim2.new(0, 8, 0, 4)
+statsPanelTitle.Size = UDim2.new(1, -16, 0, 20)
+statsPanelTitle.Position = UDim2.new(0, KRAFT_RAND, 0, 6)
 statsPanelTitle.BackgroundTransparency = 1
-statsPanelTitle.Font = Enum.Font.LuckiestGuy
-statsPanelTitle.TextScaled = true
-statsPanelTitle.TextColor3 = Color3.fromRGB(255, 210, 80)
-statsPanelTitle.TextStrokeColor3 = Color3.new(0, 0, 0)
-statsPanelTitle.TextStrokeTransparency = 0.3
-statsPanelTitle.TextXAlignment = Enum.TextXAlignment.Center
-statsPanelTitle.Text = "🏋️ TRAINING"
-
+statsPanelTitle.TextXAlignment = Enum.TextXAlignment.Left
+statsPanelTitle.Text = "TRAINING"
+statsPanelTitle.Parent = statsRowFrame
+HudChrome.Label(statsPanelTitle, 16)
+statsPanelTitle.TextColor3 = HudChrome.Color.TextSecondary
 
 local statsRow = Instance.new("Frame")
 statsRow.Name = "StatsRow"
-statsRow.Size = UDim2.new(1, -16, 0, 68)
-statsRow.Position = UDim2.new(0, 8, 0, 30)
+statsRow.Size = UDim2.new(1, -KRAFT_RAND * 2, 0, 52)
+statsRow.Position = UDim2.new(0, KRAFT_RAND, 0, 30)
 statsRow.BackgroundTransparency = 1
 statsRow.Parent = statsRowFrame
 
@@ -1562,11 +1569,9 @@ statsRowLayout.Padding = UDim.new(0, 8)
 statsRowLayout.SortOrder = Enum.SortOrder.LayoutOrder
 statsRowLayout.Parent = statsRow
 
-
-
 -- Ordnet den Trainings-Stat-Typ (wie er in "TrainingStat" steht, z.B. "Arm") derselben
--- Farbe zu, die auch der kleine Skill-Balken oben hat -- damit der große Trainings-Balken
--- unten farblich konsistent zum jeweils trainierten Skill ist.
+-- Farbe zu, die auch der kleine Balken oben hat -- damit der grosse Trainings-Balken
+-- farblich zum jeweils trainierten Wert passt.
 local STAT_COLOR_BY_TYPE = {
 	Arm = Color3.fromRGB(220, 90, 220),
 	Leg = Color3.fromRGB(255, 150, 60),
@@ -1575,45 +1580,61 @@ local STAT_COLOR_BY_TYPE = {
 
 local statBars = {} -- [key] = { label = TextLabel, fill = Frame, displayName = string }
 local lastStatValues = {} -- [key] = number
-local isAnimatingStat = {} -- [key] = true, während eine Flug-Animation für diesen Stat läuft
--- Vorwärtsdeklaration: wird von der Energie-Flug-Animation weiter oben im Script (im
--- onArrive-Callback) bereits referenziert, aber erst weiter unten definiert -- Lua macht
--- lokale Variablen erst AB ihrer Deklaration sichtbar, daher hier vorab anlegen.
+local isAnimatingStat = {} -- [key] = true, waehrend eine Flug-Animation fuer diesen Stat laeuft
+-- Vorwaertsdeklaration: wird von der Energie-Flug-Animation weiter oben im Skript (im
+-- onArrive-Rueckruf) bereits referenziert, aber erst weiter unten definiert -- Lua macht
+-- lokale Variablen erst AB ihrer Deklaration sichtbar.
 local updateLevelBar
 local advanceXPBar
 
+-- Die Emoji sind raus. Der Wert steht jetzt rechts in derselben Zeile wie sein Name, so
+-- wie in den Level- und HP-Feldern auch -- Bezeichnung links, Messung rechts.
 local STAT_BAR_CONFIG = {
-	{ key = "ArmPower", label = "💪 Arm", color = Color3.fromRGB(220, 90, 220), effect = "Base Damage" },
-	{ key = "LegPower", label = "🦵 Bein", color = Color3.fromRGB(255, 150, 60), effect = "Bonus Damage" },
-	{ key = "BodyPower", label = "💓 Körper", color = Color3.fromRGB(90, 220, 130), effect = "Energy Efficiency" },
+	{ key = "ArmPower", label = "ARM", short = "Arm", color = Color3.fromRGB(220, 90, 220), effect = "BASE DAMAGE" },
+	{ key = "LegPower", label = "BEIN", short = "Bein", color = Color3.fromRGB(255, 150, 60), effect = "BONUS DAMAGE" },
+	{ key = "BodyPower", label = "KOERPER", short = "Koerper", color = Color3.fromRGB(90, 220, 130), effect = "ENERGY EFFICIENCY" },
 }
 
 for index, config in ipairs(STAT_BAR_CONFIG) do
 	local column = Instance.new("Frame")
 	column.Name = config.key .. "Column"
-	column.Size = UDim2.new(0, 108, 1, 0)
+	column.Size = UDim2.new(0, KRAFT_SPALTE, 1, 0)
 	column.LayoutOrder = index
 	column.BackgroundTransparency = 1
 	column.Parent = statsRow
 
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Name = "Name"
+	nameLabel.Size = UDim2.new(0, 58, 0, 18)
+	nameLabel.Position = UDim2.new(0, 0, 0, 0)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+	nameLabel.Text = config.label
+	nameLabel.Parent = column
+	HudChrome.Label(nameLabel, 14)
+	nameLabel.TextColor3 = config.color
+
 	local label = Instance.new("TextLabel")
-	label.Name = "Label"
-	label.Size = UDim2.new(1, 0, 0, 18)
-	label.Position = UDim2.new(0, 0, 0, 0)
+	label.Name = "Value"
+	label.Size = UDim2.new(0, KRAFT_SPALTE - 58, 0, 18)
+	label.Position = UDim2.new(0, 58, 0, 0)
 	label.BackgroundTransparency = 1
-	label.TextColor3 = Color3.new(1, 1, 1)
-	label.Font = Enum.Font.FredokaOne
-	label.TextScaled = true
-	label.Text = config.label .. ": 0/0"
+	label.TextXAlignment = Enum.TextXAlignment.Right
+	label.Text = "0 / 0"
 	label.Parent = column
+	HudChrome.Number(label, 13)
 
 	local statBackground = Instance.new("Frame")
 	statBackground.Name = "Background"
-	statBackground.Size = UDim2.new(1, 0, 0, 16)
+	statBackground.Size = UDim2.new(1, 0, 0, 8)
 	statBackground.Position = UDim2.new(0, 0, 0, 22)
-	statBackground.BackgroundColor3 = Color3.fromRGB(30, 60, 100)
+	statBackground.BackgroundColor3 = HudChrome.Color.PanelSunken
+	statBackground.BorderSizePixel = 0
 	statBackground.Parent = column
-	applyComicStyle(statBackground, 7, 2)
+
+	local statBackgroundCorner = Instance.new("UICorner")
+	statBackgroundCorner.CornerRadius = UDim.new(0, 4)
+	statBackgroundCorner.Parent = statBackground
 
 	local statFill = Instance.new("Frame")
 	statFill.Name = "Fill"
@@ -1622,22 +1643,25 @@ for index, config in ipairs(STAT_BAR_CONFIG) do
 	statFill.BorderSizePixel = 0
 	statFill.ZIndex = 2
 	statFill.Parent = statBackground
-	applyComicStyle(statFill, 5, 0)
 
-	-- Wirkungs-Zeile: macht konkret klar, wofür der Wert gut ist (vorher komplett
-	-- unerklärt) -- z.B. "Schlag-Schaden" unter Arm.
+	local statFillCorner = Instance.new("UICorner")
+	statFillCorner.CornerRadius = UDim.new(0, 4)
+	statFillCorner.Parent = statFill
+
+	-- Wirkungs-Zeile: wofuer der Wert gut ist. Ohne sie sind es drei Balken ohne Grund.
 	local effectLabel = Instance.new("TextLabel")
 	effectLabel.Name = "EffectLabel"
 	effectLabel.Size = UDim2.new(1, 0, 0, 14)
-	effectLabel.Position = UDim2.new(0, 0, 0, 42)
+	effectLabel.Position = UDim2.new(0, 0, 0, 34)
 	effectLabel.BackgroundTransparency = 1
-	effectLabel.TextColor3 = Color3.fromRGB(180, 185, 195)
-	effectLabel.Font = Enum.Font.FredokaOne
-	effectLabel.TextScaled = true
-	effectLabel.Text = "↑ " .. config.effect
+	effectLabel.TextXAlignment = Enum.TextXAlignment.Left
+	effectLabel.TextTruncate = Enum.TextTruncate.AtEnd
+	effectLabel.Text = config.effect
 	effectLabel.Parent = column
+	HudChrome.Number(effectLabel, 11)
+	effectLabel.TextColor3 = HudChrome.Color.TextDim
 
-	statBars[config.key] = { label = label, fill = statFill, displayName = config.label }
+	statBars[config.key] = { label = label, fill = statFill, displayName = config.short }
 end
 
 -- ===== Zonenabhängige Umschaltung: Heat/Berserk-Leiste ist ausserhalb von Sanctuary
@@ -1921,191 +1945,166 @@ detailAction.Text = ""
 detailAction.Parent = detailFrame
 applyComicStyle(detailAction, 12, 3)
 
--- ===== Trainings-Panel: unten Mitte, NUR sichtbar während aktivem Training an einer Station =====
+-- ===== Trainings-Panel: oben Mitte, nur waehrend aktivem Training an einer Station =====
+--
+-- Es steht unter den drei Kraftwerten (die dort von y 8 bis 100 liegen) und gehoert mit
+-- ihnen zusammen: dort oben steht der eigene Zustand, und waehrend des Trainings ist
+-- genau das die Frage -- wie weit bin ich mit diesem Wert.
 local STAT_DISPLAY_NAMES = {
-	Leg = "🦵 Bein",
-	Arm = "💪 Arm",
-	Body = "💓 Körper",
+	Leg = "BEIN",
+	Arm = "ARM",
+	Body = "KOERPER",
 }
+
+local TRAIN_BREITE = 440
+local TRAIN_RAND = 12
+local TRAIN_X_KNOPF = 44
 
 local trainingFrame = Instance.new("Frame")
 trainingFrame.Name = "TrainingFrame"
-trainingFrame.Size = UDim2.new(0, 440, 0, 100)
+trainingFrame.Size = UDim2.new(0, TRAIN_BREITE, 0, 62)
 trainingFrame.AnchorPoint = Vector2.new(0.5, 0)
-trainingFrame.Position = UDim2.new(0.5, 0, 0, 94) -- oben mittig, unterhalb des Player-Status-Clusters (der endet bei Y=8+78=86)
-trainingFrame.BackgroundTransparency = 1
+trainingFrame.Position = UDim2.new(0.5, 0, 0, 108)
 trainingFrame.Visible = false
 trainingFrame.Parent = screenGui
-local trainingFrameCorner, trainingFrameStroke = applyComicStyle(trainingFrame, 18, 5)
-trainingFrameStroke.Transparency = 1
+HudChrome.Panel(trainingFrame, { radius = HudChrome.Radius.Small })
 
 local trainingTitle = Instance.new("TextLabel")
 trainingTitle.Name = "TrainingTitle"
-trainingTitle.Size = UDim2.new(1, 0, 0, 28)
-trainingTitle.Position = UDim2.new(0, 0, 0, 4)
+trainingTitle.Size = UDim2.new(0, 240, 0, 22)
+trainingTitle.Position = UDim2.new(0, TRAIN_RAND, 0, 8)
 trainingTitle.BackgroundTransparency = 1
-trainingTitle.Font = Enum.Font.LuckiestGuy
-trainingTitle.TextScaled = true
-trainingTitle.TextColor3 = Color3.new(1, 1, 1)
-trainingTitle.Text = "Training"
+trainingTitle.TextXAlignment = Enum.TextXAlignment.Left
+trainingTitle.Text = "TRAINING"
 trainingTitle.Parent = trainingFrame
+HudChrome.Label(trainingTitle, 18)
 
--- Große Stat-Fortschrittsanzeige (aktueller Wert / Cap für diese Station) -- etwas
--- schmaler, damit rechts daneben Platz für den kompakten X-Button bleibt.
+-- Der Wert steht NEBEN dem Balken, nicht darin. Im Balken stand er auf der Fuellung --
+-- weisse Schrift auf Gruen -- und war damit genauso schlecht zu lesen wie es die HP-Zahl
+-- vorher war.
+local trainingBarLabel = Instance.new("TextLabel")
+trainingBarLabel.Name = "TrainingBarLabel"
+trainingBarLabel.Size = UDim2.new(0, 150, 0, 22)
+trainingBarLabel.Position = UDim2.new(1, -TRAIN_RAND - TRAIN_X_KNOPF - 8 - 150, 0, 8)
+trainingBarLabel.BackgroundTransparency = 1
+trainingBarLabel.TextXAlignment = Enum.TextXAlignment.Right
+trainingBarLabel.Text = ""
+trainingBarLabel.Parent = trainingFrame
+HudChrome.NumberBold(trainingBarLabel, 18)
+
 local trainingBarBackground = Instance.new("Frame")
 trainingBarBackground.Name = "TrainingBarBackground"
-trainingBarBackground.Size = UDim2.new(1, -64, 0, 28)
-trainingBarBackground.Position = UDim2.new(0, 8, 0, 36)
-trainingBarBackground.BackgroundColor3 = Color3.fromRGB(30, 60, 100)
+trainingBarBackground.Size = UDim2.new(1, -TRAIN_RAND * 2 - TRAIN_X_KNOPF - 8, 0, 10)
+trainingBarBackground.Position = UDim2.new(0, TRAIN_RAND, 0, 38)
+trainingBarBackground.BackgroundColor3 = HudChrome.Color.PanelSunken
+trainingBarBackground.BorderSizePixel = 0
 trainingBarBackground.Parent = trainingFrame
-applyComicStyle(trainingBarBackground, 12, 3)
+
+local trainingBarCorner = Instance.new("UICorner")
+trainingBarCorner.CornerRadius = UDim.new(0, 5)
+trainingBarCorner.Parent = trainingBarBackground
 
 local trainingBarFill = Instance.new("Frame")
 trainingBarFill.Name = "Fill"
 trainingBarFill.Size = UDim2.new(0, 0, 1, 0)
 trainingBarFill.BackgroundColor3 = Color3.fromRGB(90, 220, 130)
 trainingBarFill.BorderSizePixel = 0
+trainingBarFill.ZIndex = 2
 trainingBarFill.Parent = trainingBarBackground
-applyComicStyle(trainingBarFill, 10, 0)
 
-local trainingBarLabel = Instance.new("TextLabel")
-trainingBarLabel.Name = "TrainingBarLabel"
-trainingBarLabel.Size = UDim2.new(1, 0, 1, 0)
-trainingBarLabel.BackgroundTransparency = 1
-trainingBarLabel.Font = Enum.Font.FredokaOne
-trainingBarLabel.TextScaled = true
-trainingBarLabel.TextColor3 = Color3.new(1, 1, 1)
-trainingBarLabel.ZIndex = 2
-trainingBarLabel.Text = ""
-trainingBarLabel.Parent = trainingBarBackground
+local trainingBarFillCorner = Instance.new("UICorner")
+trainingBarFillCorner.CornerRadius = UDim.new(0, 5)
+trainingBarFillCorner.Parent = trainingBarFill
 
--- Verlassen-Button: kompakter "X"-Button, direkt neben dem Trainings-Balken (innerhalb
--- des Panels, das jetzt weit genug oben sitzt, um nicht mehr mit den Angriffs-Buttons zu kollidieren).
+-- Verlassen: der einzige Knopf im HUD, der etwas abbricht. Er traegt deshalb die
+-- Gefahrfarbe als Rahmen, nicht als Flaeche -- eine rote Flaeche im ruhigen Chrome zoege
+-- mehr Aufmerksamkeit auf sich als das Training selbst.
 local leaveTrainingButton = Instance.new("TextButton")
 leaveTrainingButton.Name = "LeaveTrainingButton"
-leaveTrainingButton.Size = UDim2.new(0, 40, 0, 28)
+leaveTrainingButton.Size = UDim2.new(0, TRAIN_X_KNOPF, 0, 32)
 leaveTrainingButton.AnchorPoint = Vector2.new(1, 0)
-leaveTrainingButton.Position = UDim2.new(1, -8, 0, 36)
-leaveTrainingButton.BackgroundColor3 = Color3.fromRGB(220, 70, 70)
-leaveTrainingButton.Font = Enum.Font.FredokaOne
-leaveTrainingButton.TextScaled = true
-leaveTrainingButton.TextColor3 = Color3.new(1, 1, 1)
+leaveTrainingButton.Position = UDim2.new(1, -TRAIN_RAND, 0, 16)
+leaveTrainingButton.AutoButtonColor = false
 leaveTrainingButton.Text = "X"
 leaveTrainingButton.Parent = trainingFrame
-applyComicStyle(leaveTrainingButton, 10, 3)
+HudChrome.Panel(leaveTrainingButton, {
+	radius = HudChrome.Radius.Small,
+	fill = HudChrome.Color.PanelRaised,
+	transparency = 0,
+	border = HudChrome.Color.Danger,
+})
+HudChrome.Label(leaveTrainingButton, 18)
+leaveTrainingButton.TextColor3 = HudChrome.Color.Danger
 
 leaveTrainingButton.MouseButton1Click:Connect(function()
 	StopTrainingEvent:FireServer()
 end)
 
--- ===== Boost-Anzeige: eigenes, DAUERHAFT sichtbares Panel (oben rechts) -- der Boost-
--- Fortschritt bleibt ja bestehen, auch wenn man gerade an keiner Station steht, deshalb
--- verschwindet diese Anzeige NICHT zusammen mit dem Stations-Trainings-Panel.
+-- ===== Boost-Anzeige =====
+-- Eigenes Feld, weil der Boost-Fortschritt bestehen bleibt, auch wenn man gerade an keiner
+-- Station steht -- es verschwindet also NICHT zusammen mit dem Stations-Panel.
 local boostFrame = Instance.new("Frame")
 boostFrame.Name = "BoostFrame"
-boostFrame.Size = UDim2.new(0, 440, 0, 50) -- gleiche Breite wie das Trainings-Panel darüber
+boostFrame.Size = UDim2.new(0, TRAIN_BREITE, 0, 52)
 boostFrame.AnchorPoint = Vector2.new(0.5, 0)
-boostFrame.Position = UDim2.new(0.5, 0, 0, 198) -- direkt unterhalb des Trainings-Panels (dessen unterer Rand liegt jetzt bei Y=94+100=194)
-boostFrame.BackgroundTransparency = 1 -- kein Hintergrund mehr
+boostFrame.Position = UDim2.new(0.5, 0, 0, 178)
+boostFrame.Visible = false
 boostFrame.Parent = screenGui
+HudChrome.Panel(boostFrame, { radius = HudChrome.Radius.Small })
+
+local boostLabel = Instance.new("TextLabel")
+boostLabel.Name = "BoostLabel"
+boostLabel.Size = UDim2.new(0, 240, 0, 20)
+boostLabel.Position = UDim2.new(0, TRAIN_RAND, 0, 7)
+boostLabel.BackgroundTransparency = 1
+boostLabel.TextXAlignment = Enum.TextXAlignment.Left
+boostLabel.Text = "TRAINING BOOST"
+boostLabel.Parent = boostFrame
+HudChrome.Label(boostLabel, 16)
+boostLabel.TextColor3 = HudChrome.Color.Ready
 
 local boostBarBackground = Instance.new("Frame")
 boostBarBackground.Name = "BoostBarBackground"
-boostBarBackground.Size = UDim2.new(1, -64, 0, 22) -- gleiche Breite wie der Trainings-Balken (dort -64 wegen dem X-Button daneben)
-boostBarBackground.Position = UDim2.new(0, 8, 0, 0)
-boostBarBackground.BackgroundColor3 = Color3.fromRGB(30, 60, 100)
+boostBarBackground.Size = UDim2.new(1, -TRAIN_RAND * 2, 0, 10)
+boostBarBackground.Position = UDim2.new(0, TRAIN_RAND, 0, 32)
+boostBarBackground.BackgroundColor3 = HudChrome.Color.PanelSunken
+boostBarBackground.BorderSizePixel = 0
 boostBarBackground.Parent = boostFrame
-applyComicStyle(boostBarBackground, 10, 3)
+
+local boostBarCorner = Instance.new("UICorner")
+boostBarCorner.CornerRadius = UDim.new(0, 5)
+boostBarCorner.Parent = boostBarBackground
 
 local boostBarFill = Instance.new("Frame")
 boostBarFill.Name = "Fill"
 boostBarFill.Size = UDim2.new(0, 0, 1, 0)
-boostBarFill.BackgroundColor3 = Color3.fromRGB(255, 220, 60)
+boostBarFill.BackgroundColor3 = HudChrome.Color.Ready
 boostBarFill.BorderSizePixel = 0
+boostBarFill.ZIndex = 2
 boostBarFill.Parent = boostBarBackground
-applyComicStyle(boostBarFill, 8, 0)
 
-local boostLabel = Instance.new("TextLabel")
-boostLabel.Name = "BoostLabel"
-boostLabel.Size = UDim2.new(1, -16, 0, 20)
-boostLabel.Position = UDim2.new(0, 8, 0, 28)
-boostLabel.BackgroundTransparency = 1
-boostLabel.Font = Enum.Font.FredokaOne
-boostLabel.TextScaled = true
-boostLabel.TextColor3 = Color3.new(1, 1, 1)
-boostLabel.Text = "⚡ Training Boost" -- statische Überschrift, ändert sich nicht mehr
-boostLabel.Parent = boostFrame
+local boostBarFillCorner = Instance.new("UICorner")
+boostBarFillCorner.CornerRadius = UDim.new(0, 5)
+boostBarFillCorner.Parent = boostBarFill
 
-boostFrame.Visible = false
-
--- ===== Berserker-Modus-Panel: rote Progressbar, zeigt verbleibende Dauer =====
--- Unten mittig, unter der normalen HUD-Zeile -- unabhängig vom Trainings-System sichtbar,
--- da der Berserker-Modus ja im normalen Kampf (Häuser zerstören) ausgelöst wird.
-local berserkerFrame = Instance.new("Frame")
-berserkerFrame.Name = "BerserkerFrame"
-berserkerFrame.Size = UDim2.new(0, 320, 0, 58)
-berserkerFrame.AnchorPoint = Vector2.new(0.5, 0)
-berserkerFrame.Position = UDim2.new(0.5, 0, 0, 170)
-berserkerFrame.BackgroundColor3 = Color3.fromRGB(40, 10, 10)
-berserkerFrame.Visible = false
-berserkerFrame.Parent = screenGui
-applyComicStyle(berserkerFrame, 16, 4)
-
-local berserkerLabel = Instance.new("TextLabel")
-berserkerLabel.Name = "BerserkerLabel"
-berserkerLabel.Size = UDim2.new(1, -16, 0, 22)
-berserkerLabel.Position = UDim2.new(0, 8, 0, 4)
-berserkerLabel.BackgroundTransparency = 1
-berserkerLabel.Font = Enum.Font.LuckiestGuy
-berserkerLabel.TextScaled = true
-berserkerLabel.TextColor3 = Color3.fromRGB(255, 70, 60)
-berserkerLabel.Text = "BERSERKER-MODUS"
-berserkerLabel.Parent = berserkerFrame
-
-local berserkerBarBackground = Instance.new("Frame")
-berserkerBarBackground.Name = "BerserkerBarBackground"
-berserkerBarBackground.Size = UDim2.new(1, -16, 0, 22)
-berserkerBarBackground.Position = UDim2.new(0, 8, 0, 28)
-berserkerBarBackground.BackgroundColor3 = Color3.fromRGB(60, 20, 20)
-berserkerBarBackground.Parent = berserkerFrame
-applyComicStyle(berserkerBarBackground, 10, 3)
-
-local berserkerBarFill = Instance.new("Frame")
-berserkerBarFill.Name = "Fill"
-berserkerBarFill.Size = UDim2.new(1, 0, 1, 0)
-berserkerBarFill.BackgroundColor3 = Color3.fromRGB(255, 45, 35)
-berserkerBarFill.BorderSizePixel = 0
-berserkerBarFill.Parent = berserkerBarBackground
-applyComicStyle(berserkerBarFill, 8, 0)
-
-RunService.Heartbeat:Connect(function()
-	local endsAt = player:GetAttribute("BerserkerEndsAt") or 0
-	local startedAt = player:GetAttribute("BerserkerStartedAt") or 0
-	local now = Workspace:GetServerTimeNow()
-	local isActive = now < endsAt
-
-	berserkerFrame.Visible = isActive
-	if isActive then
-		local totalDuration = math.max(endsAt - startedAt, 0.1)
-		local remaining = endsAt - now
-		local ratio = math.clamp(remaining / totalDuration, 0, 1)
-		berserkerBarFill.Size = UDim2.new(ratio, 0, 1, 0)
-
-		-- Label + Farbe je nach tatsächlichem Heat-Zustand: "MELTDOWN" (lila) sobald die
-		-- (talent-abhängige) Meltdown-Schwelle erreicht ist, sonst "BERSERKER-MODUS" (rot).
-		local heat = player:GetAttribute("Heat") or 0
-		local effectiveMeltdownThreshold = player:GetAttribute("EffectiveMeltdownThreshold") or 100
-		if heat >= effectiveMeltdownThreshold then
-			berserkerLabel.Text = "MELTDOWN"
-			berserkerLabel.TextColor3 = Color3.fromRGB(180, 60, 220)
-			berserkerBarFill.BackgroundColor3 = Color3.fromRGB(180, 60, 220)
-		else
-			berserkerLabel.Text = "BERSERKER-MODUS"
-			berserkerLabel.TextColor3 = Color3.fromRGB(255, 70, 60)
-			berserkerBarFill.BackgroundColor3 = Color3.fromRGB(255, 45, 35)
-		end
-	end
-end)
+-- ===== Das Berserker-Panel ist entfernt =====
+--
+-- Es konnte nie erscheinen. Seine Sichtbarkeit haengt an
+--
+--     local endsAt = player:GetAttribute("BerserkerEndsAt") or 0
+--     local isActive = now < endsAt
+--
+-- und "BerserkerEndsAt" wird von KEINER Stelle im Projekt gesetzt. Der Ausdruck war also
+-- immer now < 0, immer falsch. Panel, Balken, Beschriftung und eine Heartbeat-Schleife
+-- liefen als toter Code mit.
+--
+-- Der Grund steht in BerserkerAuraClient: die Eskalation laeuft nach HITZE, nicht nach
+-- Zeit -- ein fester Timer wurde bewusst verworfen. Das Panel ist ein Rest aus dem
+-- verworfenen Entwurf.
+--
+-- Was es zeigen sollte, zeigt der Tacho inzwischen ohnehin besser: die Stufe steht dort
+-- gross ueber dem Instrument, die Hitze traegt der Zeiger, und der Meltdown-Bereich ist
+-- am Farbband markiert. So war es im Grilling auch entschieden (Q22).
 
 -- Läuft jeden Frame: Boost-Anzeige + Stations-Balken, beide NUR während aktivem Training
 -- an einer Station sichtbar (verschwinden zusammen, sobald die Station verlassen wird).
@@ -2166,7 +2165,19 @@ RunService.Heartbeat:Connect(function()
 	local cap = math.max(player:GetAttribute(capAttribute) or 1, 1)
 	local ratio = math.clamp(statValue.Value / cap, 0, 1)
 
-	trainingTitle.Text = (STAT_DISPLAY_NAMES[statType] or statType) .. "-Training"
+	trainingTitle.Text = (STAT_DISPLAY_NAMES[statType] or statType) .. " TRAINING"
+
+	-- Die Zahl war vorher nie gesetzt: trainingBarLabel wurde angelegt, auf "" gestellt und
+	-- nirgends befuellt. Der Balken lief also ohne jede Angabe, wie weit er ist.
+	--
+	-- Koerper wird rein kosmetisch hochskaliert -- die Zuwaechse sind serverseitig
+	-- absichtlich sehr klein (TRAINING_SLOWDOWN), und "0 / 1" saehe aus wie ein Fehler.
+	-- Dieselbe Rechnung wie bei den drei Kraftwerten oben.
+	local anzeigeWert, anzeigeCap = statValue.Value, cap
+	if statType == "Body" then
+		anzeigeWert, anzeigeCap = anzeigeWert * 100, anzeigeCap * 100
+	end
+	trainingBarLabel.Text = math.floor(anzeigeWert) .. " / " .. math.floor(anzeigeCap)
 
 	-- Wie beim Kraft-Balken: während eine Flug-Animation für diesen Stat läuft, hier
 	-- nicht eingreifen -- der Balken springt erst bei Ankunft der Zahl auf den neuen Wert
@@ -2646,7 +2657,9 @@ function updateLevelBar()
 			if key == "BodyPower" then
 				displayValue, displayCap = value * 100, cap * 100
 			end
-			ui.label.Text = ui.displayName .. ": " .. math.floor(displayValue) .. "/" .. math.floor(displayCap)
+			-- Nur noch die Zahl: der Name steht jetzt links daneben in einer eigenen
+			-- Beschriftung, so wie in den Level- und HP-Feldern.
+			ui.label.Text = math.floor(displayValue) .. " / " .. math.floor(displayCap)
 			lastStatValues[key] = value
 		end
 	end
@@ -2673,6 +2686,25 @@ local function buildSkinPreview(container, skin, revealed)
 	if not revealed then
 		ModelPreviewUtils.ShowPlaceholder(container)
 		return
+	end
+
+	-- Erst nach einem ECHTEN Modell fragen. Der Primal Beast hat eines; die übrigen Stufen
+	-- noch nicht, dort bleibt es beim Avatar in Skin-Grösse (siehe StageModels).
+	local realModel = StageModels.BuildPreview(skin.Faction or "Kaiju", skin.Id)
+	if realModel then
+		local viewport = ModelPreviewUtils.CreateViewport(container, 2)
+		local okReal = pcall(function()
+			realModel.Parent = viewport
+			ModelPreviewUtils.Fit(viewport, realModel, container)
+			ModelPreviewUtils.AddGlow(container, ModelPreviewUtils.FindGlowColor(realModel), 1)
+		end)
+		if okReal then
+			ModelPreviewUtils.Spin(realModel)
+			return
+		end
+		-- Fehlgeschlagen: aufräumen und den Avatar-Weg unten nehmen, statt einen leeren
+		-- Rahmen stehen zu lassen.
+		viewport:Destroy()
 	end
 
 	local pack = Workspace:FindFirstChild("R15AvatarPack")
