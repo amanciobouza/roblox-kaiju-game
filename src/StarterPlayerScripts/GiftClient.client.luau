@@ -15,6 +15,7 @@ local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtil
 local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
 local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
 local RunService = game:GetService("RunService")
+local SoundService = game:GetService("SoundService")
 local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
 
@@ -42,13 +43,6 @@ screenGui.Name = "GiftGui"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
--- Vollbild-Bildschirm aus HudChrome.Screen: Feld, Kopf, Titel, Unterzeile und
--- Schliessen-Knopf. Sie standen hier einzeln -- LuckiestGuy, ein rotes X, ein Titel mit
--- Emoji -- und in jedem anderen Menue noch einmal, jedes Mal etwas anders.
---
--- Die Unterzeile traegt jetzt, was vorher nirgends stand: wie viele Geschenke gerade
--- abholbar sind. Das war bisher nur am Laempchen in der Navigation zu sehen, und dort sagt
--- es nur DASS, nicht wie viele.
 -- ===== Die Strecke =====
 --
 -- Hier stand ein Raster aus zwoelf gleich grossen Kacheln. Das war der Fehler, und zwar
@@ -177,10 +171,20 @@ HudChrome.MenuCaption(sessionCaption, 13)
 local KARTE_BREITE = 420
 local KARTE_HOEHE = 176
 
-local naechsteKarte = Instance.new("Frame")
+-- Die Karte IST der Knopf.
+--
+-- Vorher stand auf ihr gross "CLAIM", anfassen musste man aber den kleinen runden Punkt
+-- unten auf der Achse. Eine Aufschrift, die etwas verspricht, was an ihr nicht geht, ist
+-- schlimmer als gar keine -- man sucht dann den Fehler bei sich.
+--
+-- Die Punkte auf der Bahn bleiben zusaetzlich anklickbar. Sie sind jetzt nicht mehr der
+-- Weg, sondern eine Abkuerzung, wenn mehrere Geschenke gleichzeitig bereitliegen.
+local naechsteKarte = Instance.new("TextButton")
 naechsteKarte.Name = "NextGiftCard"
 naechsteKarte.Size = UDim2.new(0, KARTE_BREITE, 0, KARTE_HOEHE)
 naechsteKarte.Position = UDim2.new(0, 32, 0, 20)
+naechsteKarte.AutoButtonColor = false
+naechsteKarte.Text = ""
 naechsteKarte.ZIndex = 4
 naechsteKarte.Parent = schirm.content
 local _, karteRand = HudChrome.Panel(naechsteKarte, {
@@ -254,6 +258,61 @@ karteBalken.BackgroundColor3 = HudChrome.Color.Ready
 karteBalken.BorderSizePixel = 0
 karteBalken.ZIndex = 6
 karteBalken.Parent = karteBalkenSchacht
+
+-- ===== Der Belohnungston =====
+--
+-- Ein Geschenk abzuholen ist der einzige Augenblick in diesem Bildschirm, in dem etwas
+-- PASSIERT -- alles andere ist Warten und Zusehen. Ohne Klang bleibt davon ein Rechteck,
+-- das die Farbe wechselt.
+--
+-- WICHTIG: Diese Kennung ist geliehen -- es ist derselbe Klang wie beim Stufenaufstieg.
+-- Das ist ein Platzhalter, damit der Moment ueberhaupt klingt; er sollte einen eigenen
+-- bekommen, sonst bedeuten zwei verschiedene Ereignisse dasselbe.
+local CLAIM_SOUND_ID = "rbxassetid://9095193253"
+
+local claimSound = Instance.new("Sound")
+claimSound.Name = "GiftClaimSound"
+claimSound.SoundId = CLAIM_SOUND_ID
+claimSound.Volume = 0.85
+claimSound.Parent = SoundService
+
+-- Was die Karte gerade zeigt. Der Klick-Handler braucht es, und er kann nicht in der
+-- Heartbeat-Schleife stehen -- dort wuerde er je Bild neu verbunden.
+local karteN = nil
+local karteBereit = false
+
+local function holeAb(n)
+	local claimedFolder = player:FindFirstChild("ClaimedGifts")
+	local marker = claimedFolder and claimedFolder:FindFirstChild("Gift" .. n)
+	local sessionStart = player:GetAttribute("SessionStartTime")
+	if not marker or marker.Value or not sessionStart then
+		return false
+	end
+	if Workspace:GetServerTimeNow() - sessionStart < unlockTime(n) then
+		return false
+	end
+	ClaimGiftEvent:FireServer(n)
+	claimSound:Play()
+	return true
+end
+
+naechsteKarte.MouseButton1Click:Connect(function()
+	if not karteBereit or not karteN then
+		return
+	end
+	if not holeAb(karteN) then
+		return
+	end
+	-- Kurzer Stoss am Rahmen. Bewusst KEIN Groessenpuls: die Karte steht neben der Bahn,
+	-- und was waechst, schiebt hier nichts weg -- aber ein Rahmen, der aufblitzt, ist
+	-- dieselbe Bewegungssprache wie bei den Alarmsternen und der Navigation.
+	karteRand.Color = Color3.new(1, 1, 1)
+	karteRand.Thickness = 3
+	TweenService:Create(karteRand, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
+		Color = HudChrome.Color.Border,
+		Thickness = HudChrome.BorderThickness,
+	}):Play()
+end)
 
 -- ===== Die Bahn =====
 local BAHN_Y = 0.72 -- Anteil der Inhaltshoehe
@@ -347,15 +406,7 @@ for n = 1, GIFT_COUNT do
 	zeitLabel.TextColor3 = HudChrome.Color.TextDim
 
 	knopf.MouseButton1Click:Connect(function()
-		local claimedFolder = player:FindFirstChild("ClaimedGifts")
-		local marker = claimedFolder and claimedFolder:FindFirstChild("Gift" .. n)
-		local sessionStart = player:GetAttribute("SessionStartTime")
-		if not marker or marker.Value or not sessionStart then
-			return
-		end
-		if Workspace:GetServerTimeNow() - sessionStart >= unlockTime(n) then
-			ClaimGiftEvent:FireServer(n)
-		end
+		holeAb(n)
 	end)
 
 	giftCells[n] = { knopf = knopf, ring = ring, bild = bild, zeichen = zeichen, zeitLabel = zeitLabel }
@@ -493,6 +544,8 @@ RunService.Heartbeat:Connect(function()
 	wasReadyInitialisiert = true
 
 	-- ===== Die Karte fuer das Naechste =====
+	karteN, karteBereit = zeigeN, zeigeBereit
+
 	if zeigeN then
 		zeigeSymbol(karteBild, karteZeichen, zeigeN)
 		karteTitel.Text = giftDescription(zeigeN)
