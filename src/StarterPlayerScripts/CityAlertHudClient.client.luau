@@ -692,6 +692,71 @@ for index, task in ipairs(TASK_LIST) do
 	questRows[task.id] = { row = row, box = box, boxStroke = boxStroke, textLabel = textLabel }
 end
 
+-- ===== Der Gebaeudezaehler =====
+--
+-- OHNE Zielwert -- das ist eine Entscheidung, keine Luecke. Ein Nenner machte aus dem
+-- Zaehler eine fuenfte Aufgabe, und die vier darueber sind die Aufgaben. Er sagt nur: so
+-- weit bist du bei diesem Besuch gekommen.
+--
+-- Er zaehlt den BESUCH, nicht das Leben. Eine Zahl, die bei 4.812 steht, sagt nichts
+-- darueber, ob man hier gerade vorankommt; eine, die bei 12 steht und waechst, schon. Der
+-- Server setzt sie beim Ortswechsel zurueck (HouseHandler).
+--
+-- Eine Trennlinie darueber, weil er etwas anderes ist als die Zeilen davor: die sind
+-- Aufgaben mit einem Ende, er ist eine Messung ohne eines.
+local zaehlerTrenner = Instance.new("Frame")
+zaehlerTrenner.Name = "CounterDivider"
+zaehlerTrenner.Size = UDim2.new(1, 0, 0, 1)
+zaehlerTrenner.BackgroundColor3 = HudChrome.Color.BorderDim
+zaehlerTrenner.BorderSizePixel = 0
+zaehlerTrenner.LayoutOrder = #TASK_LIST + 1
+zaehlerTrenner.ZIndex = 21
+zaehlerTrenner.Parent = questFrame
+
+local zaehlerZeile = Instance.new("Frame")
+zaehlerZeile.Name = "BuildingCounterRow"
+zaehlerZeile.Size = UDim2.new(1, 0, 0, 24)
+zaehlerZeile.BackgroundTransparency = 1
+zaehlerZeile.LayoutOrder = #TASK_LIST + 2
+zaehlerZeile.ZIndex = 21
+zaehlerZeile.Parent = questFrame
+
+local zaehlerSymbol = HudChrome.IconImage(zaehlerZeile, HudChrome.Icon.BuildingDestruction)
+zaehlerSymbol.Size = UDim2.new(0, 18, 0, 18)
+zaehlerSymbol.Position = UDim2.new(0, -2, 0.5, -9)
+zaehlerSymbol.ZIndex = 22
+
+-- Rechtsbuendig wie der Geldbetrag: die Einerstelle bleibt stehen, egal wie lang die Zahl
+-- wird. Bei einem Zaehler, der laeuft, ist das der Unterschied zwischen ruhig und zappelig.
+local zaehlerLabel = Instance.new("TextLabel")
+zaehlerLabel.Name = "BuildingCounterLabel"
+zaehlerLabel.Size = UDim2.new(1, -22, 1, 0)
+zaehlerLabel.Position = UDim2.new(0, 22, 0, 0)
+zaehlerLabel.BackgroundTransparency = 1
+zaehlerLabel.TextXAlignment = Enum.TextXAlignment.Right
+zaehlerLabel.ZIndex = 22
+zaehlerLabel.Text = "0"
+zaehlerLabel.Parent = zaehlerZeile
+HudChrome.NumberBold(zaehlerLabel, 18)
+
+local zaehlerWort = Instance.new("TextLabel")
+zaehlerWort.Name = "BuildingCounterCaption"
+zaehlerWort.Size = UDim2.new(0, 120, 1, 0)
+zaehlerWort.Position = UDim2.new(0, 22, 0, 0)
+zaehlerWort.BackgroundTransparency = 1
+zaehlerWort.TextXAlignment = Enum.TextXAlignment.Left
+zaehlerWort.ZIndex = 22
+zaehlerWort.Text = "DESTROYED"
+zaehlerWort.Parent = zaehlerZeile
+HudChrome.Sublabel(zaehlerWort, 12)
+
+local function zeigeZaehler()
+	zaehlerLabel.Text = tostring(player:GetAttribute("CityBuildingsDestroyed") or 0)
+end
+
+player:GetAttributeChangedSignal("CityBuildingsDestroyed"):Connect(zeigeZaehler)
+zeigeZaehler()
+
 -- ===== CITY BROKEN =====
 local cityBrokenBanner = Instance.new("Frame")
 cityBrokenBanner.Name = "CityBrokenBanner"
@@ -799,7 +864,15 @@ local function updateQuestList()
 		end
 	end
 
-	questFrame.Visible = anyTaskVisible
+	-- Das Feld steht, sobald man in einer Stadt ist -- nicht erst, wenn eine Aufgabe
+	-- anwendbar ist. Sonst waere der Gebaeudezaehler ausgerechnet am Anfang unsichtbar,
+	-- wenn noch keine Stufe erreicht ist und das Zerstoeren die einzige Taetigkeit.
+	--
+	-- Ueberschrift und Trennlinie haengen dagegen an den Aufgaben: ohne sie stuende ein
+	-- "OBJECTIVES" ueber einer leeren Liste und ein Strich ueber nichts.
+	questFrame.Visible = true
+	questHeader.Visible = anyTaskVisible
+	zaehlerTrenner.Visible = anyTaskVisible
 end
 
 RunService.Heartbeat:Connect(updateQuestList)

@@ -1420,6 +1420,20 @@ local function destroyHouse(house, destroyerPlayer, originPosition, isPassiveDam
 		if statCity then
 			_G.RecordStat(destroyerPlayer, "BuildingsDestroyed." .. statCity)
 		end
+
+		-- Zaehler fuer den laufenden BESUCH, fuer die Anzeige im HUD.
+		--
+		-- Bewusst neben der Lebensstatistik und nicht aus ihr abgeleitet: die waechst ewig
+		-- weiter, und eine Zahl, die bei 4.812 steht, sagt nichts darueber, ob man hier
+		-- gerade vorankommt. Zurueckgesetzt wird sie beim Verlassen der Stadt (siehe unten).
+		--
+		-- Ohne Zielwert -- das ist eine Entscheidung, keine Luecke. Ein Nenner machte aus
+		-- dem Zaehler eine Aufgabe; die Aufgaben stehen darueber in der Liste, und die
+		-- Eskalation soll gerade NICHT vorhersagbar sein.
+		destroyerPlayer:SetAttribute(
+			"CityBuildingsDestroyed",
+			(destroyerPlayer:GetAttribute("CityBuildingsDestroyed") or 0) + 1
+		)
 	end
 
 	if destroyerPlayer and not isProloguePlayer and _G.OnBuildingDestroyedForAchievements then
@@ -2206,3 +2220,20 @@ _G.HOUSE_TAG = HOUSE_TAG
 -- Prolog-Stadt-Reset gedacht (siehe PrologueOrchestrator.lua), wenn ein Spieler
 -- durchgespielt hat und die Stadt für den nächsten Spieler zurückgesetzt werden muss.
 _G.ForceRespawnHouse = performRespawn
+
+-- ===== Der Besuchszähler beginnt mit jeder Stadt von vorn =====
+--
+-- Er steht in HouseHandler, weil hier gezählt wird (siehe CityBuildingsDestroyed weiter
+-- oben). Zurückgesetzt wird beim Wechsel des Ortes -- auch beim Verlassen in die Wildnis
+-- oder ins Sanctuary, denn dann gilt die Zahl für nichts mehr.
+local function beobachteStadtwechsel(player)
+	player:SetAttribute("CityBuildingsDestroyed", 0)
+	player:GetAttributeChangedSignal("CurrentCityName"):Connect(function()
+		player:SetAttribute("CityBuildingsDestroyed", 0)
+	end)
+end
+
+Players.PlayerAdded:Connect(beobachteStadtwechsel)
+for _, player in ipairs(Players:GetPlayers()) do
+	beobachteStadtwechsel(player)
+end
