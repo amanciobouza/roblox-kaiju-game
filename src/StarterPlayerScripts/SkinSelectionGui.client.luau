@@ -1086,14 +1086,15 @@ do
 	redlineMark.Parent = redlinePivot
 
 	-- ===== Schriftzug auf dem Blatt =====
-	-- Die Sperrung entsteht durch eingefuegte Leerzeichen: Roblox kennt keine Laufweite.
+	-- Der Name des Herstellers, wie er auf einem Zifferblatt steht. Ohne kuenstliche
+	-- Sperrung: ein Name ist eine Signatur, keine technische Beschriftung.
 	local wordmark = Instance.new("TextLabel")
 	wordmark.Name = "GaugeWordmark"
 	wordmark.AnchorPoint = Vector2.new(0.5, 1)
 	wordmark.Size = UDim2.new(0, 180, 0, 12)
 	wordmark.Position = UDim2.new(0, GAUGE_CENTER.X, 0, GAUGE_CENTER.Y - 26)
 	wordmark.BackgroundTransparency = 1
-	wordmark.Text = "T R E N C H B O R N"
+	wordmark.Text = "Amaux Bozé"
 	wordmark.ZIndex = 9
 	wordmark.Parent = heatFrame
 	HudChrome.Label(wordmark, 9)
@@ -1282,7 +1283,11 @@ do
 	local energyArcWedges = {}
 	for i = 0, ENERGY_ARC_SECTOR_COUNT - 1 do
 		local percent = (i / (ENERGY_ARC_SECTOR_COUNT - 1)) * 100
-		local pivot = makePivot("EnergyArcPivot" .. i, -90 + (percent / 100) * 180, 6)
+		-- ZIndex 8, nicht 6: das Zifferblatt liegt auf 7 und reicht seit dem Umbau bis an
+		-- den Ring (Radius 120). Der Bogen liegt bei 106 bis 118 also MITTEN darauf und
+		-- verschwand dahinter. Solange das Blatt nur bis 104 ging und der Bogen aussen
+		-- lag, spielte die Reihenfolge keine Rolle -- deshalb fiel es erst jetzt auf.
+		local pivot = makePivot("EnergyArcPivot" .. i, -90 + (percent / 100) * 180, 8)
 
 		local wedge = Instance.new("Frame")
 		wedge.Name = "EnergyWedge"
@@ -1291,7 +1296,7 @@ do
 		wedge.Position = UDim2.new(0.5, 0, 0, -ENERGY_ARC_INNER)
 		wedge.BackgroundColor3 = ENERGY_ARC_COLOR_DIM
 		wedge.BorderSizePixel = 0
-		wedge.ZIndex = 6
+		wedge.ZIndex = 8
 		wedge.Parent = pivot
 
 		table.insert(energyArcWedges, { frame = wedge, percent = percent, flashUntil = 0 })
@@ -1749,7 +1754,7 @@ shopLayout.Parent = shopScroll
 -- Kein Unterbildschirm: der Shop ist seit dem Vollbild-Umbau breit genug, beides
 -- nebeneinander zu zeigen. Ein Klick in der Liste WAEHLT nur aus -- gekauft und angelegt
 -- wird ueber den Knopf hier. Vorher kaufte ein Klick sofort, was bei 6000 Muenzen fuer den
--- Radiant Apex ein teures Versehen sein konnte.
+-- die oberste Stufe ein teures Versehen sein konnte.
 local detailFrame = Instance.new("Frame")
 detailFrame.Name = "SkinDetail"
 detailFrame.Size = UDim2.new(1 - LIST_WIDTH, -24, 1, -60)
@@ -2647,7 +2652,7 @@ end
 -- ===== Warum nicht mehr die feste Kameradistanz =====
 -- Frueher stand die Kamera fuer alle sechs Stufen gleich weit weg. Das war Absicht: alle
 -- sechs sind derselbe Avatar in sechs Groessen (SkinsConfig tauscht kein Mesh), und die
--- feste Kamera machte diesen Unterschied sichtbar. Der Preis war, dass der Baby Kaiju als
+-- feste Kamera machte diesen Unterschied sichtbar. Der Preis war, dass der Primal Beast als
 -- Punkt in einem leeren Rahmen stand -- ein Steckbrief, der nichts zeigt. Die Groesse geht
 -- nicht verloren: der Scale-Balken im Steckbrief nennt sie als Zahl UND als Vergleich zum
 -- getragenen Skin.
