@@ -13,6 +13,9 @@ local ComicStyleUtils = require(ReplicatedStorage:WaitForChild("ComicStyleUtils"
 local UiTypography = require(ReplicatedStorage:WaitForChild("UiTypography"))
 local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
 local applyComicStyle = ComicStyleUtils.Apply
+-- Nur fuer das Forschungsfeld im HUD. Der Talentbaum selbst bleibt vorerst im
+-- Comic-Stil -- Menues kommen nach dem HUD dran.
+local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -1017,9 +1020,22 @@ for _, tabConfig in ipairs(FACTION_TABS) do
 end
 
 -- ===== Forschungs-Statusanzeige aktualisieren =====
--- ===== Eigenständiges HUD-Widget: zeigt den Forschungs-Fortschritt AUCH wenn das
--- Talent-Fenster geschlossen ist (unten links, unter den restlichen linken HUD-
--- Elementen). =====
+-- ===== Eigenstaendiges HUD-Feld: zeigt den Forschungs-Fortschritt AUCH wenn das
+-- Talent-Fenster geschlossen ist. =====
+--
+-- Es steht in der linken Spalte, unter der Bahn der Belohnungs-Meldungen (HudToast, oben
+-- links bis y 80). Die Forschung ist ein DAUERZUSTAND -- sie laeuft, waehrend man kaempft,
+-- und man will nur wissen, wie lange noch. Deshalb dieselbe Anatomie wie die anderen
+-- Dauer-Anzeigen: Symbol, Name, Unterzeile, und ein schmaler Balken an der Unterkante.
+--
+-- Vorher fuellte der Fortschritt das ganze Feld als durchscheinende Flaeche hinter dem
+-- Text. Das las sich als "Feld halb markiert", nicht als Fortschritt -- und der Text stand
+-- zur Haelfte auf Gelb, zur Haelfte auf Dunkel.
+local HUD_BREITE = 260
+local HUD_HOEHE = 66
+local HUD_RAND = 12
+local HUD_SYMBOL = 26
+
 local hudScreenGui = Instance.new("ScreenGui")
 hudScreenGui.Name = "ResearchHudGui"
 hudScreenGui.ResetOnSpawn = false
@@ -1028,53 +1044,79 @@ hudScreenGui.Parent = playerGui
 
 local hudResearchFrame = Instance.new("Frame")
 hudResearchFrame.Name = "ResearchHudFrame"
-hudResearchFrame.Size = UDim2.new(0, 230, 0, 50)
-hudResearchFrame.Position = UDim2.new(0, 12, 0, 160)
-hudResearchFrame.BackgroundColor3 = Color3.fromRGB(20, 18, 28)
+hudResearchFrame.Size = UDim2.new(0, HUD_BREITE, 0, HUD_HOEHE)
+hudResearchFrame.Position = UDim2.new(0, 16, 0, 96)
 hudResearchFrame.Visible = false
 hudResearchFrame.Parent = hudScreenGui
-applyComicStyle(hudResearchFrame, 10, 2)
+HudChrome.Panel(hudResearchFrame, { radius = HudChrome.Radius.Small })
 
-local hudResearchFill = Instance.new("Frame")
-hudResearchFill.Size = UDim2.new(0, 0, 1, 0)
-hudResearchFill.BackgroundColor3 = Color3.fromRGB(220, 180, 60)
-hudResearchFill.BackgroundTransparency = 0.65
-hudResearchFill.BorderSizePixel = 0
-hudResearchFill.Parent = hudResearchFrame
-local hudResearchFillCorner = Instance.new("UICorner")
-hudResearchFillCorner.CornerRadius = UDim.new(0, 10)
-hudResearchFillCorner.Parent = hudResearchFill
+local hudResearchIcon = Instance.new("TextLabel")
+hudResearchIcon.Name = "ResearchIcon"
+hudResearchIcon.Size = UDim2.new(0, HUD_SYMBOL, 0, HUD_SYMBOL)
+hudResearchIcon.Position = UDim2.new(0, HUD_RAND, 0, 9)
+hudResearchIcon.BackgroundTransparency = 1
+hudResearchIcon.TextScaled = true
+hudResearchIcon.Text = ""
+hudResearchIcon.ZIndex = 2
+hudResearchIcon.Parent = hudResearchFrame
+
+local HUD_TEXT_X = HUD_RAND + HUD_SYMBOL + 8
 
 local hudResearchLabel = Instance.new("TextLabel")
-hudResearchLabel.Size = UDim2.new(1, -12, 0, 20)
-hudResearchLabel.Position = UDim2.new(0, 6, 0, 4)
+hudResearchLabel.Name = "ResearchLabel"
+hudResearchLabel.Size = UDim2.new(0, HUD_BREITE - HUD_TEXT_X - HUD_RAND, 0, 22)
+hudResearchLabel.Position = UDim2.new(0, HUD_TEXT_X, 0, 7)
 hudResearchLabel.BackgroundTransparency = 1
-hudResearchLabel.Font = Enum.Font.FredokaOne
-hudResearchLabel.TextScaled = true
 hudResearchLabel.TextXAlignment = Enum.TextXAlignment.Left
-hudResearchLabel.TextColor3 = Color3.new(1, 1, 1)
-hudResearchLabel.Text = "🔬 Researching..."
+hudResearchLabel.TextTruncate = Enum.TextTruncate.AtEnd
+hudResearchLabel.Text = ""
 hudResearchLabel.ZIndex = 2
 hudResearchLabel.Parent = hudResearchFrame
+HudChrome.Label(hudResearchLabel, 17)
 
 local hudResearchCountdown = Instance.new("TextLabel")
-hudResearchCountdown.Size = UDim2.new(1, -12, 0, 20)
-hudResearchCountdown.Position = UDim2.new(0, 6, 0, 24)
+hudResearchCountdown.Name = "ResearchCountdown"
+hudResearchCountdown.Size = UDim2.new(0, HUD_BREITE - HUD_TEXT_X - HUD_RAND, 0, 18)
+hudResearchCountdown.Position = UDim2.new(0, HUD_TEXT_X, 0, 29)
 hudResearchCountdown.BackgroundTransparency = 1
-hudResearchCountdown.Font = Enum.Font.FredokaOne
-hudResearchCountdown.TextScaled = true
 hudResearchCountdown.TextXAlignment = Enum.TextXAlignment.Left
-hudResearchCountdown.TextColor3 = Color3.fromRGB(220, 200, 140)
 hudResearchCountdown.Text = ""
 hudResearchCountdown.ZIndex = 2
 hudResearchCountdown.Parent = hudResearchFrame
+HudChrome.Number(hudResearchCountdown, 13)
+hudResearchCountdown.TextColor3 = HudChrome.Color.TextSecondary
+
+local hudResearchTrack = Instance.new("Frame")
+hudResearchTrack.Name = "ResearchTrack"
+hudResearchTrack.Size = UDim2.new(0, HUD_BREITE - HUD_RAND * 2, 0, 6)
+hudResearchTrack.Position = UDim2.new(0, HUD_RAND, 0, 52)
+hudResearchTrack.BackgroundColor3 = HudChrome.Color.PanelSunken
+hudResearchTrack.BorderSizePixel = 0
+hudResearchTrack.ZIndex = 2
+hudResearchTrack.Parent = hudResearchFrame
+
+local hudResearchTrackCorner = Instance.new("UICorner")
+hudResearchTrackCorner.CornerRadius = UDim.new(0, 3)
+hudResearchTrackCorner.Parent = hudResearchTrack
+
+local hudResearchFill = Instance.new("Frame")
+hudResearchFill.Name = "Fill"
+hudResearchFill.Size = UDim2.new(0, 0, 1, 0)
+hudResearchFill.BackgroundColor3 = HudChrome.Color.Ready
+hudResearchFill.BorderSizePixel = 0
+hudResearchFill.ZIndex = 3
+hudResearchFill.Parent = hudResearchTrack
+
+local hudResearchFillCorner = Instance.new("UICorner")
+hudResearchFillCorner.CornerRadius = UDim.new(0, 3)
+hudResearchFillCorner.Parent = hudResearchFill
 
 -- Klick auf das HUD-Widget öffnet direkt das Talent-Fenster (bequemer Rücksprung).
 local hudResearchButton = Instance.new("TextButton")
 hudResearchButton.Size = UDim2.new(1, 0, 1, 0)
 hudResearchButton.BackgroundTransparency = 1
 hudResearchButton.Text = ""
-hudResearchButton.ZIndex = 3
+hudResearchButton.ZIndex = 4
 hudResearchButton.Parent = hudResearchFrame
 hudResearchButton.MouseButton1Click:Connect(function()
 	panel.Visible = true
@@ -1093,8 +1135,9 @@ local function updateResearchHud()
 
 	hudResearchFrame.Visible = true
 	local remaining = talentState.research.completesAt - workspace:GetServerTimeNow()
-	hudResearchLabel.Text = talent.icon .. " " .. talent.name
-	hudResearchCountdown.Text = formatDuration(remaining) .. " left"
+	hudResearchIcon.Text = talent.icon
+	hudResearchLabel.Text = talent.name
+	hudResearchCountdown.Text = string.upper(formatDuration(remaining)) .. " LEFT"
 
 	local elapsed = talentState.research.totalDuration - remaining
 	local ratio = math.clamp(elapsed / math.max(talentState.research.totalDuration, 0.01), 0, 1)
