@@ -265,10 +265,10 @@ karteBalken.Parent = karteBalkenSchacht
 -- PASSIERT -- alles andere ist Warten und Zusehen. Ohne Klang bleibt davon ein Rechteck,
 -- das die Farbe wechselt.
 --
--- WICHTIG: Diese Kennung ist geliehen -- es ist derselbe Klang wie beim Stufenaufstieg.
--- Das ist ein Platzhalter, damit der Moment ueberhaupt klingt; er sollte einen eigenen
--- bekommen, sonst bedeuten zwei verschiedene Ereignisse dasselbe.
-local CLAIM_SOUND_ID = "rbxassetid://9095193253"
+-- Ein eigener Klang, nicht mehr der geliehene vom Stufenaufstieg. Das war die ganze
+-- Ueberlegung hinter dem Wechsel: zwei verschiedene Ereignisse duerfen nicht gleich
+-- klingen, sonst verlieren beide ihre Bedeutung.
+local CLAIM_SOUND_ID = "rbxassetid://4612378364"
 
 local claimSound = Instance.new("Sound")
 claimSound.Name = "GiftClaimSound"
