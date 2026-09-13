@@ -1620,22 +1620,35 @@ local STAT_COLOR_BY_TYPE = {
 	Body = Color3.fromRGB(90, 220, 130),
 }
 
--- Welche Knochen zu welchem Wert gehoeren.
+-- Welche Teile zu welchem Wert gehoeren.
 --
 -- Es sind KANDIDATENLISTEN, keine Pflichtlisten: gefunden wird, was da ist, und aus allen
--- Treffern zusammen entsteht der Bereich. Das ist noetig, weil zwei Benennungen
--- nebeneinander existieren -- die Kaiju-Modelle aus der Werkstatt sind nach R6 benannt
--- ("Torso", "Pelvis"), der Standard-Avatar nach R15 ("UpperTorso", "LowerTorso").
+-- Treffern zusammen entsteht der Bereich. Fehlende Namen werden stillschweigend
+-- uebergangen.
 --
--- Gemessen, nicht geraten: der Scan meldete "keine Knochen dieses Namens im Modell" fuer
--- den Rumpf, obwohl Arm und Bein gelangen. Im Bauplan des Storm Hunter steht fuenfzehnmal
--- "Torso" und kein einziges Mal "UpperTorso" -- die beiden Vorkommen, die ich vorher
--- gezaehlt hatte, stammten aus den Aegis- und Bastion-Modulen, also aus ganz anderen
--- Figuren.
+-- Das ist noetig, weil hier ZWEI Welten aufeinandertreffen, und das habe ich zweimal
+-- falsch geraten, bevor ich im Bauplan nachgesehen habe:
+--
+--   Der Standard-Avatar ist nach R15 benannt: UpperTorso, RightUpperArm.
+--   Das Kaiju-Modell aus der Werkstatt hat eine eigene ANATOMIE: UpperRibcage,
+--   DorsalLumbarMass, RightBicepsMass, RightOuterQuadriceps.
+--
+-- Die anatomischen Namen stehen zuerst, weil sie dem Modell gehoeren, das hier tatsaechlich
+-- gezeigt wird (KaijuEvolutionBlockout baut sie, der Storm Hunter uebernimmt sie). Die
+-- R15-Namen bleiben als Rueckfall, falls doch einmal der Standard-Avatar gezeigt wird.
 local SCAN_TEILE = {
-	ArmPower = { "RightUpperArm", "RightLowerArm", "RightHand", "RightArm" },
-	LegPower = { "RightUpperLeg", "RightLowerLeg", "RightFoot", "RightLeg" },
-	BodyPower = { "Torso", "Pelvis", "UpperTorso", "LowerTorso" },
+	ArmPower = {
+		"RightBicepsMass", "RightForearmMass", "RightPalm", "RightHandBack", "RightDeltoid",
+		"RightUpperArm", "RightLowerArm", "RightHand",
+	},
+	LegPower = {
+		"RightOuterQuadriceps", "RightCalfMass", "RightForefoot", "RightHeelMass",
+		"RightUpperLeg", "RightLowerLeg", "RightFoot",
+	},
+	BodyPower = {
+		"UpperRibcage", "UpperAbdomen", "LowerAbdomen", "DorsalLumbarMass", "SacralMass", "BellyShield",
+		"Torso", "UpperTorso", "LowerTorso",
+	},
 }
 
 local statBars = {} -- [key] = { label, fill, displayName, scanStroke, scanViewport, scanLine }
