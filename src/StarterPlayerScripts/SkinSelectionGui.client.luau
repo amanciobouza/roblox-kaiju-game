@@ -1561,6 +1561,14 @@ local SCAN_ZOOM = 1.8
 -- gemeint", und der graue Rest gibt ihm seinen Ort.
 local SCAN_GRAU = Color3.fromRGB(72, 78, 88)
 
+-- Wie weit die Farbe des Wertes in Richtung Stahl gezogen wird.
+--
+-- Dichter UND weniger bunt sind zwei verschiedene Schrauben, und sie ziehen gegeneinander:
+-- ein deckenderes Neonteil ist zwangslaeufig farbiger. Die Deckkraft steigt deshalb wie
+-- gewuenscht, und die Saettigung faellt zum Ausgleich um die Haelfte. Was bleibt, ist die
+-- Zuordnung -- man erkennt weiter, welcher Wert gemeint ist -- ohne das Grelle.
+local SCAN_ENTSAETTIGUNG = 0.5
+
 local statsRowFrame = Instance.new("Frame")
 statsRowFrame.Name = "StatsRowFrame"
 statsRowFrame.Size = UDim2.new(0, SPALTE_BREITE, 0, 34 + KRAFT_ZEILE * 3 - 8 + 12)
@@ -1926,8 +1934,10 @@ local function baueScan(key, vorlage)
 			--
 			-- Der gescannte Bereich leuchtet in der Farbe seines Wertes, der Rest bleibt
 			-- grau und tritt noch weiter zurueck.
-			klon.Color = gehoertDazu and eintrag.color or SCAN_GRAU
-			klon.Transparency = gehoertDazu and 0.3 or 0.6
+			klon.Color = gehoertDazu
+				and eintrag.color:Lerp(HudChrome.Color.BorderBright, SCAN_ENTSAETTIGUNG)
+				or SCAN_GRAU
+			klon.Transparency = gehoertDazu and 0.15 or 0.3
 			klon.Parent = modell
 			if gehoertDazu then
 				gefunden += 1
