@@ -359,12 +359,18 @@ local ANTWORT_NAMEN = {
 	[5] = "MAXIMUM ALERT",
 }
 
--- Kurzer Alarmton beim Erscheinen. Vom Barrikaden-Alarm geborgt, damit die Warnung
--- ueberhaupt klingt -- ein eigener gehoert an diese Stelle.
-local WARN_SOUND_ID = "rbxassetid://910988901"
+-- Kurzer Alarmton beim Einfahren.
+local WARN_SOUND_ID = "rbxassetid://124157245478803"
 
 local WARN_HOEHE = 66
 local WARN_SYMBOL = 30
+
+-- Sie faehrt von rechts herein, statt einfach da zu sein. Das Erscheinen IST die
+-- Meldung -- ein Feld, das lautlos auftaucht, uebersieht man beim Kaempfen, weil der
+-- Blick in der Bildmitte haengt. Eine Bewegung am Rand faengt ihn.
+local WARN_Y = 118 + PANEL_HOEHE + 6
+local WARN_RUHE_X = -16
+local WARN_AUS_X = PANEL_BREITE + 40 -- so weit draussen, dass nichts hervorlugt
 local WARN_AN = 0.80 -- ab hier erscheint sie
 local WARN_AUS = 0.72 -- und verschwindet erst hier wieder: ohne diesen Abstand flackert
 -- sie an der Schwelle, weil der Druckwert im Kampf staendig hin und her geht.
@@ -373,7 +379,7 @@ local warnFrame = Instance.new("Frame")
 warnFrame.Name = "AlertWarningFrame"
 warnFrame.Size = UDim2.new(0, PANEL_BREITE, 0, WARN_HOEHE)
 warnFrame.AnchorPoint = Vector2.new(1, 0)
-warnFrame.Position = UDim2.new(1, -16, 0, 118 + PANEL_HOEHE + 6)
+warnFrame.Position = UDim2.new(1, WARN_AUS_X, 0, WARN_Y)
 warnFrame.Visible = false
 warnFrame.ZIndex = 20
 warnFrame.Parent = screenGui
@@ -421,6 +427,48 @@ warnSound.SoundId = WARN_SOUND_ID
 warnSound.Volume = 0.6
 warnSound.Parent = screenGui
 
+-- Ein laufender Uebergang wird beim naechsten abgebrochen. Ohne das ueberlagern sich Ein-
+-- und Ausfahrt, wenn der Druckwert nahe der Schwelle pendelt.
+local warnTween = nil
+
+local function zeigeWarnung(sichtbar)
+	if warnTween then
+		warnTween:Cancel()
+	end
+
+	if sichtbar then
+		warnFrame.Position = UDim2.new(1, WARN_AUS_X, 0, WARN_Y)
+		warnFrame.Visible = true
+		warnTween = TweenService:Create(
+			warnFrame,
+			TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+			{ Position = UDim2.new(1, WARN_RUHE_X, 0, WARN_Y) }
+		)
+		warnTween:Play()
+
+		if warnSound.SoundId ~= "" and warnSound.SoundId ~= "rbxassetid://0" then
+			warnSound.TimePosition = 0
+			warnSound:Play()
+		end
+		return
+	end
+
+	warnTween = TweenService:Create(
+		warnFrame,
+		TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+		{ Position = UDim2.new(1, WARN_AUS_X, 0, WARN_Y) }
+	)
+	-- Erst ausblenden, wenn sie WIRKLICH draussen ist. Cancel meldet sich auf demselben
+	-- Ereignis -- ohne die Zustandspruefung wuerde eine abgebrochene Ausfahrt das gerade
+	-- eingefahrene Feld sofort wieder verstecken.
+	warnTween.Completed:Connect(function(zustand)
+		if zustand == Enum.PlaybackState.Completed then
+			warnFrame.Visible = false
+		end
+	end)
+	warnTween:Play()
+end
+
 -- Die Liste rueckt nach, wenn die Warnung da ist -- sonst laege sie darunter begraben.
 local function listenY()
 	return 118 + PANEL_HOEHE + 8 + (warnFrame.Visible and (WARN_HOEHE + 6) or 0)
@@ -430,7 +478,9 @@ local function updateWarnung()
 	local cityName = player:GetAttribute("CurrentCityName")
 	local zone = player:GetAttribute("CurrentZone")
 	if not cityName or cityName == "None" or zone == "Sanctuary" then
-		warnFrame.Visible = false
+		if warnFrame.Visible then
+			zeigeWarnung(false)
+		end
 		return
 	end
 
@@ -438,7 +488,9 @@ local function updateWarnung()
 	local progressValue = cityAlertValues:FindFirstChild(cityName .. "Progress")
 	local config = CityAlertConfig.GetCityConfig(cityName)
 	if not levelValue or not progressValue or not config then
-		warnFrame.Visible = false
+		if warnFrame.Visible then
+			zeigeWarnung(false)
+		end
 		return
 	end
 
@@ -450,13 +502,17 @@ local function updateWarnung()
 	-- Auf der Hoechststufe dieser Stadt kommt nichts mehr -- dann gibt es auch nichts
 	-- anzukuendigen.
 	if level >= maxLevel then
-		warnFrame.Visible = false
+		if warnFrame.Visible then
+			zeigeWarnung(false)
+		end
 		return
 	end
 
 	local schwelle = config.AlertThresholdLevel2
 	if not schwelle or schwelle <= 0 then
-		warnFrame.Visible = false
+		if warnFrame.Visible then
+			zeigeWarnung(false)
+		end
 		return
 	end
 	local ratio = math.clamp(progressValue.Value / schwelle, 0, 1)
@@ -475,14 +531,10 @@ local function updateWarnung()
 		warnSubLabel.Text = "ALERT LEVEL " .. naechste .. " INBOUND"
 	end
 
+	-- Nur beim WECHSEL faehrt sie -- die Funktion laeuft bei jeder Aenderung des
+	-- Druckwerts, und der aendert sich im Kampf staendig.
 	if sichtbar ~= warSichtbar then
-		warnFrame.Visible = sichtbar
-		-- Der Ton nur beim ERSCHEINEN, nicht bei jedem Durchlauf. Die Funktion laeuft bei
-		-- jeder Aenderung des Druckwerts, und der aendert sich im Kampf staendig.
-		if sichtbar and warnSound.SoundId ~= "" then
-			warnSound.TimePosition = 0
-			warnSound:Play()
-		end
+		zeigeWarnung(sichtbar)
 	end
 end
 
