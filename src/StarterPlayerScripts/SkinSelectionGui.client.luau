@@ -756,7 +756,11 @@ do
 	local GAUGE_MAX = 110
 	local GAUGE_CENTER = Vector2.new(140, 200) -- Drehpunkt = Unterkante von heatFrame = Grundlinie der Knoepfe
 
-	local FACE_RADIUS = 104 -- dunkles Zifferblatt
+	-- Das Zifferblatt reicht bis an die INNENKANTE des Rings. Vorher endete es bei 104,
+	-- der Ring begann bei 120 -- und der Energiebogen dazwischen lag auf nichts: er schwebte
+	-- in einem durchsichtigen Spalt und sah aus, als gehoere er nicht dazu. Jetzt liegt er
+	-- auf dem Blatt, wie jede andere Anzeige des Instruments auch.
+	local FACE_RADIUS = 120 -- dunkles Zifferblatt, bis an den Ring
 	local BAND_OUTER = 100 -- Farbband
 	local BAND_INNER = 88
 	local TICK_OUTER = 86 -- Teilstriche wachsen von hier nach innen
@@ -767,7 +771,7 @@ do
 	-- er zwischen ihnen, und der Bogen lag frei ausserhalb -- damit gehoerte er optisch
 	-- nicht mehr zum Geraet. Ein Ring, der aussen herumlaeuft, macht aus zwei Anzeigen
 	-- eine.
-	local BEZEL_INNER = 120
+	local BEZEL_INNER = FACE_RADIUS -- der Ring sitzt genau auf der Kante des Blattes
 	local BEZEL_THICK = 11
 	local BEZEL_OUTER = BEZEL_INNER + BEZEL_THICK
 	local NEEDLE_LENGTH = 84
@@ -828,6 +832,18 @@ do
 		fill = HudChrome.Color.PanelRaised,
 		transparency = 0,
 	})
+
+	-- Derselbe Lichtverlauf wie am Ring: oben hell, unten dunkel. Ohne ihn war der Sockel
+	-- eine flache Flaeche in einem Grauton und der Ring ein verlaufendes -- zwei
+	-- verschiedene Schwarztoene, die an ihrer Nahtstelle aufeinandertrafen. Ein Werkstueck
+	-- hat eine Lichtquelle, nicht zwei.
+	local sockelVerlauf = Instance.new("UIGradient")
+	sockelVerlauf.Rotation = 90
+	sockelVerlauf.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, HudChrome.Color.PanelRaised),
+		ColorSequenceKeypoint.new(1, HudChrome.Color.Panel),
+	})
+	sockelVerlauf.Parent = gehaeuse
 
 	-- Eine helle Linie auf der Oberkante: dort faellt das Licht auf eine waagerechte
 	-- Metallkante. Ohne sie ist der Sockel ein graues Rechteck.
@@ -943,9 +959,12 @@ do
 	-- Unterschied zwischen einem gezeichneten Kreis und einem Ring aus Metall.
 	local bezelGradient = Instance.new("UIGradient")
 	bezelGradient.Rotation = 90
+	-- Der sichtbare Teil des Rings ist seine OBERE Haelfte, also der Verlauf von 0 bis 0.5.
+	-- Der Wendepunkt liegt deshalb genau auf 0.5: dort, an der Waagerechten, trifft der Ring
+	-- auf den Sockel, und beide haben an der Nahtstelle denselben Ton.
 	bezelGradient.Color = ColorSequence.new({
 		ColorSequenceKeypoint.new(0, HudChrome.Color.BorderBright),
-		ColorSequenceKeypoint.new(0.55, HudChrome.Color.PanelRaised),
+		ColorSequenceKeypoint.new(0.5, HudChrome.Color.PanelRaised),
 		ColorSequenceKeypoint.new(1, HudChrome.Color.Panel),
 	})
 	bezelGradient.Parent = bezelStroke
