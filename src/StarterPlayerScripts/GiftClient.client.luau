@@ -167,107 +167,11 @@ sessionCaption.ZIndex = 3
 sessionCaption.Parent = schirm.header
 HudChrome.MenuCaption(sessionCaption, 13)
 
--- ===== Die Karte fuer das Naechste =====
-local KARTE_BREITE = 420
-local KARTE_HOEHE = 176
-
--- Die Karte IST der Knopf.
---
--- Vorher stand auf ihr gross "CLAIM", anfassen musste man aber den kleinen runden Punkt
--- unten auf der Achse. Eine Aufschrift, die etwas verspricht, was an ihr nicht geht, ist
--- schlimmer als gar keine -- man sucht dann den Fehler bei sich.
---
--- Die Punkte auf der Bahn bleiben zusaetzlich anklickbar. Sie sind jetzt nicht mehr der
--- Weg, sondern eine Abkuerzung, wenn mehrere Geschenke gleichzeitig bereitliegen.
-local naechsteKarte = Instance.new("TextButton")
-naechsteKarte.Name = "NextGiftCard"
-naechsteKarte.Size = UDim2.new(0, KARTE_BREITE, 0, KARTE_HOEHE)
-naechsteKarte.Position = UDim2.new(0, 32, 0, 20)
-naechsteKarte.AutoButtonColor = false
-naechsteKarte.Text = ""
-naechsteKarte.ZIndex = 4
-naechsteKarte.Parent = schirm.content
-local _, karteRand = HudChrome.Panel(naechsteKarte, {
-	radius = HudChrome.Radius.Panel,
-	fill = HudChrome.Color.PanelRaised,
-	transparency = 0,
-})
-
-local karteKaption = Instance.new("TextLabel")
-karteKaption.Size = UDim2.new(1, -32, 0, 18)
-karteKaption.Position = UDim2.new(0, 20, 0, 14)
-karteKaption.BackgroundTransparency = 1
-karteKaption.TextXAlignment = Enum.TextXAlignment.Left
-karteKaption.Text = "NEXT"
-karteKaption.ZIndex = 5
-karteKaption.Parent = naechsteKarte
-HudChrome.MenuCaption(karteKaption, 14)
-
-local karteBild = Instance.new("ImageLabel")
-karteBild.Size = UDim2.new(0, 84, 0, 84)
-karteBild.Position = UDim2.new(0, 20, 0, 42)
-karteBild.BackgroundTransparency = 1
-karteBild.ScaleType = Enum.ScaleType.Fit
-karteBild.Visible = false
-karteBild.ZIndex = 5
-karteBild.Parent = naechsteKarte
-
-local karteZeichen = Instance.new("TextLabel")
-karteZeichen.Size = UDim2.new(0, 84, 0, 84)
-karteZeichen.Position = UDim2.new(0, 20, 0, 42)
-karteZeichen.BackgroundTransparency = 1
-karteZeichen.TextScaled = true
-karteZeichen.Text = ""
-karteZeichen.ZIndex = 5
-karteZeichen.Parent = naechsteKarte
-
-local karteTitel = Instance.new("TextLabel")
-karteTitel.Size = UDim2.new(1, -140, 0, 30)
-karteTitel.Position = UDim2.new(0, 120, 0, 44)
-karteTitel.BackgroundTransparency = 1
-karteTitel.TextXAlignment = Enum.TextXAlignment.Left
-karteTitel.Text = ""
-karteTitel.ZIndex = 5
-karteTitel.Parent = naechsteKarte
-HudChrome.Label(karteTitel, HudChrome.MenuTextSize.Section)
-
-local karteZahl = Instance.new("TextLabel")
-karteZahl.Size = UDim2.new(1, -140, 0, 46)
-karteZahl.Position = UDim2.new(0, 120, 0, 74)
-karteZahl.BackgroundTransparency = 1
-karteZahl.TextXAlignment = Enum.TextXAlignment.Left
-karteZahl.Text = "--:--"
-karteZahl.ZIndex = 5
-karteZahl.Parent = naechsteKarte
-HudChrome.NumberBold(karteZahl, 40)
-
--- Der Balken laeuft von der VORIGEN Station zur naechsten, nicht von null. Von null aus
--- staende er bei Geschenk elf fast am Ende und bewegte sich kaum -- er misst aber die
--- aktuelle Strecke, nicht die ganze Sitzung.
-local karteBalkenSchacht = Instance.new("Frame")
-karteBalkenSchacht.Size = UDim2.new(1, -40, 0, 6)
-karteBalkenSchacht.Position = UDim2.new(0, 20, 1, -26)
-karteBalkenSchacht.BackgroundColor3 = HudChrome.Color.PanelSunken
-karteBalkenSchacht.BorderSizePixel = 0
-karteBalkenSchacht.ZIndex = 5
-karteBalkenSchacht.Parent = naechsteKarte
-
-local karteBalken = Instance.new("Frame")
-karteBalken.Size = UDim2.new(0, 0, 1, 0)
-karteBalken.BackgroundColor3 = HudChrome.Color.Ready
-karteBalken.BorderSizePixel = 0
-karteBalken.ZIndex = 6
-karteBalken.Parent = karteBalkenSchacht
-
 -- ===== Der Belohnungston =====
 --
 -- Ein Geschenk abzuholen ist der einzige Augenblick in diesem Bildschirm, in dem etwas
 -- PASSIERT -- alles andere ist Warten und Zusehen. Ohne Klang bleibt davon ein Rechteck,
 -- das die Farbe wechselt.
---
--- Ein eigener Klang, nicht mehr der geliehene vom Stufenaufstieg. Das war die ganze
--- Ueberlegung hinter dem Wechsel: zwei verschiedene Ereignisse duerfen nicht gleich
--- klingen, sonst verlieren beide ihre Bedeutung.
 local CLAIM_SOUND_ID = "rbxassetid://4612378364"
 
 local claimSound = Instance.new("Sound")
@@ -275,11 +179,6 @@ claimSound.Name = "GiftClaimSound"
 claimSound.SoundId = CLAIM_SOUND_ID
 claimSound.Volume = 0.85
 claimSound.Parent = SoundService
-
--- Was die Karte gerade zeigt. Der Klick-Handler braucht es, und er kann nicht in der
--- Heartbeat-Schleife stehen -- dort wuerde er je Bild neu verbunden.
-local karteN = nil
-local karteBereit = false
 
 local function holeAb(n)
 	local claimedFolder = player:FindFirstChild("ClaimedGifts")
@@ -296,23 +195,171 @@ local function holeAb(n)
 	return true
 end
 
-naechsteKarte.MouseButton1Click:Connect(function()
-	if not karteBereit or not karteN then
-		return
+-- ===== Die Reihe der Karten =====
+--
+-- Hier stand EINE Karte, die immer nur das naechste Geschenk zeigte. Das war falsch, sobald
+-- mehrere gleichzeitig bereitliegen -- und das ist der Normalfall: wer eine Stunde spielt,
+-- ohne das Menue zu oeffnen, hat sechs offene Geschenke. Eine Karte nach der anderen
+-- abzuarbeiten sah aus wie eine Warteschlange, und man wusste nie, wie viele noch kommen.
+--
+-- Jetzt eine Reihe: je eine Karte fuer JEDES abholbare Geschenk, und ganz rechts die Karte
+-- fuer das naechste, das noch dauert. Die Reihenfolge ist die der Bahn darunter -- was
+-- frueher dran war, steht links.
+--
+-- Ein Schiebefeld, kein Raster: bei zwoelf offenen Geschenken passt die Reihe auf kein
+-- Geraet. Waagerecht schieben bleibt dieselbe Bewegung wie die Bahn darunter; ein Raster
+-- haette eine zweite Leserichtung eingefuehrt.
+local KARTE_BREITE = 208
+local KARTE_NAECHST_BREITE = 300
+local KARTE_HOEHE = 168
+
+local kartenBereich = Instance.new("ScrollingFrame")
+kartenBereich.Name = "GiftCards"
+kartenBereich.Position = UDim2.new(0, 32, 0, 16)
+kartenBereich.Size = UDim2.new(1, -64, 0, KARTE_HOEHE + 14)
+kartenBereich.BackgroundTransparency = 1
+kartenBereich.BorderSizePixel = 0
+kartenBereich.ScrollBarThickness = 5
+kartenBereich.ScrollingDirection = Enum.ScrollingDirection.X
+kartenBereich.CanvasSize = UDim2.new(0, 0, 0, 0)
+kartenBereich.AutomaticCanvasSize = Enum.AutomaticSize.X
+kartenBereich.ZIndex = 4
+kartenBereich.Parent = schirm.content
+
+local kartenLayout = Instance.new("UIListLayout")
+kartenLayout.FillDirection = Enum.FillDirection.Horizontal
+kartenLayout.SortOrder = Enum.SortOrder.LayoutOrder
+kartenLayout.Padding = UDim.new(0, 12)
+kartenLayout.Parent = kartenBereich
+
+-- Baut eine Karte. Beide Sorten teilen sich den Aufbau -- Symbol links, Beschriftung
+-- rechts, grosse Zahl darunter --, sie unterscheiden sich nur in Breite und darin, was in
+-- der grossen Zeile steht: CLAIM oder ein Countdown.
+local function baueKarte(name, breite, anklickbar)
+	local karte = anklickbar and Instance.new("TextButton") or Instance.new("Frame")
+	karte.Name = name
+	karte.Size = UDim2.new(0, breite, 0, KARTE_HOEHE)
+	karte.Visible = false
+	karte.ZIndex = 5
+	if anklickbar then
+		karte.AutoButtonColor = false
+		karte.Text = ""
 	end
-	if not holeAb(karteN) then
-		return
-	end
-	-- Kurzer Stoss am Rahmen. Bewusst KEIN Groessenpuls: die Karte steht neben der Bahn,
-	-- und was waechst, schiebt hier nichts weg -- aber ein Rahmen, der aufblitzt, ist
-	-- dieselbe Bewegungssprache wie bei den Alarmsternen und der Navigation.
-	karteRand.Color = Color3.new(1, 1, 1)
-	karteRand.Thickness = 3
-	TweenService:Create(karteRand, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
-		Color = HudChrome.Color.Border,
-		Thickness = HudChrome.BorderThickness,
-	}):Play()
-end)
+	karte.Parent = kartenBereich
+	local _, rand = HudChrome.Panel(karte, {
+		radius = HudChrome.Radius.Panel,
+		fill = HudChrome.Color.PanelRaised,
+		transparency = 0,
+	})
+
+	local kaption = Instance.new("TextLabel")
+	kaption.Size = UDim2.new(1, -28, 0, 18)
+	kaption.Position = UDim2.new(0, 16, 0, 12)
+	kaption.BackgroundTransparency = 1
+	kaption.TextXAlignment = Enum.TextXAlignment.Left
+	kaption.Text = ""
+	kaption.ZIndex = 6
+	kaption.Parent = karte
+	HudChrome.MenuCaption(kaption, 13)
+
+	local bild = Instance.new("ImageLabel")
+	bild.Size = UDim2.new(0, 52, 0, 52)
+	bild.Position = UDim2.new(0, 16, 0, 38)
+	bild.BackgroundTransparency = 1
+	bild.ScaleType = Enum.ScaleType.Fit
+	bild.Visible = false
+	bild.ZIndex = 6
+	bild.Parent = karte
+
+	local zeichen = Instance.new("TextLabel")
+	zeichen.Size = UDim2.new(0, 52, 0, 52)
+	zeichen.Position = UDim2.new(0, 16, 0, 38)
+	zeichen.BackgroundTransparency = 1
+	zeichen.TextScaled = true
+	zeichen.Text = ""
+	zeichen.ZIndex = 6
+	zeichen.Parent = karte
+
+	local titel = Instance.new("TextLabel")
+	titel.Size = UDim2.new(1, -84, 0, 52)
+	titel.Position = UDim2.new(0, 76, 0, 38)
+	titel.BackgroundTransparency = 1
+	titel.TextXAlignment = Enum.TextXAlignment.Left
+	titel.TextYAlignment = Enum.TextYAlignment.Center
+	titel.Text = ""
+	titel.ZIndex = 6
+	titel.Parent = karte
+	HudChrome.MenuBody(titel, HudChrome.MenuTextSize.Caption)
+
+	local zahl = Instance.new("TextLabel")
+	zahl.Size = UDim2.new(1, -32, 0, 40)
+	zahl.Position = UDim2.new(0, 16, 0, 100)
+	zahl.BackgroundTransparency = 1
+	zahl.TextXAlignment = Enum.TextXAlignment.Left
+	zahl.Text = ""
+	zahl.ZIndex = 6
+	zahl.Parent = karte
+	HudChrome.NumberBold(zahl, 32)
+
+	local schacht = Instance.new("Frame")
+	schacht.Size = UDim2.new(1, -32, 0, 5)
+	schacht.Position = UDim2.new(0, 16, 1, -18)
+	schacht.BackgroundColor3 = HudChrome.Color.PanelSunken
+	schacht.BorderSizePixel = 0
+	schacht.ZIndex = 6
+	schacht.Parent = karte
+
+	local balken = Instance.new("Frame")
+	balken.Size = UDim2.new(0, 0, 1, 0)
+	balken.BackgroundColor3 = HudChrome.Color.Ready
+	balken.BorderSizePixel = 0
+	balken.ZIndex = 7
+	balken.Parent = schacht
+
+	return {
+		karte = karte,
+		rand = rand,
+		kaption = kaption,
+		bild = bild,
+		zeichen = zeichen,
+		titel = titel,
+		zahl = zahl,
+		balken = balken,
+	}
+end
+
+-- Eine Abhol-Karte je Geschenk, im Voraus gebaut und dann nur noch ein- und ausgeblendet.
+-- Karten bei jedem Bild neu anzulegen waere zwoelf Instanzen pro Bild.
+local claimKarten = {}
+for n = 1, GIFT_COUNT do
+	local eintrag = baueKarte("ClaimCard" .. n, KARTE_BREITE, true)
+	eintrag.kaption.Text = "READY"
+	eintrag.zahl.Text = "CLAIM"
+	eintrag.zahl.TextColor3 = HudChrome.Color.Ready
+	eintrag.rand.Color = HudChrome.Color.Ready
+	eintrag.balken.Size = UDim2.new(1, 0, 1, 0)
+	zeigeSymbol(eintrag.bild, eintrag.zeichen, n)
+	eintrag.titel.Text = giftDescription(n)
+
+	eintrag.karte.MouseButton1Click:Connect(function()
+		if not holeAb(n) then
+			return
+		end
+		-- Kurzer Stoss am Rahmen, dieselbe Bewegungssprache wie bei den Alarmsternen.
+		eintrag.rand.Color = Color3.new(1, 1, 1)
+		eintrag.rand.Thickness = 3
+		TweenService:Create(eintrag.rand, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
+			Color = HudChrome.Color.Ready,
+			Thickness = HudChrome.BorderThickness,
+		}):Play()
+	end)
+
+	claimKarten[n] = eintrag
+end
+
+-- Und eine fuer das, was noch dauert. Sie ist breiter: sie traegt einen Countdown, der
+-- laeuft, und der soll nicht neben "CLAIM" untergehen.
+local naechsteKarte = baueKarte("NextGiftCard", KARTE_NAECHST_BREITE, false)
 
 -- ===== Die Bahn =====
 local BAHN_Y = 0.72 -- Anteil der Inhaltshoehe
@@ -474,7 +521,10 @@ RunService.Heartbeat:Connect(function()
 	local claimableCount = 0
 	-- Das erste ABHOLBARE, sonst das erste noch kommende. Die Karte zeigt genau eines von
 	-- beiden -- was bereitliegt, geht vor dem, was noch dauert.
-	local zeigeN, zeigeBereit = nil, false
+	-- Das erste Geschenk, das noch NICHT bereit ist -- unabhaengig davon, ob nebenher schon
+	-- welche bereitliegen. Das war der Fehler der einen Karte: solange irgendetwas abholbar
+	-- war, verschwand die Vorschau auf das Naechste, obwohl beides gleichzeitig gilt.
+	local naechstesN = nil
 
 	for n = 1, GIFT_COUNT do
 		local eintrag = giftCells[n]
@@ -503,9 +553,6 @@ RunService.Heartbeat:Connect(function()
 				eintrag.zeitLabel.TextColor3 = HudChrome.Color.Ready
 				anyClaimable = true
 				claimableCount += 1
-				if not zeigeBereit then
-					zeigeN, zeigeBereit = n, true
-				end
 			else
 				eintrag.ring.Color = HudChrome.Color.BorderDim
 				eintrag.ring.Thickness = HudChrome.BorderThickness
@@ -514,8 +561,8 @@ RunService.Heartbeat:Connect(function()
 				eintrag.bild.ImageTransparency = 0.6
 				eintrag.zeichen.TextTransparency = 0.6
 				eintrag.zeitLabel.TextColor3 = HudChrome.Color.TextDim
-				if not zeigeN then
-					zeigeN = n
+				if not naechstesN then
+					naechstesN = n
 				end
 			end
 
@@ -543,39 +590,53 @@ RunService.Heartbeat:Connect(function()
 
 	wasReadyInitialisiert = true
 
-	-- ===== Die Karte fuer das Naechste =====
-	karteN, karteBereit = zeigeN, zeigeBereit
+	-- ===== Die Reihe fuellen =====
+	--
+	-- Sichtbar ist eine Abhol-Karte genau dann, wenn ihr Geschenk bereit UND nicht abgeholt
+	-- ist. Die LayoutOrder ist die Geschenknummer -- damit steht die Reihe in derselben
+	-- Ordnung wie die Bahn darunter, ohne dass hier sortiert werden muesste.
+	for n = 1, GIFT_COUNT do
+		local eintrag = claimKarten[n]
+		local marker = claimedFolder:FindFirstChild("Gift" .. n)
+		local sichtbar = marker and not marker.Value and elapsed >= unlockTime(n)
+		eintrag.karte.Visible = sichtbar == true
+		eintrag.karte.LayoutOrder = n
+	end
 
-	if zeigeN then
-		zeigeSymbol(karteBild, karteZeichen, zeigeN)
-		karteTitel.Text = giftDescription(zeigeN)
-		karteZahl.TextColor3 = zeigeBereit and HudChrome.Color.Ready or HudChrome.Color.TextPrimary
-		karteKaption.Text = zeigeBereit and "READY TO CLAIM" or "NEXT"
-		karteRand.Color = zeigeBereit and HudChrome.Color.Ready or HudChrome.Color.Border
-
-		if zeigeBereit then
-			karteZahl.Text = "CLAIM"
-			karteBalken.Size = UDim2.new(1, 0, 1, 0)
-		else
-			karteZahl.Text = formatLang(unlockTime(zeigeN) - elapsed)
-			-- Von der VORIGEN Station aus, nicht von null: von null aus staende der Balken
-			-- bei Geschenk elf fast am Ende und bewegte sich kaum. Er misst die aktuelle
-			-- Strecke, nicht die ganze Sitzung.
-			local von = zeigeN > 1 and unlockTime(zeigeN - 1) or 0
-			local bis = unlockTime(zeigeN)
-			local anteil = bis > von and math.clamp((elapsed - von) / (bis - von), 0, 1) or 0
-			karteBalken.Size = UDim2.new(anteil, 0, 1, 0)
-		end
+	-- Die Karte fuer das Naechste steht ganz rechts -- was noch dauert, kommt nach dem, was
+	-- schon da ist.
+	naechsteKarte.karte.LayoutOrder = GIFT_COUNT + 1
+	if naechstesN then
+		naechsteKarte.karte.Visible = true
+		naechsteKarte.kaption.Text = "NEXT"
+		zeigeSymbol(naechsteKarte.bild, naechsteKarte.zeichen, naechstesN)
+		naechsteKarte.titel.Text = giftDescription(naechstesN)
+		naechsteKarte.zahl.Text = formatLang(unlockTime(naechstesN) - elapsed)
+		naechsteKarte.zahl.TextColor3 = HudChrome.Color.TextPrimary
+		naechsteKarte.rand.Color = HudChrome.Color.Border
+		-- Von der VORIGEN Station aus, nicht von null: von null aus staende der Balken bei
+		-- Geschenk elf fast am Ende und bewegte sich kaum. Er misst die aktuelle Strecke,
+		-- nicht die ganze Sitzung.
+		local von = naechstesN > 1 and unlockTime(naechstesN - 1) or 0
+		local bis = unlockTime(naechstesN)
+		local anteil = bis > von and math.clamp((elapsed - von) / (bis - von), 0, 1) or 0
+		naechsteKarte.balken.Size = UDim2.new(anteil, 0, 1, 0)
+	elseif claimableCount == 0 then
+		-- Nichts offen und nichts mehr unterwegs: alles abgeholt. Das ist ein Zustand und
+		-- kein Fehler -- er verdient einen Satz statt einer leeren Flaeche.
+		naechsteKarte.karte.Visible = true
+		naechsteKarte.kaption.Text = "COMPLETE"
+		naechsteKarte.titel.Text = "All gifts collected"
+		naechsteKarte.zahl.Text = formatLang(elapsed)
+		naechsteKarte.zahl.TextColor3 = HudChrome.Color.TextPrimary
+		naechsteKarte.rand.Color = HudChrome.Color.Border
+		naechsteKarte.balken.Size = UDim2.new(1, 0, 1, 0)
+		naechsteKarte.bild.Visible = false
+		naechsteKarte.zeichen.Visible = false
 	else
-		-- Alles abgeholt. Das ist ein Zustand und kein Fehler -- er verdient einen Satz.
-		karteKaption.Text = "COMPLETE"
-		karteTitel.Text = "All gifts collected"
-		karteZahl.Text = formatLang(elapsed)
-		karteZahl.TextColor3 = HudChrome.Color.TextPrimary
-		karteBalken.Size = UDim2.new(1, 0, 1, 0)
-		karteRand.Color = HudChrome.Color.Border
-		karteBild.Visible = false
-		karteZeichen.Visible = false
+		-- Es liegt etwas bereit und es kommt nichts mehr: die Reihe besteht dann nur aus
+		-- Abhol-Karten, und eine leere "NEXT"-Karte daneben waere eine Luege.
+		naechsteKarte.karte.Visible = false
 	end
 
 	-- Das Geschenk-Laempchen geht NICHT beim Oeffnen aus, sondern erst beim Abholen --
