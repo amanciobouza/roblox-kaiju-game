@@ -24,6 +24,7 @@ local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
+local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
 
 local cityAlertValues = ReplicatedStorage:WaitForChild("CityAlertValues", 10)
 if not cityAlertValues then
@@ -44,14 +45,20 @@ local CITY_DISPLAY_NAMES = {
 -- Militär-Funk, Kriegshorn). Level 4 nutzt bereits die vorhandene Militär-Alarm-ID.
 local LEVEL_INFO = {
 	[1] = { title = "CITY ALERT", consequence = "", soundId = "" },
-	[2] = { title = "EMERGENCY RESPONSE", consequence = "🚒 FIRE RESPONSE DEPLOYED", soundId = "" },
-	[3] = { title = "SECURITY RESPONSE", consequence = "🛡️ DEFENSIVE BARRICADES DEPLOYED", soundId = "" },
-	[4] = { title = "MILITARY RESPONSE", consequence = "⚔️ MILITARY FORCES DEPLOYED", soundId = "rbxassetid://93574748731319" },
-	[5] = { title = "MAXIMUM ALERT", consequence = "👹 CITY DEFENDER AWAKENED", soundId = "" },
+	[2] = { title = "EMERGENCY RESPONSE", consequence = "FIRE RESPONSE DEPLOYED", soundId = "" },
+	[3] = { title = "SECURITY RESPONSE", consequence = "DEFENSIVE BARRICADES DEPLOYED", soundId = "" },
+	[4] = { title = "MILITARY RESPONSE", consequence = "MILITARY FORCES DEPLOYED", soundId = "rbxassetid://93574748731319" },
+	[5] = { title = "MAXIMUM ALERT", consequence = "CITY DEFENDER AWAKENED", soundId = "" },
 }
 
 local IMPACT_SOUND_ID = "" -- tiefer Boom/Impact beim Trigger (0.0s) -- Platzhalter, bitte befüllen
 local STAMP_SOUND_ID = "" -- CLANG/THOOM beim Einstanzen des neuen Sterns (0.55s) -- Platzhalter
+
+-- Feste Schriftgroessen statt TextScaled, wie im ganzen HUD. Die Hoechststufe hebt den
+-- Titel nicht mehr ueber die Kaestchenhoehe, sondern ueber die Schriftgroesse selbst an --
+-- dasselbe Bild, aber ohne dass die Groesse davon abhaengt, wie hoch gerade ein Kasten ist.
+local TITEL_GROESSE = 30
+local TITEL_GROESSE_MAX = 42
 
 local COOLDOWN_SECONDS = 5 -- verhindert Spam, falls der Fortschritt durch Zerfall/Eskalation hin- und herpendelt
 
@@ -74,7 +81,7 @@ edgeFlash.Parent = screenGui
 local edgeFlashStroke = Instance.new("UIStroke")
 edgeFlashStroke.Thickness = 60
 edgeFlashStroke.Transparency = 1
-edgeFlashStroke.Color = Color3.fromRGB(230, 60, 40)
+edgeFlashStroke.Color = HudChrome.Color.Danger
 edgeFlashStroke.Parent = edgeFlash
 
 -- Zentrale Ankündigung.
@@ -82,30 +89,25 @@ local banner = Instance.new("Frame")
 banner.Name = "AnnouncementBanner"
 banner.AnchorPoint = Vector2.new(0.5, 0.5)
 banner.Position = UDim2.new(0.5, 0, 0.35, 0)
-banner.Size = UDim2.new(0, 560, 0, 175)
-banner.BackgroundColor3 = Color3.fromRGB(20, 18, 26)
-banner.BackgroundTransparency = 1
-banner.Visible = false
+banner.Size = UDim2.new(0, 560, 0, 182)
 banner.ZIndex = 41
 banner.Parent = screenGui
+HudChrome.Panel(banner, { radius = HudChrome.Radius.Panel })
 
-local bannerCorner = Instance.new("UICorner")
-bannerCorner.CornerRadius = UDim.new(0, 18)
-bannerCorner.Parent = banner
+-- Die Ankuendigung faehrt aus dem Nichts auf, deshalb startet sie unsichtbar. HudChrome
+-- setzt beim Anlegen einen sichtbaren Grund -- der wird hier bewusst wieder zurueckgenommen.
+banner.BackgroundTransparency = 1
+banner.Visible = false
 
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Name = "TitleLabel"
-titleLabel.Size = UDim2.new(1, -24, 0, 34)
+titleLabel.Size = UDim2.new(1, -24, 0, 40)
 titleLabel.Position = UDim2.new(0, 12, 0, 10)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Font = Enum.Font.LuckiestGuy
-titleLabel.TextScaled = true
-titleLabel.TextColor3 = Color3.new(1, 1, 1)
-titleLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
-titleLabel.TextStrokeTransparency = 0.3
 titleLabel.ZIndex = 42
 titleLabel.Text = ""
 titleLabel.Parent = banner
+HudChrome.Label(titleLabel, TITEL_GROESSE)
 
 -- Sterne-Reihe.
 local MAX_BANNER_STARS = 5
@@ -130,13 +132,12 @@ for i = 1, MAX_BANNER_STARS do
 	star.Name = "Star" .. i
 	star.Size = UDim2.new(0, 48, 1, 0)
 	star.BackgroundTransparency = 1
-	star.Font = Enum.Font.FredokaOne
+	star.Font = Enum.Font.GothamBold
 	star.TextScaled = true
-	star.TextColor3 = Color3.fromRGB(255, 210, 80)
-	star.TextStrokeColor3 = Color3.new(0, 0, 0)
-	star.TextStrokeTransparency = 0.3
+	star.TextColor3 = HudChrome.Color.Ready
+	star.TextStrokeTransparency = 1
 	star.ZIndex = 42
-	star.Text = "★"
+	star.Text = "\u{2605}"
 	star.Visible = false
 	star.LayoutOrder = i
 	star.Parent = starsContainer
@@ -145,32 +146,26 @@ end
 
 local levelLabel = Instance.new("TextLabel")
 levelLabel.Name = "LevelLabel"
-levelLabel.Size = UDim2.new(1, -24, 0, 22)
-levelLabel.Position = UDim2.new(0, 12, 0, 110)
+levelLabel.Size = UDim2.new(1, -24, 0, 24)
+levelLabel.Position = UDim2.new(0, 12, 0, 112)
 levelLabel.BackgroundTransparency = 1
-levelLabel.Font = Enum.Font.FredokaOne
-levelLabel.TextScaled = true
-levelLabel.TextColor3 = Color3.fromRGB(230, 70, 60)
-levelLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
-levelLabel.TextStrokeTransparency = 0.3
 levelLabel.ZIndex = 42
 levelLabel.Text = ""
 levelLabel.Parent = banner
+HudChrome.Number(levelLabel, 18)
+levelLabel.TextColor3 = HudChrome.Color.Danger
 
 local consequenceLabel = Instance.new("TextLabel")
 consequenceLabel.Name = "ConsequenceLabel"
-consequenceLabel.Size = UDim2.new(1, -24, 0, 30)
-consequenceLabel.Position = UDim2.new(0, 12, 0, 136)
+consequenceLabel.Size = UDim2.new(1, -24, 0, 26)
+consequenceLabel.Position = UDim2.new(0, 12, 0, 142)
 consequenceLabel.BackgroundTransparency = 1
-consequenceLabel.Font = Enum.Font.FredokaOne
-consequenceLabel.TextScaled = true
-consequenceLabel.TextColor3 = Color3.fromRGB(255, 220, 150)
-consequenceLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
-consequenceLabel.TextStrokeTransparency = 0.3
 consequenceLabel.TextTransparency = 1
 consequenceLabel.ZIndex = 42
 consequenceLabel.Text = ""
 consequenceLabel.Parent = banner
+HudChrome.Label(consequenceLabel, 17)
+consequenceLabel.TextColor3 = HudChrome.Color.Ready
 
 -- Shockwave-Ring (0.55s) -- ein sich ausdehnender, ausblendender Kreis-Rand.
 local shockwaveRing = Instance.new("Frame")
@@ -184,7 +179,7 @@ shockwaveRing.Parent = banner
 
 local shockwaveStroke = Instance.new("UIStroke")
 shockwaveStroke.Thickness = 4
-shockwaveStroke.Color = Color3.fromRGB(255, 210, 80)
+shockwaveStroke.Color = HudChrome.Color.Ready
 shockwaveStroke.Transparency = 1
 shockwaveStroke.Parent = shockwaveRing
 
@@ -322,9 +317,8 @@ local function showAnnouncement(cityName, newLevel, oldLevel)
 	end
 
 	titleLabel.Text = info.title
-	titleLabel.TextColor3 = Color3.new(1, 1, 1)
-	levelLabel.Text = "ALERT " .. (oldLevel > 0 and ("⭐" .. string.rep("", 0)) or "") -- Platzhalter, wird gleich überschrieben
-	levelLabel.Text = "Level " .. oldLevel .. " → " .. newLevel
+	titleLabel.TextColor3 = HudChrome.Color.TextPrimary
+	levelLabel.Text = "LEVEL " .. oldLevel .. "  \u{2192}  " .. newLevel
 	consequenceLabel.Text = ""
 	consequenceLabel.TextTransparency = 1
 
@@ -395,12 +389,12 @@ local function showAnnouncement(cityName, newLevel, oldLevel)
 	end
 
 	levelLabel.Text = "ALERT LEVEL " .. newLevel
-	levelLabel.TextColor3 = Color3.fromRGB(230, 70, 60)
+	levelLabel.TextColor3 = HudChrome.Color.Danger
 
 	if isMaxLevel then
-		-- MAXIMUM ALERT füllt kurz die Bildschirmbreite.
+		-- Die Hoechststufe laesst den Titel kurz anwachsen.
 		TweenService:Create(titleLabel, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-			Size = UDim2.new(1, -24, 0, 50),
+			TextSize = TITEL_GROESSE_MAX,
 		}):Play()
 	end
 
@@ -435,10 +429,10 @@ local function showAnnouncement(cityName, newLevel, oldLevel)
 	banner.Visible = false
 	banner.Size = originalSize
 	banner.Position = originalPosition
-	titleLabel.Size = UDim2.new(1, -24, 0, 34) -- zurücksetzen, falls Level-5-Verbreiterung aktiv war
+	titleLabel.TextSize = TITEL_GROESSE -- zuruecksetzen, falls die Hoechststufe ihn angehoben hat
 
 	if _G.FlashCityAlertIndicator then
-		_G.FlashCityAlertIndicator(Color3.fromRGB(230, 70, 60))
+		_G.FlashCityAlertIndicator(HudChrome.Color.Danger)
 	end
 
 	isAnimating = false
