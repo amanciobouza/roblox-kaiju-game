@@ -1513,41 +1513,37 @@ MeltdownExplosionEvent.OnClientEvent:Connect(function()
 	}):Play()
 end)
 
--- ===== Die drei Kraftwerte: Bein, Arm, Koerper =====
+-- ===== Die drei Kraftwerte als Roentgenscans =====
 --
--- Sie stehen in der RECHTEN SPALTE, unter dem Ortsfeld. Oben Mitte ging nicht mehr: dort
--- stehen jetzt auch im Sanctuary die Level- und HP-Felder, seit das HUD dort seine Form
--- behaelt.
+-- Statt Titel und Farbbalken bekommt jeder Wert ein SCANFENSTER: ein kleines Sichtfeld mit
+-- Raster, Eckwinkeln und einer wandernden Abtastlinie, und darin die echten Gliedmassen der
+-- eigenen Figur -- Arm, Bein, Rumpf -- in Neon, halb durchsichtig.
 --
--- Die rechte Spalte ist der richtige Platz -- sie zeigt, WAS GERADE GILT, und im Sanctuary
--- ist das die Ausbildung. Die Spalte ist dort ohnehin frei: keine Alarmstufe, keine
--- Vorwarnung, keine Aufgabenliste.
+-- Die Teile werden aus dem laufenden Charakter GEKLONT, nicht aus einer Bibliothek geladen.
+-- Damit zeigt der Scan immer genau die Figur, die man gerade traegt, samt Skin, und es
+-- braucht kein einziges neues Modell. Stirbt oder wechselt die Figur, wird neu gescannt.
 --
--- Deshalb auch senkrecht statt nebeneinander: die Spalte ist 236 Pixel breit, drei
--- Werte nebeneinander waeren je 76 Pixel -- zu schmal fuer Name, Zahl und Wirkung.
---
--- Die Obergrenze kommt aus den Spieler-Attributen StatCap/ArmStatCap/LegStatCap, NICHT aus
--- einer Formel im Client -- der Server rechnet sie ueber eine Kurve.
-local SPALTE_BREITE = 236 -- dieselbe wie das Ortsfeld daruber (CityAlertHudClient)
+-- Die Farbe ist die des jeweiligen Wertes, nicht Cyan: Cyan gehoert im ganzen HUD allein
+-- der Special Energy. So bleiben die drei ausserdem auf einen Blick auseinanderzuhalten.
+local SPALTE_BREITE = 236 -- dieselbe wie das Ortsfeld darueber (CityAlertHudClient)
 local SPALTE_X = -16
 local SPALTE_RAND = 10
 local KRAFT_Y = 224 -- unter dem Ortsfeld (118 + 98 + 8)
-local KRAFT_ZEILE = 46
+local KRAFT_ZEILE = 54
+local SCAN_GROESSE = 44
 
 local statsRowFrame = Instance.new("Frame")
 statsRowFrame.Name = "StatsRowFrame"
-statsRowFrame.Size = UDim2.new(0, SPALTE_BREITE, 0, 34 + KRAFT_ZEILE * 3 - 6 + 10)
+statsRowFrame.Size = UDim2.new(0, SPALTE_BREITE, 0, 32 + KRAFT_ZEILE * 3 - 6 + 10)
 statsRowFrame.AnchorPoint = Vector2.new(1, 0)
 statsRowFrame.Position = UDim2.new(1, SPALTE_X, 0, KRAFT_Y)
 statsRowFrame.Parent = screenGui
 HudChrome.Panel(statsRowFrame, { radius = HudChrome.Radius.Small })
 
--- Der Titel war vorher da, aber unsichtbar: er wurde gebaut und nie eingehaengt
--- (statsPanelTitle.Parent fehlte). Ein Panel ohne Ueberschrift stand damit besonders im
--- Sanctuary ohne jeden Zusammenhang herum.
+-- Der Titel war vorher da, aber unsichtbar: er wurde gebaut und nie eingehaengt.
 local statsPanelTitle = Instance.new("TextLabel")
 statsPanelTitle.Name = "PanelTitle"
-statsPanelTitle.Size = UDim2.new(1, -SPALTE_RAND * 2, 0, 18)
+statsPanelTitle.Size = UDim2.new(0, 120, 0, 18)
 statsPanelTitle.Position = UDim2.new(0, SPALTE_RAND, 0, 8)
 statsPanelTitle.BackgroundTransparency = 1
 statsPanelTitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -1556,20 +1552,49 @@ statsPanelTitle.Parent = statsRowFrame
 HudChrome.Label(statsPanelTitle, 14)
 statsPanelTitle.TextColor3 = HudChrome.Color.TextSecondary
 
--- Ordnet den Trainings-Stat-Typ (wie er in "TrainingStat" steht, z.B. "Arm") derselben
--- Farbe zu, die auch der Wert oben hat.
+-- Der Abbruch-Knopf sitzt in der Kopfzeile dieses Feldes, nicht mehr in einem eigenen
+-- Panel. Er war das Einzige, was jenes Panel noch beitrug: seine Fortschrittsleiste zeigte
+-- denselben Wert wie die Zeile darueber, nur ein zweites Mal.
+local leaveTrainingButton = Instance.new("TextButton")
+leaveTrainingButton.Name = "LeaveTrainingButton"
+leaveTrainingButton.Size = UDim2.new(0, 26, 0, 22)
+leaveTrainingButton.AnchorPoint = Vector2.new(1, 0)
+leaveTrainingButton.Position = UDim2.new(1, -SPALTE_RAND, 0, 6)
+leaveTrainingButton.AutoButtonColor = false
+leaveTrainingButton.Visible = false
+leaveTrainingButton.Text = "X"
+leaveTrainingButton.Parent = statsRowFrame
+HudChrome.Panel(leaveTrainingButton, {
+	radius = HudChrome.Radius.Small,
+	fill = HudChrome.Color.PanelRaised,
+	transparency = 0,
+	border = HudChrome.Color.Danger,
+})
+HudChrome.Label(leaveTrainingButton, 15)
+leaveTrainingButton.TextColor3 = HudChrome.Color.Danger
+
+leaveTrainingButton.MouseButton1Click:Connect(function()
+	StopTrainingEvent:FireServer()
+end)
+
 local STAT_COLOR_BY_TYPE = {
 	Arm = Color3.fromRGB(220, 90, 220),
 	Leg = Color3.fromRGB(255, 150, 60),
 	Body = Color3.fromRGB(90, 220, 130),
 }
 
-local statBars = {} -- [key] = { label = TextLabel, fill = Frame, displayName = string }
-local lastStatValues = {} -- [key] = number
-local isAnimatingStat = {} -- [key] = true, waehrend eine Flug-Animation fuer diesen Stat laeuft
--- Vorwaertsdeklaration: wird von der Energie-Flug-Animation weiter oben im Skript (im
--- onArrive-Rueckruf) bereits referenziert, aber erst weiter unten definiert -- Lua macht
--- lokale Variablen erst AB ihrer Deklaration sichtbar.
+-- Welche Teile der R15-Figur zu welchem Wert gehoeren.
+local SCAN_TEILE = {
+	ArmPower = { "RightUpperArm", "RightLowerArm", "RightHand" },
+	LegPower = { "RightUpperLeg", "RightLowerLeg", "RightFoot" },
+	BodyPower = { "UpperTorso", "LowerTorso" },
+}
+
+local statBars = {} -- [key] = { label, fill, displayName, scanStroke, scanViewport, scanLine }
+local lastStatValues = {}
+local isAnimatingStat = {}
+-- Vorwaertsdeklaration: wird von der Energie-Flug-Animation weiter oben im Skript
+-- referenziert, aber erst weiter unten definiert.
 local updateLevelBar
 local advanceXPBar
 
@@ -1580,13 +1605,91 @@ local STAT_BAR_CONFIG = {
 }
 
 for index, config in ipairs(STAT_BAR_CONFIG) do
-	local oben = 34 + (index - 1) * KRAFT_ZEILE
-	local innen = SPALTE_BREITE - SPALTE_RAND * 2
+	local oben = 32 + (index - 1) * KRAFT_ZEILE
+	local textX = SPALTE_RAND + SCAN_GROESSE + 8
+	local textBreite = SPALTE_BREITE - textX - SPALTE_RAND
 
+	-- --- Das Scanfenster ---
+	local scanFrame = Instance.new("Frame")
+	scanFrame.Name = config.key .. "Scan"
+	scanFrame.Size = UDim2.new(0, SCAN_GROESSE, 0, SCAN_GROESSE)
+	scanFrame.Position = UDim2.new(0, SPALTE_RAND, 0, oben)
+	scanFrame.BackgroundColor3 = HudChrome.Color.PanelSunken
+	scanFrame.BorderSizePixel = 0
+	scanFrame.ClipsDescendants = true
+	scanFrame.Parent = statsRowFrame
+
+	local scanCorner = Instance.new("UICorner")
+	scanCorner.CornerRadius = UDim.new(0, 3)
+	scanCorner.Parent = scanFrame
+
+	local scanStroke = Instance.new("UIStroke")
+	scanStroke.Thickness = 1
+	scanStroke.Color = HudChrome.Color.BorderDim
+	scanStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	scanStroke.Parent = scanFrame
+
+	-- Raster: zwei Linien quer, zwei laengs. Mehr braucht es nicht -- sie sollen sagen
+	-- "hier wird gemessen", nicht selbst gelesen werden.
+	for _, lage in ipairs({ { true, 0.33 }, { true, 0.66 }, { false, 0.33 }, { false, 0.66 } }) do
+		local waagerecht, anteil = lage[1], lage[2]
+		local linie = Instance.new("Frame")
+		linie.Name = "Grid"
+		linie.BackgroundColor3 = config.color
+		linie.BackgroundTransparency = 0.85
+		linie.BorderSizePixel = 0
+		linie.ZIndex = 2
+		if waagerecht then
+			linie.Size = UDim2.new(1, 0, 0, 1)
+			linie.Position = UDim2.new(0, 0, anteil, 0)
+		else
+			linie.Size = UDim2.new(0, 1, 1, 0)
+			linie.Position = UDim2.new(anteil, 0, 0, 0)
+		end
+		linie.Parent = scanFrame
+	end
+
+	local scanViewport = ModelPreviewUtils.CreateViewport(scanFrame, 3)
+	scanViewport.Name = "ScanViewport"
+
+	-- Die Abtastlinie wandert von oben nach unten. Sie ist der Grund, warum das Fenster
+	-- nach Geraet aussieht und nicht nach Bild: ein Scan laeuft.
+	local scanLine = Instance.new("Frame")
+	scanLine.Name = "ScanLine"
+	scanLine.Size = UDim2.new(1, 0, 0, 2)
+	scanLine.Position = UDim2.new(0, 0, 0, 0)
+	scanLine.BackgroundColor3 = config.color
+	scanLine.BackgroundTransparency = 0.4
+	scanLine.BorderSizePixel = 0
+	scanLine.ZIndex = 4
+	scanLine.Parent = scanFrame
+
+	-- Vier Eckwinkel. Sie kosten vier Rahmen und machen aus einem Kaestchen ein Sichtfeld.
+	for _, ecke in ipairs({ { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } }) do
+		local ex, ey = ecke[1], ecke[2]
+		for _, richtung in ipairs({ "waagerecht", "senkrecht" }) do
+			local winkel = Instance.new("Frame")
+			winkel.Name = "Bracket"
+			winkel.AnchorPoint = Vector2.new(ex, ey)
+			winkel.BackgroundColor3 = config.color
+			winkel.BackgroundTransparency = 0.25
+			winkel.BorderSizePixel = 0
+			winkel.ZIndex = 5
+			if richtung == "waagerecht" then
+				winkel.Size = UDim2.new(0, 9, 0, 2)
+			else
+				winkel.Size = UDim2.new(0, 2, 0, 9)
+			end
+			winkel.Position = UDim2.new(ex, ex == 0 and 2 or -2, ey, ey == 0 and 2 or -2)
+			winkel.Parent = scanFrame
+		end
+	end
+
+	-- --- Die Ablesung daneben ---
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.Name = config.key .. "Name"
 	nameLabel.Size = UDim2.new(0, 90, 0, 18)
-	nameLabel.Position = UDim2.new(0, SPALTE_RAND, 0, oben)
+	nameLabel.Position = UDim2.new(0, textX, 0, oben)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 	nameLabel.Text = config.label
@@ -1596,8 +1699,8 @@ for index, config in ipairs(STAT_BAR_CONFIG) do
 
 	local label = Instance.new("TextLabel")
 	label.Name = config.key .. "Value"
-	label.Size = UDim2.new(0, innen - 90, 0, 18)
-	label.Position = UDim2.new(0, SPALTE_RAND + 90, 0, oben)
+	label.Size = UDim2.new(0, textBreite - 90, 0, 18)
+	label.Position = UDim2.new(0, textX + 90, 0, oben)
 	label.BackgroundTransparency = 1
 	label.TextXAlignment = Enum.TextXAlignment.Right
 	label.Text = "0 / 0"
@@ -1606,8 +1709,8 @@ for index, config in ipairs(STAT_BAR_CONFIG) do
 
 	local statBackground = Instance.new("Frame")
 	statBackground.Name = config.key .. "Track"
-	statBackground.Size = UDim2.new(0, innen, 0, 8)
-	statBackground.Position = UDim2.new(0, SPALTE_RAND, 0, oben + 20)
+	statBackground.Size = UDim2.new(0, textBreite, 0, 8)
+	statBackground.Position = UDim2.new(0, textX, 0, oben + 21)
 	statBackground.BackgroundColor3 = HudChrome.Color.PanelSunken
 	statBackground.BorderSizePixel = 0
 	statBackground.Parent = statsRowFrame
@@ -1628,11 +1731,10 @@ for index, config in ipairs(STAT_BAR_CONFIG) do
 	statFillCorner.CornerRadius = UDim.new(0, 4)
 	statFillCorner.Parent = statFill
 
-	-- Wirkungs-Zeile: wofuer der Wert gut ist. Ohne sie sind es drei Balken ohne Grund.
 	local effectLabel = Instance.new("TextLabel")
 	effectLabel.Name = config.key .. "Effect"
-	effectLabel.Size = UDim2.new(0, innen, 0, 14)
-	effectLabel.Position = UDim2.new(0, SPALTE_RAND, 0, oben + 30)
+	effectLabel.Size = UDim2.new(0, textBreite, 0, 14)
+	effectLabel.Position = UDim2.new(0, textX, 0, oben + 31)
 	effectLabel.BackgroundTransparency = 1
 	effectLabel.TextXAlignment = Enum.TextXAlignment.Left
 	effectLabel.Text = config.effect
@@ -1640,8 +1742,111 @@ for index, config in ipairs(STAT_BAR_CONFIG) do
 	HudChrome.Number(effectLabel, 11)
 	effectLabel.TextColor3 = HudChrome.Color.TextDim
 
-	statBars[config.key] = { label = label, fill = statFill, displayName = config.short }
+	statBars[config.key] = {
+		label = label,
+		fill = statFill,
+		displayName = config.short,
+		color = config.color,
+		scanFrame = scanFrame,
+		scanStroke = scanStroke,
+		scanViewport = scanViewport,
+		scanLine = scanLine,
+	}
 end
+
+-- ===== Den Scan mit der eigenen Figur fuellen =====
+--
+-- Geklont wird aus dem laufenden Charakter. Alles, was nicht zur Form gehoert, faellt weg:
+-- Anhaenge, Motoren, Skripte, Aufkleber. Was bleibt, ist die reine Gestalt in Neon.
+local function baueScan(key)
+	local eintrag = statBars[key]
+	local teileNamen = SCAN_TEILE[key]
+	if not eintrag or not teileNamen then
+		return
+	end
+
+	local altes = eintrag.scanViewport:FindFirstChildOfClass("Model")
+	if altes then
+		altes:Destroy()
+	end
+
+	local character = player.Character
+	if not character then
+		return
+	end
+
+	local modell = Instance.new("Model")
+	modell.Name = "ScanModel"
+	local gefunden = 0
+	for _, name in ipairs(teileNamen) do
+		local teil = character:FindFirstChild(name)
+		if teil and teil:IsA("BasePart") then
+			local klon = teil:Clone()
+			for _, kind in ipairs(klon:GetChildren()) do
+				-- SpecialMesh traegt bei alten Rigs die Form -- der muss bleiben.
+				if not kind:IsA("SpecialMesh") then
+					kind:Destroy()
+				end
+			end
+			if klon:IsA("MeshPart") then
+				klon.TextureID = "" -- kein Skin-Bild: ein Roentgenbild zeigt Form, nicht Farbe
+			end
+			klon.Anchored = true
+			klon.CanCollide = false
+			klon.CastShadow = false
+			klon.Material = Enum.Material.Neon
+			klon.Color = eintrag.color
+			klon.Transparency = 0.3
+			klon.Parent = modell
+			gefunden += 1
+		end
+	end
+
+	if gefunden == 0 then
+		-- Keine passenden Teile -- z.B. bei einem Rig, das anders benannt ist. Dann bleibt
+		-- das Fenster leer statt halb gefuellt; Raster und Abtastlinie stehen weiter.
+		modell:Destroy()
+		return
+	end
+
+	modell.Parent = eintrag.scanViewport
+	ModelPreviewUtils.Fit(eintrag.scanViewport, modell, eintrag.scanFrame, 0.8)
+end
+
+local function baueAlleScans()
+	for key in pairs(SCAN_TEILE) do
+		baueScan(key)
+	end
+end
+
+-- Der Charakter existiert beim Start des Skripts moeglicherweise noch nicht, und er wird
+-- bei jedem Tod und bei jedem Skin-Wechsel ersetzt.
+player.CharacterAdded:Connect(function()
+	task.wait(0.5) -- den Gliedmassen Zeit lassen, im Charakter aufzutauchen
+	baueAlleScans()
+end)
+if player.Character then
+	task.spawn(baueAlleScans)
+end
+player:GetAttributeChangedSignal("EquippedSkin"):Connect(function()
+	task.delay(0.5, baueAlleScans)
+end)
+
+-- Die Abtastlinien wandern. Eine Schleife fuer alle drei -- drei eigene waeren dieselbe
+-- Rechnung dreimal.
+RunService.Heartbeat:Connect(function()
+	if not statsRowFrame.Visible then
+		return
+	end
+	local lauf = (os.clock() * 0.45) % 1
+	for _, eintrag in pairs(statBars) do
+		if eintrag.scanLine then
+			eintrag.scanLine.Position = UDim2.new(0, 0, lauf, 0)
+			-- An den Raendern ausblenden, damit die Linie nicht springt, sondern durchlaeuft.
+			eintrag.scanLine.BackgroundTransparency = 0.4 + math.abs(lauf - 0.5) * 0.8
+		end
+	end
+end)
 
 -- ===== Zonenabhängige Umschaltung: Heat/Berserk-Leiste ist ausserhalb von Sanctuary
 -- relevant (Kampf), die Skill-Balken (Arm/Bein/Körper) dagegen speziell IM Sanctuary
@@ -1923,104 +2128,23 @@ detailAction.Text = ""
 detailAction.Parent = detailFrame
 applyComicStyle(detailAction, 12, 3)
 
--- ===== Trainings-Panel: oben Mitte, nur waehrend aktivem Training an einer Station =====
+-- ===== Das Stations-Panel ist entfernt =====
 --
--- Es steht unter den drei Kraftwerten (die dort von y 8 bis 100 liegen) und gehoert mit
--- ihnen zusammen: dort oben steht der eigene Zustand, und waehrend des Trainings ist
--- genau das die Frage -- wie weit bin ich mit diesem Wert.
+-- Es zeigte Titel, Fortschrittsbalken und Zahl des gerade trainierten Wertes -- also genau
+-- das, was die Zeile desselben Wertes in der Uebersicht darueber ohnehin schon zeigt. Zwei
+-- Balken fuer dieselbe Zahl, uebereinander.
+--
+-- Das Einzige, was es beitrug, war der Abbruch-Knopf. Der sitzt jetzt in der Kopfzeile der
+-- Uebersicht. Welcher Wert gerade trainiert wird, sagt dort das aufleuchtende Scanfenster.
 local STAT_DISPLAY_NAMES = {
 	Leg = "BEIN",
 	Arm = "ARM",
 	Body = "KOERPER",
 }
 
--- Beide Felder stehen unter den Kraftwerten in derselben Spalte -- alles, was mit dem
--- Training zu tun hat, an einer Stelle statt verteilt ueber zwei Bildschirmhaelften.
 local TRAIN_BREITE = SPALTE_BREITE
 local TRAIN_RAND = SPALTE_RAND
-local TRAIN_X_KNOPF = 36
-local TRAIN_Y = KRAFT_Y + 34 + KRAFT_ZEILE * 3 - 6 + 10 + 8
-local BOOST_Y = TRAIN_Y + 62 + 8
-
-local trainingFrame = Instance.new("Frame")
-trainingFrame.Name = "TrainingFrame"
-trainingFrame.Size = UDim2.new(0, TRAIN_BREITE, 0, 62)
-trainingFrame.AnchorPoint = Vector2.new(1, 0)
-trainingFrame.Position = UDim2.new(1, SPALTE_X, 0, TRAIN_Y)
-trainingFrame.Visible = false
-trainingFrame.Parent = screenGui
-HudChrome.Panel(trainingFrame, { radius = HudChrome.Radius.Small })
-
-local trainingTitle = Instance.new("TextLabel")
-trainingTitle.Name = "TrainingTitle"
-trainingTitle.Size = UDim2.new(0, 120, 0, 22)
-trainingTitle.Position = UDim2.new(0, TRAIN_RAND, 0, 8)
-trainingTitle.BackgroundTransparency = 1
-trainingTitle.TextXAlignment = Enum.TextXAlignment.Left
-trainingTitle.Text = "TRAINING"
-trainingTitle.Parent = trainingFrame
-HudChrome.Label(trainingTitle, 15)
-
--- Der Wert steht NEBEN dem Balken, nicht darin. Im Balken stand er auf der Fuellung --
--- weisse Schrift auf Gruen -- und war damit genauso schlecht zu lesen wie es die HP-Zahl
--- vorher war.
-local trainingBarLabel = Instance.new("TextLabel")
-trainingBarLabel.Name = "TrainingBarLabel"
-trainingBarLabel.Size = UDim2.new(0, 100, 0, 22)
-trainingBarLabel.Position = UDim2.new(1, -TRAIN_RAND - TRAIN_X_KNOPF - 8 - 100, 0, 8)
-trainingBarLabel.BackgroundTransparency = 1
-trainingBarLabel.TextXAlignment = Enum.TextXAlignment.Right
-trainingBarLabel.Text = ""
-trainingBarLabel.Parent = trainingFrame
-HudChrome.NumberBold(trainingBarLabel, 15)
-
-local trainingBarBackground = Instance.new("Frame")
-trainingBarBackground.Name = "TrainingBarBackground"
-trainingBarBackground.Size = UDim2.new(1, -TRAIN_RAND * 2 - TRAIN_X_KNOPF - 8, 0, 10)
-trainingBarBackground.Position = UDim2.new(0, TRAIN_RAND, 0, 38)
-trainingBarBackground.BackgroundColor3 = HudChrome.Color.PanelSunken
-trainingBarBackground.BorderSizePixel = 0
-trainingBarBackground.Parent = trainingFrame
-
-local trainingBarCorner = Instance.new("UICorner")
-trainingBarCorner.CornerRadius = UDim.new(0, 5)
-trainingBarCorner.Parent = trainingBarBackground
-
-local trainingBarFill = Instance.new("Frame")
-trainingBarFill.Name = "Fill"
-trainingBarFill.Size = UDim2.new(0, 0, 1, 0)
-trainingBarFill.BackgroundColor3 = Color3.fromRGB(90, 220, 130)
-trainingBarFill.BorderSizePixel = 0
-trainingBarFill.ZIndex = 2
-trainingBarFill.Parent = trainingBarBackground
-
-local trainingBarFillCorner = Instance.new("UICorner")
-trainingBarFillCorner.CornerRadius = UDim.new(0, 5)
-trainingBarFillCorner.Parent = trainingBarFill
-
--- Verlassen: der einzige Knopf im HUD, der etwas abbricht. Er traegt deshalb die
--- Gefahrfarbe als Rahmen, nicht als Flaeche -- eine rote Flaeche im ruhigen Chrome zoege
--- mehr Aufmerksamkeit auf sich als das Training selbst.
-local leaveTrainingButton = Instance.new("TextButton")
-leaveTrainingButton.Name = "LeaveTrainingButton"
-leaveTrainingButton.Size = UDim2.new(0, TRAIN_X_KNOPF, 0, 32)
-leaveTrainingButton.AnchorPoint = Vector2.new(1, 0)
-leaveTrainingButton.Position = UDim2.new(1, -TRAIN_RAND, 0, 16)
-leaveTrainingButton.AutoButtonColor = false
-leaveTrainingButton.Text = "X"
-leaveTrainingButton.Parent = trainingFrame
-HudChrome.Panel(leaveTrainingButton, {
-	radius = HudChrome.Radius.Small,
-	fill = HudChrome.Color.PanelRaised,
-	transparency = 0,
-	border = HudChrome.Color.Danger,
-})
-HudChrome.Label(leaveTrainingButton, 18)
-leaveTrainingButton.TextColor3 = HudChrome.Color.Danger
-
-leaveTrainingButton.MouseButton1Click:Connect(function()
-	StopTrainingEvent:FireServer()
-end)
+local BOOST_Y = KRAFT_Y + 32 + KRAFT_ZEILE * 3 - 6 + 10 + 8
 
 -- ===== Boost-Anzeige =====
 -- Eigenes Feld, weil der Boost-Fortschritt bestehen bleibt, auch wenn man gerade an keiner
@@ -2088,9 +2212,8 @@ boostBarFillCorner.Parent = boostBarFill
 -- gross ueber dem Instrument, die Hitze traegt der Zeiger, und der Meltdown-Bereich ist
 -- am Farbband markiert. So war es im Grilling auch entschieden (Q22).
 
--- Läuft jeden Frame: Boost-Anzeige + Stations-Balken, beide NUR während aktivem Training
--- an einer Station sichtbar (verschwinden zusammen, sobald die Station verlassen wird).
-local lastTrainingBarValue = nil
+-- Laeuft jeden Frame: Boost-Anzeige und Abbruch-Knopf, beide nur waehrend aktivem
+-- Training sichtbar.
 
 -- Kein eigener Boost-Sound mehr -- die Tempo-Erhöhung der Hintergrundmusik (siehe
 -- BackgroundMusicClient.lua) übernimmt die Rolle als hörbares Boost-Feedback komplett.
@@ -2103,10 +2226,21 @@ RunService.Heartbeat:Connect(function()
 		statType = "Body"
 	end
 	local isTraining = statType ~= nil
-	trainingFrame.Visible = isTraining
 	boostFrame.Visible = isTraining
+	leaveTrainingButton.Visible = isTraining
+
+	-- Welcher Wert gerade trainiert wird, sagt das Scanfenster: seine Umrandung nimmt die
+	-- Farbe des Wertes an, die anderen beiden bleiben grau. Das ersetzt den Titel des
+	-- entfernten Panels -- und sagt dasselbe an der Stelle, an der man ohnehin hinsieht.
+	for key, eintrag in pairs(statBars) do
+		local aktiv = isTraining and key == (statType .. "Power")
+		if eintrag.scanStroke then
+			eintrag.scanStroke.Color = aktiv and eintrag.color or HudChrome.Color.BorderDim
+			eintrag.scanStroke.Thickness = aktiv and 2 or 1
+		end
+	end
+
 	if not isTraining then
-		lastTrainingBarValue = nil -- zurücksetzen, damit beim nächsten Start keine falsche Erhöhung erkannt wird
 		return
 	end
 
@@ -2147,34 +2281,8 @@ RunService.Heartbeat:Connect(function()
 	local cap = math.max(player:GetAttribute(capAttribute) or 1, 1)
 	local ratio = math.clamp(statValue.Value / cap, 0, 1)
 
-	trainingTitle.Text = (STAT_DISPLAY_NAMES[statType] or statType) .. " TRAINING"
-
-	-- Die Zahl war vorher nie gesetzt: trainingBarLabel wurde angelegt, auf "" gestellt und
-	-- nirgends befuellt. Der Balken lief also ohne jede Angabe, wie weit er ist.
-	--
-	-- Koerper wird rein kosmetisch hochskaliert -- die Zuwaechse sind serverseitig
-	-- absichtlich sehr klein (TRAINING_SLOWDOWN), und "0 / 1" saehe aus wie ein Fehler.
-	-- Dieselbe Rechnung wie bei den drei Kraftwerten oben.
-	local anzeigeWert, anzeigeCap = statValue.Value, cap
-	if statType == "Body" then
-		anzeigeWert, anzeigeCap = anzeigeWert * 100, anzeigeCap * 100
-	end
-	trainingBarLabel.Text = math.floor(anzeigeWert) .. " / " .. math.floor(anzeigeCap)
-
-	-- Wie beim Kraft-Balken: während eine Flug-Animation für diesen Stat läuft, hier
-	-- nicht eingreifen -- der Balken springt erst bei Ankunft der Zahl auf den neuen Wert
-	-- (siehe spawnFlyingTrainPoint).
-	if not isAnimatingStat[statType .. "Power"] then
-		trainingBarFill.Size = UDim2.new(ratio, 0, 1, 0)
-		local skillColor = STAT_COLOR_BY_TYPE[statType]
-		if skillColor then
-			trainingBarFill.BackgroundColor3 = skillColor
-			-- Attribut zurücksetzen, damit flashElement (aus früheren Aufrufen mit der alten
-			-- Farbe gecacht) beim nächsten Aufleuchten wieder zur RICHTIGEN Ruhefarbe zurückkehrt.
-			trainingBarFill:SetAttribute("RestColor", nil)
-		end
-		lastTrainingBarValue = statValue.Value
-	end
+	-- Anzeige und Balken pflegt die Uebersicht selbst (siehe statBars weiter oben). Hier
+	-- bleibt nichts zu tun: die Zeile des trainierten Wertes IST die Anzeige.
 end)
 
 -- Lässt eine "+X"-Anzeige vom Charakter zum großen Trainings-Balken unten fliegen,
@@ -2243,14 +2351,16 @@ local function spawnFlyingTrainPoint(amount, statType)
 				return
 			end
 
-			-- Phase 3: erst jetzt nach unten zur Trainings-Progressbar fliegen (die im
-			-- Trainings-Panel während der aktiven Session sichtbare Leiste), statt zum
-			-- Kraft-Balken oben unter dem Level.
+			-- Phase 3: zum Balken DIESES Wertes in der Uebersicht fliegen. Frueher ging der
+			-- Flug zur Leiste des Stations-Panels -- die gibt es nicht mehr, weil sie
+			-- denselben Wert ein zweites Mal zeigte. Jetzt landet die Zahl dort, wo sie
+			-- auch wirkt.
+			local zielBalken = ui.fill.Parent
 			local targetPosition = UDim2.new(
 				0,
-				trainingBarBackground.AbsolutePosition.X + trainingBarBackground.AbsoluteSize.X / 2,
+				zielBalken.AbsolutePosition.X + zielBalken.AbsoluteSize.X / 2,
 				0,
-				trainingBarBackground.AbsolutePosition.Y + trainingBarBackground.AbsoluteSize.Y / 2
+				zielBalken.AbsolutePosition.Y + zielBalken.AbsoluteSize.Y / 2
 			)
 
 			local flightTween = TweenService:Create(
@@ -2281,15 +2391,6 @@ local function spawnFlyingTrainPoint(amount, statType)
 
 				flashElement(ui.fill, Color3.new(1, 1, 1))
 				glowFlashElement(ui.fill, Color3.fromRGB(255, 255, 200))
-
-				-- Trainings-Panel-Leiste (falls gerade dieses Training aktiv ist) ebenfalls
-				-- erst jetzt aktualisieren + aufleuchten lassen, statt live jeden Frame.
-				if trainingBarFill then
-					trainingBarFill.Size = UDim2.new(statRatio, 0, 1, 0)
-					flashElement(trainingBarFill, Color3.new(1, 1, 1))
-					glowFlashElement(trainingBarFill, Color3.fromRGB(255, 255, 150))
-					lastTrainingBarValue = value
-				end
 
 				isAnimatingStat[key] = false
 				lastStatValues[key] = value
