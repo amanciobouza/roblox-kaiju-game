@@ -8,11 +8,9 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
-local ComicStyleUtils = require(ReplicatedStorage:WaitForChild("ComicStyleUtils"))
-local UiTypography = require(ReplicatedStorage:WaitForChild("UiTypography"))
+local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
 local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
 local ResponsiveGridUtils = require(ReplicatedStorage:WaitForChild("ResponsiveGridUtils"))
-local applyComicStyle = ComicStyleUtils.Apply
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
@@ -42,37 +40,27 @@ screenGui.Name = "GiftGui"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
-local panel = Instance.new("Frame")
-panel.Name = "GiftPanel"
--- Vollbild: alle Menü-Bildschirme nutzen die ganze Fläche.
-panel.Size = UDim2.new(1, 0, 1, 0)
-panel.Position = UDim2.new(0, 0, 0, 0)
-panel.AnchorPoint = Vector2.new(0, 0)
-panel.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
-panel.Visible = false
-panel.Parent = screenGui
-applyComicStyle(panel, 20, 5)
+-- Vollbild-Bildschirm aus HudChrome.Screen: Feld, Kopf, Titel, Unterzeile und
+-- Schliessen-Knopf. Sie standen hier einzeln -- LuckiestGuy, ein rotes X, ein Titel mit
+-- Emoji -- und in jedem anderen Menue noch einmal, jedes Mal etwas anders.
+--
+-- Die Unterzeile traegt jetzt, was vorher nirgends stand: wie viele Geschenke gerade
+-- abholbar sind. Das war bisher nur am Laempchen in der Navigation zu sehen, und dort sagt
+-- es nur DASS, nicht wie viele.
+local schirm = HudChrome.Screen(screenGui, {
+	name = "GiftPanel",
+	title = "TIME GIFTS",
+	subtitle = "",
+})
+local panel = schirm.panel
+local statusLabel = schirm.subtitle
+local giftCloseButton = schirm.close
 
 -- Inhalt unter der Roblox-Systemleiste hervorholen. IgnoreGuiInset zieht die
 -- Zeichenflaeche bewusst DARUNTER, damit oben kein Streifen mit Sicht auf die Welt bleibt --
 -- das gilt aber nur fuer den Hintergrund. Das Polster wird nachgezogen, siehe TopInsetUtils.
 TopInsetUtils.Bind(panel)
 
--- X-Schliessen-Button -- kehrt zum Hamburger-Menü zurück (dieses Panel hatte bisher
--- keinen eigenen, war nur über den jetzt entfernten "← Back"-Button schliessbar).
-local giftCloseButton = Instance.new("TextButton")
-giftCloseButton.Name = "CloseButton"
-giftCloseButton.Size = UDim2.new(0, 34, 0, 34)
-giftCloseButton.AnchorPoint = Vector2.new(1, 0)
-giftCloseButton.Position = UDim2.new(1, -8, 0, 8)
-giftCloseButton.BackgroundColor3 = Color3.fromRGB(220, 70, 70)
-giftCloseButton.Font = Enum.Font.FredokaOne
-giftCloseButton.TextScaled = true
-giftCloseButton.TextColor3 = Color3.new(1, 1, 1)
-giftCloseButton.Text = "X"
-giftCloseButton.ZIndex = 5
-giftCloseButton.Parent = panel
-applyComicStyle(giftCloseButton, 8, 2)
 giftCloseButton.MouseButton1Click:Connect(function()
 	panel.Visible = false
 	if _G.NavReturnToMenu then
@@ -80,25 +68,16 @@ giftCloseButton.MouseButton1Click:Connect(function()
 	end
 end)
 
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, -16, 0, 40)
-titleLabel.Position = UDim2.new(0, 8, 0, 8)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Font = Enum.Font.LuckiestGuy
-titleLabel.TextScaled = true
-titleLabel.TextColor3 = Color3.fromRGB(235, 235, 245)
-titleLabel.Text = "🎁 Time Gifts"
-titleLabel.Parent = panel
-
 local grid = Instance.new("ScrollingFrame")
-grid.Size = UDim2.new(1, -16, 1, -56)
-grid.Position = UDim2.new(0, 8, 0, 48)
+-- Im Inhaltsbereich: die Kopfhoehe ist dort schon abgezogen.
+grid.Size = UDim2.new(1, -32, 1, -24)
+grid.Position = UDim2.new(0, 16, 0, 12)
 grid.BackgroundTransparency = 1
 grid.BorderSizePixel = 0
 grid.ScrollBarThickness = 8
 grid.CanvasSize = UDim2.new(0, 0, 0, 0)
 grid.AutomaticCanvasSize = Enum.AutomaticSize.Y
-grid.Parent = panel
+grid.Parent = schirm.content
 
 local gridLayout = Instance.new("UIGridLayout")
 -- Vorher 135x110. Auf einem Vollbild-Bildschirm standen zwoelf Briefmarken in einer
@@ -120,28 +99,29 @@ for n = 1, giftCountValue.Value do
 	local cell = Instance.new("TextButton")
 	cell.Name = "Gift" .. n
 	cell.LayoutOrder = n
-	cell.BackgroundColor3 = Color3.fromRGB(230, 80, 130)
 	cell.AutoButtonColor = false
 	cell.Text = ""
 	cell.Parent = grid
-	applyComicStyle(cell, 14, 3)
+	-- Vorher pink. Nach Regel 2 bedeutet Farbe eine Messung, und "Geschenk" ist keine --
+	-- zwoelf pinke Kacheln waren nur die lauteste Flaeche im ganzen Menue. Was hier
+	-- wirklich zwei Zustaende hat, ist abholbar gegen gesperrt, und das traegt der Ueberzug.
+	HudChrome.Panel(cell, { radius = HudChrome.Radius.Panel, fill = HudChrome.Color.PanelRaised })
 
 	local numberLabel = Instance.new("TextLabel")
-	numberLabel.Size = UDim2.new(1, 0, 0, 18)
-	numberLabel.Position = UDim2.new(0, 0, 0, 4)
+	numberLabel.Size = UDim2.new(1, -16, 0, 22)
+	numberLabel.Position = UDim2.new(0, 8, 0, 8)
 	numberLabel.BackgroundTransparency = 1
-	numberLabel.Font = Enum.Font.LuckiestGuy
-	numberLabel.TextScaled = true
-	numberLabel.TextColor3 = Color3.new(1, 1, 1)
+	numberLabel.TextXAlignment = Enum.TextXAlignment.Left
 	numberLabel.Text = "#" .. n
+	HudChrome.Number(numberLabel, 16)
+	numberLabel.TextColor3 = HudChrome.Color.TextDim
 	numberLabel.ZIndex = 2
 	numberLabel.Parent = cell
 
 	local iconLabel = Instance.new("TextLabel")
-	iconLabel.Size = UDim2.new(1, 0, 0, 76)
-	iconLabel.Position = UDim2.new(0, 0, 0, 26)
+	iconLabel.Size = UDim2.new(1, 0, 0, 72)
+	iconLabel.Position = UDim2.new(0, 0, 0, 30)
 	iconLabel.BackgroundTransparency = 1
-	iconLabel.Font = Enum.Font.LuckiestGuy
 	iconLabel.TextScaled = true
 	-- Das Symbol der TATSAECHLICHEN Belohnung. Vorher stand hier bei allen zwoelf
 	-- Geschenken dasselbe Paket -- die Karte sagte damit nichts ueber ihren Inhalt.
@@ -151,11 +131,11 @@ for n = 1, giftCountValue.Value do
 	iconLabel.Parent = cell
 
 	local descLabel = Instance.new("TextLabel")
-	descLabel.Size = UDim2.new(1, -16, 0, 52)
-	descLabel.Position = UDim2.new(0, 8, 0, 106)
+	descLabel.Size = UDim2.new(1, -20, 0, 56)
+	descLabel.Position = UDim2.new(0, 10, 0, 108)
 	descLabel.BackgroundTransparency = 1
-	descLabel.TextColor3 = Color3.new(1, 1, 1)
-	UiTypography.Body(descLabel, 15)
+	descLabel.TextYAlignment = Enum.TextYAlignment.Top
+	HudChrome.MenuBody(descLabel, HudChrome.MenuTextSize.Caption)
 	local desc = giftDescriptionsFolder:FindFirstChild("Gift" .. n)
 	descLabel.Text = desc and desc.Value or ""
 	descLabel.ZIndex = 2
@@ -165,25 +145,29 @@ for n = 1, giftCountValue.Value do
 	-- sichtbar, wirkt nur "ausgegraut") + kleiner Countdown-Streifen unten
 	local overlay = Instance.new("Frame")
 	overlay.Size = UDim2.new(1, 0, 1, 0)
-	overlay.BackgroundColor3 = Color3.fromRGB(160, 160, 160)
-	overlay.BackgroundTransparency = 0.55
+	-- Gesperrtes wird ABGEDUNKELT, nicht aufgehellt. Der helle Grauschleier von vorher
+	-- stammte aus dem Comic-Stil, wo der Grund hell war; auf dem dunklen Feld hier machte
+	-- er die gesperrte Karte HELLER als die abholbare -- also genau falsch herum.
+	overlay.BackgroundColor3 = HudChrome.Color.PanelSunken
+	overlay.BackgroundTransparency = 0.45
 	overlay.BorderSizePixel = 0
 	overlay.ZIndex = 3
 	overlay.Parent = cell
-	applyComicStyle(overlay, 14, 0)
+	local overlayCorner = Instance.new("UICorner")
+	overlayCorner.CornerRadius = UDim.new(0, HudChrome.Radius.Panel)
+	overlayCorner.Parent = overlay
 
 	local timeLabel = Instance.new("TextLabel")
-	timeLabel.Size = UDim2.new(1, 0, 0, 18)
-	timeLabel.Position = UDim2.new(0, 0, 1, -18)
+	-- Mittig statt am unteren Rand: der Countdown IST der Inhalt einer gesperrten Karte.
+	-- Ein Streifen unten las sich wie eine Fussnote zu etwas, das man sowieso nicht anfassen
+	-- kann.
+	timeLabel.Size = UDim2.new(1, 0, 0, 30)
+	timeLabel.Position = UDim2.new(0, 0, 0.5, -15)
 	timeLabel.BackgroundTransparency = 1
-	timeLabel.Font = Enum.Font.FredokaOne
-	timeLabel.TextScaled = true
-	timeLabel.TextColor3 = Color3.new(1, 1, 1)
-	timeLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
-	timeLabel.TextStrokeTransparency = 0
 	timeLabel.ZIndex = 4
 	timeLabel.Text = "--:--"
 	timeLabel.Parent = overlay
+	HudChrome.NumberBold(timeLabel, 22)
 
 	cell.MouseButton1Click:Connect(function()
 		local claimedFolder = player:FindFirstChild("ClaimedGifts")
@@ -204,7 +188,7 @@ local function playReadyGlow(cell)
 		return
 	end
 	local originalColor = stroke.Color
-	stroke.Color = Color3.fromRGB(255, 255, 150)
+	stroke.Color = HudChrome.Color.Ready
 	TweenService:Create(stroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
 		Color = originalColor,
 	}):Play()
@@ -219,6 +203,7 @@ RunService.Heartbeat:Connect(function()
 
 	local elapsed = Workspace:GetServerTimeNow() - sessionStart
 	local anyClaimable = false
+	local claimableCount = 0
 
 	for n = 1, giftCountValue.Value do
 		local ui = giftCells[n]
@@ -230,8 +215,8 @@ RunService.Heartbeat:Connect(function()
 
 			if claimed then
 				ui.overlay.Visible = true
-				ui.overlay.BackgroundTransparency = 0.6
-				ui.timeLabel.Text = "✅"
+				ui.overlay.BackgroundTransparency = 0.35
+				ui.timeLabel.Text = "CLAIMED"
 			elseif ready then
 				ui.overlay.Visible = false
 				if not wasReady[n] then
@@ -246,6 +231,7 @@ RunService.Heartbeat:Connect(function()
 			wasReady[n] = ready
 			if ready and not claimed then
 				anyClaimable = true
+				claimableCount += 1
 			end
 		end
 	end
@@ -260,4 +246,11 @@ RunService.Heartbeat:Connect(function()
 	if _G.SetNavBadge then
 		_G.SetNavBadge("Gifts", anyClaimable)
 	end
+
+	-- Die Unterzeile im Kopf sagt, WIE VIELE bereitliegen. Das Laempchen in der Navigation
+	-- sagt nur, DASS etwas bereitliegt -- wer das Menue offen hat, will die Zahl.
+	statusLabel.Text = claimableCount > 0
+			and string.format("%d ready to claim", claimableCount)
+		or "Nothing ready yet"
+	statusLabel.TextColor3 = claimableCount > 0 and HudChrome.Color.Ready or HudChrome.Color.TextSecondary
 end)
