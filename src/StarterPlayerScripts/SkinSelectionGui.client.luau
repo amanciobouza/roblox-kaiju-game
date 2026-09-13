@@ -442,16 +442,40 @@ do
 	-- GetGuiInset bleibt als Untergrenze stehen, fuer den Fall, dass die Messung zu frueh
 	-- kommt und noch null meldet. Beide Zahlen stehen in der Ausgabe, sonst laesst sich
 	-- nicht unterscheiden, welche gegriffen hat.
+	local clusterGebunden = false
+
 	local function versatzAnwenden()
 		local gemessen = screenGui.AbsolutePosition.Y - barGui.AbsolutePosition.Y
 		local gerechnet = HudChrome.TopInset()
 		local versatz = math.max(gemessen, gerechnet, 0)
+		local hoehe = versatz + HUD_KOPFLEISTE_HOEHE
 
-		bar.Size = UDim2.new(1, 0, 0, versatz + HUD_KOPFLEISTE_HOEHE)
-		print(string.format(
-			"[Kaiju Debug] Kopfleiste: gemessen %d px, GetGuiInset %d px, Leiste %d px hoch.",
-			gemessen, gerechnet, versatz + HUD_KOPFLEISTE_HOEHE
-		))
+		-- ===== Gegenprobe: enthaelt die Leiste die Statusfelder wirklich? =====
+		--
+		-- Die 78 sind fuer den Rechner gedacht, wo nichts skaliert wird. Auf dem Telefon
+		-- liegen zwischen dem Wert und dem, was auf dem Schirm steht, ZWEI UIScale-Ebenen:
+		-- die globale Verkleinerung des HUDs und die Gegenskalierung des Statusblocks. Das
+		-- Ergebnis vorherzusagen hiesse, beide nachzurechnen -- und genau solche Rechnungen
+		-- sind in dieser Sitzung mehrfach danebengegangen.
+		--
+		-- Also wird die Unterkante abgelesen und die Leiste notfalls tiefer gezogen. Die 78
+		-- bleiben die Untergrenze: auf dem Rechner sieht das Ergebnis dadurch unveraendert
+		-- aus, auf dem Telefon waechst die Leiste so weit, wie sie muss.
+		local cluster = screenGui:FindFirstChild("PlayerStatusCluster")
+		if cluster and cluster.AbsoluteSize.Y > 0 then
+			local unterkante = cluster.AbsolutePosition.Y + cluster.AbsoluteSize.Y - bar.AbsolutePosition.Y
+			hoehe = math.max(hoehe, unterkante + 18) -- 18 px Luft, wie auf dem Rechner (78 - 8 - 52)
+
+			-- Erst ab hier gibt es etwas zu beobachten: der Block entsteht spaeter in diesem
+			-- Skript, und seine Groesse steht erst, wenn beide UIScale-Ebenen gegriffen haben.
+			if not clusterGebunden then
+				clusterGebunden = true
+				cluster:GetPropertyChangedSignal("AbsoluteSize"):Connect(versatzAnwenden)
+				cluster:GetPropertyChangedSignal("AbsolutePosition"):Connect(versatzAnwenden)
+			end
+		end
+
+		bar.Size = UDim2.new(1, 0, 0, hoehe)
 	end
 
 	-- Der Versatz steht beim Start des Skripts oft noch auf null: die Kern-Oberflaeche von
@@ -461,6 +485,9 @@ do
 	HudChrome.BindTopInset(versatzAnwenden)
 	screenGui:GetPropertyChangedSignal("AbsolutePosition"):Connect(versatzAnwenden)
 	screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(versatzAnwenden)
+	-- Noch einmal, sobald dieses Skript durchgelaufen ist: dann steht der Statusblock, und
+	-- die Gegenprobe oben findet ihn und haengt sich an ihn.
+	task.defer(versatzAnwenden)
 end
 
 local statusCluster = Instance.new("Frame")
