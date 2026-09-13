@@ -1620,11 +1620,22 @@ local STAT_COLOR_BY_TYPE = {
 	Body = Color3.fromRGB(90, 220, 130),
 }
 
--- Welche Teile der R15-Figur zu welchem Wert gehoeren.
+-- Welche Knochen zu welchem Wert gehoeren.
+--
+-- Es sind KANDIDATENLISTEN, keine Pflichtlisten: gefunden wird, was da ist, und aus allen
+-- Treffern zusammen entsteht der Bereich. Das ist noetig, weil zwei Benennungen
+-- nebeneinander existieren -- die Kaiju-Modelle aus der Werkstatt sind nach R6 benannt
+-- ("Torso", "Pelvis"), der Standard-Avatar nach R15 ("UpperTorso", "LowerTorso").
+--
+-- Gemessen, nicht geraten: der Scan meldete "keine Knochen dieses Namens im Modell" fuer
+-- den Rumpf, obwohl Arm und Bein gelangen. Im Bauplan des Storm Hunter steht fuenfzehnmal
+-- "Torso" und kein einziges Mal "UpperTorso" -- die beiden Vorkommen, die ich vorher
+-- gezaehlt hatte, stammten aus den Aegis- und Bastion-Modulen, also aus ganz anderen
+-- Figuren.
 local SCAN_TEILE = {
-	ArmPower = { "RightUpperArm", "RightLowerArm", "RightHand" },
-	LegPower = { "RightUpperLeg", "RightLowerLeg", "RightFoot" },
-	BodyPower = { "UpperTorso", "LowerTorso" },
+	ArmPower = { "RightUpperArm", "RightLowerArm", "RightHand", "RightArm" },
+	LegPower = { "RightUpperLeg", "RightLowerLeg", "RightFoot", "RightLeg" },
+	BodyPower = { "Torso", "Pelvis", "UpperTorso", "LowerTorso" },
 }
 
 local statBars = {} -- [key] = { label, fill, displayName, scanStroke, scanViewport, scanLine }
