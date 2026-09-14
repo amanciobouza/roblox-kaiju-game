@@ -515,7 +515,10 @@ local function buildViewport(container, factionKey)
 			local realViewport = ModelPreviewUtils.CreateViewport(container, 71)
 			local okReal = pcall(function()
 				realModel.Parent = realViewport
-				ModelPreviewUtils.Fit(realViewport, realModel, container)
+				-- Der Heldenblick statt des Katalogblicks: laengere Brennweite, Zielpunkt
+				-- ueber der Mitte, Kamera leicht von unten. Warum, steht in
+				-- ModelPreviewUtils bei BLICK_HELD.
+				ModelPreviewUtils.Fit(realViewport, realModel, container, ModelPreviewUtils.BLICK_HELD)
 				-- NACH dem Einpassen drehen, und vorn multipliziert: Fit hat das Modell
 				-- mittig in den Ursprung gesetzt, eine vorn multiplizierte Drehung dreht
 				-- also um die Mitte. Hinten multipliziert wäre es der Pivot, und die Figur
@@ -542,7 +545,7 @@ local function buildViewport(container, factionKey)
 		local previewModel = template:Clone()
 		previewModel:ScaleTo(firstSkin.Scale or 1)
 		previewModel.Parent = viewport
-		ModelPreviewUtils.Fit(viewport, previewModel, container)
+		ModelPreviewUtils.Fit(viewport, previewModel, container, ModelPreviewUtils.BLICK_HELD)
 		previewModel:PivotTo(CFrame.Angles(0, math.rad(ANSICHT_DREHUNG), 0) * previewModel:GetPivot())
 	end)
 	if not ok then

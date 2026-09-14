@@ -9,7 +9,7 @@
 -- sich in genau den Punkten, die man leicht übersieht -- Seitenverhältnis des Rahmens,
 -- Drehung um den Pivot statt um die Mitte -- und entsprechend verschieden sahen sie aus.
 --
--- ===== Die zwei Fallen beim Einpassen =====
+-- ===== Die drei Fallen beim Einpassen =====
 -- 1. Der Pivot eines Avatars sitzt im Rumpf, nicht in der Mitte des Hüllquaders. Wer um
 --    ihn dreht, lässt die Figur im Rahmen KREISEN statt sich drehen. Deshalb wird das
 --    Modell erst so verschoben, dass seine Mitte im Ursprung liegt, und die Drehung wird
@@ -17,6 +17,8 @@
 -- 2. Der Rahmen ist selten quadratisch. FieldOfView ist der SENKRECHTE Öffnungswinkel;
 --    bei einem hohen, schmalen Rahmen ist der waagrechte enger. Wer das ignoriert,
 --    schneidet die Schultern ab.
+-- 3. Ein Modell in Ruhelage zeigt dem Betrachter den RÜCKEN. Vorderseite und Blickrichtung
+--    der Kamera liegen beide auf -Z. Deshalb dreht Fit() das Modell um 180 Grad.
 --
 -- Gerahmt wird über die Diagonale der Grundfläche, nicht über die einzelne Kante: ein
 -- drehendes Modell ist bei 45 Grad breiter als jede seiner Kanten.
@@ -27,8 +29,75 @@ local ModelPreviewUtils = {}
 
 local FIELD_OF_VIEW = 50
 
--- Etwas Luft zum Rand, sonst stossen Kopf und Füsse an.
-local DEFAULT_FILL = 1.12
+-- ===== Zwei Blickwinkel, nicht einer =====
+--
+-- Bis hierher gab es genau eine Kameraeinstellung: geradeaus, mittig auf den Huellquader,
+-- fuenfzig Grad Oeffnungswinkel. Fuer einen KATALOG ist das richtig -- das Archiv zeigt
+-- sechsundzwanzig Eintraege nebeneinander, und dort soll keiner interessanter aussehen als
+-- der andere. Gleiche Kamera, gleiche Bedingungen, vergleichbar.
+--
+-- Die Fraktionsauswahl ist kein Katalog. Dort stehen drei Figuren, zwischen denen man sich
+-- entscheidet, und sie duerfen etwas darstellen. Drei Dinge unterscheiden die beiden Blicke:
+--
+--   BRENNWEITE. Fuenfzig Grad sind ein Weitwinkel: was naeher an der Kamera ist, wirkt
+--   ueberproportional gross, und bei einer Figur, die auf den Betrachter zulaeuft, heisst
+--   das Nase gross, Fuesse klein. Zweiunddreissig Grad entsprechen etwa einem
+--   Portraitobjektiv -- die Kamera steht dafuer weiter weg, und die Figur bleibt gleich
+--   gross im Bild, aber in ihren eigenen Proportionen.
+--
+--   ZIELPUNKT. Nicht die Mitte des Huellquaders, sondern ein Stueck darueber. Die Mitte
+--   einer stehenden Figur liegt in der Huefte; wer dorthin zielt, macht ein Bild, dessen
+--   Gegenstand der Bauch ist. Der Blick gehoert nach oben, wo Kopf und Schultern sind.
+--
+--   NEIGUNG. Leicht von UNTEN. Eine Kamera unter Augenhoehe laesst gross wirken, was sie
+--   zeigt -- das ist der aelteste Trick der Filmsprache und hier genau der Punkt: man
+--   waehlt zwischen drei Titanen, nicht zwischen drei Gegenstaenden.
+local BLICK_KATALOG = {
+	fov = FIELD_OF_VIEW,
+	-- Etwas Luft zum Rand, sonst stossen Kopf und Fuesse an. Von 1.12 auf 1.25 angehoben,
+	-- als die ersten echten Figurenmodelle dazukamen: bei einem schlanken Avatar reichten
+	-- zwoelf Prozent, bei einer breiten, gebueckten Gestalt mit Schweif sassen Kopf und
+	-- Fuesse am Rand.
+	fill = 1.25,
+	zielHoehe = 0, -- Anteil der Modellhoehe ueber der Mitte
+	neigung = 0, -- Grad; negativ = Kamera unterhalb, blickt hinauf
+}
+
+ModelPreviewUtils.BLICK_HELD = {
+	fov = 32,
+	fill = 1.2,
+	zielHoehe = 0.12,
+	neigung = -9,
+}
+
+-- Stellt die Kamera so, dass `size` in den Rahmen passt. Ausgelagert, weil sie ZWEIMAL
+-- gebraucht wird: einmal sofort und noch einmal, sobald der Rahmen seine echte Grösse
+-- kennt (siehe Fit).
+local function aimCamera(camera, container, size, blick)
+	local frame = container.AbsoluteSize
+	local aspect = (frame.X > 0 and frame.Y > 0) and (frame.X / frame.Y) or 1
+
+	camera.FieldOfView = blick.fov
+
+	local verticalFov = math.rad(blick.fov)
+	local horizontalFov = 2 * math.atan(math.tan(verticalFov / 2) * aspect)
+	local diagonal = math.sqrt(size.X * size.X + size.Z * size.Z)
+	local distance = math.max(
+		(size.Y / 2) / math.tan(verticalFov / 2),
+		(diagonal / 2) / math.tan(horizontalFov / 2)
+	) * blick.fill
+
+	-- Der Zielpunkt liegt ueber der Mitte, nicht darin. Beim Katalogblick ist zielHoehe
+	-- null, dann ist das hier rechnerisch dasselbe wie vorher.
+	local ziel = Vector3.new(0, size.Y * blick.zielHoehe, 0)
+
+	-- Die Kamera steht auf einer Kugel um den Zielpunkt. Negative Neigung heisst: unterhalb,
+	-- und sie blickt hinauf.
+	local rad = math.rad(blick.neigung)
+	local position = ziel + Vector3.new(0, math.sin(rad), math.cos(rad)) * distance
+
+	camera.CFrame = CFrame.new(position, ziel)
+end
 
 -- Legt einen beleuchteten ViewportFrame an, der den Behälter ausfüllt.
 --
@@ -93,8 +162,22 @@ local function visibleBounds(model)
 	return (minimum + maximum) / 2, maximum - minimum, skipped
 end
 
-function ModelPreviewUtils.Fit(viewport, model, container, fill)
-	model:PivotTo(CFrame.new(0, 0, 0))
+-- `blick` ist entweder eine Tabelle (BLICK_HELD oder eine eigene) oder -- wie bisher --
+-- eine Zahl, die nur den Fuellgrad meint. Die Zahl bleibt zulaessig, weil vier Aufrufer sie
+-- so benutzen und ein Umbau dort nichts verbessern wuerde.
+function ModelPreviewUtils.Fit(viewport, model, container, blick)
+	-- Halbe Drehung, damit die Figur den Betrachter ANSIEHT.
+	--
+	-- In Roblox zeigt die Vorderseite eines Modells entlang der NEGATIVEN Z-Achse
+	-- (CFrame.LookVector). Die Kamera steht weiter unten bei +Z und blickt Richtung -Z --
+	-- sie schaut also in dieselbe Richtung, in die das Modell schaut, und sieht damit
+	-- dessen Ruecken. Ohne diese Drehung stand der ganze Katalog mit dem Ruecken zum
+	-- Spieler, und bei den drehenden Vorschauen begann die Drehung auf der falschen Seite.
+	--
+	-- Das setzt voraus, dass das Modell nach der Konvention gebaut ist. Sollte ein
+	-- einzelnes Modell seitenverkehrt erscheinen, ist es in seiner Quelle falsch herum
+	-- gebaut -- dann dort drehen, nicht hier eine Ausnahme einbauen.
+	model:PivotTo(CFrame.Angles(0, math.pi, 0))
 
 	local center, size, skipped = visibleBounds(model)
 	if not center then
@@ -120,23 +203,47 @@ function ModelPreviewUtils.Fit(viewport, model, container, fill)
 
 	model:PivotTo(model:GetPivot() - center)
 
+	local einstellung = BLICK_KATALOG
+	if type(blick) == "table" then
+		einstellung = blick
+	elseif type(blick) == "number" then
+		einstellung = {
+			fov = BLICK_KATALOG.fov,
+			fill = blick,
+			zielHoehe = BLICK_KATALOG.zielHoehe,
+			neigung = BLICK_KATALOG.neigung,
+		}
+	end
+
 	local camera = Instance.new("Camera")
-	camera.FieldOfView = FIELD_OF_VIEW
 	camera.Parent = viewport
 	viewport.CurrentCamera = camera
 
-	local frame = container.AbsoluteSize
-	local aspect = (frame.X > 0 and frame.Y > 0) and (frame.X / frame.Y) or 1
+	aimCamera(camera, container, size, einstellung)
 
-	local verticalFov = math.rad(FIELD_OF_VIEW)
-	local horizontalFov = 2 * math.atan(math.tan(verticalFov / 2) * aspect)
-	local diagonal = math.sqrt(size.X * size.X + size.Z * size.Z)
-	local distance = math.max(
-		(size.Y / 2) / math.tan(verticalFov / 2),
-		(diagonal / 2) / math.tan(horizontalFov / 2)
-	) * (fill or DEFAULT_FILL)
+	-- ===== Nachmessen, sobald der Rahmen seine echte Grösse hat =====
+	-- Beim ersten Aufruf steht die Grösse oft noch nicht fest: die Karte ist gerade erst
+	-- entstanden, das UIGridLayout hat noch nicht gerechnet, oder das Panel ist unsichtbar.
+	-- AbsoluteSize ist dann (0,0), und aimCamera muss auf ein quadratisches Verhältnis
+	-- raten.
+	--
+	-- Das Raten geht in eine bestimmte Richtung schief: bei einem HOHEN, schmalen Rahmen
+	-- (die Archivkarte ist 168 breit und 216 hoch) ist der waagrechte Öffnungswinkel in
+	-- Wahrheit enger als angenommen. Die Kamera steht dann zu nah, und das Modell läuft
+	-- über den Rand -- genau das war an den Figuren zu sehen, weil sie viel breiter sind
+	-- als ein Avatar.
+	--
+	-- Statt das Messen zu verschieben und zu hoffen: bei jeder Änderung neu ausrichten. Das
+	-- deckt auch das Drehen des Telefons und das Verkleinern des Fensters ab.
+	local resizeConnection
+	resizeConnection = container:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+		if not (camera.Parent and model.Parent) then
+			resizeConnection:Disconnect()
+			return
+		end
+		aimCamera(camera, container, size, einstellung)
+	end)
 
-	camera.CFrame = CFrame.new(Vector3.new(0, 0, distance), Vector3.new(0, 0, 0))
 	return camera
 end
 
