@@ -685,9 +685,79 @@ achievementsSchirm.close.MouseButton1Click:Connect(function()
 	_G.NavReturnToMenu()
 end)
 
+-- ===== Filter: alles, offen, erreicht =====
+--
+-- Einundvierzig Zeilen sind zu viele, um sie mit den Augen zu sortieren. Und die zwei
+-- Fragen, die man an so eine Liste stellt, sind immer dieselben: was fehlt mir noch, und
+-- was habe ich schon.
+--
+-- Drei Knoepfe statt eines Umschalters: ein Umschalter kennt zwei Zustaende, hier gibt es
+-- drei -- und "alles" ist kein Zwischenzustand von "offen" und "erreicht", sondern ein
+-- eigener.
+local FILTER_ALLE, FILTER_OFFEN, FILTER_ERREICHT = "all", "open", "done"
+local achievementsFilter = FILTER_ALLE
+
+local filterRow = Instance.new("Frame")
+filterRow.Name = "FilterRow"
+filterRow.Size = UDim2.new(1, -24, 0, 34)
+filterRow.Position = UDim2.new(0, 12, 0, 8)
+filterRow.BackgroundTransparency = 1
+filterRow.Parent = achievementsSchirm.content
+
+local filterLayout = Instance.new("UIListLayout")
+filterLayout.FillDirection = Enum.FillDirection.Horizontal
+filterLayout.SortOrder = Enum.SortOrder.LayoutOrder
+filterLayout.Padding = UDim.new(0, 8)
+filterLayout.Parent = filterRow
+
+local filterButtons = {} -- [wert] = { knopf=, rand=, label= }
+local aktualisiereFilterKnoepfe
+
+local function baueFilterKnopf(order, wert, text)
+	local knopf = Instance.new("TextButton")
+	knopf.Name = "Filter" .. wert
+	knopf.Size = UDim2.new(0, 118, 0, 34)
+	knopf.LayoutOrder = order
+	knopf.AutoButtonColor = false
+	knopf.Text = text
+	knopf.Parent = filterRow
+	local _, rand = HudChrome.Panel(knopf, {
+		radius = HudChrome.Radius.Small,
+		fill = HudChrome.Color.PanelRaised,
+		transparency = 0,
+	})
+	HudChrome.Label(knopf, HudChrome.MenuTextSize.Caption)
+
+	knopf.MouseButton1Click:Connect(function()
+		achievementsFilter = wert
+		aktualisiereFilterKnoepfe()
+	end)
+
+	filterButtons[wert] = { knopf = knopf, rand = rand }
+	return knopf
+end
+
+baueFilterKnopf(1, FILTER_ALLE, "ALL")
+baueFilterKnopf(2, FILTER_OFFEN, "OPEN")
+baueFilterKnopf(3, FILTER_ERREICHT, "UNLOCKED")
+
+-- Der gewaehlte Knopf traegt einen hellen Rand und hellen Text -- dieselbe Sprache wie der
+-- offene Menuepunkt und die bereite Station auf der Geschenkachse.
+function aktualisiereFilterKnoepfe()
+	for wert, eintrag in pairs(filterButtons) do
+		local gewaehlt = (wert == achievementsFilter)
+		eintrag.rand.Color = gewaehlt and HudChrome.Color.BorderBright or HudChrome.Color.Border
+		eintrag.rand.Thickness = gewaehlt and 2 or HudChrome.BorderThickness
+		eintrag.knopf.TextColor3 = gewaehlt and HudChrome.Color.TextPrimary
+			or HudChrome.Color.TextSecondary
+	end
+end
+
+aktualisiereFilterKnoepfe()
+
 local achievementsScroll = Instance.new("ScrollingFrame")
-achievementsScroll.Size = UDim2.new(1, -24, 1, -24)
-achievementsScroll.Position = UDim2.new(0, 12, 0, 12)
+achievementsScroll.Size = UDim2.new(1, -24, 1, -62)
+achievementsScroll.Position = UDim2.new(0, 12, 0, 50)
 achievementsScroll.BackgroundTransparency = 1
 achievementsScroll.BorderSizePixel = 0
 achievementsScroll.ScrollBarThickness = 8
@@ -702,6 +772,10 @@ achievementsListLayout.Parent = achievementsScroll
 
 -- [achievementId] = { row=, fillBar=, progressLabel= } -- für die laufende Aktualisierung.
 local achievementRows = {}
+-- Die Kategorien mitfuehren, damit eine Ueberschrift verschwinden kann, wenn der Filter
+-- alle ihre Zeilen ausblendet. Ohne das staende "VERNICHTUNG" ueber einer leeren Flaeche --
+-- und der Filter saehe aus, als haette er etwas kaputt gemacht.
+local achievementCategories = {}
 
 local layoutOrder = 0
 local lastCategory = nil
@@ -713,6 +787,9 @@ for _, achievement in ipairs(AchievementsConfig.List) do
 		lastCategory = achievement.category
 		layoutOrder += 1
 
+		local kategorie = { rows = {} }
+		table.insert(achievementCategories, kategorie)
+
 		local categoryHeader = Instance.new("TextLabel")
 		categoryHeader.Size = UDim2.new(1, 0, 0, 34)
 		categoryHeader.BackgroundTransparency = 1
@@ -723,6 +800,7 @@ for _, achievement in ipairs(AchievementsConfig.List) do
 		categoryHeader.TextColor3 = HudChrome.Color.TextSecondary
 		categoryHeader.LayoutOrder = layoutOrder
 		categoryHeader.Parent = achievementsScroll
+		kategorie.header = categoryHeader
 
 		layoutOrder += 1
 		local categoryFrame = Instance.new("Frame")
@@ -732,6 +810,7 @@ for _, achievement in ipairs(AchievementsConfig.List) do
 		categoryFrame.BackgroundTransparency = 1
 		categoryFrame.LayoutOrder = layoutOrder
 		categoryFrame.Parent = achievementsScroll
+		kategorie.frame = categoryFrame
 
 		currentCategoryGrid = Instance.new("UIGridLayout")
 		currentCategoryGrid.CellSize = UDim2.new(0, MIN_CARD_WIDTH, 0, 52)
@@ -826,7 +905,7 @@ for _, achievement in ipairs(AchievementsConfig.List) do
 	HudChrome.Label(newFlag, 12)
 	newFlag.TextColor3 = Color3.new(1, 1, 1)
 
-	achievementRows[achievement.id] = {
+	local eintrag = {
 		row = row,
 		rowStroke = rowStroke,
 		nameLabel = nameLabel,
@@ -835,6 +914,8 @@ for _, achievement in ipairs(AchievementsConfig.List) do
 		newFlag = newFlag,
 		achievement = achievement,
 	}
+	achievementRows[achievement.id] = eintrag
+	table.insert(achievementCategories[#achievementCategories].rows, eintrag)
 end
 
 -- Läuft nur, solange das Panel sichtbar ist -- aktualisiert Fortschritt + Freischaltungs-
@@ -879,6 +960,31 @@ RunService.Heartbeat:Connect(function()
 
 		if unlocked then
 			erreicht += 1
+		end
+
+		-- Der Filter wirkt HIER und nicht beim Klick: ob ein Achievement erreicht ist,
+		-- aendert sich waehrend das Panel offen steht (man spielt ja weiter), und eine
+		-- Liste, die beim Umschalten einmal gefiltert wurde, waere danach falsch.
+		local passt = (achievementsFilter == FILTER_ALLE)
+			or (achievementsFilter == FILTER_ERREICHT and unlocked)
+			or (achievementsFilter == FILTER_OFFEN and not unlocked)
+		rowInfo.row.Visible = passt
+	end
+
+	-- Eine Kategorie ohne sichtbare Zeile verschwindet mitsamt Ueberschrift.
+	for _, kategorie in ipairs(achievementCategories) do
+		local sichtbar = false
+		for _, eintrag in ipairs(kategorie.rows) do
+			if eintrag.row.Visible then
+				sichtbar = true
+				break
+			end
+		end
+		if kategorie.header then
+			kategorie.header.Visible = sichtbar
+		end
+		if kategorie.frame then
+			kategorie.frame.Visible = sichtbar
 		end
 	end
 
