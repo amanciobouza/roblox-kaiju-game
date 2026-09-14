@@ -156,7 +156,9 @@ detailBack.Text = "\u{2190}"
 TopInsetUtils.Bind(detail)
 
 local detailViewportHolder = Instance.new("Frame")
-detailViewportHolder.Size = UDim2.new(0.38, -32, 1, -76)
+-- Diese Werte gelten nur, bis layoutDetail zum ersten Mal laeuft -- dort stehen sie noch
+-- einmal. Sie muessen trotzdem stimmen: sonst springt das Feld beim Oeffnen sichtbar.
+detailViewportHolder.Size = UDim2.new(0.38, -32, 1, -24)
 detailViewportHolder.Position = UDim2.new(0, 24, 0, 12)
 detailViewportHolder.Parent = detailSchirm.content
 HudChrome.Panel(detailViewportHolder, {
@@ -165,13 +167,41 @@ HudChrome.Panel(detailViewportHolder, {
 	transparency = 0,
 })
 
+-- Ein Verlauf unter dem Hinweis. Er liegt jetzt AUF dem Modell, und ein helles Modell
+-- macht grauen Text stellenweise unlesbar -- unvorhersehbar, je nachdem was die Vorschau
+-- dort gerade zeigt. Dieselbe Loesung wie bei den Angriffsknoepfen: ein Verlauf statt eines
+-- aufgeklebten Kastens.
+local detailHintScrim = Instance.new("Frame")
+detailHintScrim.Name = "HintScrim"
+detailHintScrim.AnchorPoint = Vector2.new(0, 1)
+detailHintScrim.Position = UDim2.new(0, 0, 1, 0)
+detailHintScrim.Size = UDim2.new(1, 0, 0, 48)
+detailHintScrim.BackgroundColor3 = HudChrome.Color.PanelSunken
+detailHintScrim.BorderSizePixel = 0
+detailHintScrim.ZIndex = 3
+detailHintScrim.Parent = detailViewportHolder
+
+local detailHintGradient = Instance.new("UIGradient")
+detailHintGradient.Rotation = 90
+detailHintGradient.Transparency = NumberSequence.new({
+	NumberSequenceKeypoint.new(0, 1),
+	NumberSequenceKeypoint.new(0.5, 0.3),
+	NumberSequenceKeypoint.new(1, 0.05),
+})
+detailHintGradient.Parent = detailHintScrim
+
 local detailHint = Instance.new("TextLabel")
-detailHint.Size = UDim2.new(0.38, -32, 0, 28)
-detailHint.Position = UDim2.new(0, 24, 1, -34)
+-- Der Hinweis liegt IM Vorschaufeld, an seiner Unterkante -- wie eine Bildunterschrift.
+-- Darunter gestellt haette er dem Feld dauerhaft vierzig Pixel genommen, auch bei den
+-- Eintraegen, die gar keinen Hinweis haben.
+detailHint.AnchorPoint = Vector2.new(0, 1)
+detailHint.Size = UDim2.new(1, -20, 0, 24)
+detailHint.Position = UDim2.new(0, 10, 1, -8)
 detailHint.BackgroundTransparency = 1
 detailHint.TextXAlignment = Enum.TextXAlignment.Left
 detailHint.Text = ""
-detailHint.Parent = detailSchirm.content
+detailHint.ZIndex = 4
+detailHint.Parent = detailViewportHolder
 HudChrome.MenuCaption(detailHint)
 
 local detailText = Instance.new("ScrollingFrame")
@@ -288,10 +318,17 @@ local function layoutDetail()
 	end
 	local x = math.max(DETAIL_GAP, math.floor((width - total) / 2))
 
-	detailViewportHolder.Position = UDim2.new(0, x, 0, 64)
-	detailViewportHolder.Size = UDim2.new(0, modelWidth, 1, -140)
-	detailHint.Position = UDim2.new(0, x, 1, -70)
-	detailHint.Size = UDim2.new(0, modelWidth, 0, 28)
+	-- Oben auf derselben Hoehe wie der Text daneben, unten bis an denselben Rand.
+	--
+	-- Hier standen noch die Zahlen von vor der Kopfzeile: 64 oben, 140 unten. Das Feld
+	-- begann dadurch 52 Pixel tiefer als der Text und endete 116 frueher -- am Rechner
+	-- faellt das als Unruhe auf, auf dem Telefon als Fehler.
+	--
+	-- Die Zahlen standen zweimal: beim Anlegen und hier. Beim Umbau auf HudChrome.Screen
+	-- habe ich die eine Stelle erwischt und diese nicht -- und diese gewinnt, weil sie bei
+	-- jeder Groessenaenderung erneut schreibt.
+	detailViewportHolder.Position = UDim2.new(0, x, 0, 12)
+	detailViewportHolder.Size = UDim2.new(0, modelWidth, 1, -24)
 
 	x += modelWidth + DETAIL_GAP
 	detailText.Position = UDim2.new(0, x, 0, 12)
@@ -487,6 +524,9 @@ local function openDetail(entry)
 	end
 	detailTitle.Text = entry.name
 	detailHint.Text = entry.hint or ""
+	-- Kein Hinweis, kein Verlauf: er wuerde sonst das Modell abdunkeln, ohne dass darunter
+	-- etwas steht.
+	detailHintScrim.Visible = detailHint.Text ~= ""
 	local categoryInfo
 	for _, category in ipairs(ArchiveConfig.Categories) do
 		if category.key == entry.category then
