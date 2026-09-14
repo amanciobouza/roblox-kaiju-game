@@ -36,14 +36,12 @@ print("[Kaiju Debug] SkinSelectionGui: Module geladen, baue HUD.")
 
 -- Icon + Farbe pro Energie-Typ für die fliegende Zahl-Animation -- dieselben Farben wie
 -- im Talentbaum/HUD (TalentTreeClient.lua, EnergyTypesClient.lua), konsistent im ganzen Spiel.
-local ENERGY_TYPE_VISUALS = {
-	Heat = { icon = "🔥", color = Color3.fromRGB(255, 140, 30) },
-	Chemical = { icon = "🧪", color = Color3.fromRGB(255, 45, 190) },
-	Electric = { icon = "⚡", color = Color3.fromRGB(57, 217, 255) },
-	Radiation = { icon = "☢️", color = Color3.fromRGB(126, 255, 16) },
-	Spirit = { icon = "✨", color = Color3.fromRGB(255, 205, 70) },
-}
-local DEFAULT_ENERGY_VISUAL = { icon = "⚡", color = Color3.fromRGB(255, 140, 40) }
+-- Farbe und Bild je Energietyp kommen aus HudChrome -- dieselben, die ueber den Gebaeuden
+-- schweben und die der Energiestrom traegt. Hier stand eine eigene Kopie mit eigenen Emoji
+-- und, bei Heat, einer anderen Farbe.
+local function energieFarbe(energyType)
+	return HudChrome.EnergyColor[energyType] or HudChrome.EnergyColorDefault
+end
 
 -- Für die Kraft-Werte (Bein/Arm/Körper): bei kleinen Zahlen (<1000, der übliche Bereich)
 -- zwei Nachkommastellen zeigen (z.B. "0.27"), da das Training jetzt SEHR fein variiert
@@ -2820,7 +2818,8 @@ local function spawnFlyingEnergy(worldPosition, amount, energyType, onArrive)
 		return
 	end
 
-	local visual = ENERGY_TYPE_VISUALS[energyType] or DEFAULT_ENERGY_VISUAL
+	local farbe = energieFarbe(energyType)
+	local bildId = (energyType and HudChrome.EnergyIcon[energyType]) or ""
 
 	local jitter = Vector3.new(math.random(-15, 15) / 10, math.random(0, 15) / 10, math.random(-15, 15) / 10)
 	local screenPoint = camera:WorldToViewportPoint(worldPosition + Vector3.new(0, 3, 0) + jitter)
@@ -2830,22 +2829,43 @@ local function spawnFlyingEnergy(worldPosition, amount, energyType, onArrive)
 	local sideJump = (math.random(0, 1) == 0 and -1 or 1) * math.random(100, 180)
 	local poppedPosition = UDim2.new(0, screenPoint.X + sideJump, 0, screenPoint.Y - 48)
 
-	-- Kein Hintergrund/Kreis mehr -- nur der Text selbst (Icon + Energiewert), mit
-	-- schwarzem Textumriss für Lesbarkeit, Farbe passend zum tatsächlichen Energie-Typ.
-	local energySymbol = Instance.new("TextLabel")
+	-- Bild UND Zahl, nicht mehr beides in einem Text.
+	--
+	-- Vorher stand das Emoji als erstes Zeichen in derselben Zeichenkette wie der Wert. Mit
+	-- einem Bild geht das nicht, und es war ohnehin die schlechtere Loesung: ein Emoji im
+	-- Text laesst sich nicht ausrichten, sass auf der Grundlinie und war je nach Geraet
+	-- verschieden breit -- die Zahl sprang dadurch von Typ zu Typ.
+	--
+	-- Jetzt ein durchsichtiger Rahmen, der beides traegt und als Ganzes fliegt. Der Rahmen
+	-- ist das, was getweent wird; Bild und Zahl haengen einfach darin.
+	local energySymbol = Instance.new("Frame")
 	energySymbol.Name = "FlyingEnergy"
 	energySymbol.Size = UDim2.new(0, 0, 0, 0) -- startet unsichtbar klein, für den Pop-Effekt
 	energySymbol.AnchorPoint = Vector2.new(0.5, 0.5)
 	energySymbol.Position = UDim2.new(0, screenPoint.X + sideJump * 0.3, 0, screenPoint.Y - 18)
 	energySymbol.BackgroundTransparency = 1
-	energySymbol.Font = Enum.Font.LuckiestGuy
-	energySymbol.TextScaled = true
-	energySymbol.Text = visual.icon .. NumberFormat.Format(amount)
-	energySymbol.TextColor3 = visual.color
-	energySymbol.TextStrokeColor3 = Color3.new(0, 0, 0)
-	energySymbol.TextStrokeTransparency = 0
 	energySymbol.ZIndex = 51
 	energySymbol.Parent = screenGui
+
+	local energieBild = HudChrome.IconImage(energySymbol, bildId)
+	energieBild.Size = UDim2.new(0, 34, 1, 0)
+	energieBild.Position = UDim2.new(0, 0, 0, 0)
+	energieBild.Visible = bildId ~= ""
+	energieBild.ZIndex = 52
+
+	local energieZahl = Instance.new("TextLabel")
+	energieZahl.Name = "Amount"
+	energieZahl.Size = UDim2.new(1, -38, 1, 0)
+	energieZahl.Position = UDim2.new(0, 38, 0, 0)
+	energieZahl.BackgroundTransparency = 1
+	energieZahl.TextXAlignment = Enum.TextXAlignment.Left
+	energieZahl.Text = NumberFormat.Format(amount)
+	energieZahl.TextColor3 = farbe
+	energieZahl.TextStrokeColor3 = Color3.new(0, 0, 0)
+	energieZahl.TextStrokeTransparency = 0
+	energieZahl.TextScaled = true
+	energieZahl.ZIndex = 52
+	energieZahl.Parent = energySymbol
 
 	-- Phase 1: seitlich hüpfen + auf volle Größe aufpoppen (Überschwung-Easing)
 	local popTween = TweenService:Create(

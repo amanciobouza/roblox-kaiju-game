@@ -12,16 +12,26 @@
 -- umgestaltet werden muss. Dieselben Farben wie im HUD (EnergyTypesClient.lua), damit es
 -- konsistent wirkt.
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+
+-- Farben und Symbole kommen aus HudChrome. Sie standen hier als eigene Tabelle, mit eigenen
+-- Emoji und -- bei Heat -- einer anderen Farbe als im HUD. Dieselbe Energie sah dadurch
+-- verschieden aus, je nachdem ob man das Gebäude oder die Anzeige ansah.
+local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
 
 local EnergyTypeSkin = {}
 
-local ENERGY_TYPE_VISUALS = {
-	Chemical = { color = Color3.fromRGB(255, 45, 190), icon = "⚗️" },
-	Electric = { color = Color3.fromRGB(57, 217, 255), icon = "⚡" },
-	Radiation = { color = Color3.fromRGB(126, 255, 16), icon = "☢️" },
-	Spirit = { color = Color3.fromRGB(255, 205, 70), icon = "✨" },
-	-- "Heat" bewusst NICHT hier -- das ist der Standard-Look, unverändert.
+-- Welche Typen überhaupt eine Sonderbehandlung bekommen.
+--
+-- "Heat" steht bewusst NICHT hier: das ist der Standard-Look, und ein brennendes Gebäude
+-- sagt ohnehin schon, was es gibt. Ein Symbol darüber wäre eine Beschriftung für etwas, das
+-- man sieht.
+local BESONDERE_TYPEN = {
+	Chemical = true,
+	Electric = true,
+	Radiation = true,
+	Spirit = true,
 }
 
 function EnergyTypeSkin.Apply(house)
@@ -33,7 +43,12 @@ function EnergyTypeSkin.Apply(house)
 	local effectiveType = (_G.RollSpawnEnergyType and _G.RollSpawnEnergyType(declaredType)) or declaredType or "Heat"
 	house:SetAttribute("EffectiveEnergyType", effectiveType)
 
-	local visual = ENERGY_TYPE_VISUALS[effectiveType]
+	local visual = BESONDERE_TYPEN[effectiveType]
+		and {
+			color = HudChrome.EnergyColor[effectiveType] or HudChrome.EnergyColorDefault,
+			image = HudChrome.EnergyIcon[effectiveType] or "",
+		}
+		or nil
 	local anchorPart = house.PrimaryPart
 	local existingGlowAnchor = house:FindFirstChild("EnergyTypeGlowAnchor")
 	local existingIcon = anchorPart and anchorPart:FindFirstChild("EnergyTypeIcon")
@@ -140,10 +155,10 @@ function EnergyTypeSkin.Apply(house)
 	-- selbst evtl. nicht sofort auffällt (z.B. bei ungünstigem Blickwinkel/Beleuchtung).
 	if anchorPart then
 		if existingIcon then
-			-- Von einem früheren Spawn übrig -- nur das Icon aktualisieren.
-			local iconLabel = existingIcon:FindFirstChildWhichIsA("TextLabel")
+			-- Von einem früheren Spawn übrig -- nur das Bild austauschen.
+			local iconLabel = existingIcon:FindFirstChildWhichIsA("ImageLabel")
 			if iconLabel then
-				iconLabel.Text = visual.icon
+				iconLabel.Image = visual.image
 			end
 		else
 			local ok, cframe, size = pcall(function()
@@ -153,18 +168,20 @@ function EnergyTypeSkin.Apply(house)
 
 			local billboard = Instance.new("BillboardGui")
 			billboard.Name = "EnergyTypeIcon"
-			billboard.Size = UDim2.new(0, 36, 0, 36)
+			billboard.Size = UDim2.new(0, 48, 0, 48)
 			billboard.StudsOffsetWorldSpace = Vector3.new(0, topOffsetY, 0)
 			billboard.AlwaysOnTop = true
 			billboard.MaxDistance = 400
 			billboard.Parent = anchorPart
 
-			local iconLabel = Instance.new("TextLabel")
+			-- Ein Bild statt eines Emoji. Ein Emoji zeichnet das Betriebssystem in seinem
+			-- eigenen Stil -- über einem Gebäude in der Welt fiel das besonders auf, weil
+			-- daneben nichts steht, an dem man es einordnen könnte.
+			local iconLabel = Instance.new("ImageLabel")
 			iconLabel.Size = UDim2.new(1, 0, 1, 0)
 			iconLabel.BackgroundTransparency = 1
-			iconLabel.Font = Enum.Font.LuckiestGuy
-			iconLabel.TextScaled = true
-			iconLabel.Text = visual.icon
+			iconLabel.ScaleType = Enum.ScaleType.Fit
+			iconLabel.Image = visual.image
 			iconLabel.Parent = billboard
 
 			-- Schwebe-Effekt: pendelt sanft nach oben/unten, wie ein Symbol das in der Luft

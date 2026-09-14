@@ -41,12 +41,16 @@ screenGui.Parent = player:WaitForChild("PlayerGui")
 -- EnergyTypesHandler.lua), nur eben nicht permanent im Kampf-HUD gezeigt. Diese Tabelle
 -- bleibt als Farb-/Icon-Referenz erhalten, damit der Talentbaum später dieselben Farben
 -- wiederverwenden kann.
+--
+-- Die Farben stehen nicht mehr hier, sondern in HudChrome.EnergyColor. Diese Tabelle war
+-- ausdruecklich als Referenz angelegt -- nur konnte der Server nicht hineinsehen, und so
+-- haben sich vier Kopien davon gebildet, von denen eine abwich.
 local ENERGY_CONFIG = {
-	{ key = "Heat", emoji = "🔥", color = Color3.fromRGB(255, 35, 25), attribute = "EnergyHeat" },
-	{ key = "Chemical", emoji = "🧪", color = Color3.fromRGB(255, 45, 190), attribute = "EnergyChemical" },
-	{ key = "Electric", emoji = "⚡", color = Color3.fromRGB(57, 217, 255), attribute = "EnergyElectric" },
-	{ key = "Radiation", emoji = "☢️", color = Color3.fromRGB(126, 255, 16), attribute = "EnergyRadiation" },
-	{ key = "Spirit", emoji = "✨", color = Color3.fromRGB(255, 205, 70), attribute = "EnergySpirit" },
+	{ key = "Heat", attribute = "EnergyHeat" },
+	{ key = "Chemical", attribute = "EnergyChemical" },
+	{ key = "Electric", attribute = "EnergyElectric" },
+	{ key = "Radiation", attribute = "EnergyRadiation" },
+	{ key = "Spirit", attribute = "EnergySpirit" },
 }
 
 -- ===== Welt-Event: EIN Feld =====
@@ -156,14 +160,10 @@ countdownLabel.Text = ""
 countdownLabel.Parent = eventFrame
 HudChrome.NumberBold(countdownLabel, 21)
 
--- Farbe je Energietyp, aus derselben Tabelle wie der Rest des Spiels.
+-- Farbe je Energietyp, aus derselben Tabelle wie der Rest des Spiels -- inzwischen
+-- woertlich: HudChrome.EnergyColor kennen Client und Server.
 local function farbeFuerTyp(energyType)
-	for _, eintrag in ipairs(ENERGY_CONFIG) do
-		if eintrag.key == energyType then
-			return eintrag.color
-		end
-	end
-	return HudChrome.Color.Ready
+	return (energyType and HudChrome.EnergyColor[energyType]) or HudChrome.Color.Ready
 end
 
 -- Symbol, wenn es eines gibt -- sonst der Streifen. Beide sitzen an derselben Stelle,

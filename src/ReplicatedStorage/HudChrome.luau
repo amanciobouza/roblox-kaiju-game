@@ -191,6 +191,29 @@ HudChrome.EnergyIcon = {
 	Spirit = "rbxassetid://111068377126240",
 }
 
+-- ===== Farben der fuenf Energien =====
+--
+-- Sie standen in FUENF Dateien: EnergyTypesClient (als "Farbreferenz" deklariert),
+-- SkinSelectionGui, EnergyAbsorbClient, EnergyTypeSkin und EnergyCollectionHandler. Vier
+-- davon waren gleich, eine nicht -- Heat war beim fliegenden Symbol und beim Partikel
+-- orange (255,140,30), beim Gebaeude und beim Strom rot (255,35,25). Dieselbe Energie sah
+-- also verschieden aus, je nachdem, wo man sie gerade ansah.
+--
+-- Massgeblich ist die Reihe aus EnergyTypesClient: sie war ausdruecklich als Referenz
+-- angelegt, nur hat sich niemand daran gehalten, weil sie in einem Client-Skript stand und
+-- der Server nicht hineinsehen kann. Hier koennen es beide.
+HudChrome.EnergyColor = {
+	Heat = Color3.fromRGB(255, 35, 25),
+	Chemical = Color3.fromRGB(255, 45, 190),
+	Electric = Color3.fromRGB(57, 217, 255),
+	Radiation = Color3.fromRGB(126, 255, 16),
+	Spirit = Color3.fromRGB(255, 205, 70),
+}
+
+-- Rueckfallebene fuer einen Typ, den niemand kennt -- ein Gebaeude mit vertipptem Attribut
+-- soll sichtbar Energie geben und nicht unsichtbar bleiben.
+HudChrome.EnergyColorDefault = Color3.fromRGB(255, 140, 40)
+
 -- ===== Symbole der drei Figuren =====
 --
 -- Kaiju, Jaeger, Ronin -- die drei Kapitel des Spiels. Sie erscheinen in der

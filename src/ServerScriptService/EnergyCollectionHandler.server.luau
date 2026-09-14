@@ -12,6 +12,8 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+-- Nur wegen der Energiefarben: sie stehen dort einmal fuer Client UND Server.
+local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
@@ -266,14 +268,9 @@ _G.ActiveFireSources = activeFireSources
 -- Farbe richtet sich nach dem "EnergyType"-Attribut des Hauses (siehe EnergyTypesHandler.lua
 -- fürs identische Farbschema im HUD) -- unmarkierte Häuser (Standard) bleiben beim
 -- warmen Orange der Wärme-Energie.
-local STREAM_COLOR_BY_TYPE = {
-	Heat = Color3.fromRGB(255, 35, 25),
-	Chemical = Color3.fromRGB(255, 45, 190),
-	Electric = Color3.fromRGB(57, 217, 255),
-	Radiation = Color3.fromRGB(126, 255, 16),
-	Spirit = Color3.fromRGB(255, 205, 70),
-}
-local DEFAULT_STREAM_COLOR = Color3.fromRGB(255, 140, 40) -- warmes Orange, Rückfallebene
+-- Farben aus HudChrome statt einer eigenen Kopie. Sie standen hier gleich, in vier anderen
+-- Dateien teilweise anders -- und geteilt ist das die Stelle, an der eine Aenderung auch
+-- wirklich ueberall ankommt.
 local CURVE_AMPLITUDE = 8
 local CURVE_SPEED = 2.2
 local WIDTH_START = 0.6
@@ -313,7 +310,17 @@ local function createStreamBeam(player, house, sourcePosition)
 	targetAttachment.Name = "EnergyStreamTarget"
 	targetAttachment.Parent = rootPart
 
-	local streamColor = STREAM_COLOR_BY_TYPE[house:GetAttribute("EnergyType")] or DEFAULT_STREAM_COLOR
+	-- ===== Der EFFEKTIVE Typ, nicht der deklarierte =====
+	--
+	-- Hier stand GetAttribute("EnergyType"). Das ist der Typ, der am Gebaeude DEKLARIERT
+	-- ist -- und bei Heat-Gebaeuden wird beim Spawnen neu gewuerfelt (rollSpawnEnergyType).
+	-- Ein Gebaeude, das gerade Radiation gibt und auch so eingefaerbt ist, zog dadurch
+	-- einen orangefarbenen Strom: die Faerbung, das Symbol und der Ertrag folgten dem
+	-- gewuerfelten Typ, nur das Band nicht.
+	--
+	-- getEffectiveEnergyType steht seit jeher zwanzig Zeilen weiter oben in dieser Datei.
+	local streamType = getEffectiveEnergyType(house)
+	local streamColor = HudChrome.EnergyColor[streamType] or HudChrome.EnergyColorDefault
 
 	local beam = Instance.new("Beam")
 	beam.Attachment0 = sourceAttachment

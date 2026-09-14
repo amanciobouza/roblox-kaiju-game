@@ -8,6 +8,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
+local StageModels = require(ReplicatedStorage:WaitForChild("StageModels"))
 local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
@@ -15,16 +16,10 @@ local EnergyAbsorbEvent = RemoteEventUtils.GetOrCreate("EnergyAbsorbEvent")
 
 local ABSORB_DURATION = 0.5
 
--- Jeder der 5 Energie-Typen bekommt seine eigene, wiedererkennbare Farbe -- dieselben
--- Farben wie im Talentbaum/HUD (ENERGY_COLORS in TalentTreeClient.lua, EnergyTypesClient.lua).
-local ENERGY_COLORS = {
-	Heat = Color3.fromRGB(255, 140, 30),
-	Chemical = Color3.fromRGB(255, 45, 190),
-	Electric = Color3.fromRGB(57, 217, 255),
-	Radiation = Color3.fromRGB(126, 255, 16),
-	Spirit = Color3.fromRGB(255, 205, 70),
-}
-local DEFAULT_ENERGY_COLOR = Color3.fromRGB(255, 140, 40)
+-- Farben aus HudChrome. Hier stand eine eigene Kopie, und der Kommentar daneben behauptete,
+-- es seien "dieselben Farben wie im Talentbaum/HUD" -- fuer Heat stimmte das nicht: dort
+-- rot, hier orange. Genau so laufen zwei Listen auseinander, die niemand vergleicht.
+local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
 
 -- Bremst zu häufige Effekt-Spawns aus (bei mehreren Feuerquellen in Reichweite könnten
 -- sonst viele Partikel pro Sekunde entstehen -- reicht völlig, alle paar Ticks EINEN
@@ -39,13 +34,18 @@ local function showAbsorbParticle(sourcePosition, energyType)
 	end
 	lastEffectTime = now
 
+	-- ===== Ziel ist die sichtbare Figur, nicht der Avatar =====
+	-- Hier stand einmal der Kopf des Avatars. Traegt der Spieler ein Kaiju-Modell, ist der
+	-- Avatar versteckt und gegenueber dem Modell winzig -- sein Kopf steht dann etwa auf
+	-- Schienbeinhoehe, zwischen den Beinen. Die Baender liefen dorthin und endeten sichtbar
+	-- VOR der Figur statt an ihr. StageModels.GetBodyPoint nennt den Brustkorb des Modells.
 	local character = player.Character
-	local head = character and character:FindFirstChild("Head")
-	if not head then
+	local ziel = StageModels.GetBodyPoint(character)
+	if not ziel then
 		return
 	end
 
-	local energyColor = ENERGY_COLORS[energyType] or DEFAULT_ENERGY_COLOR
+	local energyColor = HudChrome.EnergyColor[energyType] or HudChrome.EnergyColorDefault
 
 	local part = Instance.new("Part")
 	part.Name = "EnergyAbsorbParticle"
@@ -68,7 +68,7 @@ local function showAbsorbParticle(sourcePosition, energyType)
 	local tween = TweenService:Create(
 		part,
 		TweenInfo.new(ABSORB_DURATION, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-		{ Position = head.Position, Size = Vector3.new(0.2, 0.2, 0.2), Transparency = 0.6 }
+		{ Position = ziel, Size = Vector3.new(0.2, 0.2, 0.2), Transparency = 0.6 }
 	)
 	tween:Play()
 
