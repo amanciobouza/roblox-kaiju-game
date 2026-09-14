@@ -600,9 +600,19 @@ local function layoutAnwenden()
 		return
 	end
 
-	local kartenHoehe = kartenBereich.AbsoluteSize.Y
-	local frei = hoehe - kartenHoehe - 16 -- 16 Luft zwischen Karten und Achse
-	STATION_HOEHE = math.clamp(math.min(STATION_HOEHE_VOLL, frei), STATION_HOEHE_MIN, STATION_HOEHE_VOLL)
+	-- ===== Die Achse zuerst, die Karten mit dem Rest =====
+	--
+	-- Umgekehrt war es falsch. Zuerst bekamen die Karten ihre volle Hoehe und die Achse den
+	-- Rest -- und wenn der Rest unter die Untergrenze fiel, stand die Achse trotzdem auf
+	-- dieser Untergrenze. Sie ragte dann unten aus dem Bild.
+	--
+	-- Eine Untergrenze, die groesser sein darf als der Platz, ist keine Grenze, sondern ein
+	-- Wunsch. Jetzt wird von unten gerechnet: die Achse sitzt so, dass sie GANZ sichtbar
+	-- ist, und was darueber uebrig bleibt, gehoert den Karten. Bleibt denen zu wenig, ist
+	-- das sichtbar und behebbar -- ein Bildschirmrand ist es nicht.
+	local frei = hoehe - 16
+	STATION_HOEHE = math.clamp(math.min(STATION_HOEHE_VOLL, frei), 1, STATION_HOEHE_VOLL)
+	local kartenHoehe = math.max(hoehe - STATION_HOEHE - 16, 0)
 
 	-- Alles andere folgt dem Verhaeltnis. Ein einzeln gesetzter Wert waere die naechste
 	-- Stelle, die beim naechsten Umbau nicht mitkommt.
@@ -612,8 +622,11 @@ local function layoutAnwenden()
 	local punkt = math.max(math.floor(PUNKT * q), 12)
 	local zeitGroesse = math.max(math.floor(16 * q), 11)
 
-	-- Die Bahn sitzt so tief, dass die Station oben gerade unter den Karten anfaengt.
-	bahn.Position = UDim2.new(0, BAHN_RAND, 0, math.floor(kartenHoehe + 16 + STATION_HOEHE / 2))
+	-- Die Bahn sitzt so, dass die Station unten genau mit dem Inhalt abschliesst.
+	bahn.Position = UDim2.new(0, BAHN_RAND, 0, math.floor(hoehe - STATION_HOEHE / 2))
+	-- Und die Kartenreihe bekommt, was darueber bleibt. Sie ist ein Schiebefeld -- zu wenig
+	-- Hoehe schneidet die Karten an, statt sie irgendwohin zu schieben.
+	kartenBereich.Size = UDim2.new(1, -64, 0, math.max(kartenHoehe - 16, 0))
 	marke.Size = UDim2.new(0, 2, 0, STATION_HOEHE - 40)
 
 	for n = 1, GIFT_COUNT do
