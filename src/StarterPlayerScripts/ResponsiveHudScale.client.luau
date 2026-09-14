@@ -42,16 +42,24 @@ local MIN_SCALE = 0.55 -- nie kleiner als das, sonst wird Text unlesbar
 -- Das HUD im Spiel bleibt skaliert: dort sitzen Knoepfe und Anzeigen an festen Positionen
 -- und muessen weiterhin gemeinsam schrumpfen, damit sie sich nicht ueberlappen.
 --
--- NavigationGui steht bewusst NICHT hier: darin sitzt die Navigationsleiste, eine Spalte
--- aus 44-Pixel-Knoepfen ueber dem unteren Rand. Bei voller Groesse waere sie auf einem 360
--- Pixel hohen Telefon hoeher als der Bildschirm. Die Vollbild-Panels in diesem ScreenGui
--- heben die Skalierung stattdessen einzeln wieder auf, siehe NavigationClient.
+-- NavigationGui stand hier lange NICHT, und der Grund war gut: darin sass die
+-- Navigationsleiste, eine Spalte aus acht 44-Pixel-Knoepfen ueber dem unteren Rand. Bei
+-- voller Groesse waere sie auf einem niedrigen Telefon hoeher als der Bildschirm gewesen.
+--
+-- Diese Leiste gibt es nicht mehr. Seit die acht Punkte hinter einem Knopf im Menue liegen,
+-- enthaelt das ScreenGui nur noch EINEN 52-Pixel-Knopf und lauter Vollbild-Flaechen -- also
+-- genau das, was von der Skalierung nicht kleiner, sondern falsch wird.
+--
+-- Auf dem Telefon war das zu sehen: das Menue stand nicht mittig, sondern weit unten
+-- rechts, und von acht Kacheln waren nur zwei erreichbar. Mittig heisst dort "in der Mitte
+-- der Flaeche", und die Flaeche war durch die Skalierung nicht mehr der Bildschirm.
 local EXCLUDED_GUI_NAMES = {
 	TalentTreeGui = true,
 	ArchiveGui = true,
 	GiftGui = true,
 	SkinShopGui = true,
 	FactionGui = true,
+	NavigationGui = true,
 }
 
 local function getCurrentScale()

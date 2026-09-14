@@ -211,7 +211,9 @@ end
 -- haette eine zweite Leserichtung eingefuehrt.
 local KARTE_BREITE = 208
 local KARTE_NAECHST_BREITE = 300
-local KARTE_HOEHE = 168
+-- 152 statt 168. Die Karten hatten achtzehn Pixel Luft, die niemand brauchte -- und auf
+-- dem Telefon geht jeder Pixel, den sie nicht belegen, an die Achse darunter.
+local KARTE_HOEHE = 152
 
 local kartenBereich = Instance.new("ScrollingFrame")
 kartenBereich.Name = "GiftCards"
@@ -303,7 +305,7 @@ local function baueKarte(name, breite, anklickbar)
 
 	local schacht = Instance.new("Frame")
 	schacht.Size = UDim2.new(1, -32, 0, 5)
-	schacht.Position = UDim2.new(0, 16, 1, -18)
+	schacht.Position = UDim2.new(0, 16, 1, -14)
 	schacht.BackgroundColor3 = HudChrome.Color.PanelSunken
 	schacht.BorderSizePixel = 0
 	schacht.ZIndex = 6
@@ -377,19 +379,38 @@ local naechsteKarte = baueKarte("NextGiftCard", KARTE_NAECHST_BREITE, false)
 -- Bildschirms. Also stehen sie abwechselnd ueber und unter der Bahn. Der waagerechte
 -- Abstand zwischen zwei Symbolen DERSELBEN Seite ist damit doppelt so gross, und die
 -- Punkte bleiben, wo sie hingehoeren.
-local BAHN_Y = 0.66 -- Anteil der Inhaltshoehe; darueber liegt die Kartenreihe
+-- ===== Warum die Bahn NICHT auf einem Anteil der Hoehe sitzt =====
+--
+-- Sie sass auf 0,66 der Inhaltshoehe. Am Rechner ging das auf; auf dem Telefon nicht,
+-- und zwar nicht knapp: dort bleiben vom Bildschirm nach Kopfzeile und
+-- Systemleisten-Polster noch rund 377 Pixel Inhalt. Kartenreihe und Achse brauchen
+-- zusammen 442. Ein Anteil verteilt einen Platz, den es nicht gibt -- und die Stationen
+-- lagen dann in den Karten.
+--
+-- Ein Anteil war ohnehin die falsche Groesse. Die Bahn gehoert UNTER die Kartenreihe, und
+-- das ist eine Beziehung zwischen zwei Dingen, kein Prozentwert vom Ganzen. Sie sitzt
+-- deshalb auf einem gerechneten Versatz -- und wenn der Platz nicht reicht, schrumpft die
+-- Achse mit, statt sich zu ueberlagern.
 local BAHN_RAND = 56
 local PUNKT = 26
 local PUNKT_BEREIT = 40
 local STATION_BREITE = 92
-local STATION_HOEHE = 260 -- Platz fuer Symbol und Zeit auf BEIDEN Seiten der Bahn
-local SYMBOL = 68
+
+-- Die Wunschmasse. Sie gelten, solange der Platz reicht.
+local STATION_HOEHE_VOLL = 260 -- Symbol und Zeit auf BEIDEN Seiten der Bahn
+local SYMBOL_VOLL = 68
+local STATION_HOEHE_MIN = 150 -- darunter ist das Symbol kein Symbol mehr, sondern ein Fleck
+
+-- Was am Ende gilt. Wird unten aus der gemessenen Inhaltshoehe bestimmt und bei jeder
+-- Aenderung nachgezogen -- Drehen des Telefons aendert beides.
+local STATION_HOEHE = STATION_HOEHE_VOLL
+local SYMBOL = SYMBOL_VOLL
 
 local bahn = Instance.new("Frame")
 bahn.Name = "Track"
 bahn.AnchorPoint = Vector2.new(0, 0.5)
 bahn.Size = UDim2.new(1, -BAHN_RAND * 2, 0, 5)
-bahn.Position = UDim2.new(0, BAHN_RAND, BAHN_Y, 0)
+bahn.Position = UDim2.new(0, BAHN_RAND, 0, 0) -- die Hoehe setzt layoutAnwenden unten
 bahn.BackgroundColor3 = HudChrome.Color.BorderDim
 bahn.BorderSizePixel = 0
 bahn.ZIndex = 2
@@ -521,6 +542,8 @@ for n = 1, GIFT_COUNT do
 	giftCells[n] = {
 		knopf = knopf,
 		punkt = punkt,
+		punktGroesse = PUNKT,
+		punktGroesseBereit = PUNKT_BEREIT,
 		ring = ring,
 		bild = bild,
 		zeichen = zeichen,
@@ -559,7 +582,71 @@ local function beschriftungenAusduennen()
 end
 
 bahn:GetPropertyChangedSignal("AbsoluteSize"):Connect(beschriftungenAusduennen)
-task.defer(beschriftungenAusduennen)
+
+-- ===== Hoehe aufteilen, statt sie zu verteilen =====
+--
+-- Gemessen statt gerechnet: die Inhaltshoehe haengt an der Bildhoehe, an der Kopfzeile und
+-- am Polster fuer Robloxs Systemleiste -- und dieses Polster wird selbst erst nachgezogen,
+-- wenn die Kern-Oberflaeche steht. Sie vorherzusagen hiesse, drei Dinge nachzurechnen, von
+-- denen sich zwei spaeter noch aendern.
+--
+-- Die Aufteilung: die Kartenreihe bekommt oben, was sie braucht, die Achse den Rest. Bleibt
+-- fuer die Achse zu wenig, schrumpft sie -- Symbol, Abstaende und Schrift gemeinsam, damit
+-- sie ihr Verhaeltnis behaelt. Unter STATION_HOEHE_MIN hoert das auf: dann ist das Symbol
+-- kein Symbol mehr, und lieber steht die Achse etwas zu tief, als dass man nichts erkennt.
+local function layoutAnwenden()
+	local hoehe = schirm.content.AbsoluteSize.Y
+	if hoehe <= 0 then
+		return
+	end
+
+	local kartenHoehe = kartenBereich.AbsoluteSize.Y
+	local frei = hoehe - kartenHoehe - 16 -- 16 Luft zwischen Karten und Achse
+	STATION_HOEHE = math.clamp(math.min(STATION_HOEHE_VOLL, frei), STATION_HOEHE_MIN, STATION_HOEHE_VOLL)
+
+	-- Alles andere folgt dem Verhaeltnis. Ein einzeln gesetzter Wert waere die naechste
+	-- Stelle, die beim naechsten Umbau nicht mitkommt.
+	local q = STATION_HOEHE / STATION_HOEHE_VOLL
+	SYMBOL = math.floor(SYMBOL_VOLL * q)
+	local abstand = math.floor(30 * q)
+	local punkt = math.max(math.floor(PUNKT * q), 12)
+	local zeitGroesse = math.max(math.floor(16 * q), 11)
+
+	-- Die Bahn sitzt so tief, dass die Station oben gerade unter den Karten anfaengt.
+	bahn.Position = UDim2.new(0, BAHN_RAND, 0, math.floor(kartenHoehe + 16 + STATION_HOEHE / 2))
+	marke.Size = UDim2.new(0, 2, 0, STATION_HOEHE - 40)
+
+	for n = 1, GIFT_COUNT do
+		local eintrag = giftCells[n]
+		local oben = eintrag.oben
+		local symbolY = oben and (STATION_HOEHE / 2 - abstand - SYMBOL) or (STATION_HOEHE / 2 + abstand)
+		local zeitY = oben and (symbolY - 26 * q) or (symbolY + SYMBOL + 6)
+
+		eintrag.knopf.Size = UDim2.new(0, STATION_BREITE, 0, STATION_HOEHE)
+		eintrag.bild.Size = UDim2.new(0, SYMBOL, 0, SYMBOL)
+		eintrag.bild.Position = UDim2.new(0.5, 0, 0, symbolY)
+		eintrag.zeichen.Size = UDim2.new(0, SYMBOL, 0, SYMBOL)
+		eintrag.zeichen.Position = UDim2.new(0.5, 0, 0, symbolY)
+		eintrag.zeitLabel.Position = UDim2.new(0.5, 0, 0, zeitY)
+		eintrag.zeitLabel.TextSize = zeitGroesse
+		eintrag.stiel.Size = UDim2.new(0, 1, 0, math.max(abstand - punkt / 2, 4))
+		eintrag.stiel.Position = UDim2.new(0.5, 0, 0.5, oben and -punkt / 2 or punkt / 2)
+		-- Die RUHENDE Groesse des Punktes. Die Schleife unten setzt sie je Zustand neu und
+		-- muss denselben Wert kennen -- deshalb liegt er im Eintrag und nicht als Konstante.
+		eintrag.punktGroesse = punkt
+		eintrag.punktGroesseBereit = math.max(math.floor(PUNKT_BEREIT * q), 18)
+	end
+
+	beschriftungenAusduennen()
+end
+
+schirm.content:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutAnwenden)
+kartenBereich:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutAnwenden)
+-- Das Polster fuer die Systemleiste wird erst spaeter nachgezogen (TopInsetUtils), und mit
+-- ihm aendert sich die Inhaltshoehe. Ohne diesen Nachschlag bliebe das Layout auf dem
+-- Stand von vor dem Aufbau der Kern-Oberflaeche stehen.
+task.defer(layoutAnwenden)
+task.delay(2.5, layoutAnwenden)
 
 local wasReady = {} -- [n] = bool, fuer den Leucht-Puls beim Bereitwerden
 local wasReadyInitialisiert = false
@@ -612,7 +699,7 @@ RunService.Heartbeat:Connect(function()
 				eintrag.ring.Color = HudChrome.Color.Border
 				eintrag.ring.Thickness = HudChrome.BorderThickness
 				eintrag.punkt.BackgroundColor3 = HudChrome.Color.Border
-				eintrag.punkt.Size = UDim2.new(0, PUNKT, 0, PUNKT)
+				eintrag.punkt.Size = UDim2.new(0, eintrag.punktGroesse, 0, eintrag.punktGroesse)
 				eintrag.stiel.BackgroundColor3 = HudChrome.Color.BorderDim
 				eintrag.bild.ImageTransparency = 0.55
 				eintrag.zeichen.TextTransparency = 0.55
@@ -621,7 +708,7 @@ RunService.Heartbeat:Connect(function()
 				eintrag.ring.Color = HudChrome.Color.Ready
 				eintrag.ring.Thickness = 3
 				eintrag.punkt.BackgroundColor3 = HudChrome.Color.PanelRaised
-				eintrag.punkt.Size = UDim2.new(0, PUNKT_BEREIT, 0, PUNKT_BEREIT)
+				eintrag.punkt.Size = UDim2.new(0, eintrag.punktGroesseBereit, 0, eintrag.punktGroesseBereit)
 				eintrag.stiel.BackgroundColor3 = HudChrome.Color.Ready
 				eintrag.bild.ImageTransparency = 0
 				eintrag.zeichen.TextTransparency = 0
@@ -632,7 +719,7 @@ RunService.Heartbeat:Connect(function()
 				eintrag.ring.Color = HudChrome.Color.BorderDim
 				eintrag.ring.Thickness = HudChrome.BorderThickness
 				eintrag.punkt.BackgroundColor3 = HudChrome.Color.PanelSunken
-				eintrag.punkt.Size = UDim2.new(0, PUNKT, 0, PUNKT)
+				eintrag.punkt.Size = UDim2.new(0, eintrag.punktGroesse, 0, eintrag.punktGroesse)
 				eintrag.stiel.BackgroundColor3 = HudChrome.Color.BorderDim
 				eintrag.bild.ImageTransparency = 0.65
 				eintrag.zeichen.TextTransparency = 0.65

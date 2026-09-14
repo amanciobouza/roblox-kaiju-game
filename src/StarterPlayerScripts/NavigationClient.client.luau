@@ -156,6 +156,71 @@ local menuBadgeCorner = Instance.new("UICorner")
 menuBadgeCorner.CornerRadius = UDim.new(1, 0)
 menuBadgeCorner.Parent = menuBadge
 
+-- ===== Der Puls =====
+-- Ein ruhender Punkt uebersieht man neben allem anderen im Bild. Bewegung nicht.
+--
+-- Bewusst KEIN hartes Blinken: ein Aus-und-An liest sich als Stoerung -- als waere etwas
+-- kaputt oder dringend falsch. Ein Laempchen, das sagt "hier wartet etwas", soll ruhig
+-- atmen, nicht alarmieren. Deshalb ein weicher Sinus, hin und zurueck, ohne Pause.
+--
+-- Zwei Ebenen, weil eine allein zu wenig oder zu viel waere:
+--   Der Punkt selbst atmet nur leicht (14 auf 17 Pixel) -- mehr liesse ihn wackeln.
+--   Ein Ring dahinter geht nach aussen und verschwindet dabei, wie ein Radarsignal. Er
+--   traegt die Aufmerksamkeit; der Punkt bleibt dabei ruhig lesbar.
+local PULS_DAUER = 1.1
+
+local menuBadgeRing = Instance.new("Frame")
+menuBadgeRing.Name = "BadgeRing"
+menuBadgeRing.AnchorPoint = Vector2.new(0.5, 0.5)
+menuBadgeRing.Position = UDim2.new(0.5, 0, 0.5, 0)
+menuBadgeRing.Size = UDim2.new(0, 14, 0, 14)
+menuBadgeRing.BackgroundColor3 = HudChrome.Color.Danger
+menuBadgeRing.BackgroundTransparency = 0.4
+menuBadgeRing.BorderSizePixel = 0
+-- HINTER dem Punkt: gleicher Elternknopf, aber niedrigerer ZIndex.
+menuBadgeRing.ZIndex = 5
+menuBadgeRing.Parent = menuBadge
+local menuBadgeRingCorner = Instance.new("UICorner")
+menuBadgeRingCorner.CornerRadius = UDim.new(1, 0)
+menuBadgeRingCorner.Parent = menuBadgeRing
+
+-- Die beiden Tweens laufen endlos und kehren um (RepeatCount -1, Reverses). Das ist der
+-- Grund, warum hier keine Schleife noetig ist: die Bewegung lebt in der Engine und kostet
+-- kein Bild pro Sekunde.
+local menuBadgePulse = TweenService:Create(
+	menuBadge,
+	TweenInfo.new(PULS_DAUER, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+	{ Size = UDim2.new(0, 17, 0, 17) }
+)
+
+-- Der Ring kehrt NICHT um -- er soll nach aussen verschwinden und wieder klein anfangen,
+-- nicht zurueckschrumpfen. Deshalb laeuft er nur vorwaerts und wird beim Wiederholen
+-- zurueckgesetzt.
+local menuBadgeRingPulse = TweenService:Create(
+	menuBadgeRing,
+	TweenInfo.new(PULS_DAUER, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, -1, false, 0),
+	{ Size = UDim2.new(0, 30, 0, 30), BackgroundTransparency = 1 }
+)
+
+-- Sichtbarkeit und Puls gehoeren zusammen: ein unsichtbares Laempchen soll nicht animiert
+-- werden, und ein sichtbares nicht stillstehen. Deshalb EINE Stelle fuer beides.
+local function setMenuBadgeVisible(visible)
+	if menuBadge.Visible == visible then
+		return
+	end
+	menuBadge.Visible = visible
+	if visible then
+		menuBadge.Size = UDim2.new(0, 14, 0, 14)
+		menuBadgeRing.Size = UDim2.new(0, 14, 0, 14)
+		menuBadgeRing.BackgroundTransparency = 0.4
+		menuBadgePulse:Play()
+		menuBadgeRingPulse:Play()
+	else
+		menuBadgePulse:Cancel()
+		menuBadgeRingPulse:Cancel()
+	end
+end
+
 -- ===== Das Menue =====
 local KACHEL_BREITE = 148
 local KACHEL_HOEHE = 84
@@ -178,7 +243,9 @@ menuOverlay.Text = ""
 menuOverlay.Visible = false
 menuOverlay.ZIndex = 40
 menuOverlay.Parent = screenGui
-unscalePanel(menuOverlay)
+-- KEIN unscalePanel hier. Dieses ScreenGui wird seit dem Wegfall der Navigationsleiste gar
+-- nicht mehr skaliert (siehe ResponsiveHudScale) -- eine Gegenskalierung waere jetzt die
+-- Stelle, die etwas verschiebt, statt etwas geradezuruecken.
 
 local menuPanel = Instance.new("Frame")
 menuPanel.Name = "MenuPanel"
@@ -505,7 +572,7 @@ local function applyBadge(key, on)
 			break
 		end
 	end
-	menuBadge.Visible = irgendeines
+	setMenuBadgeVisible(irgendeines)
 end
 
 -- [key] = { [itemId] = true } -- WELCHE Eintraege ungesehen sind. Das Laempchen sagt nur,
