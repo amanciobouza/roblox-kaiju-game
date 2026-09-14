@@ -10,17 +10,12 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ComicStyleUtils = require(ReplicatedStorage:WaitForChild("ComicStyleUtils"))
-local UiTypography = require(ReplicatedStorage:WaitForChild("UiTypography"))
 local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
 local ResponsiveGridUtils = require(ReplicatedStorage:WaitForChild("ResponsiveGridUtils"))
-local applyComicStyle = ComicStyleUtils.Apply
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
-
--- Comic-Style Hilfsfunktion jetzt über ComicStyleUtils (siehe oben)
 
 -- ===== Lesbare Spaltenbreite =====
 -- Seit die Menue-Bildschirme die ganze Flaeche nutzen, laufen Textzeilen ueber die volle
@@ -55,54 +50,6 @@ screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.DisplayOrder = 90
 screenGui.IgnoreGuiInset = true
 screenGui.Parent = playerGui
-
--- ===== Vollbild-Panels von der HUD-Skalierung ausnehmen =====
--- ResponsiveHudScale haengt jedem ScreenGui eine UIScale an, die auf schmalen Geraeten bis
--- auf 0.55 heruntergeht. Fuer die Navigationsleiste ist das noetig: eine Spalte aus
--- 44-Pixel-Knoepfen waere bei voller Groesse hoeher als ein Telefon im Querformat.
---
--- Fuer die Panels DARIN ist es schaedlich. Sie stehen auf Size = (1,0,1,0), beanspruchen
--- also ausdruecklich die ganze Flaeche -- bei Faktor 0.55 nehmen sie davon noch 55 Prozent
--- ein und lassen den Rest leer. Und ihr Text schrumpft mit: aus 14 Punkten werden knapp
--- acht, was auf dem Telefon nicht mehr zu lesen ist.
---
--- Eine zweite UIScale am Panel hebt die erste auf. Verschachtelte UIScale multiplizieren
--- sich, 0.55 mal 1/0.55 ist eins -- das Panel rendert in seiner echten Groesse, die Leiste
--- daneben bleibt verkleinert.
-local function unscalePanel(panel)
-	local compensation = Instance.new("UIScale")
-	compensation.Name = "HudScaleCompensation"
-	compensation.Scale = 1
-	compensation.Parent = panel
-
-	local watched = nil
-
-	local function apply()
-		local hudScale = screenGui:FindFirstChildOfClass("UIScale")
-		if hudScale and hudScale.Scale > 0 then
-			compensation.Scale = 1 / hudScale.Scale
-		else
-			compensation.Scale = 1
-		end
-	end
-
-	-- Die UIScale entsteht moeglicherweise ERST nach diesem Skript -- die HUD-Skripte
-	-- laufen parallel und ihre Reihenfolge ist nicht garantiert. Deshalb sowohl jetzt
-	-- pruefen als auch auf ihr Auftauchen und jede spaetere Aenderung hoeren.
-	local function rebind()
-		local hudScale = screenGui:FindFirstChildOfClass("UIScale")
-		if hudScale ~= watched then
-			watched = hudScale
-			if hudScale then
-				hudScale:GetPropertyChangedSignal("Scale"):Connect(apply)
-			end
-		end
-		apply()
-	end
-
-	screenGui.ChildAdded:Connect(rebind)
-	rebind()
-end
 
 -- ===== Ein Knopf statt acht =====
 --
@@ -243,9 +190,10 @@ menuOverlay.Text = ""
 menuOverlay.Visible = false
 menuOverlay.ZIndex = 40
 menuOverlay.Parent = screenGui
--- KEIN unscalePanel hier. Dieses ScreenGui wird seit dem Wegfall der Navigationsleiste gar
--- nicht mehr skaliert (siehe ResponsiveHudScale) -- eine Gegenskalierung waere jetzt die
--- Stelle, die etwas verschiebt, statt etwas geradezuruecken.
+-- KEINE Gegenskalierung hier. Dieses ScreenGui wird seit dem Wegfall der
+-- Navigationsleiste gar nicht mehr skaliert (siehe ResponsiveHudScale) -- eine
+-- Gegenskalierung waere jetzt die Stelle, die etwas verschiebt, statt etwas
+-- geradezuruecken. Aus demselben Grund ist unscalePanel ganz entfallen.
 
 local menuPanel = Instance.new("Frame")
 menuPanel.Name = "MenuPanel"
@@ -669,112 +617,83 @@ task.spawn(function()
 end)
 
 -- ===== Platzhalter-Panel-Baukasten (für Achievements & Haustiere) =====
-local function createPlaceholderPanel(key, title, message)
-	local panel = Instance.new("Frame")
-	panel.Name = key .. "Panel"
-	panel.Size = UDim2.new(1, 0, 1, 0)
-	panel.Position = UDim2.new(0, 0, 0, 0)
-	panel.AnchorPoint = Vector2.new(0, 0)
-	panel.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
-	panel.Visible = false
-	panel.Parent = screenGui
-	-- Ueber der Menueleiste: siehe ZIndexBehavior oben.
+local function createPlaceholderPanel(key, title, subtitle, message)
+	local schirm = HudChrome.Screen(screenGui, {
+		name = key .. "Panel",
+		title = title,
+		subtitle = subtitle,
+	})
+	local panel = schirm.panel
+	-- Ueber dem Menue-Knopf: siehe ZIndexBehavior oben.
 	panel.ZIndex = 5
-	applyComicStyle(panel, 20, 5)
 	-- Auch der Platzhalter ist ein Vollbild-Panel und braucht das Polster.
 	TopInsetUtils.Bind(panel)
-	unscalePanel(panel)
-
-	local titleLabel = Instance.new("TextLabel")
-	titleLabel.Size = UDim2.new(1, -16, 0, 44)
-	titleLabel.Position = UDim2.new(0, 8, 0, 10)
-	titleLabel.BackgroundTransparency = 1
-	titleLabel.Font = Enum.Font.LuckiestGuy
-	titleLabel.TextScaled = true
-	titleLabel.TextColor3 = Color3.fromRGB(235, 235, 245)
-	titleLabel.Text = title
-	titleLabel.Parent = panel
+	schirm.close.MouseButton1Click:Connect(function()
+		_G.NavReturnToMenu()
+	end)
 
 	local messageLabel = Instance.new("TextLabel")
 	-- Mittig und gedeckelt: ueber die volle Vollbildbreite waere es eine einzige lange Zeile.
 	messageLabel.AnchorPoint = Vector2.new(0.5, 0)
-	messageLabel.Size = UDim2.new(1, -32, 1, -70)
+	messageLabel.Size = UDim2.new(1, -32, 1, -48)
 	local messageWidthCap = Instance.new("UISizeConstraint")
 	messageWidthCap.MaxSize = Vector2.new(620, math.huge)
 	messageWidthCap.Parent = messageLabel
-	messageLabel.Position = UDim2.new(0.5, 0, 0, 60)
+	messageLabel.Position = UDim2.new(0.5, 0, 0, 32)
 	messageLabel.BackgroundTransparency = 1
-	UiTypography.Body(messageLabel)
-	messageLabel.TextWrapped = true
-	messageLabel.TextColor3 = Color3.fromRGB(165, 165, 180)
+	messageLabel.TextYAlignment = Enum.TextYAlignment.Top
 	messageLabel.Text = message
-	messageLabel.Parent = panel
+	messageLabel.Parent = schirm.content
+	HudChrome.MenuBody(messageLabel)
+	messageLabel.TextColor3 = HudChrome.Color.TextSecondary
 
 	panels[key] = panel
 	return panel
 end
 
-createPlaceholderPanel("Pets", "🐺 Companion", "Coming soon! A personal companion that fights alongside you, grows through your bond, and evolves as you play.")
+createPlaceholderPanel(
+	"Pets",
+	"COMPANION",
+	"NOT YET BUILT",
+	"Coming soon! A personal companion that fights alongside you, grows through your bond, and evolves as you play."
+)
 
 -- ===== Echtes Achievement-Panel (ersetzt den bisherigen Platzhalter) =====
 local AchievementsConfig = require(ReplicatedStorage:WaitForChild("AchievementsConfig"))
 local achievementUnlockedEvent = RemoteEventUtils.GetOrCreate("AchievementUnlockedEvent")
 
-local achievementsPanel = Instance.new("Frame")
-achievementsPanel.Name = "AchievementsPanel"
--- Vollbild: alle Menü-Bildschirme nutzen die ganze Fläche.
-achievementsPanel.Size = UDim2.new(1, 0, 1, 0)
-achievementsPanel.Position = UDim2.new(0, 0, 0, 0)
-achievementsPanel.AnchorPoint = Vector2.new(0, 0)
-achievementsPanel.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
-achievementsPanel.Visible = false
-achievementsPanel.Parent = screenGui
--- Ueber der Menueleiste: siehe ZIndexBehavior oben.
+-- "Erfolge" war die letzte deutsche Zeichenkette in diesem Bildschirm; alles andere darin
+-- ist englisch. Die Unterzeile zaehlt, wie viele davon erreicht sind -- das war bisher nur
+-- zu sehen, wenn man die ganze Liste durchgesehen hat.
+local achievementsSchirm = HudChrome.Screen(screenGui, {
+	name = "AchievementsPanel",
+	title = "ACHIEVEMENTS",
+	subtitle = "",
+})
+local achievementsPanel = achievementsSchirm.panel
+local achievementsProgressLabel = achievementsSchirm.subtitle
+-- Ueber dem Menue-Knopf: siehe ZIndexBehavior oben.
 achievementsPanel.ZIndex = 5
-applyComicStyle(achievementsPanel, 20, 5)
 
 -- Inhalt unter der Roblox-Systemleiste hervorholen. IgnoreGuiInset zieht die
 -- Zeichenflaeche bewusst DARUNTER, damit oben kein Streifen mit Sicht auf die Welt bleibt --
 -- das gilt aber nur fuer den Hintergrund. Das Polster wird nachgezogen, siehe TopInsetUtils.
 TopInsetUtils.Bind(achievementsPanel)
-unscalePanel(achievementsPanel)
 panels["Achievements"] = achievementsPanel
 
-local achievementsTitleLabel = Instance.new("TextLabel")
-achievementsTitleLabel.Size = UDim2.new(1, -70, 0, 40)
-achievementsTitleLabel.Position = UDim2.new(0, 8, 0, 10)
-achievementsTitleLabel.BackgroundTransparency = 1
-achievementsTitleLabel.Font = Enum.Font.LuckiestGuy
-achievementsTitleLabel.TextScaled = true
-achievementsTitleLabel.TextColor3 = Color3.fromRGB(235, 235, 245)
-achievementsTitleLabel.Text = "🏆 Erfolge"
-achievementsTitleLabel.Parent = achievementsPanel
-
-local achievementsCloseButton = Instance.new("TextButton")
-achievementsCloseButton.Name = "AchievementsCloseButton"
-achievementsCloseButton.Size = UDim2.new(0, 44, 0, 44)
-achievementsCloseButton.AnchorPoint = Vector2.new(1, 0)
-achievementsCloseButton.Position = UDim2.new(1, -8, 0, 8)
-achievementsCloseButton.BackgroundColor3 = Color3.fromRGB(220, 70, 70)
-achievementsCloseButton.Font = Enum.Font.FredokaOne
-achievementsCloseButton.TextScaled = true
-achievementsCloseButton.TextColor3 = Color3.new(1, 1, 1)
-achievementsCloseButton.Text = "X"
-achievementsCloseButton.Parent = achievementsPanel
-applyComicStyle(achievementsCloseButton, 10, 2)
-achievementsCloseButton.MouseButton1Click:Connect(function()
+achievementsSchirm.close.MouseButton1Click:Connect(function()
 	_G.NavReturnToMenu()
 end)
 
 local achievementsScroll = Instance.new("ScrollingFrame")
-achievementsScroll.Size = UDim2.new(1, -24, 1, -62)
-achievementsScroll.Position = UDim2.new(0, 12, 0, 56)
+achievementsScroll.Size = UDim2.new(1, -24, 1, -24)
+achievementsScroll.Position = UDim2.new(0, 12, 0, 12)
 achievementsScroll.BackgroundTransparency = 1
 achievementsScroll.BorderSizePixel = 0
 achievementsScroll.ScrollBarThickness = 8
 achievementsScroll.CanvasSize = UDim2.new(0, 0, 0, 0) -- wird von UIListLayout automatisch gesetzt
 achievementsScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-achievementsScroll.Parent = achievementsPanel
+achievementsScroll.Parent = achievementsSchirm.content
 
 local achievementsListLayout = Instance.new("UIListLayout")
 achievementsListLayout.Padding = UDim.new(0, 6)
@@ -795,13 +714,13 @@ for _, achievement in ipairs(AchievementsConfig.List) do
 		layoutOrder += 1
 
 		local categoryHeader = Instance.new("TextLabel")
-		categoryHeader.Size = UDim2.new(1, 0, 0, 26)
+		categoryHeader.Size = UDim2.new(1, 0, 0, 34)
 		categoryHeader.BackgroundTransparency = 1
-		categoryHeader.Font = Enum.Font.LuckiestGuy
-		categoryHeader.TextScaled = true
 		categoryHeader.TextXAlignment = Enum.TextXAlignment.Left
-		categoryHeader.TextColor3 = Color3.fromRGB(255, 205, 90)
-		categoryHeader.Text = lastCategory
+		categoryHeader.TextYAlignment = Enum.TextYAlignment.Bottom
+		categoryHeader.Text = string.upper(lastCategory)
+		HudChrome.Label(categoryHeader, HudChrome.MenuTextSize.Section)
+		categoryHeader.TextColor3 = HudChrome.Color.TextSecondary
 		categoryHeader.LayoutOrder = layoutOrder
 		categoryHeader.Parent = achievementsScroll
 
@@ -826,66 +745,69 @@ for _, achievement in ipairs(AchievementsConfig.List) do
 	local row = Instance.new("Frame")
 	row.Name = achievement.id .. "Row"
 	-- Groesse setzt das Raster; der Wert hier ist nur der Ausgangszustand.
-	row.Size = UDim2.new(0, MIN_CARD_WIDTH, 0, 52)
-	row.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+	row.Size = UDim2.new(0, MIN_CARD_WIDTH, 0, 60)
 	row.LayoutOrder = layoutOrder
 	row.Parent = currentCategoryGrid.Parent
-	applyComicStyle(row, 10, 2)
+	local _, rowStroke = HudChrome.Panel(row, {
+		radius = HudChrome.Radius.Panel,
+		fill = HudChrome.Color.PanelRaised,
+		transparency = 0,
+	})
 
 	local iconLabel = Instance.new("TextLabel")
 	iconLabel.Size = UDim2.new(0, 40, 0, 40)
-	iconLabel.Position = UDim2.new(0, 6, 0, 6)
+	iconLabel.Position = UDim2.new(0, 10, 0.5, -20)
 	iconLabel.BackgroundTransparency = 1
-	iconLabel.Font = Enum.Font.FredokaOne
 	iconLabel.TextScaled = true
 	iconLabel.Text = achievement.icon
 	iconLabel.Parent = row
 
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.Name = "NameLabel"
-	nameLabel.Size = UDim2.new(1, -158, 0, 20)
-	nameLabel.Position = UDim2.new(0, 52, 0, 4)
+	nameLabel.Size = UDim2.new(1, -162, 0, 24)
+	nameLabel.Position = UDim2.new(0, 58, 0, 8)
 	nameLabel.BackgroundTransparency = 1
-	UiTypography.Subhead(nameLabel, 16)
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-	nameLabel.TextColor3 = Color3.fromRGB(235, 235, 245)
 	nameLabel.Text = achievement.name
+	HudChrome.Label(nameLabel, HudChrome.MenuTextSize.Caption + 2)
 	nameLabel.Parent = row
 
 	local descLabel = Instance.new("TextLabel")
-	descLabel.Size = UDim2.new(1, -158, 0, 16)
-	descLabel.Position = UDim2.new(0, 52, 0, 24)
+	descLabel.Size = UDim2.new(1, -162, 0, 20)
+	descLabel.Position = UDim2.new(0, 58, 0, 32)
 	descLabel.BackgroundTransparency = 1
-	UiTypography.Body(descLabel, 14)
 	descLabel.TextXAlignment = Enum.TextXAlignment.Left
-	descLabel.TextColor3 = Color3.fromRGB(165, 165, 180)
 	descLabel.Text = achievement.description
+	HudChrome.MenuCaption(descLabel, 14)
 	descLabel.Parent = row
 
 	local progressBarFrame, progressFill, progressLabel
 	if achievement.type == "counter" then
+		-- Schacht dunkel, Fuellung bernstein: dieselbe Sprache wie jeder andere Balken im
+		-- Spiel. Vorher war der Schacht heller als der Grund und die Fuellung gruen -- gruen
+		-- heisst dort ueberall "Leben", und hier hiess es "Fortschritt".
 		local track = Instance.new("Frame")
-		track.Size = UDim2.new(0, 90, 0, 10)
-		track.Position = UDim2.new(1, -98, 0, 8)
-		track.BackgroundColor3 = Color3.fromRGB(210, 205, 190)
+		track.Size = UDim2.new(0, 90, 0, 8)
+		track.Position = UDim2.new(1, -102, 0, 12)
+		track.BackgroundColor3 = HudChrome.Color.PanelSunken
+		track.BorderSizePixel = 0
 		track.Parent = row
-		applyComicStyle(track, 5, 1)
 
 		progressFill = Instance.new("Frame")
 		progressFill.Size = UDim2.new(0, 0, 1, 0)
-		progressFill.BackgroundColor3 = Color3.fromRGB(90, 200, 110)
+		progressFill.BackgroundColor3 = HudChrome.Color.Ready
 		progressFill.BorderSizePixel = 0
 		progressFill.Parent = track
 
 		progressLabel = Instance.new("TextLabel")
-		progressLabel.Size = UDim2.new(0, 90, 0, 16)
-		progressLabel.Position = UDim2.new(1, -98, 0, 20)
+		progressLabel.Size = UDim2.new(0, 90, 0, 20)
+		progressLabel.Position = UDim2.new(1, -102, 0, 26)
 		progressLabel.BackgroundTransparency = 1
-		progressLabel.Font = Enum.Font.FredokaOne
-		progressLabel.TextScaled = true
-		progressLabel.TextColor3 = Color3.fromRGB(165, 165, 180)
+		progressLabel.TextXAlignment = Enum.TextXAlignment.Right
 		progressLabel.Text = "0/" .. achievement.threshold
 		progressLabel.Parent = row
+		HudChrome.Number(progressLabel, 14)
+		progressLabel.TextColor3 = HudChrome.Color.TextSecondary
 		progressBarFrame = track
 	end
 
@@ -896,18 +818,17 @@ for _, achievement in ipairs(AchievementsConfig.List) do
 	newFlag.AnchorPoint = Vector2.new(1, 0.5)
 	newFlag.Size = UDim2.new(0, 42, 0, 18)
 	newFlag.Position = UDim2.new(1, -8, 0.5, 0)
-	newFlag.BackgroundColor3 = Color3.fromRGB(235, 45, 45)
-	newFlag.Font = Enum.Font.FredokaOne
-	newFlag.TextScaled = true
-	newFlag.TextColor3 = Color3.fromRGB(255, 255, 255)
 	newFlag.Text = "NEW"
 	newFlag.Visible = false
 	newFlag.ZIndex = 4
 	newFlag.Parent = row
-	applyComicStyle(newFlag, 6, 2)
+	HudChrome.Panel(newFlag, { radius = HudChrome.Radius.Small, fill = HudChrome.Color.Danger })
+	HudChrome.Label(newFlag, 12)
+	newFlag.TextColor3 = Color3.new(1, 1, 1)
 
 	achievementRows[achievement.id] = {
 		row = row,
+		rowStroke = rowStroke,
 		nameLabel = nameLabel,
 		progressFill = progressFill,
 		progressLabel = progressLabel,
@@ -925,22 +846,27 @@ RunService.Heartbeat:Connect(function()
 	-- Welche Achievements seit dem letzten Oeffnen dazugekommen sind. Kommt aus der
 	-- Menueleiste, die es ueber den Neustart hinweg mitfuehrt.
 	local fresh = _G.GetNavBadgeItems and _G.GetNavBadgeItems("Achievements") or {}
+	local erreicht, gesamt = 0, 0
 	for achievementId, rowInfo in pairs(achievementRows) do
+		gesamt += 1
 		local achievement = rowInfo.achievement
 		local unlocked = player:GetAttribute("Achievement_" .. achievementId) == true
 		rowInfo.newFlag.Visible = fresh[achievementId] == true
 
+		-- Drei Zustaende, und sie stehen im RAHMEN statt in der Flaeche. Nach der Stilregel
+		-- ist der Grund bei allen Feldern derselbe dunkle Ton; wer ihn faerbt, baut ein
+		-- zweites Farbsystem neben dem, das schon da ist.
 		if achievement.dormant and not unlocked then
-			rowInfo.row.BackgroundColor3 = Color3.fromRGB(34, 34, 40)
-			rowInfo.nameLabel.Text = achievement.name .. "  🔒 Kommt später"
-			rowInfo.nameLabel.TextColor3 = Color3.fromRGB(130, 130, 145)
+			rowInfo.rowStroke.Color = HudChrome.Color.BorderDim
+			rowInfo.nameLabel.Text = achievement.name .. "  —  not yet"
+			rowInfo.nameLabel.TextColor3 = HudChrome.Color.TextDim
 		elseif unlocked then
-			rowInfo.row.BackgroundColor3 = Color3.fromRGB(56, 50, 28)
-			rowInfo.nameLabel.TextColor3 = Color3.fromRGB(120, 220, 130)
-			rowInfo.nameLabel.Text = "✅ " .. achievement.name
+			rowInfo.rowStroke.Color = HudChrome.Color.Ready
+			rowInfo.nameLabel.TextColor3 = HudChrome.Color.Ready
+			rowInfo.nameLabel.Text = achievement.name
 		else
-			rowInfo.row.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
-			rowInfo.nameLabel.TextColor3 = Color3.fromRGB(235, 235, 245)
+			rowInfo.rowStroke.Color = HudChrome.Color.Border
+			rowInfo.nameLabel.TextColor3 = HudChrome.Color.TextPrimary
 			rowInfo.nameLabel.Text = achievement.name
 		end
 
@@ -950,7 +876,15 @@ RunService.Heartbeat:Connect(function()
 			rowInfo.progressFill.Size = UDim2.new(ratio, 0, 1, 0)
 			rowInfo.progressLabel.Text = math.min(current, achievement.threshold) .. "/" .. achievement.threshold
 		end
+
+		if unlocked then
+			erreicht += 1
+		end
 	end
+
+	-- Wie viele von wie vielen -- die Antwort auf die erste Frage an so eine Liste. Sie war
+	-- bisher nur zu bekommen, indem man alle einundvierzig Zeilen durchgesehen hat.
+	achievementsProgressLabel.Text = string.format("%d of %d unlocked", erreicht, gesamt)
 end)
 
 -- ===== Freischaltungs-Meldung =====
@@ -982,7 +916,7 @@ achievementUnlockedEvent.OnClientEvent:Connect(function(achievementId)
 	end
 
 	HudToast.Show({
-		title = "ERFOLG FREIGESCHALTET",
+		title = "ACHIEVEMENT UNLOCKED",
 		detail = achievement.name,
 		glyph = achievement.icon,
 		color = HudChrome.Color.Ready,
@@ -1031,61 +965,34 @@ end)
 -- ===== Hilfeseite =====
 local HelpConfig = require(ReplicatedStorage:WaitForChild("HelpConfig"))
 
-local helpPanel = Instance.new("Frame")
-helpPanel.Name = "HelpPanel"
--- Vollbild: alle Menü-Bildschirme nutzen die ganze Fläche.
-helpPanel.Size = UDim2.new(1, 0, 1, 0)
-helpPanel.Position = UDim2.new(0, 0, 0, 0)
-helpPanel.AnchorPoint = Vector2.new(0, 0)
-helpPanel.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
-helpPanel.Visible = false
-helpPanel.Parent = screenGui
--- Ueber der Menueleiste: siehe ZIndexBehavior oben.
+local helpSchirm = HudChrome.Screen(screenGui, {
+	name = "HelpPanel",
+	title = "HELP",
+	subtitle = "HOW THIS WORKS",
+})
+local helpPanel = helpSchirm.panel
+-- Ueber dem Menue-Knopf: siehe ZIndexBehavior oben.
 helpPanel.ZIndex = 5
-applyComicStyle(helpPanel, 20, 5)
 
 -- Inhalt unter der Roblox-Systemleiste hervorholen. IgnoreGuiInset zieht die
 -- Zeichenflaeche bewusst DARUNTER, damit oben kein Streifen mit Sicht auf die Welt bleibt --
 -- das gilt aber nur fuer den Hintergrund. Das Polster wird nachgezogen, siehe TopInsetUtils.
 TopInsetUtils.Bind(helpPanel)
-unscalePanel(helpPanel)
 panels["Help"] = helpPanel
 
-local helpTitleLabel = Instance.new("TextLabel")
-helpTitleLabel.Size = UDim2.new(1, -70, 0, 40)
-helpTitleLabel.Position = UDim2.new(0, 8, 0, 10)
-helpTitleLabel.BackgroundTransparency = 1
-helpTitleLabel.Font = Enum.Font.LuckiestGuy
-helpTitleLabel.TextScaled = true
-helpTitleLabel.TextColor3 = Color3.fromRGB(235, 235, 245)
-helpTitleLabel.Text = "❓ Help"
-helpTitleLabel.Parent = helpPanel
-
-local helpCloseButton = Instance.new("TextButton")
-helpCloseButton.Name = "HelpCloseButton"
-helpCloseButton.Size = UDim2.new(0, 44, 0, 44)
-helpCloseButton.AnchorPoint = Vector2.new(1, 0)
-helpCloseButton.Position = UDim2.new(1, -8, 0, 8)
-helpCloseButton.BackgroundColor3 = Color3.fromRGB(220, 70, 70)
-helpCloseButton.Font = Enum.Font.FredokaOne
-helpCloseButton.TextScaled = true
-helpCloseButton.TextColor3 = Color3.new(1, 1, 1)
-helpCloseButton.Text = "X"
-helpCloseButton.Parent = helpPanel
-applyComicStyle(helpCloseButton, 10, 2)
-helpCloseButton.MouseButton1Click:Connect(function()
+helpSchirm.close.MouseButton1Click:Connect(function()
 	_G.NavReturnToMenu()
 end)
 
 local helpScroll = Instance.new("ScrollingFrame")
-helpScroll.Size = UDim2.new(1, -24, 1, -62)
-helpScroll.Position = UDim2.new(0, 12, 0, 56)
+helpScroll.Size = UDim2.new(1, -24, 1, -24)
+helpScroll.Position = UDim2.new(0, 12, 0, 12)
 helpScroll.BackgroundTransparency = 1
 helpScroll.BorderSizePixel = 0
 helpScroll.ScrollBarThickness = 8
 helpScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 helpScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-helpScroll.Parent = helpPanel
+helpScroll.Parent = helpSchirm.content
 
 local helpListLayout = Instance.new("UIListLayout")
 helpListLayout.Padding = UDim.new(0, 14)
@@ -1156,13 +1063,12 @@ local function buildDiagram(diagramType, parent)
 			bar.Size = UDim2.new(0, 100, 0, 14)
 			bar.Position = UDim2.new(0, (i - 1) * 140, 0, 18)
 			bar.BackgroundColor3 = entry[2]
+			bar.BorderSizePixel = 0
 			bar.Parent = diagramFrame
-			applyComicStyle(bar, 6, 1)
 			local icon = Instance.new("TextLabel")
 			icon.Size = UDim2.new(0, 24, 0, 24)
 			icon.Position = UDim2.new(0, (i - 1) * 140, 0, -6)
 			icon.BackgroundTransparency = 1
-			icon.Font = Enum.Font.FredokaOne
 			icon.TextScaled = true
 			icon.Text = entry[1]
 			icon.Parent = diagramFrame
@@ -1173,9 +1079,8 @@ local function buildDiagram(diagramType, parent)
 			star.Size = UDim2.new(0, 36, 0, 36)
 			star.Position = UDim2.new(0, (i - 1) * 44, 0, 6)
 			star.BackgroundTransparency = 1
-			star.Font = Enum.Font.FredokaOne
 			star.TextScaled = true
-			star.TextColor3 = Color3.fromRGB(255, 210, 80)
+			star.TextColor3 = HudChrome.Color.Ready
 			star.Text = "★"
 			star.Parent = diagramFrame
 		end
@@ -1183,9 +1088,12 @@ local function buildDiagram(diagramType, parent)
 		local track = Instance.new("Frame")
 		track.Size = UDim2.new(1, 0, 0, 20)
 		track.Position = UDim2.new(0, 0, 0, 16)
-		track.BackgroundColor3 = Color3.fromRGB(58, 58, 68)
+		track.BackgroundColor3 = HudChrome.Color.PanelSunken
+		track.BorderSizePixel = 0
 		track.Parent = diagramFrame
-		applyComicStyle(track, 8, 1)
+		local trackCorner = Instance.new("UICorner")
+		trackCorner.CornerRadius = UDim.new(0, HudChrome.Radius.Small)
+		trackCorner.Parent = track
 		local gradient = Instance.new("UIGradient")
 		gradient.Color = ColorSequence.new({
 			ColorSequenceKeypoint.new(0, Color3.fromRGB(70, 130, 210)),
@@ -1220,7 +1128,6 @@ local function buildDiagram(diagramType, parent)
 			icon.Size = UDim2.new(0, 44, 0, 44)
 			icon.Position = UDim2.new(0, (i - 1) * 60, 0, 3)
 			icon.BackgroundTransparency = 1
-			icon.Font = Enum.Font.FredokaOne
 			icon.TextScaled = true
 			icon.Text = iconText
 			icon.Parent = diagramFrame
@@ -1235,11 +1142,14 @@ for index, section in ipairs(HelpConfig.Sections) do
 	sectionFrame.Name = section.id .. "Section"
 	sectionFrame.AutomaticSize = Enum.AutomaticSize.Y
 	sectionFrame.Size = UDim2.new(1, 0, 0, 0)
-	sectionFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
 	sectionFrame.LayoutOrder = index
 	sectionFrame.Parent = helpColumns[1]
 	helpSectionOrder[index] = sectionFrame
-	applyComicStyle(sectionFrame, 12, 2)
+	HudChrome.Panel(sectionFrame, {
+		radius = HudChrome.Radius.Panel,
+		fill = HudChrome.Color.PanelRaised,
+		transparency = 0,
+	})
 	helpSectionFrames[section.id] = sectionFrame
 
 	local sectionPadding = Instance.new("UIPadding")
@@ -1255,23 +1165,22 @@ for index, section in ipairs(HelpConfig.Sections) do
 	sectionLayout.Parent = sectionFrame
 
 	local sectionTitle = Instance.new("TextLabel")
-	sectionTitle.Size = UDim2.new(1, 0, 0, 26)
+	sectionTitle.Size = UDim2.new(1, 0, 0, 32)
 	sectionTitle.BackgroundTransparency = 1
-	sectionTitle.Font = Enum.Font.LuckiestGuy
-	sectionTitle.TextScaled = true
 	sectionTitle.TextXAlignment = Enum.TextXAlignment.Left
-	sectionTitle.TextColor3 = Color3.fromRGB(235, 235, 245)
-	sectionTitle.Text = section.icon .. " " .. section.title
+	sectionTitle.TextYAlignment = Enum.TextYAlignment.Bottom
+	sectionTitle.Text = section.icon .. "  " .. section.title
+	HudChrome.Label(sectionTitle, HudChrome.MenuTextSize.Section)
 	sectionTitle.LayoutOrder = 1
 	sectionTitle.Parent = sectionFrame
 
 	local sectionSummary = Instance.new("TextLabel")
-	sectionSummary.Size = UDim2.new(1, 0, 0, 32)
+	sectionSummary.Size = UDim2.new(1, 0, 0, 36)
 	sectionSummary.BackgroundTransparency = 1
-	UiTypography.Body(sectionSummary)
 	sectionSummary.TextXAlignment = Enum.TextXAlignment.Left
-	sectionSummary.TextColor3 = Color3.fromRGB(165, 165, 180)
+	sectionSummary.TextYAlignment = Enum.TextYAlignment.Top
 	sectionSummary.Text = section.summary
+	HudChrome.MenuCaption(sectionSummary)
 	sectionSummary.LayoutOrder = 2
 	sectionSummary.Parent = sectionFrame
 
@@ -1280,12 +1189,12 @@ for index, section in ipairs(HelpConfig.Sections) do
 
 	for pointIndex, pointText in ipairs(section.points) do
 		local pointLabel = Instance.new("TextLabel")
-		pointLabel.Size = UDim2.new(1, 0, 0, 20)
+		pointLabel.Size = UDim2.new(1, 0, 0, 24)
 		pointLabel.BackgroundTransparency = 1
-		UiTypography.Body(pointLabel)
 		pointLabel.TextXAlignment = Enum.TextXAlignment.Left
-		pointLabel.TextColor3 = Color3.fromRGB(235, 235, 245)
-		pointLabel.Text = "• " .. pointText
+		pointLabel.TextYAlignment = Enum.TextYAlignment.Top
+		pointLabel.Text = "— " .. pointText
+		HudChrome.MenuBody(pointLabel, HudChrome.MenuTextSize.Caption)
 		pointLabel.LayoutOrder = 3 + pointIndex
 		pointLabel.Parent = sectionFrame
 	end
