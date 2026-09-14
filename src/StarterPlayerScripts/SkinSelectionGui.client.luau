@@ -8,7 +8,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
-local ComicStyleUtils = require(ReplicatedStorage:WaitForChild("ComicStyleUtils"))
 local ModelPreviewUtils = require(ReplicatedStorage:WaitForChild("ModelPreviewUtils"))
 -- Nur fuer die Scanfenster: es weiss als einzige Stelle, welches Modell eine Figuren-Stufe
 -- darstellt. Der Zugriff ist abgesichert, weil das Modul noch entsteht -- fehlt es, fallen
@@ -20,9 +19,7 @@ if not okStageModels then
 	StageModels = nil
 	warn("[Kaiju Debug] StageModels nicht verfuegbar -- die Scans zeigen die getragene Figur.")
 end
-local UiTypography = require(ReplicatedStorage:WaitForChild("UiTypography"))
 local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
-local applyComicStyle = ComicStyleUtils.Apply
 local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
 local SoundService = game:GetService("SoundService")
 local StarterGui = game:GetService("StarterGui")
@@ -98,9 +95,6 @@ energyArriveSound.Parent = SoundService
 -- Solange eine Münz-Flug-Animation läuft, soll der normale Coins-Changed-Handler
 -- den Zähler NICHT sofort überschreiben (sonst springt die Zahl vor der Animation hoch).
 local isAnimatingCoins = false
-
--- ===== Comic-Style Hilfsfunktion =====
--- (jetzt über ComicStyleUtils, siehe oben -- war hier zuvor dupliziert)
 
 -- Lässt ein GUI-Element kurz hell aufblitzen (Hintergrundfarbe -> heller Blitz -> zurück
 -- zur Originalfarbe) -- z.B. bei Level-Aufstieg oder Coins-Zuwachs, als kurzes visuelles
@@ -2148,17 +2142,17 @@ shopGui.DisplayOrder = 100
 shopGui.IgnoreGuiInset = true
 shopGui.Parent = player:WaitForChild("PlayerGui")
 
-local shopFrame = Instance.new("Frame")
-shopFrame.Name = "ShopFrame"
--- Vollbild: alle Menü-Bildschirme nutzen die ganze Fläche.
--- IgnoreGuiInset am ScreenGui gehört dazu -- ohne das beginnt jedes ScreenGui UNTERHALB
--- der Roblox-Systemleiste, und oben bliebe ein Streifen mit Sicht auf die Welt stehen.
-shopFrame.Size = UDim2.new(1, 0, 1, 0)
-shopFrame.Position = UDim2.new(0, 0, 0, 0)
-shopFrame.AnchorPoint = Vector2.new(0, 0)
-shopFrame.Visible = false
-shopFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
-shopFrame.Parent = shopGui
+-- Vollbild aus HudChrome.Screen -- Feld, Kopf, Titel, Unterzeile, Schliessen-Knopf und ein
+-- Inhaltsbereich, in dem die Kopfhoehe schon abgezogen ist.
+--
+-- IgnoreGuiInset am ScreenGui gehört dazu: ohne das beginnt jedes ScreenGui UNTERHALB der
+-- Roblox-Systemleiste, und oben bliebe ein Streifen mit Sicht auf die Welt stehen.
+local shopKopf = HudChrome.Screen(shopGui, {
+	name = "ShopFrame",
+	title = "SKINS",
+	subtitle = "",
+})
+local shopFrame = shopKopf.panel
 
 -- Schliesst den Shop zwangsweise -- unabhängig davon, was ihn geöffnet hat (auch falls es
 -- NICHT über den normalen Navigations-Weg lief, siehe ForceCloseShopEvent). Genutzt vom
@@ -2167,45 +2161,17 @@ local ForceCloseShopEvent = RemoteEventUtils.GetOrCreate("ForceCloseShopEvent")
 ForceCloseShopEvent.OnClientEvent:Connect(function()
 	shopFrame.Visible = false
 end)
-applyComicStyle(shopFrame, 20, 5)
-
 -- Inhalt unter der Roblox-Systemleiste hervorholen. IgnoreGuiInset zieht die
 -- Zeichenflaeche bewusst DARUNTER, damit oben kein Streifen mit Sicht auf die Welt bleibt --
 -- das gilt aber nur fuer den Hintergrund. Das Polster wird nachgezogen, siehe TopInsetUtils.
 TopInsetUtils.Bind(shopFrame)
 
--- X-Schliessen-Button -- kehrt zum Hamburger-Menü zurück (dieses Panel hatte bisher
--- keinen eigenen, war nur über den jetzt entfernten "← Back"-Button schliessbar).
-local shopCloseButton = Instance.new("TextButton")
-shopCloseButton.Name = "CloseButton"
-shopCloseButton.Size = UDim2.new(0, 34, 0, 34)
-shopCloseButton.AnchorPoint = Vector2.new(1, 0)
-shopCloseButton.Position = UDim2.new(1, -8, 0, 8)
-shopCloseButton.BackgroundColor3 = Color3.fromRGB(220, 70, 70)
-shopCloseButton.Font = Enum.Font.FredokaOne
-shopCloseButton.TextScaled = true
-shopCloseButton.TextColor3 = Color3.new(1, 1, 1)
-shopCloseButton.Text = "X"
-shopCloseButton.ZIndex = 5
-shopCloseButton.Parent = shopFrame
-applyComicStyle(shopCloseButton, 8, 2)
-shopCloseButton.MouseButton1Click:Connect(function()
+shopKopf.close.MouseButton1Click:Connect(function()
 	shopFrame.Visible = false
 	if _G.NavReturnToMenu then
 		_G.NavReturnToMenu()
 	end
 end)
-
-local shopTitle = Instance.new("TextLabel")
-shopTitle.Name = "ShopTitle"
-shopTitle.Size = UDim2.new(1, -16, 0, 40)
-shopTitle.Position = UDim2.new(0, 8, 0, 8)
-shopTitle.BackgroundTransparency = 1
-shopTitle.TextColor3 = Color3.fromRGB(235, 235, 245)
-shopTitle.Font = Enum.Font.LuckiestGuy
-shopTitle.TextScaled = true
-shopTitle.Text = "☯️ Skins"
-shopTitle.Parent = shopFrame
 
 -- Liste links, Steckbrief rechts. Die Liste braucht wenig -- sechs Eintraege mit Name und
 -- Zustand --, der Steckbrief traegt Modell, Balken, Beschreibung und den Aktionsknopf.
@@ -2213,14 +2179,15 @@ local LIST_WIDTH = 0.3
 
 local shopScroll = Instance.new("ScrollingFrame")
 shopScroll.Name = "ShopScroll"
-shopScroll.Size = UDim2.new(LIST_WIDTH, -16, 1, -60)
-shopScroll.Position = UDim2.new(0, 12, 0, 54)
+-- Im Inhaltsbereich des Kopfes: die Kopfhoehe ist dort schon abgezogen.
+shopScroll.Size = UDim2.new(LIST_WIDTH, -16, 1, -24)
+shopScroll.Position = UDim2.new(0, 12, 0, 12)
 shopScroll.BackgroundTransparency = 1
 shopScroll.BorderSizePixel = 0
 shopScroll.ScrollBarThickness = 10
 shopScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 shopScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-shopScroll.Parent = shopFrame
+shopScroll.Parent = shopKopf.content
 
 local shopLayout = Instance.new("UIListLayout")
 shopLayout.Padding = UDim.new(0, 8)
@@ -2236,32 +2203,36 @@ shopLayout.Parent = shopScroll
 -- die oberste Stufe ein teures Versehen sein konnte.
 local detailFrame = Instance.new("Frame")
 detailFrame.Name = "SkinDetail"
-detailFrame.Size = UDim2.new(1 - LIST_WIDTH, -24, 1, -60)
-detailFrame.Position = UDim2.new(LIST_WIDTH, 4, 0, 54)
+detailFrame.Size = UDim2.new(1 - LIST_WIDTH, -24, 1, -24)
+detailFrame.Position = UDim2.new(LIST_WIDTH, 4, 0, 12)
 
 local SKIN_TEXT_MAX_WIDTH = 620 -- lesbare Zeilenlaenge, unabhaengig von der Bildschirmbreite
-detailFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
-detailFrame.Parent = shopFrame
-applyComicStyle(detailFrame, 14, 3)
+detailFrame.Parent = shopKopf.content
+HudChrome.Panel(detailFrame, {
+	radius = HudChrome.Radius.Panel,
+	fill = HudChrome.Color.PanelRaised,
+	transparency = 0,
+})
 
 local detailViewport = Instance.new("Frame")
 detailViewport.Name = "Preview"
 detailViewport.Size = UDim2.new(0.42, -24, 0.52, 0)
 detailViewport.Position = UDim2.new(0, 16, 0, 16)
-detailViewport.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
 detailViewport.Parent = detailFrame
-applyComicStyle(detailViewport, 12, 2)
+HudChrome.Panel(detailViewport, {
+	radius = HudChrome.Radius.Panel,
+	fill = HudChrome.Color.PanelSunken,
+	transparency = 0,
+})
 
 local detailName = Instance.new("TextLabel")
 detailName.Size = UDim2.new(0.58, -32, 0, 40)
 detailName.Position = UDim2.new(0.42, 0, 0, 16)
 detailName.BackgroundTransparency = 1
-detailName.Font = Enum.Font.LuckiestGuy
-detailName.TextScaled = true
 detailName.TextXAlignment = Enum.TextXAlignment.Left
-detailName.TextColor3 = Color3.fromRGB(235, 235, 245)
 detailName.Text = ""
 detailName.Parent = detailFrame
+HudChrome.Label(detailName, HudChrome.MenuTextSize.Heading)
 
 -- Hoechstbreite der Textspalte. Ohne sie laeuft der Steckbrief auf einem breiten
 -- Bildschirm ueber die halbe Monitorbreite -- so lange Zeilen liest niemand gern.
@@ -2292,7 +2263,7 @@ local detailStrength = Instance.new("TextLabel")
 detailStrength.Size = UDim2.new(0.58, -32, 0, 90)
 detailStrength.Position = UDim2.new(0.42, 0, 0, 106)
 detailStrength.BackgroundTransparency = 1
-UiTypography.Body(detailStrength)
+HudChrome.MenuBody(detailStrength)
 detailStrength.TextXAlignment = Enum.TextXAlignment.Left
 detailStrength.TextYAlignment = Enum.TextYAlignment.Top
 detailStrength.TextColor3 = Color3.fromRGB(235, 235, 245)
@@ -2313,7 +2284,7 @@ local detailBonus = Instance.new("TextLabel")
 detailBonus.Size = UDim2.new(0.58, -32, 0, 26)
 detailBonus.Position = UDim2.new(0.42, 0, 0, 200)
 detailBonus.BackgroundColor3 = Color3.fromRGB(255, 236, 180)
-UiTypography.Body(detailBonus, 15)
+HudChrome.MenuBody(detailBonus, HudChrome.MenuTextSize.Caption)
 detailBonus.TextColor3 = Color3.fromRGB(120, 80, 20)
 detailBonus.Text = ""
 detailBonus.Visible = false
@@ -2324,7 +2295,7 @@ detailBonus.Parent = detailFrame
 local detailBonusWidthCap = Instance.new("UISizeConstraint")
 detailBonusWidthCap.MaxSize = Vector2.new(SKIN_TEXT_MAX_WIDTH, math.huge)
 detailBonusWidthCap.Parent = detailBonus
-applyComicStyle(detailBonus, 8, 2)
+HudChrome.Panel(detailBonus, { radius = HudChrome.Radius.Small, fill = HudChrome.Color.PanelSunken })
 
 -- Vier Balken: Leben, Angriff, Tempo, Groesse. Der Angriffsbalken ist neu und hat eine
 -- Vorgeschichte: hier stand einmal ein Feld "Damage", das entfernt wurde, weil es nirgends
@@ -2347,7 +2318,7 @@ for index, def in ipairs(STAT_DEFS) do
 	local label = Instance.new("TextLabel")
 	label.Size = UDim2.new(0, 70, 1, 0)
 	label.BackgroundTransparency = 1
-	label.Font = Enum.Font.FredokaOne
+
 	label.TextSize = 14
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.TextColor3 = Color3.fromRGB(165, 165, 180)
@@ -2359,14 +2330,15 @@ for index, def in ipairs(STAT_DEFS) do
 	track.Position = UDim2.new(0, 74, 0.5, -7)
 	track.BackgroundColor3 = Color3.fromRGB(58, 58, 68)
 	track.Parent = row
-	applyComicStyle(track, 7, 2)
+	track.BackgroundColor3 = HudChrome.Color.PanelSunken
+	track.BorderSizePixel = 0
 
 	local fill = Instance.new("Frame")
 	fill.Size = UDim2.new(0, 0, 1, 0)
 	fill.BackgroundColor3 = Color3.fromRGB(90, 175, 235)
 	fill.BorderSizePixel = 0
 	fill.Parent = track
-	applyComicStyle(fill, 7, 0)
+	fill.BorderSizePixel = 0
 
 	-- Der Vergleich zum GETRAGENEN Skin -- das ist die Frage, wegen der man herschaut.
 	local delta = Instance.new("TextLabel")
@@ -2387,12 +2359,13 @@ local detailAction = Instance.new("TextButton")
 detailAction.Name = "ActionButton"
 detailAction.Size = UDim2.new(1, -32, 0, 52)
 detailAction.Position = UDim2.new(0, 16, 1, -68)
-detailAction.Font = Enum.Font.FredokaOne
+
 detailAction.TextScaled = true
 detailAction.TextColor3 = Color3.new(1, 1, 1)
 detailAction.Text = ""
 detailAction.Parent = detailFrame
-applyComicStyle(detailAction, 12, 3)
+HudChrome.Panel(detailAction, { radius = HudChrome.Radius.Panel })
+HudChrome.Label(detailAction, HudChrome.MenuTextSize.Section)
 
 -- ===== Das Stations-Panel ist entfernt =====
 --
@@ -2594,7 +2567,6 @@ local function spawnFlyingTrainPoint(amount, statType)
 	pointLabel.AnchorPoint = Vector2.new(0.5, 0.5)
 	pointLabel.Position = UDim2.new(0, screenPoint.X + sideJump * 0.3, 0, screenPoint.Y - 18)
 	pointLabel.BackgroundTransparency = 1
-	pointLabel.Font = Enum.Font.LuckiestGuy
 	pointLabel.TextScaled = true
 	pointLabel.Text = "+" .. string.format("%.1f", displayAmount)
 	pointLabel.TextColor3 = Color3.fromRGB(90, 220, 130)
@@ -3088,10 +3060,9 @@ local function buildSkinPreview(container, skin, revealed)
 		local missing = Instance.new("TextLabel")
 		missing.Size = UDim2.new(1, 0, 1, 0)
 		missing.BackgroundTransparency = 1
-		missing.TextColor3 = Color3.fromRGB(170, 160, 145)
 		missing.Text = "no preview"
 		missing.Parent = container
-		UiTypography.Body(missing)
+		HudChrome.MenuCaption(missing)
 		return
 	end
 
@@ -3285,15 +3256,15 @@ local function refreshShop()
 		order += 1
 		local header = Instance.new("TextLabel")
 		header.Name = faction.Key .. "Header"
-		header.Size = UDim2.new(1, -4, 0, 26)
+		header.Size = UDim2.new(1, -4, 0, 32)
 		header.BackgroundTransparency = 1
-		header.Font = Enum.Font.LuckiestGuy
-		header.TextScaled = true
 		header.TextXAlignment = Enum.TextXAlignment.Left
-		header.TextColor3 = Color3.fromRGB(255, 205, 90)
-		header.Text = faction.Icon .. " " .. faction.Label
+		header.TextYAlignment = Enum.TextYAlignment.Bottom
+		header.Text = string.upper(faction.Label)
 		header.LayoutOrder = order
 		header.Parent = shopScroll
+		HudChrome.Label(header, HudChrome.MenuTextSize.Section)
+		header.TextColor3 = HudChrome.Color.TextSecondary
 
 		for _, skin in ipairs(skins) do
 			local isUnlocked = unlockedFolder:FindFirstChild("Skin_" .. skin.Id) ~= nil
@@ -3303,29 +3274,49 @@ local function refreshShop()
 
 			order += 1
 			local button = Instance.new("TextButton")
-			button.Size = UDim2.new(1, -4, 0, 52)
-			button.Font = Enum.Font.FredokaOne
-			button.TextScaled = true
-			button.TextColor3 = Color3.new(1, 1, 1)
+			button.Size = UDim2.new(1, -4, 0, 56)
+			button.AutoButtonColor = false
 			button.LayoutOrder = order
 			button.Parent = shopScroll
-			applyComicStyle(button, 14, 3)
+			local _, buttonStroke = HudChrome.Panel(button, {
+				radius = HudChrome.Radius.Panel,
+				fill = HudChrome.Color.PanelRaised,
+				transparency = 0,
+			})
+			HudChrome.Label(button, HudChrome.MenuTextSize.Caption)
 
+			-- ===== Fuenf Zustaende, und sie stehen im RAHMEN =====
+			--
+			-- Vorher trug jeder seine eigene Flaechenfarbe: gruen, blau, dunkelrot, gelb,
+			-- grau. Fuenf bunte Kaesten uebereinander, und keine der Farben bedeutete eine
+			-- Messung -- genau das, was Regel 2 ausschliesst. Schlimmer: der KAUFBARE war
+			-- gelb und der zu teure grau, also sah der teuerste Knopf am ruhigsten aus.
+			--
+			-- Jetzt traegt der Rahmen den Zustand, und die Farbe sagt eine Sache: bernstein
+			-- heisst "das kannst du jetzt tun". Das ist dieselbe Bedeutung wie beim bereiten
+			-- Angriffsknopf und bei einem abholbaren Geschenk.
+			button.Text = skin.Name
 			if isEquipped then
-				button.Text = "✅ " .. skin.Name
-				button.BackgroundColor3 = Color3.fromRGB(80, 200, 90)
+				button.Text = skin.Name .. "  —  worn"
+				buttonStroke.Color = HudChrome.Color.BorderBright
+				buttonStroke.Thickness = 2
+				button.TextColor3 = HudChrome.Color.TextPrimary
 			elseif isUnlocked then
-				button.Text = "👕 Wear " .. skin.Name
-				button.BackgroundColor3 = Color3.fromRGB(70, 150, 235)
+				buttonStroke.Color = HudChrome.Color.Border
+				button.TextColor3 = HudChrome.Color.TextPrimary
 			elseif not meetsLevel then
-				button.Text = "🔒 " .. skin.Name .. " - Level " .. skin.RequiredLevel .. " required"
-				button.BackgroundColor3 = Color3.fromRGB(120, 60, 60)
+				button.Text = skin.Name .. "  —  level " .. skin.RequiredLevel
+				buttonStroke.Color = HudChrome.Color.BorderDim
+				button.TextColor3 = HudChrome.Color.TextDim
 			elseif canAfford then
-				button.Text = "💰 " .. skin.Name .. " (" .. skin.Cost .. ")"
-				button.BackgroundColor3 = Color3.fromRGB(255, 180, 40)
+				button.Text = skin.Name .. "  —  " .. skin.Cost
+				buttonStroke.Color = HudChrome.Color.Ready
+				buttonStroke.Thickness = 2
+				button.TextColor3 = HudChrome.Color.Ready
 			else
-				button.Text = "🔒 " .. skin.Name .. " (" .. skin.Cost .. ")"
-				button.BackgroundColor3 = Color3.fromRGB(160, 160, 160)
+				button.Text = skin.Name .. "  —  " .. skin.Cost
+				buttonStroke.Color = HudChrome.Color.BorderDim
+				button.TextColor3 = HudChrome.Color.TextDim
 			end
 
 			-- Ein Klick WAEHLT nur aus. Gekauft und angelegt wird im Steckbrief.
@@ -3341,17 +3332,21 @@ local function refreshShop()
 		for index = 1, pendingCount do
 			order += 1
 			local button = Instance.new("TextButton")
-			button.Size = UDim2.new(1, -4, 0, 52)
-			button.Font = Enum.Font.FredokaOne
-			button.TextScaled = true
-			button.TextColor3 = Color3.fromRGB(200, 200, 210)
-			button.BackgroundColor3 = Color3.fromRGB(52, 52, 62)
+			button.Size = UDim2.new(1, -4, 0, 56)
+			button.AutoButtonColor = false
 			-- Der geplante Name statt "Jaeger 3". Das Fragezeichen bleibt davor: der Platz ist
 			-- weiterhin leer, er hat nur schon einen Namen.
-			button.Text = string.format("? %s - %s", pendingStages[index] or faction.Label, faction.Chapter)
+			button.Text = string.format("?  %s  —  %s", pendingStages[index] or faction.Label, faction.Chapter)
 			button.LayoutOrder = order
 			button.Parent = shopScroll
-			applyComicStyle(button, 14, 3)
+			local _, pendingStroke = HudChrome.Panel(button, {
+				radius = HudChrome.Radius.Panel,
+				fill = HudChrome.Color.Panel,
+				transparency = 0,
+			})
+			pendingStroke.Color = HudChrome.Color.BorderDim
+			HudChrome.Label(button, HudChrome.MenuTextSize.Caption)
+			button.TextColor3 = HudChrome.Color.TextDim
 
 			button.MouseButton1Click:Connect(function()
 				selectedPending = { faction = faction, index = index }
