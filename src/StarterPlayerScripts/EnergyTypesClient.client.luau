@@ -10,13 +10,10 @@ local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
-local ComicStyleUtils = require(ReplicatedStorage:WaitForChild("ComicStyleUtils"))
 local ModelPreviewUtils = require(ReplicatedStorage:WaitForChild("ModelPreviewUtils"))
 local StageModels = require(ReplicatedStorage:WaitForChild("StageModels"))
-local UiTypography = require(ReplicatedStorage:WaitForChild("UiTypography"))
 local SkinsConfig = require(ReplicatedStorage:WaitForChild("SkinsConfig"))
 local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
-local applyComicStyle = ComicStyleUtils.Apply
 local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -375,20 +372,26 @@ factionGui.DisplayOrder = 100
 factionGui.IgnoreGuiInset = true
 factionGui.Parent = player:WaitForChild("PlayerGui")
 
-local factionPanel = Instance.new("Frame")
-factionPanel.Name = "FactionPanel"
--- Vollbild: alle Menü-Bildschirme nutzen die ganze Fläche.
--- IgnoreGuiInset am ScreenGui gehört dazu -- ohne das beginnt jedes ScreenGui UNTERHALB
--- der Roblox-Systemleiste, und oben bliebe ein Streifen mit Sicht auf die Welt stehen.
-factionPanel.Size = UDim2.new(1, 0, 1, 0)
-factionPanel.Position = UDim2.new(0, 0, 0, 0)
-factionPanel.AnchorPoint = Vector2.new(0, 0)
-factionPanel.BackgroundColor3 = Color3.fromRGB(8, 6, 16)
-factionPanel.Visible = false
+-- ===== Warum dieser Bildschirm seine Atmosphaere behaelt =====
+--
+-- Kopf, Titel und Schliessen-Knopf kommen wie ueberall aus HudChrome.Screen. Der
+-- VERLAUF und der wandernde Lichtschein bleiben aber -- sie sind keine Comic-Reste,
+-- sondern der Grund, warum dieser Bildschirm anders wirkt als eine Liste.
+--
+-- Das ist kein Bruch der Stilregeln, sondern ihre Anwendung: das CHROME ist farblos, und
+-- das ist es hier auch. Was Farbe traegt, ist der Hintergrund einer Wahl zwischen den drei
+-- Kapiteln des Spiels -- die einzige Entscheidung im ganzen Menue, die etwas bedeutet.
+local factionSchirm = HudChrome.Screen(factionGui, {
+	name = "FactionPanel",
+	title = "CHOOSE YOUR FACTION",
+	subtitle = "THREE CHAPTERS, THREE WAYS TO PLAY",
+})
+local factionPanel = factionSchirm.panel
 factionPanel.ZIndex = 70
 factionPanel.ClipsDescendants = true
-factionPanel.Parent = factionGui
-applyComicStyle(factionPanel, 20, 5)
+-- Der Kopf liegt ueber dem Verlauf und dem Lichtschein.
+factionSchirm.header.ZIndex = 73
+factionSchirm.header.BackgroundTransparency = 0.15
 
 -- Inhalt unter der Roblox-Systemleiste hervorholen. IgnoreGuiInset zieht die
 -- Zeichenflaeche bewusst DARUNTER, damit oben kein Streifen mit Sicht auf die Welt bleibt --
@@ -397,6 +400,7 @@ TopInsetUtils.Bind(factionPanel)
 
 -- Dramatischer Verlaufs-Hintergrund (dunkles Violett -> fast Schwarz) statt einer
 -- einfarbigen Fläche -- macht die Szene sofort "epischer".
+factionPanel.BackgroundColor3 = Color3.fromRGB(8, 6, 16)
 local backgroundGradient = Instance.new("UIGradient")
 backgroundGradient.Color = ColorSequence.new({
 	ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 15, 55)),
@@ -417,19 +421,6 @@ glowStreak.BackgroundTransparency = 0.92
 glowStreak.BorderSizePixel = 0
 glowStreak.ZIndex = 70
 glowStreak.Parent = factionPanel
-
-local factionTitle = Instance.new("TextLabel")
-factionTitle.Size = UDim2.new(1, 0, 0, 46)
-factionTitle.Position = UDim2.new(0, 0, 0, 12)
-factionTitle.BackgroundTransparency = 1
-factionTitle.Font = Enum.Font.LuckiestGuy
-factionTitle.TextScaled = true
-factionTitle.TextColor3 = Color3.new(1, 1, 1)
-factionTitle.TextStrokeColor3 = Color3.fromRGB(120, 60, 200)
-factionTitle.TextStrokeTransparency = 0.5
-factionTitle.Text = "⚔️ CHOOSE YOUR FACTION ⚔️"
-factionTitle.ZIndex = 71
-factionTitle.Parent = factionPanel
 
 local FACTIONS = {
 	-- "strength" beschreibt, wofür die Figur STEHT -- bewusst hier und nicht im
@@ -475,11 +466,12 @@ local ANSICHT_DREHUNG = 25
 local CARD_MAX_WIDTH = 460
 
 local cardRow = Instance.new("Frame")
-cardRow.Size = UDim2.new(1, -32, 1, -70)
-cardRow.Position = UDim2.new(0, 16, 0, 64)
+-- Im Inhaltsbereich: die Kopfhoehe ist dort schon abgezogen.
+cardRow.Size = UDim2.new(1, -32, 1, -24)
+cardRow.Position = UDim2.new(0, 16, 0, 12)
 cardRow.BackgroundTransparency = 1
 cardRow.ZIndex = 71
-cardRow.Parent = factionPanel
+cardRow.Parent = factionSchirm.content
 
 local cardRowLayout = Instance.new("UIListLayout")
 cardRowLayout.FillDirection = Enum.FillDirection.Horizontal
@@ -561,7 +553,7 @@ for index, faction in ipairs(FACTIONS) do
 	card.BackgroundColor3 = Color3.fromRGB(20, 18, 30)
 	card.ZIndex = 71
 	card.Parent = cardRow
-	applyComicStyle(card, 14, 3)
+	HudChrome.Panel(card, { radius = HudChrome.Radius.Panel, transparency = 0.05 })
 
 	local cardStroke = card:FindFirstChildOfClass("UIStroke")
 	if cardStroke then
@@ -609,7 +601,7 @@ for index, faction in ipairs(FACTIONS) do
 	subtitleLabel.Size = UDim2.new(1, -16, 0, 20)
 	subtitleLabel.Position = UDim2.new(0, 8, 0, VORSCHAU_UNTEN + 38)
 	subtitleLabel.BackgroundTransparency = 1
-	UiTypography.Body(subtitleLabel, 14)
+	HudChrome.Label(subtitleLabel, HudChrome.MenuTextSize.Caption)
 	subtitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 	subtitleLabel.TextColor3 = Color3.fromRGB(210, 210, 220)
 	subtitleLabel.Text = faction.subtitle .. " -- " .. faction.desc
@@ -620,7 +612,7 @@ for index, faction in ipairs(FACTIONS) do
 	strengthLabel.Size = UDim2.new(1, -24, 0, 84)
 	strengthLabel.Position = UDim2.new(0, 12, 0, subtitleLabel.Position.Y.Offset + 26)
 	strengthLabel.BackgroundTransparency = 1
-	UiTypography.Body(strengthLabel)
+	HudChrome.MenuBody(strengthLabel, HudChrome.MenuTextSize.Caption)
 	strengthLabel.TextXAlignment = Enum.TextXAlignment.Left
 	strengthLabel.TextYAlignment = Enum.TextYAlignment.Top
 	strengthLabel.TextColor3 = Color3.fromRGB(200, 205, 220)
@@ -650,15 +642,13 @@ for index, faction in ipairs(FACTIONS) do
 		row.Parent = progressContainer
 
 		local label = Instance.new("TextLabel")
-		label.Size = UDim2.new(1, 0, 0, 15)
+		label.Size = UDim2.new(1, 0, 0, 18)
 		label.BackgroundTransparency = 1
-		label.Font = Enum.Font.FredokaOne
-		label.TextScaled = true
-		label.TextColor3 = Color3.fromRGB(210, 210, 220)
 		label.TextXAlignment = Enum.TextXAlignment.Left
 		label.Text = labelText
 		label.ZIndex = 71
 		label.Parent = row
+		HudChrome.MenuCaption(label, 13)
 
 		local track = Instance.new("Frame")
 		track.Size = UDim2.new(1, 0, 0, 11)
@@ -690,14 +680,18 @@ for index, faction in ipairs(FACTIONS) do
 	local selectButton = Instance.new("TextButton")
 	selectButton.Size = UDim2.new(1, -16, 0, 34)
 	selectButton.Position = UDim2.new(0, 8, 1, -42)
-	selectButton.BackgroundColor3 = faction.color
-	selectButton.Font = Enum.Font.LuckiestGuy
-	selectButton.TextScaled = true
-	selectButton.TextColor3 = Color3.new(1, 1, 1)
-	selectButton.Text = faction.key == "Kaiju" and "SELECT" or "🔒 LOCKED"
+	local waehlbar = (faction.key == "Kaiju")
+	selectButton.Text = waehlbar and "SELECT" or "LOCKED"
 	selectButton.ZIndex = 71
 	selectButton.Parent = card
-	applyComicStyle(selectButton, 10, 2)
+	-- Die Fraktionsfarbe traegt der RAHMEN, nicht die Flaeche -- und nur, wenn der Knopf
+	-- ueberhaupt etwas tut. Vorher war er bei allen dreien bunt gefuellt, auch bei den zwei
+	-- verschlossenen: ein Knopf, der aussieht wie der einzige, den man druecken kann.
+	local _, selectStroke = HudChrome.Panel(selectButton, { radius = HudChrome.Radius.Small })
+	selectStroke.Color = waehlbar and faction.color or HudChrome.Color.BorderDim
+	selectStroke.Thickness = waehlbar and 2 or HudChrome.BorderThickness
+	HudChrome.Label(selectButton, HudChrome.MenuTextSize.Section)
+	selectButton.TextColor3 = waehlbar and faction.color or HudChrome.Color.TextDim
 
 	selectButton.MouseButton1Click:Connect(function()
 		SelectFactionEvent:FireServer(faction.key)
@@ -800,18 +794,7 @@ factionPanel:GetPropertyChangedSignal("Visible"):Connect(function()
 	end
 end)
 
-local closeButton = Instance.new("TextButton")
-closeButton.Size = UDim2.new(0, 34, 0, 34)
-closeButton.AnchorPoint = Vector2.new(1, 0)
-closeButton.Position = UDim2.new(1, -8, 0, 8)
-closeButton.BackgroundColor3 = Color3.fromRGB(220, 70, 70)
-closeButton.Font = Enum.Font.FredokaOne
-closeButton.TextScaled = true
-closeButton.TextColor3 = Color3.new(1, 1, 1)
-closeButton.Text = "X"
-closeButton.ZIndex = 72
-closeButton.Parent = factionPanel
-applyComicStyle(closeButton, 8, 2)
+local closeButton = factionSchirm.close
 closeButton.MouseButton1Click:Connect(function()
 	factionPanel.Visible = false
 	-- Kehrt zum Hamburger-Menü zurück (ersetzt den früheren separaten "← Back"-Button).
