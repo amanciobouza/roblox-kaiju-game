@@ -362,15 +362,33 @@ end
 local naechsteKarte = baueKarte("NextGiftCard", KARTE_NAECHST_BREITE, false)
 
 -- ===== Die Bahn =====
-local BAHN_Y = 0.72 -- Anteil der Inhaltshoehe
-local BAHN_RAND = 48
-local PUNKT = 18
-local PUNKT_NAECHST = 28
+--
+-- Sie ist das Hauptstueck dieses Bildschirms, nicht seine Fusszeile -- also ist sie gross.
+-- Die erste Fassung hatte 18 Pixel grosse Punkte und 34 Pixel grosse Symbole; man sah, DASS
+-- da etwas liegt, aber nicht WAS. Ein Symbol, das man nicht erkennt, kann man auch weglassen.
+--
+-- ===== Warum die Stationen abwechselnd oben und unten stehen =====
+--
+-- Grosse Symbole vertragen sich schlecht mit den echten Abstaenden: die ersten drei
+-- Geschenke liegen auf den ersten acht Prozent der Bahn, auf tausend Pixeln also rund
+-- vierzig auseinander. Ein 68 Pixel breites Symbol passt da nicht zweimal nebeneinander.
+--
+-- Die Stationen zu VERSCHIEBEN kam nicht in Frage -- der Abstand ist die Aussage dieses
+-- Bildschirms. Also stehen sie abwechselnd ueber und unter der Bahn. Der waagerechte
+-- Abstand zwischen zwei Symbolen DERSELBEN Seite ist damit doppelt so gross, und die
+-- Punkte bleiben, wo sie hingehoeren.
+local BAHN_Y = 0.66 -- Anteil der Inhaltshoehe; darueber liegt die Kartenreihe
+local BAHN_RAND = 56
+local PUNKT = 26
+local PUNKT_BEREIT = 40
+local STATION_BREITE = 92
+local STATION_HOEHE = 260 -- Platz fuer Symbol und Zeit auf BEIDEN Seiten der Bahn
+local SYMBOL = 68
 
 local bahn = Instance.new("Frame")
 bahn.Name = "Track"
 bahn.AnchorPoint = Vector2.new(0, 0.5)
-bahn.Size = UDim2.new(1, -BAHN_RAND * 2, 0, 3)
+bahn.Size = UDim2.new(1, -BAHN_RAND * 2, 0, 5)
 bahn.Position = UDim2.new(0, BAHN_RAND, BAHN_Y, 0)
 bahn.BackgroundColor3 = HudChrome.Color.BorderDim
 bahn.BorderSizePixel = 0
@@ -387,43 +405,74 @@ bahnGelaufen.BorderSizePixel = 0
 bahnGelaufen.ZIndex = 3
 bahnGelaufen.Parent = bahn
 
--- Die Jetzt-Marke.
+-- Die Jetzt-Marke. Sie reicht jetzt ueber die ganze Hoehe der Stationen -- eine kurze
+-- Linie zwischen zwei grossen Symbolen faende man nicht wieder.
 local marke = Instance.new("Frame")
 marke.Name = "NowMarker"
 marke.AnchorPoint = Vector2.new(0.5, 0.5)
-marke.Size = UDim2.new(0, 2, 0, 54)
+marke.Size = UDim2.new(0, 2, 0, STATION_HOEHE - 40)
 marke.Position = UDim2.new(0, 0, 0.5, 0)
 marke.BackgroundColor3 = HudChrome.Color.BorderBright
 marke.BorderSizePixel = 0
 marke.ZIndex = 6
 marke.Parent = bahn
 
-local giftCells = {} -- [n] = { knopf=, ring=, bild=, zeichen=, zeitLabel= }
+-- Eine Beschriftung fuer die Marke: ohne sie ist ein senkrechter Strich nur ein Strich.
+local markeLabel = Instance.new("TextLabel")
+markeLabel.Name = "NowLabel"
+markeLabel.AnchorPoint = Vector2.new(0.5, 1)
+markeLabel.Size = UDim2.new(0, 90, 0, 18)
+markeLabel.Position = UDim2.new(0.5, 0, 0, -4)
+markeLabel.BackgroundTransparency = 1
+markeLabel.Text = "NOW"
+markeLabel.ZIndex = 7
+markeLabel.Parent = marke
+HudChrome.Label(markeLabel, 14)
+markeLabel.TextColor3 = HudChrome.Color.BorderBright
+
+local giftCells = {} -- [n] = { knopf=, punkt=, ring=, bild=, zeichen=, zeitLabel=, oben= }
 
 for n = 1, GIFT_COUNT do
 	local anteil = math.clamp(unlockTime(n) / GESAMTDAUER, 0, 1)
+	local oben = (n % 2 == 1) -- ungerade oberhalb, gerade unterhalb
 
+	-- Der ganze Bereich ist der Knopf, nicht nur der Punkt.
+	--
+	-- Vorher war der Punkt selbst der Knopf, und das Symbol darueber ein Kind AUSSERHALB
+	-- seines Rechtecks -- ein Klick darauf ging ins Leere, weil Roblox je Objekt trifft und
+	-- ein ImageLabel keine Eingabe annimmt. Man musste also ausgerechnet das kleinste Stueck
+	-- der Station treffen.
 	local knopf = Instance.new("TextButton")
 	knopf.Name = "Gift" .. n
 	knopf.AnchorPoint = Vector2.new(0.5, 0.5)
-	knopf.Size = UDim2.new(0, PUNKT, 0, PUNKT)
+	knopf.Size = UDim2.new(0, STATION_BREITE, 0, STATION_HOEHE)
 	knopf.Position = UDim2.new(anteil, 0, 0.5, 0)
+	knopf.BackgroundTransparency = 1
 	knopf.AutoButtonColor = false
 	knopf.Text = ""
-	knopf.ZIndex = 5
+	knopf.ZIndex = 4
 	knopf.Parent = bahn
-	-- Rund, nicht eckig: eine Station auf einer Strecke ist ein Punkt. HudChrome.Pill
-	-- setzt dafuer einen echten Halbkreis-Radius -- Radius.Pill allein waere nur eine Zahl,
-	-- die bei kleinen Kaestchen wieder auf die Kantenlaenge gedeckelt wird.
-	local _, ring = HudChrome.Pill(knopf, { fill = HudChrome.Color.PanelSunken, transparency = 0 })
 
-	-- Das Symbol steht UEBER der Station, die Zeit darunter. Beide gehoeren zur Station und
-	-- haengen deshalb an ihr statt an der Bahn -- so verschiebt sich nichts gegeneinander,
-	-- wenn die Bahn ihre Breite aendert.
+	local punkt = Instance.new("Frame")
+	punkt.Name = "Dot"
+	punkt.AnchorPoint = Vector2.new(0.5, 0.5)
+	punkt.Size = UDim2.new(0, PUNKT, 0, PUNKT)
+	punkt.Position = UDim2.new(0.5, 0, 0.5, 0)
+	punkt.ZIndex = 5
+	punkt.Parent = knopf
+	local _, ring = HudChrome.Pill(punkt, { fill = HudChrome.Color.PanelSunken, transparency = 0 })
+
+	-- Symbol und Zeit sitzen auf der Seite, die dieser Station zugeteilt ist. Beide sind
+	-- Kinder des Knopfes, damit ein Klick ueberall in der Station zaehlt.
+	--   oben:   Zeit 6..26, Symbol 32..100, Stiel 100..117, Punkt um 130
+	--   unten:  Punkt um 130, Stiel 143..160, Symbol 160..228, Zeit 234..254
+	local symbolY = oben and (STATION_HOEHE / 2 - 30 - SYMBOL) or (STATION_HOEHE / 2 + 30)
+	local zeitY = oben and (symbolY - 26) or (symbolY + SYMBOL + 6)
+
 	local bild = Instance.new("ImageLabel")
-	bild.AnchorPoint = Vector2.new(0.5, 1)
-	bild.Size = UDim2.new(0, 34, 0, 34)
-	bild.Position = UDim2.new(0.5, 0, 0, -12)
+	bild.AnchorPoint = Vector2.new(0.5, 0)
+	bild.Size = UDim2.new(0, SYMBOL, 0, SYMBOL)
+	bild.Position = UDim2.new(0.5, 0, 0, symbolY)
 	bild.BackgroundTransparency = 1
 	bild.ScaleType = Enum.ScaleType.Fit
 	bild.Visible = false
@@ -431,9 +480,9 @@ for n = 1, GIFT_COUNT do
 	bild.Parent = knopf
 
 	local zeichen = Instance.new("TextLabel")
-	zeichen.AnchorPoint = Vector2.new(0.5, 1)
-	zeichen.Size = UDim2.new(0, 34, 0, 34)
-	zeichen.Position = UDim2.new(0.5, 0, 0, -12)
+	zeichen.AnchorPoint = Vector2.new(0.5, 0)
+	zeichen.Size = UDim2.new(0, SYMBOL, 0, SYMBOL)
+	zeichen.Position = UDim2.new(0.5, 0, 0, symbolY)
 	zeichen.BackgroundTransparency = 1
 	zeichen.TextScaled = true
 	zeichen.Text = ""
@@ -443,42 +492,66 @@ for n = 1, GIFT_COUNT do
 
 	local zeitLabel = Instance.new("TextLabel")
 	zeitLabel.AnchorPoint = Vector2.new(0.5, 0)
-	zeitLabel.Size = UDim2.new(0, 70, 0, 18)
-	zeitLabel.Position = UDim2.new(0.5, 0, 1, 10)
+	zeitLabel.Size = UDim2.new(0, STATION_BREITE, 0, 20)
+	zeitLabel.Position = UDim2.new(0.5, 0, 0, zeitY)
 	zeitLabel.BackgroundTransparency = 1
 	zeitLabel.Text = formatLang(unlockTime(n))
 	zeitLabel.ZIndex = 5
 	zeitLabel.Parent = knopf
-	HudChrome.Number(zeitLabel, 13)
+	HudChrome.Number(zeitLabel, 16)
 	zeitLabel.TextColor3 = HudChrome.Color.TextDim
+
+	-- Der Strich zwischen Punkt und Symbol. Ohne ihn schweben die Symbole ueber und unter
+	-- der Bahn, ohne dass zu sehen waere, zu welchem Punkt sie gehoeren -- bei
+	-- abwechselnden Seiten ist das nicht mehr selbstverstaendlich.
+	local stiel = Instance.new("Frame")
+	stiel.Name = "Stem"
+	stiel.AnchorPoint = Vector2.new(0.5, oben and 1 or 0)
+	stiel.Size = UDim2.new(0, 1, 0, 30 - PUNKT / 2)
+	stiel.Position = UDim2.new(0.5, 0, 0.5, oben and -PUNKT / 2 or PUNKT / 2)
+	stiel.BackgroundColor3 = HudChrome.Color.BorderDim
+	stiel.BorderSizePixel = 0
+	stiel.ZIndex = 4
+	stiel.Parent = knopf
 
 	knopf.MouseButton1Click:Connect(function()
 		holeAb(n)
 	end)
 
-	giftCells[n] = { knopf = knopf, ring = ring, bild = bild, zeichen = zeichen, zeitLabel = zeitLabel }
+	giftCells[n] = {
+		knopf = knopf,
+		punkt = punkt,
+		ring = ring,
+		bild = bild,
+		zeichen = zeichen,
+		zeitLabel = zeitLabel,
+		stiel = stiel,
+		oben = oben,
+	}
 end
 
--- Die fruehen Stationen liegen dicht beieinander -- bei zwei Stunden Gesamtdauer sitzt das
--- erste Geschenk auf einem Prozent der Bahn. Ihre Zeitangaben wuerden sich ueberlappen.
+-- Auch mit zwei Seiten kann es vorne noch eng werden: zwischen Geschenk 1 und 3 liegen auf
+-- tausend Pixeln rund fuenfundachtzig. Das reicht fuer die Symbole, nicht immer fuer die
+-- Zeitangaben darueber.
 --
 -- Statt die Stationen zu verschieben (das waere gelogen, der Abstand IST die Aussage),
--- werden ueberlappende BESCHRIFTUNGEN weggelassen. Gerechnet wird in Pixeln und deshalb
--- neu, sobald sich die Breite aendert -- auf dem Telefon faellt mehr weg als am Rechner.
+-- werden ueberlappende BESCHRIFTUNGEN weggelassen -- getrennt je Seite, weil die beiden
+-- Reihen sich nicht ins Gehege kommen. Gerechnet wird in Pixeln und deshalb neu, sobald
+-- sich die Breite aendert: auf dem Telefon faellt mehr weg als am Rechner.
 local function beschriftungenAusduennen()
 	local breite = bahn.AbsoluteSize.X
 	if breite <= 0 then
 		return
 	end
-	local letzteRechts = -math.huge
+	local letzteRechts = { [true] = -math.huge, [false] = -math.huge }
 	for n = 1, GIFT_COUNT do
 		local eintrag = giftCells[n]
 		local x = math.clamp(unlockTime(n) / GESAMTDAUER, 0, 1) * breite
+		local seite = eintrag.oben
 		-- Die letzte Station bekommt ihre Zeit immer: sie ist das Ziel der ganzen Strecke.
-		local mussStehen = (n == GIFT_COUNT)
-		if mussStehen or x - letzteRechts >= 62 then
+		if n == GIFT_COUNT or x - letzteRechts[seite] >= 76 then
 			eintrag.zeitLabel.Visible = true
-			letzteRechts = x
+			letzteRechts[seite] = x
 		else
 			eintrag.zeitLabel.Visible = false
 		end
@@ -538,16 +611,18 @@ RunService.Heartbeat:Connect(function()
 				-- Strecke vollstaendig bleibt, verlangt aber keine Aufmerksamkeit mehr.
 				eintrag.ring.Color = HudChrome.Color.Border
 				eintrag.ring.Thickness = HudChrome.BorderThickness
-				eintrag.knopf.BackgroundColor3 = HudChrome.Color.Border
-				eintrag.knopf.Size = UDim2.new(0, PUNKT, 0, PUNKT)
+				eintrag.punkt.BackgroundColor3 = HudChrome.Color.Border
+				eintrag.punkt.Size = UDim2.new(0, PUNKT, 0, PUNKT)
+				eintrag.stiel.BackgroundColor3 = HudChrome.Color.BorderDim
 				eintrag.bild.ImageTransparency = 0.55
 				eintrag.zeichen.TextTransparency = 0.55
 				eintrag.zeitLabel.TextColor3 = HudChrome.Color.TextDim
 			elseif ready then
 				eintrag.ring.Color = HudChrome.Color.Ready
-				eintrag.ring.Thickness = 2
-				eintrag.knopf.BackgroundColor3 = HudChrome.Color.PanelRaised
-				eintrag.knopf.Size = UDim2.new(0, PUNKT_NAECHST, 0, PUNKT_NAECHST)
+				eintrag.ring.Thickness = 3
+				eintrag.punkt.BackgroundColor3 = HudChrome.Color.PanelRaised
+				eintrag.punkt.Size = UDim2.new(0, PUNKT_BEREIT, 0, PUNKT_BEREIT)
+				eintrag.stiel.BackgroundColor3 = HudChrome.Color.Ready
 				eintrag.bild.ImageTransparency = 0
 				eintrag.zeichen.TextTransparency = 0
 				eintrag.zeitLabel.TextColor3 = HudChrome.Color.Ready
@@ -556,10 +631,11 @@ RunService.Heartbeat:Connect(function()
 			else
 				eintrag.ring.Color = HudChrome.Color.BorderDim
 				eintrag.ring.Thickness = HudChrome.BorderThickness
-				eintrag.knopf.BackgroundColor3 = HudChrome.Color.PanelSunken
-				eintrag.knopf.Size = UDim2.new(0, PUNKT, 0, PUNKT)
-				eintrag.bild.ImageTransparency = 0.6
-				eintrag.zeichen.TextTransparency = 0.6
+				eintrag.punkt.BackgroundColor3 = HudChrome.Color.PanelSunken
+				eintrag.punkt.Size = UDim2.new(0, PUNKT, 0, PUNKT)
+				eintrag.stiel.BackgroundColor3 = HudChrome.Color.BorderDim
+				eintrag.bild.ImageTransparency = 0.65
+				eintrag.zeichen.TextTransparency = 0.65
 				eintrag.zeitLabel.TextColor3 = HudChrome.Color.TextDim
 				if not naechstesN then
 					naechstesN = n
