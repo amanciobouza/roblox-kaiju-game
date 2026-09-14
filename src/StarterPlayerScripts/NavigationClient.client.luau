@@ -110,10 +110,13 @@ menuBadgeCorner.Parent = menuBadge
 -- kaputt oder dringend falsch. Ein Laempchen, das sagt "hier wartet etwas", soll ruhig
 -- atmen, nicht alarmieren. Deshalb ein weicher Sinus, hin und zurueck, ohne Pause.
 --
--- Zwei Ebenen, weil eine allein zu wenig oder zu viel waere:
---   Der Punkt selbst atmet nur leicht (14 auf 17 Pixel) -- mehr liesse ihn wackeln.
---   Ein Ring dahinter geht nach aussen und verschwindet dabei, wie ein Radarsignal. Er
---   traegt die Aufmerksamkeit; der Punkt bleibt dabei ruhig lesbar.
+-- Der Puls liegt allein im RING. Er geht nach aussen und verschwindet dabei, wie ein
+-- Radarsignal.
+--
+-- Der Punkt selbst atmete zuerst mit, 14 auf 17 Pixel. Das war eine Bewegung zu viel: zwei
+-- Dinge, die gleichzeitig pulsieren, lesen sich nicht als ein Signal, sondern als ein
+-- unruhiges Element. Der Ring traegt die Aufmerksamkeit, und der Punkt bleibt dabei ruhig
+-- und scharf -- er ist das, was man am Ende lesen soll.
 local PULS_DAUER = 1.1
 
 local menuBadgeRing = Instance.new("Frame")
@@ -131,16 +134,10 @@ local menuBadgeRingCorner = Instance.new("UICorner")
 menuBadgeRingCorner.CornerRadius = UDim.new(1, 0)
 menuBadgeRingCorner.Parent = menuBadgeRing
 
--- Die beiden Tweens laufen endlos und kehren um (RepeatCount -1, Reverses). Das ist der
--- Grund, warum hier keine Schleife noetig ist: die Bewegung lebt in der Engine und kostet
--- kein Bild pro Sekunde.
-local menuBadgePulse = TweenService:Create(
-	menuBadge,
-	TweenInfo.new(PULS_DAUER, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-	{ Size = UDim2.new(0, 17, 0, 17) }
-)
-
--- Der Ring kehrt NICHT um -- er soll nach aussen verschwinden und wieder klein anfangen,
+-- Der Tween laeuft endlos (RepeatCount -1). Das ist der Grund, warum hier keine Schleife
+-- noetig ist: die Bewegung lebt in der Engine und kostet kein Bild pro Sekunde.
+--
+-- Er kehrt NICHT um -- er soll nach aussen verschwinden und wieder klein anfangen,
 -- nicht zurueckschrumpfen. Deshalb laeuft er nur vorwaerts und wird beim Wiederholen
 -- zurueckgesetzt.
 local menuBadgeRingPulse = TweenService:Create(
@@ -157,13 +154,10 @@ local function setMenuBadgeVisible(visible)
 	end
 	menuBadge.Visible = visible
 	if visible then
-		menuBadge.Size = UDim2.new(0, 14, 0, 14)
 		menuBadgeRing.Size = UDim2.new(0, 14, 0, 14)
 		menuBadgeRing.BackgroundTransparency = 0.4
-		menuBadgePulse:Play()
 		menuBadgeRingPulse:Play()
 	else
-		menuBadgePulse:Cancel()
 		menuBadgeRingPulse:Cancel()
 	end
 end
