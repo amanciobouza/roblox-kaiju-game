@@ -242,6 +242,7 @@ end
 -- deshalb auf einem gerechneten Versatz -- und wenn der Platz nicht reicht, schrumpft die
 -- Achse mit, statt sich zu ueberlagern.
 local BAHN_RAND = 56
+local NOW_ZEILE = 28 -- eigene Zeile ueber der Achse, nur fuer das Wort NOW
 local PUNKT = 26
 local PUNKT_BEREIT = 40
 local STATION_BREITE = 92
@@ -276,15 +277,30 @@ bahnGelaufen.BorderSizePixel = 0
 bahnGelaufen.ZIndex = 3
 bahnGelaufen.Parent = bahn
 
--- Die Jetzt-Marke. Sie reicht jetzt ueber die ganze Hoehe der Stationen -- eine kurze
--- Linie zwischen zwei grossen Symbolen faende man nicht wieder.
+-- ===== Die Jetzt-Marke =====
+--
+-- Sie war ein zwei Pixel breiter, voll deckender Strich ueber die ganze Stationshoehe.
+-- Damit tat sie zwei Dinge gleichzeitig, die sich widersprechen: den Ort zeigen und die
+-- Achse durchschneiden. Sie lief mitten durch Symbole und Beschriftungen, und das Wort NOW
+-- stand am oberen Ende zwischen den Zeiten der oberen Stationen.
+--
+-- Jetzt drei Teile mit drei Aufgaben:
+--
+--   Eine LANGE, blasse Linie ueber die volle Hoehe und ein Stueck darueber hinaus. Sie sagt
+--   "diese Senkrechte ist gemeint", ohne etwas zu zerschneiden -- blass genug, dass ein
+--   Symbol darunter noch ganz aussieht.
+--
+--   Eine Raute genau auf der Bahn. Sie ist der eigentliche Zeiger: klein, hell, und exakt
+--   dort, wo der Wert steht. Praezision braucht keine Laenge.
+--
+--   Das Wort NOW in einer EIGENEN Zeile ueber der ganzen Achse. Dort steht sonst nichts,
+--   und es geraet keiner Zeitangabe mehr in die Quere.
 local marke = Instance.new("Frame")
 marke.Name = "NowMarker"
 marke.AnchorPoint = Vector2.new(0.5, 0.5)
-marke.Size = UDim2.new(0, 2, 0, STATION_HOEHE - 40)
+marke.Size = UDim2.new(0, 40, 0, STATION_HOEHE)
 marke.Position = UDim2.new(0, 0, 0.5, 0)
-marke.BackgroundColor3 = HudChrome.Color.BorderBright
-marke.BorderSizePixel = 0
+marke.BackgroundTransparency = 1
 -- Ueber allen Stationen. Sie lag auf 6 und damit unter ihnen, seit die Stationen ihren
 -- ZIndex nach Zustand bekommen -- eine Bezugslinie, die hinter dem liegt, worauf sie sich
 -- bezieht, ist keine. Zwei Pixel Strich ueber einem Symbol faellt nicht auf; die Linie
@@ -292,17 +308,45 @@ marke.BorderSizePixel = 0
 marke.ZIndex = 200
 marke.Parent = bahn
 
+local markeLinie = Instance.new("Frame")
+markeLinie.Name = "Line"
+markeLinie.AnchorPoint = Vector2.new(0.5, 0.5)
+markeLinie.Size = UDim2.new(0, 1, 1, 0)
+markeLinie.Position = UDim2.new(0.5, 0, 0.5, 0)
+markeLinie.BackgroundColor3 = HudChrome.Color.BorderBright
+markeLinie.BackgroundTransparency = 0.7
+markeLinie.BorderSizePixel = 0
+markeLinie.ZIndex = 201
+markeLinie.Parent = marke
+
+-- Ein gedrehtes Quadrat. Roblox kennt keine Dreiecke in der Oberflaeche, und eine Raute
+-- zeigt ohnehin in beide Richtungen -- sie markiert einen Punkt, keine Richtung.
+local markeRaute = Instance.new("Frame")
+markeRaute.Name = "Diamond"
+markeRaute.AnchorPoint = Vector2.new(0.5, 0.5)
+markeRaute.Size = UDim2.new(0, 11, 0, 11)
+markeRaute.Position = UDim2.new(0.5, 0, 0.5, 0)
+markeRaute.Rotation = 45
+markeRaute.BackgroundColor3 = HudChrome.Color.BorderBright
+markeRaute.BorderSizePixel = 0
+markeRaute.ZIndex = 202
+markeRaute.Parent = marke
+
 -- Eine Beschriftung fuer die Marke: ohne sie ist ein senkrechter Strich nur ein Strich.
 local markeLabel = Instance.new("TextLabel")
 markeLabel.Name = "NowLabel"
 markeLabel.AnchorPoint = Vector2.new(0.5, 1)
-markeLabel.Size = UDim2.new(0, 90, 0, 18)
-markeLabel.Position = UDim2.new(0.5, 0, 0, -4)
+markeLabel.Size = UDim2.new(0, 90, 0, 22)
+-- In der reservierten Zeile ueber der Achse, nicht am oberen Ende der Linie. Dort stand es
+-- zwischen den Zeitangaben der oberen Stationen.
+-- Die Marke ragt zwoelf Pixel ueber die Stationen hinaus; von ihrer Oberkante aus zwei
+-- weiter nach unten landet die Unterkante des Wortes genau in der reservierten Zeile.
+markeLabel.Position = UDim2.new(0.5, 0, 0, 2)
 markeLabel.BackgroundTransparency = 1
 markeLabel.Text = "NOW"
-markeLabel.ZIndex = 7
+markeLabel.ZIndex = 203
 markeLabel.Parent = marke
-HudChrome.Label(markeLabel, 14)
+HudChrome.Label(markeLabel, 15)
 markeLabel.TextColor3 = HudChrome.Color.BorderBright
 
 local giftCells = {} -- [n] = { knopf=, punkt=, ring=, bild=, zeichen=, zeitLabel=, oben= }
@@ -482,10 +526,10 @@ local function layoutAnwenden()
 		return
 	end
 
-	-- Die Achse bekommt die ganze Hoehe. Sie teilt sie mit nichts mehr -- das war die
-	-- Entscheidung hinter diesem Umbau, und sie loest die Enge auf dem Telefon an der
-	-- Wurzel statt sie zu verteilen.
-	STATION_HOEHE = math.clamp(hoehe - 16, 1, STATION_HOEHE_VOLL)
+	-- Die Achse bekommt die Hoehe bis auf eine Zeile. Die gehoert dem Wort NOW: es stand
+	-- vorher am oberen Ende der Marke, also mitten unter den Zeitangaben der oberen
+	-- Stationen. Eine eigene Zeile kostet achtundzwanzig Pixel und loest das ganz.
+	STATION_HOEHE = math.clamp(hoehe - 16 - NOW_ZEILE, 1, STATION_HOEHE_VOLL)
 
 	-- Alles andere folgt dem Verhaeltnis. Ein einzeln gesetzter Wert waere die naechste
 	-- Stelle, die beim naechsten Umbau nicht mitkommt.
@@ -495,9 +539,11 @@ local function layoutAnwenden()
 	local punkt = math.max(math.floor(PUNKT * q), 12)
 	local zeitGroesse = math.max(math.floor(16 * q), 11)
 
-	-- Mittig in der Inhaltsflaeche.
-	bahn.Position = UDim2.new(0, BAHN_RAND, 0, math.floor(hoehe / 2))
-	marke.Size = UDim2.new(0, 2, 0, STATION_HOEHE - 40)
+	-- Mittig in dem, was unter der NOW-Zeile bleibt.
+	bahn.Position = UDim2.new(0, BAHN_RAND, 0, math.floor(NOW_ZEILE + (hoehe - NOW_ZEILE) / 2))
+	-- Die Linie ragt oben und unten ein Stueck ueber die Stationen hinaus: so liest sie sich
+	-- als durchgehende Senkrechte durch das ganze Bild und nicht als Teil einer Station.
+	marke.Size = UDim2.new(0, 40, 0, STATION_HOEHE + 24)
 
 	for n = 1, GIFT_COUNT do
 		local eintrag = giftCells[n]
