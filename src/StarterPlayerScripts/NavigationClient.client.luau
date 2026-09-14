@@ -1155,6 +1155,14 @@ local helpSectionOrder = {}
 local helpSectionFrames = {}
 
 -- ===== Einfache gebaute Diagramme (Platzhalter statt echter Screenshots) =====
+--
+-- ABSICHTLICH NOCH COMIC. Beim Umbau der Hilfe auf HudChrome sind Rahmen, Schrift und
+-- Farben mitgegangen, diese Diagramme aber nur so weit, dass sie nicht auffallen -- sie
+-- bestehen aus Emoji und bunten Balken, und das ist der letzte Comic-Rest im Menue.
+--
+-- Das ist eine Vertagung, keine Luecke: sie richtig zu machen heisst, eigene Bilder dafuer
+-- zu haben. Sie hier aus Rechtecken nachzubauen waere dieselbe Notloesung noch einmal, nur
+-- in Stahlgrau. Wer das aufgreift, faengt bei den Bildern an, nicht bei diesem Code.
 local function buildDiagram(diagramType, parent)
 	local diagramFrame = Instance.new("Frame")
 	diagramFrame.Name = "Diagram"
