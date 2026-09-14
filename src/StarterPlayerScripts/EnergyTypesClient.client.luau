@@ -585,16 +585,25 @@ for index, faction in ipairs(FACTIONS) do
 	ModelPreviewUtils.AddGlow(viewportContainer, faction.color, 70)
 	buildViewport(viewportContainer, faction.key)
 
+	-- Das Symbol steht jetzt als BILD neben dem Namen statt als Emoji davor. Ein Emoji im
+	-- Text laesst sich nicht ausrichten -- es wuchs mit der Schrift, sass auf der
+	-- Grundlinie und war je nach Geraet verschieden breit.
+	local factionIcon = HudChrome.IconImage(card, HudChrome.FactionIcon[faction.key] or "")
+	factionIcon.Size = UDim2.new(0, 28, 0, 28)
+	factionIcon.Position = UDim2.new(0, 10, 0, VORSCHAU_UNTEN + 5)
+	factionIcon.Visible = (HudChrome.FactionIcon[faction.key] or "") ~= ""
+	factionIcon.ZIndex = 71
+
 	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Size = UDim2.new(1, -8, 0, 30)
-	nameLabel.Position = UDim2.new(0, 4, 0, VORSCHAU_UNTEN + 4)
+	nameLabel.Size = UDim2.new(1, -46, 0, 30)
+	nameLabel.Position = UDim2.new(0, 44, 0, VORSCHAU_UNTEN + 4)
 	nameLabel.BackgroundTransparency = 1
-	nameLabel.Font = Enum.Font.LuckiestGuy
-	nameLabel.TextScaled = true
+	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 	nameLabel.TextColor3 = faction.color
-	nameLabel.Text = faction.emoji .. " " .. faction.label
+	nameLabel.Text = faction.label
 	nameLabel.ZIndex = 71
 	nameLabel.Parent = card
+	HudChrome.Label(nameLabel, HudChrome.MenuTextSize.Section)
 
 	local subtitleLabel = Instance.new("TextLabel")
 	subtitleLabel.Size = UDim2.new(1, -16, 0, 20)

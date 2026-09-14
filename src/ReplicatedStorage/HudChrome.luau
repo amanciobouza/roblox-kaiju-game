@@ -180,14 +180,26 @@ HudChrome.Icon = {
 -- ihm auch der Talentbaum und die Energie-Anzeigen dieselben fuenf Typen zeigen -- eine
 -- zweite Liste anderswo waere die naechste Stelle, die auseinanderlaeuft.
 --
--- Leer heisst: der Aufrufer weicht auf den Farbstreifen aus. Sobald eine ID hier steht,
--- erscheint das Bild ueberall, wo der Typ vorkommt.
+-- Die Schluessel sind die Typnamen aus EnergyTypesClient und den Gebaeude-Attributen. Wer
+-- hier umbenennt, bricht die Zuordnung still -- der Aufrufer faellt dann wortlos auf den
+-- Farbstreifen zurueck.
 HudChrome.EnergyIcon = {
-	Heat = "",
-	Chemical = "",
-	Electric = "",
-	Radiation = "",
-	Spirit = "",
+	Heat = "rbxassetid://131883487619340",
+	Chemical = "rbxassetid://88519091287608",
+	Electric = "rbxassetid://98858508361600",
+	Radiation = "rbxassetid://90519732597438",
+	Spirit = "rbxassetid://111068377126240",
+}
+
+-- ===== Symbole der drei Figuren =====
+--
+-- Kaiju, Jaeger, Ronin -- die drei Kapitel des Spiels. Sie erscheinen in der
+-- Fraktionsauswahl, im Achievement-Bildschirm und in der Hilfe; bisher standen dort drei
+-- Emoji, und zwar in jeder Datei ein anderes Trio.
+HudChrome.FactionIcon = {
+	Kaiju = "rbxassetid://100425603487710",
+	Jaeger = "rbxassetid://78662648045793",
+	Ronin = "rbxassetid://104693164949285",
 }
 
 -- ===== Symbole der Zeitgeschenke =====
@@ -240,7 +252,12 @@ local function preloadIcons()
 	-- einmal je Sitzung und ausgerechnet in dem Moment, in dem etwas bereit wird -- dort
 	-- ein leeres Feld zu sehen waere die schlechteste Stelle dafuer. Die Energietypen sind
 	-- noch leer und fallen von selbst heraus.
-	for _, sammlung in ipairs({ HudChrome.Icon, HudChrome.GiftIcon, HudChrome.EnergyIcon }) do
+	for _, sammlung in ipairs({
+		HudChrome.Icon,
+		HudChrome.GiftIcon,
+		HudChrome.EnergyIcon,
+		HudChrome.FactionIcon,
+	}) do
 		for name, assetId in pairs(sammlung) do
 			if assetId ~= "" then
 				table.insert(liste, assetId)
