@@ -169,8 +169,15 @@ local function setMenuBadgeVisible(visible)
 end
 
 -- ===== Das Menue =====
-local KACHEL_BREITE = 148
-local KACHEL_HOEHE = 84
+-- Die Kachel ist jetzt so gebaut wie ein Angriffsknopf: das Symbol fuellt sie ganz, die
+-- Beschriftung liegt unten DARUEBER, mit einem Verlauf darunter. Vorher war das Symbol ein
+-- 38 Pixel grosser Fleck ueber einer Zeile Text -- beides zu klein, um zu wirken, und die
+-- Kachel hatte in der Mitte Luft, die niemand brauchte.
+--
+-- Damit sehen die beiden Dinge, die man im Spiel anfasst, gleich aus: die Knoepfe unten und
+-- die Kacheln im Menue. Das ist keine Kosmetik -- es sagt "das hier kannst du druecken".
+local KACHEL_BREITE = 168
+local KACHEL_HOEHE = 132
 local KACHEL_LUECKE = 12
 local MENU_SPALTEN = 4
 local MENU_RAND = 20
@@ -433,22 +440,47 @@ for index, config in ipairs(NAV_BUTTONS) do
 	})
 	navStrokes[config.key] = buttonStroke
 
+	-- Das Symbol fuellt die ganze Kachel, leicht nach oben gerueckt, damit unten Luft fuer
+	-- die Beschriftung bleibt.
 	local icon = HudChrome.IconImage(button, config.icon)
 	icon.Name = "Icon"
-	icon.Size = UDim2.new(0, 38, 0, 38)
-	icon.Position = UDim2.new(0.5, -19, 0, 10)
+	icon.Size = UDim2.new(1, -28, 1, -34)
+	icon.Position = UDim2.new(0, 14, 0, 6)
 	icon.ImageTransparency = unbuilt and 0.6 or 0
 	icon.ZIndex = 44
 
+	-- Verlauf unter der Beschriftung: von durchsichtig oben nach dunkel unten. Ohne ihn
+	-- steht heller Text auf hellen Stellen des Bildes und wird stellenweise unlesbar -- und
+	-- zwar unvorhersehbar, je nachdem was das Symbol dort gerade zeigt.
+	local scrim = Instance.new("Frame")
+	scrim.Name = "TextScrim"
+	scrim.AnchorPoint = Vector2.new(0, 1)
+	scrim.Position = UDim2.new(0, 0, 1, 0)
+	scrim.Size = UDim2.new(1, 0, 0, 52)
+	scrim.BackgroundColor3 = HudChrome.Color.Panel
+	scrim.BorderSizePixel = 0
+	scrim.ZIndex = 45
+	scrim.Parent = button
+
+	local scrimGradient = Instance.new("UIGradient")
+	scrimGradient.Rotation = 90
+	scrimGradient.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(0.45, 0.35),
+		NumberSequenceKeypoint.new(1, 0.1),
+	})
+	scrimGradient.Parent = scrim
+
 	local caption = Instance.new("TextLabel")
 	caption.Name = "Caption"
-	caption.Size = UDim2.new(1, -12, 0, 22)
-	caption.Position = UDim2.new(0, 6, 0, 54)
+	caption.Size = UDim2.new(1, -16, 0, 26)
+	caption.Position = UDim2.new(0, 8, 1, -32)
 	caption.BackgroundTransparency = 1
+	caption.TextXAlignment = Enum.TextXAlignment.Left
 	caption.Text = config.label
-	caption.ZIndex = 44
+	caption.ZIndex = 46
 	caption.Parent = button
-	HudChrome.Label(caption, 15)
+	HudChrome.Label(caption, HudChrome.MenuTextSize.Caption + 2)
 	caption.TextColor3 = unbuilt and HudChrome.Color.TextDim or HudChrome.Color.TextPrimary
 
 	-- Das Laempchen: klein, in der oberen rechten Ecke, standardmaessig aus.
@@ -460,7 +492,7 @@ for index, config in ipairs(NAV_BUTTONS) do
 	badge.BackgroundColor3 = HudChrome.Color.Danger
 	badge.BorderSizePixel = 0
 	badge.Visible = false
-	badge.ZIndex = 45
+	badge.ZIndex = 47
 	badge.Parent = button
 	local badgeCorner = Instance.new("UICorner")
 	badgeCorner.CornerRadius = UDim.new(1, 0)
