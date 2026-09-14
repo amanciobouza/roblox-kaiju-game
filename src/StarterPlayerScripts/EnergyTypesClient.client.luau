@@ -367,6 +367,16 @@ end)
 -- mit nach vorne geholt, also genau das Gegenteil bewirkt.
 local factionGui = Instance.new("ScreenGui")
 factionGui.Name = "FactionGui"
+-- AUSDRUECKLICH Sibling. Unter der Vorgabe (Global) vergleicht Roblox den ZIndex ueber das
+-- GANZE ScreenGui hinweg -- und dieser Bildschirm rechnet historisch mit Werten um 70, die
+-- er sich selbst gegeben hat. Der Kopf aus HudChrome.Screen setzt seine Beschriftungen auf
+-- 3, wie jeder andere Bildschirm auch; global verglichen lagen sie damit HINTER den Karten,
+-- und der Titel war schlicht nicht zu sehen.
+--
+-- Unter Sibling zaehlt der ZIndex nur unter Geschwistern, und ein Kind liegt immer ueber
+-- seinem Eltern-Element. Damit stimmen beide Zahlenreihen wieder, ohne dass eine von beiden
+-- umgeschrieben werden muesste.
+factionGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 factionGui.ResetOnSpawn = false
 factionGui.DisplayOrder = 100
 factionGui.IgnoreGuiInset = true
@@ -389,9 +399,10 @@ local factionSchirm = HudChrome.Screen(factionGui, {
 local factionPanel = factionSchirm.panel
 factionPanel.ZIndex = 70
 factionPanel.ClipsDescendants = true
--- Der Kopf liegt ueber dem Verlauf und dem Lichtschein.
+-- Der Kopf liegt ueber dem Verlauf und dem Lichtschein, der Inhalt zwischen beiden.
 factionSchirm.header.ZIndex = 73
 factionSchirm.header.BackgroundTransparency = 0.15
+factionSchirm.content.ZIndex = 71
 
 -- Inhalt unter der Roblox-Systemleiste hervorholen. IgnoreGuiInset zieht die
 -- Zeichenflaeche bewusst DARUNTER, damit oben kein Streifen mit Sicht auf die Welt bleibt --
@@ -552,8 +563,27 @@ for index, faction in ipairs(FACTIONS) do
 	card.LayoutOrder = index
 	card.BackgroundColor3 = Color3.fromRGB(20, 18, 30)
 	card.ZIndex = 71
+	card.ClipsDescendants = true
 	card.Parent = cardRow
 	HudChrome.Panel(card, { radius = HudChrome.Radius.Panel, transparency = 0.05 })
+
+	-- ===== Das Figurensymbol als Grund der Karte =====
+	--
+	-- Es stand als kleines Bild neben dem Namen, 28 Pixel gross -- und war damit eine
+	-- Beschriftung des Namens, der ohnehin danebensteht. Als Hintergrund gibt es der Karte
+	-- stattdessen ein Gesicht: man erkennt die Fraktion, bevor man etwas liest.
+	--
+	-- Sehr blass und gross: es ist der GRUND, nicht der Inhalt. Wird es deutlicher, kaempft
+	-- es mit der Modellvorschau darueber, und beide verlieren.
+	local hintergrundBild = HudChrome.IconImage(card, HudChrome.FactionIcon[faction.key] or "")
+	hintergrundBild.Name = "FactionBackdrop"
+	hintergrundBild.AnchorPoint = Vector2.new(0.5, 0.5)
+	hintergrundBild.Size = UDim2.new(1.1, 0, 1.1, 0)
+	hintergrundBild.Position = UDim2.new(0.5, 0, 0.5, 0)
+	hintergrundBild.ImageTransparency = 0.88
+	hintergrundBild.ImageColor3 = faction.color
+	hintergrundBild.Visible = (HudChrome.FactionIcon[faction.key] or "") ~= ""
+	hintergrundBild.ZIndex = 70
 
 	local cardStroke = card:FindFirstChildOfClass("UIStroke")
 	if cardStroke then
@@ -577,18 +607,10 @@ for index, faction in ipairs(FACTIONS) do
 	ModelPreviewUtils.AddGlow(viewportContainer, faction.color, 70)
 	buildViewport(viewportContainer, faction.key)
 
-	-- Das Symbol steht jetzt als BILD neben dem Namen statt als Emoji davor. Ein Emoji im
-	-- Text laesst sich nicht ausrichten -- es wuchs mit der Schrift, sass auf der
-	-- Grundlinie und war je nach Geraet verschieden breit.
-	local factionIcon = HudChrome.IconImage(card, HudChrome.FactionIcon[faction.key] or "")
-	factionIcon.Size = UDim2.new(0, 28, 0, 28)
-	factionIcon.Position = UDim2.new(0, 10, 0, VORSCHAU_UNTEN + 5)
-	factionIcon.Visible = (HudChrome.FactionIcon[faction.key] or "") ~= ""
-	factionIcon.ZIndex = 71
-
+	-- Kein kleines Symbol mehr neben dem Namen -- es steht jetzt gross als Grund der Karte.
 	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Size = UDim2.new(1, -46, 0, 30)
-	nameLabel.Position = UDim2.new(0, 44, 0, VORSCHAU_UNTEN + 4)
+	nameLabel.Size = UDim2.new(1, -16, 0, 30)
+	nameLabel.Position = UDim2.new(0, 8, 0, VORSCHAU_UNTEN + 4)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 	nameLabel.TextColor3 = faction.color
