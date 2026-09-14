@@ -195,174 +195,6 @@ local function holeAb(n)
 	return true
 end
 
--- ===== Die Reihe der Karten =====
---
--- Hier stand EINE Karte, die immer nur das naechste Geschenk zeigte. Das war falsch, sobald
--- mehrere gleichzeitig bereitliegen -- und das ist der Normalfall: wer eine Stunde spielt,
--- ohne das Menue zu oeffnen, hat sechs offene Geschenke. Eine Karte nach der anderen
--- abzuarbeiten sah aus wie eine Warteschlange, und man wusste nie, wie viele noch kommen.
---
--- Jetzt eine Reihe: je eine Karte fuer JEDES abholbare Geschenk, und ganz rechts die Karte
--- fuer das naechste, das noch dauert. Die Reihenfolge ist die der Bahn darunter -- was
--- frueher dran war, steht links.
---
--- Ein Schiebefeld, kein Raster: bei zwoelf offenen Geschenken passt die Reihe auf kein
--- Geraet. Waagerecht schieben bleibt dieselbe Bewegung wie die Bahn darunter; ein Raster
--- haette eine zweite Leserichtung eingefuehrt.
-local KARTE_BREITE = 208
-local KARTE_NAECHST_BREITE = 300
--- 152 statt 168. Die Karten hatten achtzehn Pixel Luft, die niemand brauchte -- und auf
--- dem Telefon geht jeder Pixel, den sie nicht belegen, an die Achse darunter.
-local KARTE_HOEHE = 152
-
-local kartenBereich = Instance.new("ScrollingFrame")
-kartenBereich.Name = "GiftCards"
-kartenBereich.Position = UDim2.new(0, 32, 0, 16)
-kartenBereich.Size = UDim2.new(1, -64, 0, KARTE_HOEHE + 14)
-kartenBereich.BackgroundTransparency = 1
-kartenBereich.BorderSizePixel = 0
-kartenBereich.ScrollBarThickness = 5
-kartenBereich.ScrollingDirection = Enum.ScrollingDirection.X
-kartenBereich.CanvasSize = UDim2.new(0, 0, 0, 0)
-kartenBereich.AutomaticCanvasSize = Enum.AutomaticSize.X
-kartenBereich.ZIndex = 4
-kartenBereich.Parent = schirm.content
-
-local kartenLayout = Instance.new("UIListLayout")
-kartenLayout.FillDirection = Enum.FillDirection.Horizontal
-kartenLayout.SortOrder = Enum.SortOrder.LayoutOrder
-kartenLayout.Padding = UDim.new(0, 12)
-kartenLayout.Parent = kartenBereich
-
--- Baut eine Karte. Beide Sorten teilen sich den Aufbau -- Symbol links, Beschriftung
--- rechts, grosse Zahl darunter --, sie unterscheiden sich nur in Breite und darin, was in
--- der grossen Zeile steht: CLAIM oder ein Countdown.
-local function baueKarte(name, breite, anklickbar)
-	local karte = anklickbar and Instance.new("TextButton") or Instance.new("Frame")
-	karte.Name = name
-	karte.Size = UDim2.new(0, breite, 0, KARTE_HOEHE)
-	karte.Visible = false
-	karte.ZIndex = 5
-	if anklickbar then
-		karte.AutoButtonColor = false
-		karte.Text = ""
-	end
-	karte.Parent = kartenBereich
-	local _, rand = HudChrome.Panel(karte, {
-		radius = HudChrome.Radius.Panel,
-		fill = HudChrome.Color.PanelRaised,
-		transparency = 0,
-	})
-
-	local kaption = Instance.new("TextLabel")
-	kaption.Size = UDim2.new(1, -28, 0, 18)
-	kaption.Position = UDim2.new(0, 16, 0, 12)
-	kaption.BackgroundTransparency = 1
-	kaption.TextXAlignment = Enum.TextXAlignment.Left
-	kaption.Text = ""
-	kaption.ZIndex = 6
-	kaption.Parent = karte
-	HudChrome.MenuCaption(kaption, 13)
-
-	local bild = Instance.new("ImageLabel")
-	bild.Size = UDim2.new(0, 52, 0, 52)
-	bild.Position = UDim2.new(0, 16, 0, 38)
-	bild.BackgroundTransparency = 1
-	bild.ScaleType = Enum.ScaleType.Fit
-	bild.Visible = false
-	bild.ZIndex = 6
-	bild.Parent = karte
-
-	local zeichen = Instance.new("TextLabel")
-	zeichen.Size = UDim2.new(0, 52, 0, 52)
-	zeichen.Position = UDim2.new(0, 16, 0, 38)
-	zeichen.BackgroundTransparency = 1
-	zeichen.TextScaled = true
-	zeichen.Text = ""
-	zeichen.ZIndex = 6
-	zeichen.Parent = karte
-
-	local titel = Instance.new("TextLabel")
-	titel.Size = UDim2.new(1, -84, 0, 52)
-	titel.Position = UDim2.new(0, 76, 0, 38)
-	titel.BackgroundTransparency = 1
-	titel.TextXAlignment = Enum.TextXAlignment.Left
-	titel.TextYAlignment = Enum.TextYAlignment.Center
-	titel.Text = ""
-	titel.ZIndex = 6
-	titel.Parent = karte
-	HudChrome.MenuBody(titel, HudChrome.MenuTextSize.Caption)
-
-	local zahl = Instance.new("TextLabel")
-	zahl.Size = UDim2.new(1, -32, 0, 40)
-	zahl.Position = UDim2.new(0, 16, 0, 100)
-	zahl.BackgroundTransparency = 1
-	zahl.TextXAlignment = Enum.TextXAlignment.Left
-	zahl.Text = ""
-	zahl.ZIndex = 6
-	zahl.Parent = karte
-	HudChrome.NumberBold(zahl, 32)
-
-	local schacht = Instance.new("Frame")
-	schacht.Size = UDim2.new(1, -32, 0, 5)
-	schacht.Position = UDim2.new(0, 16, 1, -14)
-	schacht.BackgroundColor3 = HudChrome.Color.PanelSunken
-	schacht.BorderSizePixel = 0
-	schacht.ZIndex = 6
-	schacht.Parent = karte
-
-	local balken = Instance.new("Frame")
-	balken.Size = UDim2.new(0, 0, 1, 0)
-	balken.BackgroundColor3 = HudChrome.Color.Ready
-	balken.BorderSizePixel = 0
-	balken.ZIndex = 7
-	balken.Parent = schacht
-
-	return {
-		karte = karte,
-		rand = rand,
-		kaption = kaption,
-		bild = bild,
-		zeichen = zeichen,
-		titel = titel,
-		zahl = zahl,
-		balken = balken,
-	}
-end
-
--- Eine Abhol-Karte je Geschenk, im Voraus gebaut und dann nur noch ein- und ausgeblendet.
--- Karten bei jedem Bild neu anzulegen waere zwoelf Instanzen pro Bild.
-local claimKarten = {}
-for n = 1, GIFT_COUNT do
-	local eintrag = baueKarte("ClaimCard" .. n, KARTE_BREITE, true)
-	eintrag.kaption.Text = "READY"
-	eintrag.zahl.Text = "CLAIM"
-	eintrag.zahl.TextColor3 = HudChrome.Color.Ready
-	eintrag.rand.Color = HudChrome.Color.Ready
-	eintrag.balken.Size = UDim2.new(1, 0, 1, 0)
-	zeigeSymbol(eintrag.bild, eintrag.zeichen, n)
-	eintrag.titel.Text = giftDescription(n)
-
-	eintrag.karte.MouseButton1Click:Connect(function()
-		if not holeAb(n) then
-			return
-		end
-		-- Kurzer Stoss am Rahmen, dieselbe Bewegungssprache wie bei den Alarmsternen.
-		eintrag.rand.Color = Color3.new(1, 1, 1)
-		eintrag.rand.Thickness = 3
-		TweenService:Create(eintrag.rand, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
-			Color = HudChrome.Color.Ready,
-			Thickness = HudChrome.BorderThickness,
-		}):Play()
-	end)
-
-	claimKarten[n] = eintrag
-end
-
--- Und eine fuer das, was noch dauert. Sie ist breiter: sie traegt einen Countdown, der
--- laeuft, und der soll nicht neben "CLAIM" untergehen.
-local naechsteKarte = baueKarte("NextGiftCard", KARTE_NAECHST_BREITE, false)
-
 -- ===== Die Bahn =====
 --
 -- Sie ist das Hauptstueck dieses Bildschirms, nicht seine Fusszeile -- also ist sie gross.
@@ -397,7 +229,7 @@ local PUNKT_BEREIT = 40
 local STATION_BREITE = 92
 
 -- Die Wunschmasse. Sie gelten, solange der Platz reicht.
-local STATION_HOEHE_VOLL = 260 -- Symbol und Zeit auf BEIDEN Seiten der Bahn
+local STATION_HOEHE_VOLL = 300 -- Symbol, Zeit UND Beschreibung auf beiden Seiten der Bahn
 local SYMBOL_VOLL = 68
 local STATION_HOEHE_MIN = 150 -- darunter ist das Symbol kein Symbol mehr, sondern ein Fleck
 
@@ -485,10 +317,11 @@ for n = 1, GIFT_COUNT do
 
 	-- Symbol und Zeit sitzen auf der Seite, die dieser Station zugeteilt ist. Beide sind
 	-- Kinder des Knopfes, damit ein Klick ueberall in der Station zaehlt.
-	--   oben:   Zeit 6..26, Symbol 32..100, Stiel 100..117, Punkt um 130
-	--   unten:  Punkt um 130, Stiel 143..160, Symbol 160..228, Zeit 234..254
+	--   oben:   Text 4..24, Zeit 26..46, Symbol 52..120, Stiel, Punkt um 150
+	--   unten:  Punkt um 150, Stiel, Symbol 180..248, Zeit 254..274, Text 276..296
 	local symbolY = oben and (STATION_HOEHE / 2 - 30 - SYMBOL) or (STATION_HOEHE / 2 + 30)
 	local zeitY = oben and (symbolY - 26) or (symbolY + SYMBOL + 6)
+	local detailY = oben and (zeitY - 22) or (zeitY + 22)
 
 	local bild = Instance.new("ImageLabel")
 	bild.AnchorPoint = Vector2.new(0.5, 0)
@@ -522,6 +355,22 @@ for n = 1, GIFT_COUNT do
 	HudChrome.Number(zeitLabel, 16)
 	zeitLabel.TextColor3 = HudChrome.Color.TextDim
 
+	-- Was das Geschenk IST, im Klartext. Steht nur an den zwei Stationen, die gerade etwas
+	-- von einem wollen: der abholbaren und der naechsten. An allen zwoelf gleichzeitig waere
+	-- es eine Textwand, und an keiner waere das Symbol allein genau genug -- eine Muenze
+	-- sagt nicht, ob es fuenfzig oder achthundert sind.
+	local detailLabel = Instance.new("TextLabel")
+	detailLabel.Name = "Detail"
+	detailLabel.AnchorPoint = Vector2.new(0.5, 0)
+	detailLabel.Size = UDim2.new(0, STATION_BREITE + 60, 0, 20)
+	detailLabel.Position = UDim2.new(0.5, 0, 0, detailY)
+	detailLabel.BackgroundTransparency = 1
+	detailLabel.Text = giftDescription(n)
+	detailLabel.Visible = false
+	detailLabel.ZIndex = 6
+	detailLabel.Parent = knopf
+	HudChrome.MenuCaption(detailLabel, 14)
+
 	-- Der Strich zwischen Punkt und Symbol. Ohne ihn schweben die Symbole ueber und unter
 	-- der Bahn, ohne dass zu sehen waere, zu welchem Punkt sie gehoeren -- bei
 	-- abwechselnden Seiten ist das nicht mehr selbstverstaendlich.
@@ -548,6 +397,7 @@ for n = 1, GIFT_COUNT do
 		bild = bild,
 		zeichen = zeichen,
 		zeitLabel = zeitLabel,
+		detailLabel = detailLabel,
 		stiel = stiel,
 		oben = oben,
 	}
@@ -571,8 +421,11 @@ local function beschriftungenAusduennen()
 		local eintrag = giftCells[n]
 		local x = math.clamp(unlockTime(n) / GESAMTDAUER, 0, 1) * breite
 		local seite = eintrag.oben
-		-- Die letzte Station bekommt ihre Zeit immer: sie ist das Ziel der ganzen Strecke.
-		if n == GIFT_COUNT or x - letzteRechts[seite] >= 76 then
+		-- Zwei Zeilen sind unantastbar: CLAIM an einer bereiten Station und der laufende
+		-- Countdown an der naechsten. Sie sind der Grund, warum man ueberhaupt hinsieht --
+		-- sie dem Platz zu opfern hiesse, die Anzeige gegen das Layout zu tauschen.
+		-- Die letzte Station bekommt ihre Zeit ebenfalls immer: sie ist das Ziel der Strecke.
+		if eintrag.wichtig or n == GIFT_COUNT or x - letzteRechts[seite] >= 76 then
 			eintrag.zeitLabel.Visible = true
 			letzteRechts[seite] = x
 		else
@@ -600,19 +453,10 @@ local function layoutAnwenden()
 		return
 	end
 
-	-- ===== Die Achse zuerst, die Karten mit dem Rest =====
-	--
-	-- Umgekehrt war es falsch. Zuerst bekamen die Karten ihre volle Hoehe und die Achse den
-	-- Rest -- und wenn der Rest unter die Untergrenze fiel, stand die Achse trotzdem auf
-	-- dieser Untergrenze. Sie ragte dann unten aus dem Bild.
-	--
-	-- Eine Untergrenze, die groesser sein darf als der Platz, ist keine Grenze, sondern ein
-	-- Wunsch. Jetzt wird von unten gerechnet: die Achse sitzt so, dass sie GANZ sichtbar
-	-- ist, und was darueber uebrig bleibt, gehoert den Karten. Bleibt denen zu wenig, ist
-	-- das sichtbar und behebbar -- ein Bildschirmrand ist es nicht.
-	local frei = hoehe - 16
-	STATION_HOEHE = math.clamp(math.min(STATION_HOEHE_VOLL, frei), 1, STATION_HOEHE_VOLL)
-	local kartenHoehe = math.max(hoehe - STATION_HOEHE - 16, 0)
+	-- Die Achse bekommt die ganze Hoehe. Sie teilt sie mit nichts mehr -- das war die
+	-- Entscheidung hinter diesem Umbau, und sie loest die Enge auf dem Telefon an der
+	-- Wurzel statt sie zu verteilen.
+	STATION_HOEHE = math.clamp(hoehe - 16, 1, STATION_HOEHE_VOLL)
 
 	-- Alles andere folgt dem Verhaeltnis. Ein einzeln gesetzter Wert waere die naechste
 	-- Stelle, die beim naechsten Umbau nicht mitkommt.
@@ -622,11 +466,8 @@ local function layoutAnwenden()
 	local punkt = math.max(math.floor(PUNKT * q), 12)
 	local zeitGroesse = math.max(math.floor(16 * q), 11)
 
-	-- Die Bahn sitzt so, dass die Station unten genau mit dem Inhalt abschliesst.
-	bahn.Position = UDim2.new(0, BAHN_RAND, 0, math.floor(hoehe - STATION_HOEHE / 2))
-	-- Und die Kartenreihe bekommt, was darueber bleibt. Sie ist ein Schiebefeld -- zu wenig
-	-- Hoehe schneidet die Karten an, statt sie irgendwohin zu schieben.
-	kartenBereich.Size = UDim2.new(1, -64, 0, math.max(kartenHoehe - 16, 0))
+	-- Mittig in der Inhaltsflaeche.
+	bahn.Position = UDim2.new(0, BAHN_RAND, 0, math.floor(hoehe / 2))
 	marke.Size = UDim2.new(0, 2, 0, STATION_HOEHE - 40)
 
 	for n = 1, GIFT_COUNT do
@@ -634,6 +475,7 @@ local function layoutAnwenden()
 		local oben = eintrag.oben
 		local symbolY = oben and (STATION_HOEHE / 2 - abstand - SYMBOL) or (STATION_HOEHE / 2 + abstand)
 		local zeitY = oben and (symbolY - 26 * q) or (symbolY + SYMBOL + 6)
+		local detailY = oben and (zeitY - 22 * q) or (zeitY + 22 * q)
 
 		eintrag.knopf.Size = UDim2.new(0, STATION_BREITE, 0, STATION_HOEHE)
 		eintrag.bild.Size = UDim2.new(0, SYMBOL, 0, SYMBOL)
@@ -642,6 +484,8 @@ local function layoutAnwenden()
 		eintrag.zeichen.Position = UDim2.new(0.5, 0, 0, symbolY)
 		eintrag.zeitLabel.Position = UDim2.new(0.5, 0, 0, zeitY)
 		eintrag.zeitLabel.TextSize = zeitGroesse
+		eintrag.detailLabel.Position = UDim2.new(0.5, 0, 0, detailY)
+		eintrag.detailLabel.TextSize = math.max(math.floor(14 * q), 10)
 		eintrag.stiel.Size = UDim2.new(0, 1, 0, math.max(abstand - punkt / 2, 4))
 		eintrag.stiel.Position = UDim2.new(0.5, 0, 0.5, oben and -punkt / 2 or punkt / 2)
 		-- Die RUHENDE Groesse des Punktes. Die Schleife unten setzt sie je Zustand neu und
@@ -654,7 +498,6 @@ local function layoutAnwenden()
 end
 
 schirm.content:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutAnwenden)
-kartenBereich:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutAnwenden)
 -- Das Polster fuer die Systemleiste wird erst spaeter nachgezogen (TopInsetUtils), und mit
 -- ihm aendert sich die Inhaltshoehe. Ohne diesen Nachschlag bliebe das Layout auf dem
 -- Stand von vor dem Aufbau der Kern-Oberflaeche stehen.
@@ -676,6 +519,14 @@ local function playReadyGlow(eintrag)
 	}):Play()
 end
 
+-- ===== Zustand je Geschenk, einmal je Bild =====
+--
+-- In zwei Durchgaengen, und das hat einen Grund: welche Station die NAECHSTE ist, weiss man
+-- erst, wenn alle durchgesehen sind. Frueher stand die Vorschau in einer eigenen Karte und
+-- konnte hinterher gesetzt werden; jetzt gehoert sie einer Station, und die muss sich beim
+-- Zeichnen schon anders verhalten als ihre Nachbarn.
+local zustand = {} -- [n] = "claimed" | "ready" | "next" | "later"; einmal angelegt, nicht je Bild
+
 RunService.Heartbeat:Connect(function()
 	local sessionStart = player:GetAttribute("SessionStartTime")
 	local claimedFolder = player:FindFirstChild("ClaimedGifts")
@@ -690,140 +541,128 @@ RunService.Heartbeat:Connect(function()
 	marke.Position = UDim2.new(anteilJetzt, 0, 0.5, 0)
 	bahnGelaufen.Size = UDim2.new(anteilJetzt, 0, 1, 0)
 
-	local anyClaimable = false
+	-- ===== Erster Durchgang: einsortieren =====
 	local claimableCount = 0
-	-- Das erste ABHOLBARE, sonst das erste noch kommende. Die Karte zeigt genau eines von
-	-- beiden -- was bereitliegt, geht vor dem, was noch dauert.
-	-- Das erste Geschenk, das noch NICHT bereit ist -- unabhaengig davon, ob nebenher schon
-	-- welche bereitliegen. Das war der Fehler der einen Karte: solange irgendetwas abholbar
-	-- war, verschwand die Vorschau auf das Naechste, obwohl beides gleichzeitig gilt.
-	local naechstesN = nil
+	local naechstesGefunden = false
 
 	for n = 1, GIFT_COUNT do
-		local eintrag = giftCells[n]
 		local marker = claimedFolder:FindFirstChild("Gift" .. n)
-		if eintrag and marker then
-			local claimed = marker.Value
-			local ready = elapsed >= unlockTime(n)
-
-			if claimed then
-				-- Erledigt: die Station tritt zurueck. Sie bleibt sichtbar, damit die
-				-- Strecke vollstaendig bleibt, verlangt aber keine Aufmerksamkeit mehr.
-				eintrag.ring.Color = HudChrome.Color.Border
-				eintrag.ring.Thickness = HudChrome.BorderThickness
-				eintrag.punkt.BackgroundColor3 = HudChrome.Color.Border
-				eintrag.punkt.Size = UDim2.new(0, eintrag.punktGroesse, 0, eintrag.punktGroesse)
-				eintrag.stiel.BackgroundColor3 = HudChrome.Color.BorderDim
-				eintrag.bild.ImageTransparency = 0.55
-				eintrag.zeichen.TextTransparency = 0.55
-				eintrag.zeitLabel.TextColor3 = HudChrome.Color.TextDim
-			elseif ready then
-				eintrag.ring.Color = HudChrome.Color.Ready
-				eintrag.ring.Thickness = 3
-				eintrag.punkt.BackgroundColor3 = HudChrome.Color.PanelRaised
-				eintrag.punkt.Size = UDim2.new(0, eintrag.punktGroesseBereit, 0, eintrag.punktGroesseBereit)
-				eintrag.stiel.BackgroundColor3 = HudChrome.Color.Ready
-				eintrag.bild.ImageTransparency = 0
-				eintrag.zeichen.TextTransparency = 0
-				eintrag.zeitLabel.TextColor3 = HudChrome.Color.Ready
-				anyClaimable = true
-				claimableCount += 1
-			else
-				eintrag.ring.Color = HudChrome.Color.BorderDim
-				eintrag.ring.Thickness = HudChrome.BorderThickness
-				eintrag.punkt.BackgroundColor3 = HudChrome.Color.PanelSunken
-				eintrag.punkt.Size = UDim2.new(0, eintrag.punktGroesse, 0, eintrag.punktGroesse)
-				eintrag.stiel.BackgroundColor3 = HudChrome.Color.BorderDim
-				eintrag.bild.ImageTransparency = 0.65
-				eintrag.zeichen.TextTransparency = 0.65
-				eintrag.zeitLabel.TextColor3 = HudChrome.Color.TextDim
-				if not naechstesN then
-					naechstesN = n
-				end
-			end
-
-			-- Die Meldung kommt IM SPIEL, nicht nur hier.
-			--
-			-- Das war der groesste verschenkte Moment: das Geschenk wurde bereit, waehrend
-			-- man draussen eine Stadt zertruemmert, und niemand sagte es. Wer das Menue nicht
-			-- zufaellig offen hatte, erfuhr davon nur ueber ein kleines Laempchen.
-			--
-			-- Beim ERSTEN Durchlauf bewusst nicht: dort ist alles, was schon bereit ist, eine
-			-- Neuigkeit, und man bekaeme beim Oeffnen des Spiels fuenf Meldungen auf einmal.
-			if wasReadyInitialisiert and ready and not wasReady[n] and not claimed then
-				playReadyGlow(eintrag)
-				HudToast.Show({
-					title = "Gift ready",
-					detail = giftDescription(n),
-					glyph = giftEmoji(n),
-					image = giftBild(n),
-					color = HudChrome.Color.Ready,
-				})
-			end
-			wasReady[n] = ready
+		if not marker then
+			zustand[n] = "later"
+		elseif marker.Value then
+			zustand[n] = "claimed"
+		elseif elapsed >= unlockTime(n) then
+			zustand[n] = "ready"
+			claimableCount += 1
+		elseif not naechstesGefunden then
+			zustand[n] = "next"
+			naechstesGefunden = true
+		else
+			zustand[n] = "later"
 		end
 	end
 
-	wasReadyInitialisiert = true
-
-	-- ===== Die Reihe fuellen =====
+	-- ===== Zweiter Durchgang: zeichnen =====
 	--
-	-- Sichtbar ist eine Abhol-Karte genau dann, wenn ihr Geschenk bereit UND nicht abgeholt
-	-- ist. Die LayoutOrder ist die Geschenknummer -- damit steht die Reihe in derselben
-	-- Ordnung wie die Bahn darunter, ohne dass hier sortiert werden muesste.
+	-- Die eine Zeile unter dem Symbol traegt drei Bedeutungen, je nach Zustand: die
+	-- Uhrzeit, zu der das Geschenk faellig ist -- oder CLAIM, wenn es bereitliegt -- oder
+	-- den laufenden Countdown, wenn es das naechste ist. Ein zweites Feld dafuer haette
+	-- immer zwei Drittel leer dagestanden.
 	for n = 1, GIFT_COUNT do
-		local eintrag = claimKarten[n]
-		local marker = claimedFolder:FindFirstChild("Gift" .. n)
-		local sichtbar = marker and not marker.Value and elapsed >= unlockTime(n)
-		eintrag.karte.Visible = sichtbar == true
-		eintrag.karte.LayoutOrder = n
+		local eintrag = giftCells[n]
+		local art = zustand[n]
+		eintrag.wichtig = (art == "ready" or art == "next")
+
+		if art == "claimed" then
+			-- Erledigt: die Station tritt zurueck. Sie bleibt sichtbar, damit die Strecke
+			-- vollstaendig bleibt, verlangt aber keine Aufmerksamkeit mehr.
+			eintrag.ring.Color = HudChrome.Color.Border
+			eintrag.ring.Thickness = HudChrome.BorderThickness
+			eintrag.punkt.BackgroundColor3 = HudChrome.Color.Border
+			eintrag.punkt.Size = UDim2.new(0, eintrag.punktGroesse, 0, eintrag.punktGroesse)
+			eintrag.stiel.BackgroundColor3 = HudChrome.Color.BorderDim
+			eintrag.bild.ImageTransparency = 0.55
+			eintrag.zeichen.TextTransparency = 0.55
+			eintrag.zeitLabel.Text = formatLang(unlockTime(n))
+			eintrag.zeitLabel.TextColor3 = HudChrome.Color.TextDim
+		elseif art == "ready" then
+			eintrag.ring.Color = HudChrome.Color.Ready
+			eintrag.ring.Thickness = 3
+			eintrag.punkt.BackgroundColor3 = HudChrome.Color.PanelRaised
+			eintrag.punkt.Size = UDim2.new(0, eintrag.punktGroesseBereit, 0, eintrag.punktGroesseBereit)
+			eintrag.stiel.BackgroundColor3 = HudChrome.Color.Ready
+			eintrag.bild.ImageTransparency = 0
+			eintrag.zeichen.TextTransparency = 0
+			eintrag.zeitLabel.Text = "CLAIM"
+			eintrag.zeitLabel.TextColor3 = HudChrome.Color.Ready
+		elseif art == "next" then
+			eintrag.ring.Color = HudChrome.Color.BorderBright
+			eintrag.ring.Thickness = 2
+			eintrag.punkt.BackgroundColor3 = HudChrome.Color.PanelRaised
+			eintrag.punkt.Size = UDim2.new(0, eintrag.punktGroesse, 0, eintrag.punktGroesse)
+			eintrag.stiel.BackgroundColor3 = HudChrome.Color.Border
+			eintrag.bild.ImageTransparency = 0.2
+			eintrag.zeichen.TextTransparency = 0.2
+			eintrag.zeitLabel.Text = formatLang(unlockTime(n) - elapsed)
+			eintrag.zeitLabel.TextColor3 = HudChrome.Color.TextPrimary
+		else
+			eintrag.ring.Color = HudChrome.Color.BorderDim
+			eintrag.ring.Thickness = HudChrome.BorderThickness
+			eintrag.punkt.BackgroundColor3 = HudChrome.Color.PanelSunken
+			eintrag.punkt.Size = UDim2.new(0, eintrag.punktGroesse, 0, eintrag.punktGroesse)
+			eintrag.stiel.BackgroundColor3 = HudChrome.Color.BorderDim
+			eintrag.bild.ImageTransparency = 0.65
+			eintrag.zeichen.TextTransparency = 0.65
+			eintrag.zeitLabel.Text = formatLang(unlockTime(n))
+			eintrag.zeitLabel.TextColor3 = HudChrome.Color.TextDim
+		end
+
+		-- Der Klartext steht nur, wo er gebraucht wird. An allen zwoelf gleichzeitig waere
+		-- er eine Textwand.
+		eintrag.detailLabel.Visible = eintrag.wichtig
+		eintrag.detailLabel.TextColor3 = (art == "ready") and HudChrome.Color.Ready
+			or HudChrome.Color.TextSecondary
+
+		-- Die Meldung kommt IM SPIEL, nicht nur hier.
+		--
+		-- Das war der groesste verschenkte Moment: das Geschenk wurde bereit, waehrend man
+		-- draussen eine Stadt zertruemmert, und niemand sagte es. Wer das Menue nicht
+		-- zufaellig offen hatte, erfuhr davon nur ueber ein kleines Laempchen.
+		--
+		-- Beim ERSTEN Durchlauf bewusst nicht: dort ist alles, was schon bereit ist, eine
+		-- Neuigkeit, und man bekaeme beim Oeffnen des Spiels fuenf Meldungen auf einmal.
+		local istBereit = (art == "ready")
+		if wasReadyInitialisiert and istBereit and not wasReady[n] then
+			playReadyGlow(eintrag)
+			HudToast.Show({
+				title = "Gift ready",
+				detail = giftDescription(n),
+				glyph = giftEmoji(n),
+				image = giftBild(n),
+				color = HudChrome.Color.Ready,
+			})
+		end
+		wasReady[n] = istBereit
 	end
 
-	-- Die Karte fuer das Naechste steht ganz rechts -- was noch dauert, kommt nach dem, was
-	-- schon da ist.
-	naechsteKarte.karte.LayoutOrder = GIFT_COUNT + 1
-	if naechstesN then
-		naechsteKarte.karte.Visible = true
-		naechsteKarte.kaption.Text = "NEXT"
-		zeigeSymbol(naechsteKarte.bild, naechsteKarte.zeichen, naechstesN)
-		naechsteKarte.titel.Text = giftDescription(naechstesN)
-		naechsteKarte.zahl.Text = formatLang(unlockTime(naechstesN) - elapsed)
-		naechsteKarte.zahl.TextColor3 = HudChrome.Color.TextPrimary
-		naechsteKarte.rand.Color = HudChrome.Color.Border
-		-- Von der VORIGEN Station aus, nicht von null: von null aus staende der Balken bei
-		-- Geschenk elf fast am Ende und bewegte sich kaum. Er misst die aktuelle Strecke,
-		-- nicht die ganze Sitzung.
-		local von = naechstesN > 1 and unlockTime(naechstesN - 1) or 0
-		local bis = unlockTime(naechstesN)
-		local anteil = bis > von and math.clamp((elapsed - von) / (bis - von), 0, 1) or 0
-		naechsteKarte.balken.Size = UDim2.new(anteil, 0, 1, 0)
-	elseif claimableCount == 0 then
-		-- Nichts offen und nichts mehr unterwegs: alles abgeholt. Das ist ein Zustand und
-		-- kein Fehler -- er verdient einen Satz statt einer leeren Flaeche.
-		naechsteKarte.karte.Visible = true
-		naechsteKarte.kaption.Text = "COMPLETE"
-		naechsteKarte.titel.Text = "All gifts collected"
-		naechsteKarte.zahl.Text = formatLang(elapsed)
-		naechsteKarte.zahl.TextColor3 = HudChrome.Color.TextPrimary
-		naechsteKarte.rand.Color = HudChrome.Color.Border
-		naechsteKarte.balken.Size = UDim2.new(1, 0, 1, 0)
-		naechsteKarte.bild.Visible = false
-		naechsteKarte.zeichen.Visible = false
-	else
-		-- Es liegt etwas bereit und es kommt nichts mehr: die Reihe besteht dann nur aus
-		-- Abhol-Karten, und eine leere "NEXT"-Karte daneben waere eine Luege.
-		naechsteKarte.karte.Visible = false
-	end
+	wasReadyInitialisiert = true
+	beschriftungenAusduennen()
 
 	-- Das Geschenk-Laempchen geht NICHT beim Oeffnen aus, sondern erst beim Abholen --
 	-- sonst oeffnet man, wird abgelenkt, und das Geschenk liegt weiter da. Deshalb wird es
 	-- hier bei jedem Durchlauf neu gesetzt statt nur beim Uebergang.
 	if _G.SetNavBadge then
-		_G.SetNavBadge("Gifts", anyClaimable)
+		_G.SetNavBadge("Gifts", claimableCount > 0)
 	end
 
-	statusLabel.Text = claimableCount > 0
-			and string.format("%d ready to claim", claimableCount)
-		or "Nothing ready yet"
-	statusLabel.TextColor3 = claimableCount > 0 and HudChrome.Color.Ready or HudChrome.Color.TextSecondary
+	if claimableCount > 0 then
+		statusLabel.Text = string.format("%d ready to claim", claimableCount)
+		statusLabel.TextColor3 = HudChrome.Color.Ready
+	elseif naechstesGefunden then
+		statusLabel.Text = "Nothing ready yet"
+		statusLabel.TextColor3 = HudChrome.Color.TextSecondary
+	else
+		statusLabel.Text = "All gifts collected"
+		statusLabel.TextColor3 = HudChrome.Color.TextSecondary
+	end
 end)
