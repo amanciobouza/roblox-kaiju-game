@@ -43,6 +43,11 @@ screenGui.IgnoreGuiInset = true
 -- anzuheben, statt ein zweites ScreenGui anzulegen.
 screenGui.DisplayOrder = 100
 screenGui.Name = "GiftGui"
+-- AUSDRUECKLICH Sibling, nicht auf die Vorgabe verlassen: der ZIndex der Stationen
+-- entscheidet unten, welche bei Ueberlappung oben liegt und damit den Klick bekommt.
+-- Unter Global waere er ein Vergleich ueber den ganzen Bildschirm hinweg und wuerde
+-- zugleich die Schichtung INNERHALB einer Station durcheinanderbringen.
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
@@ -280,7 +285,11 @@ marke.Size = UDim2.new(0, 2, 0, STATION_HOEHE - 40)
 marke.Position = UDim2.new(0, 0, 0.5, 0)
 marke.BackgroundColor3 = HudChrome.Color.BorderBright
 marke.BorderSizePixel = 0
-marke.ZIndex = 6
+-- Ueber allen Stationen. Sie lag auf 6 und damit unter ihnen, seit die Stationen ihren
+-- ZIndex nach Zustand bekommen -- eine Bezugslinie, die hinter dem liegt, worauf sie sich
+-- bezieht, ist keine. Zwei Pixel Strich ueber einem Symbol faellt nicht auf; die Linie
+-- nicht zu finden, schon.
+marke.ZIndex = 200
 marke.Parent = bahn
 
 -- Eine Beschriftung fuer die Marke: ohne sie ist ein senkrechter Strich nur ein Strich.
@@ -316,6 +325,8 @@ for n = 1, GIFT_COUNT do
 	knopf.BackgroundTransparency = 1
 	knopf.AutoButtonColor = false
 	knopf.Text = ""
+	-- Der ZIndex wird unten je Zustand neu gesetzt. Er entscheidet bei ueberlappenden
+	-- Stationen, welche den Klick bekommt -- siehe die Begruendung dort.
 	knopf.ZIndex = 4
 	knopf.Parent = bahn
 
@@ -590,6 +601,33 @@ RunService.Heartbeat:Connect(function()
 		local eintrag = giftCells[n]
 		local art = zustand[n]
 		eintrag.wichtig = (art == "ready" or art == "next")
+
+		-- ===== Wer bei Ueberlappung oben liegt =====
+		--
+		-- Vorne draengen sich die Stationen: zwischen dem ersten und dem zweiten Geschenk
+		-- liegen auf der Bahn rund fuenfunddreissig Pixel, ihre Knoepfe sind zweiundneunzig
+		-- breit. Sie ueberdecken sich also, und bei gleichem ZIndex gewinnt der spaeter
+		-- angelegte -- das zweite Geschenk lag ueber dem ersten, und das erste war praktisch
+		-- nicht zu treffen, sobald beide bereit waren.
+		--
+		-- Die Knoepfe schmaler zu machen half nicht: mehr als fuenfunddreissig Pixel gibt
+		-- der Abstand nicht her, und das ist fuer einen Daumen zu wenig. Also bleibt die
+		-- Ueberlappung, und die Reihenfolge entscheidet:
+		--
+		--   bereit liegt ueber allem anderen, und darunter das FRUEHERE ueber dem spaeteren
+		--   das naechste darunter
+		--   der Rest zuunterst, ebenfalls frueher ueber spaeter
+		--
+		-- Damit trifft man an einer dichten Stelle immer das Geschenk, das man zuerst haben
+		-- will -- und nach dem Abholen rueckt das naechste an dieselbe Stelle nach. Man tippt
+		-- zweimal auf denselben Punkt und hat beide.
+		if art == "ready" then
+			eintrag.knopf.ZIndex = 100 - n
+		elseif art == "next" then
+			eintrag.knopf.ZIndex = 60
+		else
+			eintrag.knopf.ZIndex = 20 - n
+		end
 
 		if art == "claimed" then
 			-- Erledigt: die Station tritt zurueck. Sie bleibt sichtbar, damit die Strecke
