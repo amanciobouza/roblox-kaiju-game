@@ -113,6 +113,30 @@ local giftTypesFolder = Instance.new("Folder")
 giftTypesFolder.Name = "GiftTypes"
 giftTypesFolder.Parent = ReplicatedStorage
 
+-- ===== Die kurze Fassung =====
+--
+-- "2x Coins for 5 min" passt nicht unter ein Symbol auf der Zeitachse -- und muss es auch
+-- nicht: welche SORTE es ist, sagt dort bereits das Bild. Was das Bild nicht sagen kann,
+-- ist die Menge, und eine Muenze sieht bei fuenfzig aus wie bei achthundert.
+--
+-- Also zwei Fassungen desselben Geschenks: die lange fuer die Stellen, wo Platz ist, und
+-- diese hier fuer die zwoelf Stationen. Beide kommen vom Server, damit sie nicht
+-- auseinanderlaufen, wenn jemand an den Werten dreht.
+local function shortForGift(gift)
+	if gift.type == "Coins" or gift.type == "XP" or gift.type == "Evolution" then
+		return tostring(gift.amount)
+	elseif gift.type == "CoinsBoost" or gift.type == "DamageBoost" then
+		return string.format("%dx %dm", gift.multiplier, math.floor(gift.duration / 60))
+	elseif gift.type == "MegaBoost" then
+		return string.format("%dx %dm", gift.coinsMultiplier, math.floor(gift.duration / 60))
+	end
+	return ""
+end
+
+local giftShortFolder = Instance.new("Folder")
+giftShortFolder.Name = "GiftShort"
+giftShortFolder.Parent = ReplicatedStorage
+
 for n, gift in ipairs(GIFTS) do
 	local desc = Instance.new("StringValue")
 	desc.Name = "Gift" .. n
@@ -134,6 +158,11 @@ for n, gift in ipairs(GIFTS) do
 	kind.Name = "Gift" .. n
 	kind.Value = gift.type
 	kind.Parent = giftTypesFolder
+
+	local short = Instance.new("StringValue")
+	short.Name = "Gift" .. n
+	short.Value = shortForGift(gift)
+	short.Parent = giftShortFolder
 end
 
 -- Aktiviert die Belohnung von Geschenk n für den Spieler.

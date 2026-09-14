@@ -30,6 +30,9 @@ local giftIconsFolder = ReplicatedStorage:WaitForChild("GiftIcons", 10)
 -- Die Sorte je Geschenk -- erst damit laesst sich das richtige Bild waehlen. Mit
 -- Zeitgrenze, weil ein aelterer Server sie nicht anlegt; dann traegt das Emoji weiter.
 local giftTypesFolder = ReplicatedStorage:WaitForChild("GiftTypes", 10)
+-- Die kurze Fassung ("800", "2x 5m") fuer die zwoelf Stationen. Die lange steht daneben in
+-- GiftDescriptions und wird nur dort gezeigt, wo Platz ist.
+local giftShortFolder = ReplicatedStorage:WaitForChild("GiftShort", 10)
 
 -- Fuer die Meldung im Spiel, wenn ein Geschenk bereit wird.
 local HudToast = require(ReplicatedStorage:WaitForChild("HudToast"))
@@ -100,6 +103,16 @@ end
 local function giftDescription(n)
 	local value = giftDescriptionsFolder:FindFirstChild("Gift" .. n)
 	return value and value.Value or ""
+end
+
+-- Faellt auf die lange Fassung zurueck, wenn der Server sie noch nicht kennt -- lieber zu
+-- breit als leer.
+local function giftShort(n)
+	local value = giftShortFolder and giftShortFolder:FindFirstChild("Gift" .. n)
+	if value and value.Value ~= "" then
+		return value.Value
+	end
+	return giftDescription(n)
 end
 
 -- Bild wenn hochgeladen, sonst das Emoji vom Server. Dieselbe Ausweichregel wie bei den
@@ -355,18 +368,23 @@ for n = 1, GIFT_COUNT do
 	HudChrome.Number(zeitLabel, 16)
 	zeitLabel.TextColor3 = HudChrome.Color.TextDim
 
-	-- Was das Geschenk IST, im Klartext. Steht nur an den zwei Stationen, die gerade etwas
-	-- von einem wollen: der abholbaren und der naechsten. An allen zwoelf gleichzeitig waere
-	-- es eine Textwand, und an keiner waere das Symbol allein genau genug -- eine Muenze
-	-- sagt nicht, ob es fuenfzig oder achthundert sind.
+	-- Was das Geschenk IST -- an JEDER Station, nicht nur an der naechsten.
+	--
+	-- Zuerst stand es nur an den zwei Stationen, die gerade etwas von einem wollen. Das war
+	-- zu sparsam: man sah dann weder, was man schon bekommen hat, noch was noch kommt --
+	-- und genau das ist der Grund, warum man sich eine Belohnungsleiste ansieht.
+	--
+	-- Deshalb zwei Fassungen. Normalerweise die kurze ("800", "2x 5m") -- das Symbol sagt
+	-- die Sorte, die Zahl die Menge, und breit ist sie nicht. An der bereiten und der
+	-- naechsten Station die lange ("2x Coins for 5 min"): dort schaut man genau hin, und
+	-- dort darf der Text ueber die Stationsbreite hinausragen.
 	local detailLabel = Instance.new("TextLabel")
 	detailLabel.Name = "Detail"
 	detailLabel.AnchorPoint = Vector2.new(0.5, 0)
-	detailLabel.Size = UDim2.new(0, STATION_BREITE + 60, 0, 20)
+	detailLabel.Size = UDim2.new(0, STATION_BREITE, 0, 20)
 	detailLabel.Position = UDim2.new(0.5, 0, 0, detailY)
 	detailLabel.BackgroundTransparency = 1
-	detailLabel.Text = giftDescription(n)
-	detailLabel.Visible = false
+	detailLabel.Text = giftShort(n)
 	detailLabel.ZIndex = 6
 	detailLabel.Parent = knopf
 	HudChrome.MenuCaption(detailLabel, 14)
@@ -617,11 +635,21 @@ RunService.Heartbeat:Connect(function()
 			eintrag.zeitLabel.TextColor3 = HudChrome.Color.TextDim
 		end
 
-		-- Der Klartext steht nur, wo er gebraucht wird. An allen zwoelf gleichzeitig waere
-		-- er eine Textwand.
-		eintrag.detailLabel.Visible = eintrag.wichtig
-		eintrag.detailLabel.TextColor3 = (art == "ready") and HudChrome.Color.Ready
-			or HudChrome.Color.TextSecondary
+		-- Kurz ueberall, lang an den zwei Stationen, die gerade etwas von einem wollen. Die
+		-- Breite geht mit: die lange Fassung darf ueber die Station hinausragen, die kurze
+		-- nicht -- sonst schoebe sie sich vorne bei den dicht stehenden Geschenken ueber
+		-- ihre Nachbarn.
+		if eintrag.wichtig then
+			eintrag.detailLabel.Text = giftDescription(n)
+			eintrag.detailLabel.Size = UDim2.new(0, STATION_BREITE + 80, 0, 20)
+			eintrag.detailLabel.TextColor3 = (art == "ready") and HudChrome.Color.Ready
+				or HudChrome.Color.TextPrimary
+		else
+			eintrag.detailLabel.Text = giftShort(n)
+			eintrag.detailLabel.Size = UDim2.new(0, STATION_BREITE, 0, 20)
+			eintrag.detailLabel.TextColor3 = (art == "claimed") and HudChrome.Color.TextDim
+				or HudChrome.Color.TextSecondary
+		end
 
 		-- Die Meldung kommt IM SPIEL, nicht nur hier.
 		--
