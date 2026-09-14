@@ -148,6 +148,22 @@ HudChrome.Icon = {
 	Objective = "rbxassetid://137194925165755",
 	BuildingDestruction = "rbxassetid://116647769762689",
 	Guardian = "rbxassetid://103770979890545",
+
+	-- Die acht Menuepunkte. Sie loesen die Emoji ab, die bisher auf den Kacheln standen --
+	-- dasselbe Argument wie bei den Angriffen: ein Emoji zeichnet das Betriebssystem in
+	-- seinem eigenen bunten Stil, und acht davon nebeneinander waren die lauteste Flaeche
+	-- im ganzen Menue.
+	--
+	-- Der Schluessel "Skins" heisst so, obwohl der Menuepunkt intern "Monster" ist: der
+	-- interne Name steht im Speicherstand und darf nicht wandern, der sichtbare ist Skins.
+	Skins = "rbxassetid://89192509867933",
+	Achievements = "rbxassetid://126073634057511",
+	Talents = "rbxassetid://124483432242014",
+	Companion = "rbxassetid://105165530758812",
+	Gift = "rbxassetid://93207170168404",
+	Faction = "rbxassetid://74313387395312",
+	Archive = "rbxassetid://90336087936743",
+	Help = "rbxassetid://119487776863498",
 }
 
 -- Legt ein Symbol an.

@@ -270,14 +270,18 @@ local NAV_BUTTONS = {
 	-- Speicherstand (NavBadge_Monster) und in der Whitelist des NavBadgeService. Ihn
 	-- umzubenennen wuerde bei jedem Spieler das gemerkte Laempchen verwerfen -- fuer nichts,
 	-- denn sichtbar ist nur das Label.
-	{ key = "Monster", icon = "🐲", label = "Skins", color = Color3.fromRGB(80, 200, 90) },
-	{ key = "Achievements", icon = "🏆", label = "Achievements", color = Color3.fromRGB(255, 205, 30) },
-	{ key = "Talents", icon = "🌟", label = "Talents", color = Color3.fromRGB(60, 170, 220) },
-	{ key = "Pets", icon = "🐺", label = "Companion", color = Color3.fromRGB(255, 150, 90) },
-	{ key = "Gifts", icon = "🎁", label = "Gift", color = Color3.fromRGB(230, 80, 130) },
-	{ key = "Faction", icon = "🦖", label = "Faction", color = Color3.fromRGB(90, 80, 200) },
-	{ key = "Archive", icon = "📔", label = "Archive", color = Color3.fromRGB(180, 140, 80) },
-	{ key = "Help", icon = "❓", label = "Help", color = Color3.fromRGB(120, 130, 140) },
+	--
+	-- Die Farben sind entfallen. Sie gehoerten zu den acht bunten Knoepfen der alten
+	-- Leiste, und seit die weg sind, las sie niemand mehr -- das Feld stand als Beleg fuer
+	-- etwas, das es nicht mehr gibt.
+	{ key = "Monster", icon = HudChrome.Icon.Skins, label = "Skins" },
+	{ key = "Achievements", icon = HudChrome.Icon.Achievements, label = "Achievements" },
+	{ key = "Talents", icon = HudChrome.Icon.Talents, label = "Talents" },
+	{ key = "Pets", icon = HudChrome.Icon.Companion, label = "Companion" },
+	{ key = "Gifts", icon = HudChrome.Icon.Gift, label = "Gift" },
+	{ key = "Faction", icon = HudChrome.Icon.Faction, label = "Faction" },
+	{ key = "Archive", icon = HudChrome.Icon.Archive, label = "Archive" },
+	{ key = "Help", icon = HudChrome.Icon.Help, label = "Help" },
 }
 
 local navButtons = {} -- [key] = TextButton
@@ -429,17 +433,12 @@ for index, config in ipairs(NAV_BUTTONS) do
 	})
 	navStrokes[config.key] = buttonStroke
 
-	local icon = Instance.new("TextLabel")
+	local icon = HudChrome.IconImage(button, config.icon)
 	icon.Name = "Icon"
-	icon.Size = UDim2.new(1, 0, 0, 38)
-	icon.Position = UDim2.new(0, 0, 0, 10)
-	icon.BackgroundTransparency = 1
-	icon.Font = Enum.Font.GothamBold
-	icon.TextScaled = true
-	icon.Text = config.icon
-	icon.TextTransparency = unbuilt and 0.6 or 0
+	icon.Size = UDim2.new(0, 38, 0, 38)
+	icon.Position = UDim2.new(0.5, -19, 0, 10)
+	icon.ImageTransparency = unbuilt and 0.6 or 0
 	icon.ZIndex = 44
-	icon.Parent = button
 
 	local caption = Instance.new("TextLabel")
 	caption.Name = "Caption"
