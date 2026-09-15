@@ -1909,229 +1909,242 @@ local function knochenBereich(character, teileNamen)
 	return (minimum + maximum) * 0.5, maximum - minimum
 end
 
--- Woher der Scan seine Gestalt nimmt.
+-- ===== Der ganze Scan-Aufbau liegt in einem do-Block =====
 --
--- NICHT aus der getragenen Figur: die ist noch der alte Avatar, solange der Umbau auf die
--- Stufenmodelle laeuft. Der Scan soll zeigen, was die Stufe WIRKLICH ist -- und das weiss
--- StageModels.
+-- Nicht der Uebersicht wegen, sondern wegen der Register. Luau erlaubt 200 gleichzeitig
+-- lebende lokale Variablen je Funktion, und der Hauptteil dieser Datei IST eine einzige
+-- Funktion -- die Datei stand bei 199. Beim letzten Mal, als sie darueber war, liess sie
+-- sich nicht mehr uebersetzen und das halbe HUD verschwand; die Meldung dazu steht so weit
+-- oben in der Ausgabe, dass man sie leicht uebersieht.
 --
--- Gebaut wird einmal und dann geklont. Ein Modell kann nur in EINEM ViewportFrame haengen,
--- drei Fenster brauchen also drei Kopien -- aber nur einen Bau.
-local scanVorlage = nil
-local scanVorlageSkin = nil
+-- Ein do-Block gibt seine Register am Ende frei. Die sechs Namen hier drin werden ausserhalb
+-- nirgends gebraucht -- die drei Verbindungen unten halten baueAlleScans als Aufwertung
+-- fest, und das genuegt.
+do
+	-- Woher der Scan seine Gestalt nimmt.
+	--
+	-- NICHT aus der getragenen Figur: die ist noch der alte Avatar, solange der Umbau auf die
+	-- Stufenmodelle laeuft. Der Scan soll zeigen, was die Stufe WIRKLICH ist -- und das weiss
+	-- StageModels.
+	--
+	-- Gebaut wird einmal und dann geklont. Ein Modell kann nur in EINEM ViewportFrame haengen,
+	-- drei Fenster brauchen also drei Kopien -- aber nur einen Bau.
+	local scanVorlage = nil
+	local scanVorlageSkin = nil
 
-local function holeVorlage()
-	local ausgeruestet = player:FindFirstChild("EquippedSkin")
-	local skinId = (ausgeruestet and ausgeruestet.Value) or 0
+	local function holeVorlage()
+		local ausgeruestet = player:FindFirstChild("EquippedSkin")
+		local skinId = (ausgeruestet and ausgeruestet.Value) or 0
 
-	if scanVorlage and scanVorlage.Parent and scanVorlageSkin == skinId then
-		return scanVorlage
-	end
-
-	if scanVorlage then
-		scanVorlage:Destroy()
-		scanVorlage = nil
-	end
-
-	if StageModels and StageModels.BuildPreview then
-		local ok, modell = pcall(StageModels.BuildPreview, "Kaiju", skinId)
-		if ok and modell then
-			modell.Parent = script -- irgendwo ausserhalb des Bildes ablegen, nur als Vorlage
-			scanVorlage = modell
-			scanVorlageSkin = skinId
+		if scanVorlage and scanVorlage.Parent and scanVorlageSkin == skinId then
 			return scanVorlage
 		end
-	end
 
-	-- Rueckfall: die getragene Figur. Besser ein alter Scan als gar keiner.
-	return player.Character
-end
+		if scanVorlage then
+			scanVorlage:Destroy()
+			scanVorlage = nil
+		end
 
-local function baueScan(key, vorlage)
-	local eintrag = statBars[key]
-	local teileNamen = SCAN_TEILE[key]
-	if not eintrag or not teileNamen or not vorlage then
-		return false, "keine Vorlage"
-	end
-
-	local altes = eintrag.scanViewport:FindFirstChildOfClass("Model")
-	if altes then
-		altes:Destroy()
-	end
-
-	local mitte, groesse = knochenBereich(vorlage, teileNamen)
-	if not mitte then
-		return false, "keine Knochen dieses Namens im Modell"
-	end
-
-	-- Gehoert dieses Teil zum gescannten Bereich?
-	--
-	-- Geprueft wird die LAGE, nicht der Name: wie das getragene Modell seine Teile nennt,
-	-- weiss dieses Skript nicht. Der Knochenbereich sagt, wo der Arm ist -- was dort liegt,
-	-- ist der Arm. Der Zuschlag faengt auf, dass das sichtbare Mesh ueber seinen Knochen
-	-- hinausragt.
-	--
-	-- Der Rand ist in ALLEN Richtungen gleich gross und richtet sich nach der LAENGSTEN
-	-- Kante des Bereichs. Vorher war er je Achse anteilig -- und genau daran scheiterte der
-	-- Rumpf: sein Knochen ist eine duenne Scheibe, in der Tiefe also nur ein bis zwei
-	-- Studs. Fuenfunddreissig Prozent davon sind ein paar Zentimeter, und die Rueckenplatten
-	-- sitzen weiter hinten. Sie fielen aus dem Bereich, obwohl sie offensichtlich zum Rumpf
-	-- gehoeren.
-	local randweite = math.max(groesse.X, groesse.Y, groesse.Z) * 0.3
-	local rand = Vector3.new(randweite, randweite, randweite)
-	local von = mitte - groesse * 0.5 - rand
-	local bis = mitte + groesse * 0.5 + rand
-	local function imBereich(punkt)
-		return punkt.X >= von.X and punkt.X <= bis.X
-			and punkt.Y >= von.Y and punkt.Y <= bis.Y
-			and punkt.Z >= von.Z and punkt.Z <= bis.Z
-	end
-
-	-- Alles Sichtbare klonen, ohne Namen zu raten.
-	local modell = Instance.new("Model")
-	modell.Name = "ScanModel"
-	local gefunden = 0
-	for _, nachfahre in ipairs(vorlage:GetDescendants()) do
-		if nachfahre:IsA("BasePart") and nachfahre.Transparency < 1 then
-			local gehoertDazu = imBereich(nachfahre.Position)
-			local klon = nachfahre:Clone()
-			for _, kind in ipairs(klon:GetChildren()) do
-				if not kind:IsA("SpecialMesh") then
-					kind:Destroy()
-				end
-			end
-			if klon:IsA("MeshPart") then
-				klon.TextureID = "" -- ein Roentgenbild zeigt Form, nicht Farbe
-			end
-			klon.Anchored = true
-			klon.CanCollide = false
-			klon.CastShadow = false
-			klon.Material = Enum.Material.Neon
-			-- Deutlich durchsichtig: ein Roentgenbild zeigt das Innere MIT, nicht die
-			-- Oberflaeche davor. Ueberlappende Teile summieren sich zu den dichteren
-			-- Stellen auf, genau wie bei einer echten Durchleuchtung.
-			--
-			-- Der gescannte Bereich leuchtet in der Farbe seines Wertes, der Rest bleibt
-			-- grau und tritt noch weiter zurueck.
-			klon.Color = gehoertDazu
-				and eintrag.color:Lerp(HudChrome.Color.BorderBright, SCAN_ENTSAETTIGUNG)
-				or SCAN_GRAU
-			klon.Transparency = gehoertDazu and 0.15 or 0.3
-			klon.Parent = modell
-			if gehoertDazu then
-				gefunden += 1
+		if StageModels and StageModels.BuildPreview then
+			local ok, modell = pcall(StageModels.BuildPreview, "Kaiju", skinId)
+			if ok and modell then
+				modell.Parent = script -- irgendwo ausserhalb des Bildes ablegen, nur als Vorlage
+				scanVorlage = modell
+				scanVorlageSkin = skinId
+				return scanVorlage
 			end
 		end
+
+		-- Rueckfall: die getragene Figur. Besser ein alter Scan als gar keiner.
+		return player.Character
 	end
 
-	if gefunden == 0 then
-		modell:Destroy()
-		return false, "Knochen da, aber nichts Sichtbares in ihrem Bereich"
-	end
+	local function baueScan(key, vorlage)
+		local eintrag = statBars[key]
+		local teileNamen = SCAN_TEILE[key]
+		if not eintrag or not teileNamen or not vorlage then
+			return false, "keine Vorlage"
+		end
 
-	modell.Parent = eintrag.scanViewport
+		local altes = eintrag.scanViewport:FindFirstChildOfClass("Model")
+		if altes then
+			altes:Destroy()
+		end
 
-	-- Kamera auf den Knochenbereich richten, von der SEITE.
-	--
-	-- Von vorn ueberdeckt der Rumpf die Arme und die Ruecken-Platten sind gar nicht zu
-	-- sehen. Von der Seite steht jedes der drei Teile frei: der Arm neben dem Koerper, das
-	-- Bein darunter, und der Ruecken im Profil. Das ist auch die Ansicht, in der ein
-	-- Roentgenbild ueblicherweise gemacht wird.
-	--
-	-- Die Richtung kommt aus der Wurzel der Vorlage, wenn es eine gibt. Sonst gilt die
-	-- Roblox-Konvention: die Vorderseite zeigt entlang -Z, rechts ist damit +X -- dieselbe
-	-- Annahme, auf der auch ModelPreviewUtils.Fit beruht.
-	local wurzel = vorlage:FindFirstChild("HumanoidRootPart", true)
-	local zurSeite = wurzel and wurzel.CFrame.RightVector or Vector3.new(1, 0, 0)
+		local mitte, groesse = knochenBereich(vorlage, teileNamen)
+		if not mitte then
+			return false, "keine Knochen dieses Namens im Modell"
+		end
 
-	local kamera = eintrag.scanViewport.CurrentCamera
-	if not kamera then
-		kamera = Instance.new("Camera")
-		kamera.Parent = eintrag.scanViewport
-		eintrag.scanViewport.CurrentCamera = kamera
-	end
-	kamera.FieldOfView = SCAN_FOV
+		-- Gehoert dieses Teil zum gescannten Bereich?
+		--
+		-- Geprueft wird die LAGE, nicht der Name: wie das getragene Modell seine Teile nennt,
+		-- weiss dieses Skript nicht. Der Knochenbereich sagt, wo der Arm ist -- was dort liegt,
+		-- ist der Arm. Der Zuschlag faengt auf, dass das sichtbare Mesh ueber seinen Knochen
+		-- hinausragt.
+		--
+		-- Der Rand ist in ALLEN Richtungen gleich gross und richtet sich nach der LAENGSTEN
+		-- Kante des Bereichs. Vorher war er je Achse anteilig -- und genau daran scheiterte der
+		-- Rumpf: sein Knochen ist eine duenne Scheibe, in der Tiefe also nur ein bis zwei
+		-- Studs. Fuenfunddreissig Prozent davon sind ein paar Zentimeter, und die Rueckenplatten
+		-- sitzen weiter hinten. Sie fielen aus dem Bereich, obwohl sie offensichtlich zum Rumpf
+		-- gehoeren.
+		local randweite = math.max(groesse.X, groesse.Y, groesse.Z) * 0.3
+		local rand = Vector3.new(randweite, randweite, randweite)
+		local von = mitte - groesse * 0.5 - rand
+		local bis = mitte + groesse * 0.5 + rand
+		local function imBereich(punkt)
+			return punkt.X >= von.X and punkt.X <= bis.X
+				and punkt.Y >= von.Y and punkt.Y <= bis.Y
+				and punkt.Z >= von.Z and punkt.Z <= bis.Z
+		end
 
-	local spanne = math.max(groesse.X, groesse.Y, groesse.Z)
-	local abstand = (spanne * 0.5) / math.tan(math.rad(SCAN_FOV) * 0.5) * SCAN_ZOOM
-	kamera.CFrame = CFrame.new(mitte + zurSeite * abstand, mitte)
-
-	return true
-end
-
--- Der Scan braucht eine Figur, die schon SICHTBAR ist. Beim Spawn ist sie das nicht: die
--- R15-Teile stehen sofort, das getragene Modell haengt sich erst danach an. Deshalb wird
--- so lange erneut versucht, bis es klappt -- und nicht einmalig geraten.
-local scanVersuch = 0
-local function baueAlleScans()
-	scanVersuch += 1
-	local meinVersuch = scanVersuch
-
-	task.spawn(function()
-		-- Teilerfolge werden BEHALTEN. Vorher wurde bei jedem Durchgang alles neu gebaut,
-		-- und ein einziger Bereich, der nie gelingt, haette die beiden anderen zwanzigmal
-		-- neu erzeugt -- und die Erfolgsmeldung waere nie gekommen, obwohl zwei Fenster
-		-- laengst standen.
-		local steht = {}
-		for durchgang = 1, 20 do -- hoechstens zehn Sekunden
-			if scanVersuch ~= meinVersuch then
-				return -- ein neuer Charakter hat uebernommen
+		-- Alles Sichtbare klonen, ohne Namen zu raten.
+		local modell = Instance.new("Model")
+		modell.Name = "ScanModel"
+		local gefunden = 0
+		for _, nachfahre in ipairs(vorlage:GetDescendants()) do
+			if nachfahre:IsA("BasePart") and nachfahre.Transparency < 1 then
+				local gehoertDazu = imBereich(nachfahre.Position)
+				local klon = nachfahre:Clone()
+				for _, kind in ipairs(klon:GetChildren()) do
+					if not kind:IsA("SpecialMesh") then
+						kind:Destroy()
+					end
+				end
+				if klon:IsA("MeshPart") then
+					klon.TextureID = "" -- ein Roentgenbild zeigt Form, nicht Farbe
+				end
+				klon.Anchored = true
+				klon.CanCollide = false
+				klon.CastShadow = false
+				klon.Material = Enum.Material.Neon
+				-- Deutlich durchsichtig: ein Roentgenbild zeigt das Innere MIT, nicht die
+				-- Oberflaeche davor. Ueberlappende Teile summieren sich zu den dichteren
+				-- Stellen auf, genau wie bei einer echten Durchleuchtung.
+				--
+				-- Der gescannte Bereich leuchtet in der Farbe seines Wertes, der Rest bleibt
+				-- grau und tritt noch weiter zurueck.
+				klon.Color = gehoertDazu
+					and eintrag.color:Lerp(HudChrome.Color.BorderBright, SCAN_ENTSAETTIGUNG)
+					or SCAN_GRAU
+				klon.Transparency = gehoertDazu and 0.15 or 0.3
+				klon.Parent = modell
+				if gehoertDazu then
+					gefunden += 1
+				end
 			end
+		end
 
-			local vorlage = holeVorlage()
-			local gruende = {}
-			if vorlage then
-				for key in pairs(SCAN_TEILE) do
-					if not steht[key] then
-						local ok, grund = baueScan(key, vorlage)
-						if ok then
-							steht[key] = true
-						else
-							gruende[key] = grund
+		if gefunden == 0 then
+			modell:Destroy()
+			return false, "Knochen da, aber nichts Sichtbares in ihrem Bereich"
+		end
+
+		modell.Parent = eintrag.scanViewport
+
+		-- Kamera auf den Knochenbereich richten, von der SEITE.
+		--
+		-- Von vorn ueberdeckt der Rumpf die Arme und die Ruecken-Platten sind gar nicht zu
+		-- sehen. Von der Seite steht jedes der drei Teile frei: der Arm neben dem Koerper, das
+		-- Bein darunter, und der Ruecken im Profil. Das ist auch die Ansicht, in der ein
+		-- Roentgenbild ueblicherweise gemacht wird.
+		--
+		-- Die Richtung kommt aus der Wurzel der Vorlage, wenn es eine gibt. Sonst gilt die
+		-- Roblox-Konvention: die Vorderseite zeigt entlang -Z, rechts ist damit +X -- dieselbe
+		-- Annahme, auf der auch ModelPreviewUtils.Fit beruht.
+		local wurzel = vorlage:FindFirstChild("HumanoidRootPart", true)
+		local zurSeite = wurzel and wurzel.CFrame.RightVector or Vector3.new(1, 0, 0)
+
+		local kamera = eintrag.scanViewport.CurrentCamera
+		if not kamera then
+			kamera = Instance.new("Camera")
+			kamera.Parent = eintrag.scanViewport
+			eintrag.scanViewport.CurrentCamera = kamera
+		end
+		kamera.FieldOfView = SCAN_FOV
+
+		local spanne = math.max(groesse.X, groesse.Y, groesse.Z)
+		local abstand = (spanne * 0.5) / math.tan(math.rad(SCAN_FOV) * 0.5) * SCAN_ZOOM
+		kamera.CFrame = CFrame.new(mitte + zurSeite * abstand, mitte)
+
+		return true
+	end
+
+	-- Der Scan braucht eine Figur, die schon SICHTBAR ist. Beim Spawn ist sie das nicht: die
+	-- R15-Teile stehen sofort, das getragene Modell haengt sich erst danach an. Deshalb wird
+	-- so lange erneut versucht, bis es klappt -- und nicht einmalig geraten.
+	local scanVersuch = 0
+	local function baueAlleScans()
+		scanVersuch += 1
+		local meinVersuch = scanVersuch
+
+		task.spawn(function()
+			-- Teilerfolge werden BEHALTEN. Vorher wurde bei jedem Durchgang alles neu gebaut,
+			-- und ein einziger Bereich, der nie gelingt, haette die beiden anderen zwanzigmal
+			-- neu erzeugt -- und die Erfolgsmeldung waere nie gekommen, obwohl zwei Fenster
+			-- laengst standen.
+			local steht = {}
+			for durchgang = 1, 20 do -- hoechstens zehn Sekunden
+				if scanVersuch ~= meinVersuch then
+					return -- ein neuer Charakter hat uebernommen
+				end
+
+				local vorlage = holeVorlage()
+				local gruende = {}
+				if vorlage then
+					for key in pairs(SCAN_TEILE) do
+						if not steht[key] then
+							local ok, grund = baueScan(key, vorlage)
+							if ok then
+								steht[key] = true
+							else
+								gruende[key] = grund
+							end
 						end
 					end
 				end
-			end
 
-			local fehlend = {}
-			for key in pairs(SCAN_TEILE) do
-				if not steht[key] then
-					table.insert(fehlend, key .. " (" .. (gruende[key] or "unbekannt") .. ")")
+				local fehlend = {}
+				for key in pairs(SCAN_TEILE) do
+					if not steht[key] then
+						table.insert(fehlend, key .. " (" .. (gruende[key] or "unbekannt") .. ")")
+					end
 				end
-			end
 
-			if #fehlend == 0 then
-				print(string.format(
-					"[Kaiju Debug] Scan: alle drei stehen nach %d Versuch(en) -- Vorlage: %s.",
-					durchgang,
-					(scanVorlage and scanVorlage.Name) or "getragene Figur"
-				))
-				return
-			end
+				if #fehlend == 0 then
+					print(string.format(
+						"[Kaiju Debug] Scan: alle drei stehen nach %d Versuch(en) -- Vorlage: %s.",
+						durchgang,
+						(scanVorlage and scanVorlage.Name) or "getragene Figur"
+					))
+					return
+				end
 
-			if durchgang == 20 then
-				-- Benennen, WELCHER Bereich fehlt. "Es geht nicht" hilft niemandem; der
-				-- Name sagt, ob die Knochen des Bereichs im Modell fehlen oder ob dort
-				-- nichts Sichtbares liegt.
-				warn(string.format(
-					"[Kaiju Debug] Scan: nach zehn Sekunden fehlen noch %s (Vorlage: %s).",
-					table.concat(fehlend, ", "),
-					(scanVorlage and scanVorlage.Name) or "getragene Figur"
-				))
+				if durchgang == 20 then
+					-- Benennen, WELCHER Bereich fehlt. "Es geht nicht" hilft niemandem; der
+					-- Name sagt, ob die Knochen des Bereichs im Modell fehlen oder ob dort
+					-- nichts Sichtbares liegt.
+					warn(string.format(
+						"[Kaiju Debug] Scan: nach zehn Sekunden fehlen noch %s (Vorlage: %s).",
+						table.concat(fehlend, ", "),
+						(scanVorlage and scanVorlage.Name) or "getragene Figur"
+					))
+				end
+				task.wait(0.5)
 			end
-			task.wait(0.5)
-		end
-	end)
+		end)
+	end
+
+	-- Der Charakter existiert beim Start des Skripts moeglicherweise noch nicht, und er wird
+	-- bei jedem Tod und bei jedem Skin-Wechsel ersetzt. Einen Verzug braucht es hier nicht
+	-- mehr -- die Wiederholung oben wartet selbst, bis die Figur sichtbar ist.
+	player.CharacterAdded:Connect(baueAlleScans)
+	if player.Character then
+		baueAlleScans()
+	end
+	player:GetAttributeChangedSignal("EquippedSkin"):Connect(baueAlleScans)
 end
-
--- Der Charakter existiert beim Start des Skripts moeglicherweise noch nicht, und er wird
--- bei jedem Tod und bei jedem Skin-Wechsel ersetzt. Einen Verzug braucht es hier nicht
--- mehr -- die Wiederholung oben wartet selbst, bis die Figur sichtbar ist.
-player.CharacterAdded:Connect(baueAlleScans)
-if player.Character then
-	baueAlleScans()
-end
-player:GetAttributeChangedSignal("EquippedSkin"):Connect(baueAlleScans)
 
 -- Die Abtastlinien wandern. Eine Schleife fuer alle drei -- drei eigene waeren dieselbe
 -- Rechnung dreimal.
@@ -2634,6 +2647,37 @@ function aktualisiereBoostLage()
 	boostFrame.Position = UDim2.new(1, SPALTE_X, 0, KRAFT_Y + statsRowFrame.Size.Y.Offset + 8)
 end
 aktualisiereBoostLage()
+
+-- ===== Das Akkordeon muss auch einmal von selbst aufgehen =====
+-- oeffneKraft legt die drei Kraftzeilen ueberhaupt erst uebereinander: sie bekommen ihre
+-- Lage und Hoehe dort, nicht beim Bauen. Aufgerufen wurde es aber nur aus dem
+-- Klick-Handler einer Zeile -- wer nie klickte, sah alle drei an derselben Stelle
+-- uebereinanderliegen, jede mit ihrem Scanfenster.
+--
+-- Also einmal beim Aufbau, und danach bei jedem Wechsel der Station: offen ist die Kraft,
+-- die gerade trainiert wird. Genau die soll ihr Scanfenster zeigen -- bei den anderen
+-- beiden ist es das, was am meisten Platz kostet und am wenigsten hilft.
+--
+-- Trainiert gerade nichts, bleibt die zuletzt geoeffnete stehen. Eine Zeile, die sich
+-- von selbst zuklappt, sobald man die Station verlaesst, haette den Blick weggerissen,
+-- waehrend man noch auf das Ergebnis schaut.
+local function oeffneAktiveKraft()
+	local stat = player:GetAttribute("TrainingStat")
+	if player:GetAttribute("BodyTrainingActive") == true then
+		stat = "Body"
+	end
+	if stat then
+		-- "Arm" -> "ArmPower", "Leg" -> "LegPower", "Body" -> "BodyPower".
+		oeffneKraft(stat .. "Power")
+	elseif offeneKraft == nil then
+		oeffneKraft(STAT_BAR_CONFIG[1].key)
+	end
+end
+
+oeffneAktiveKraft()
+player:GetAttributeChangedSignal("TrainingStat"):Connect(oeffneAktiveKraft)
+player:GetAttributeChangedSignal("BodyTrainingActive"):Connect(oeffneAktiveKraft)
+
 boostFrame.Visible = false
 boostFrame.Parent = screenGui
 HudChrome.Panel(boostFrame, { radius = HudChrome.Radius.Small })
