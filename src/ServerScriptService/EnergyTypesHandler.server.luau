@@ -60,23 +60,27 @@ local ENERGY_ATTRIBUTE_NAME = {
 local VALID_FACTIONS = { Kaiju = true, Jaeger = true, Ronin = true }
 local DEFAULT_FACTION = "Kaiju" -- einzige aktuell spielbare Fraktion
 
+-- ===== Die Fraktion ist das KAPITEL und keine Vorliebe mehr =====
+--
+-- Hier stand eine Auswahl: wer Kaiju anklickte, bekam Kaiju -- ohne jede Bedingung --, und
+-- wer Jaeger anklickte, bekam ihn, sobald er freigeschaltet war.
+--
+-- Das war richtig, solange die Fraktion eine Vorliebe war. Als KAPITEL ist es eine
+-- Zeitmaschine: die Kapitel bauen aufeinander auf (siehe FactionUnlockService -- Jaeger
+-- verdient sich, wer den MegaCity-Guardian als Kaiju besiegt), und der Zweig oben liess
+-- jeden aus Kapitel zwei jederzeit zurueck in Kapitel eins.
+--
+-- Die aktive Fraktion wird deshalb nur noch beim KAPITELWECHSEL gesetzt -- also dort, wo
+-- eine Bedingung wirklich geprueft wurde. Ein Bildschirm kann es damit nicht mehr falsch
+-- machen, auch ein kuenftiger nicht.
+--
+-- Der WUNSCH bleibt vorerst und bewirkt nichts; er wird mit dem Kapitelbildschirm
+-- entschieden.
 SelectFactionEvent.OnServerEvent:Connect(function(player, faction)
 	if not VALID_FACTIONS[faction] then
 		return
 	end
 	player:SetAttribute("SelectedFaction", faction)
-
-	-- Jaeger/Ronin sind jetzt spielbar (vorläufig mit Kaijus Moveset -- eigene
-	-- Fähigkeiten kommen später) -- Voraussetzung: Freischalt-Bedingungen erfüllt
-	-- (siehe FactionUnlockService.lua: Level + Energie + Meilenstein).
-	if faction == "Kaiju" then
-		player:SetAttribute("Faction", faction)
-	elseif _G.GetFactionUnlockStatus then
-		local unlocked = _G.GetFactionUnlockStatus(player, faction)
-		if unlocked then
-			player:SetAttribute("Faction", faction)
-		end
-	end
 end)
 
 -- ===== Debug-Werkzeug: Fraktion sofort wechseln, OHNE Freischalt-Bedingungen zu prüfen
