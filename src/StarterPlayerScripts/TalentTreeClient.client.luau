@@ -284,16 +284,17 @@ HudChrome.Panel(detailPanel, {
 -- (1, -110) und haben das Polster deshalb von selbst beruecksichtigt; beim Umbau auf feste
 -- Hoehen -- die der Baum fuer seine Skalierung braucht -- ging das verloren.
 local function contentSize()
-	local width = panel.AbsoluteSize.X
-	local height = panel.AbsoluteSize.Y
-	local padding = panel:FindFirstChildOfClass("UIPadding")
-	if padding then
-		width -= padding.PaddingLeft.Offset + padding.PaddingLeft.Scale * width
-		width -= padding.PaddingRight.Offset + padding.PaddingRight.Scale * panel.AbsoluteSize.X
-		height -= padding.PaddingTop.Offset + padding.PaddingTop.Scale * height
-		height -= padding.PaddingBottom.Offset + padding.PaddingBottom.Scale * panel.AbsoluteSize.Y
-	end
-	return width, height
+	-- MESSEN, nicht rechnen -- und zwar an der Flaeche, in der die Kinder tatsaechlich
+	-- haengen. Beide Spalten liegen in schirm.content, und dessen AbsoluteSize hat das
+	-- Polster von TopInsetUtils UND die Kopfzeile schon abgezogen; Roblox rechnet das von
+	-- selbst, weil content ein Kind des gepolsterten Panels ist.
+	--
+	-- Vorher stand hier die Groesse des PANELS, das Polster von Hand nachgerechnet -- die
+	-- Kopfhoehe aber nicht. Beide Spalten waren dadurch 72 Pixel zu hoch und ragten unten
+	-- aus dem Bild; der Research-Knopf haengt an ihrer Unterkante und stand damit
+	-- ausserhalb des Bildschirms. Dass eine Hoehe aus zwei Quellen zusammengerechnet wird,
+	-- war hier schon einmal der Fehler (siehe Kommentar oben am Detail-Panel).
+	return schirm.content.AbsoluteSize.X, schirm.content.AbsoluteSize.Y
 end
 
 -- Kopfbereich und beide Spalten neu setzen, sobald sich die Fenstergroesse aendert.
