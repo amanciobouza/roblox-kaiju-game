@@ -30,9 +30,49 @@ local PrologueConfig = require(ReplicatedStorage:WaitForChild("PrologueConfig"))
 --
 -- Beim Anheben: SAVE_SCHEMA_VERSION erhöhen UND eine Migration von der Vorgängerversion
 -- ergänzen. Migrationen laufen beim Laden schrittweise, bis der Stand aktuell ist.
-local SAVE_SCHEMA_VERSION = 4
+local SAVE_SCHEMA_VERSION = 6
 
 -- [n] = function(data) -> data   -- hebt einen Stand von Version n auf n+1.
+-- ===== Was einem KAPITEL gehoert und was dem Spieler =====
+--
+-- Die drei Figuren sind die drei Kapitel des Spiels, und sie folgen aufeinander. Damit ein
+-- Kapitel einzeln neu gespielt werden kann, braucht jedes seine eigenen Werte -- ein Reset
+-- bei Jaeger darf Kaiju und Ronin nicht anfassen.
+--
+-- Bis Schema 5 lag alles flach im Stand: EIN Level, EIN Konto. Ab 6 liegen die Werte unten
+-- in data.Chapters[<Fraktion>]; alles, was hier NICHT steht, bleibt flach und gilt ueber
+-- alle Kapitel hinweg -- Achievements, Archiv, Zeitgeschenke, die Lebensstatistik und die
+-- Frage, welche Kapitel abgeschlossen sind.
+--
+-- TalentData steht bewusst NICHT hier. Sie ist seit jeher nach Fraktion gegliedert
+-- (levels = { Kaiju = {}, Jaeger = {}, Ronin = {} }) und damit bereits richtig aufgeteilt;
+-- der Reset raeumt dort genau einen Zweig.
+local CHAPTER_FIELDS = {
+	"Level",
+	"XP",
+	"Kills",
+	"Coins",
+	"LegPower",
+	"ArmPower",
+	"BodyPower",
+	"EquippedSkin",
+	"UnlockedSkins",
+	"EvolutionPoints",
+	"EvoSpeedLevel",
+	"EvoMoneyLevel",
+	"EvoDamageLevel",
+	"EvoTrainingLevel",
+	"EvoCooldownLevel",
+	"EvoLuckLevel",
+	"EnergyHeat",
+	"EnergyChemical",
+	"EnergyElectric",
+	"EnergyRadiation",
+	"EnergySpirit",
+}
+
+local CHAPTER_ORDER = { "Kaiju", "Jaeger", "Ronin" }
+
 local SAVE_MIGRATIONS = {
 	-- 0 -> 1: Stände von VOR der Versionierung. Sie tragen kein SchemaVersion-Feld und
 	-- werden deshalb als 0 gelesen.
@@ -88,6 +128,67 @@ local SAVE_MIGRATIONS = {
 	[3] = function(data)
 		return data
 	end,
+
+	-- 4 -> 5: die neue Kaiju-Reihe hat fuenf Stufen statt sechs (siehe SkinsConfig). Die
+	-- bisherige oberste, "Radiant Apex" mit der Id 5, ist entfallen.
+	--
+	-- Ein Stand, der die 5 noch fuehrt, zeigt danach auf einen Skin, den es nicht mehr
+	-- gibt: GetSkinById liefert nil, und der Spieler stuende ohne angewandte Werte da --
+	-- also mit dem Aussehen und der Groesse des zuletzt gesetzten Skins, aber ohne dass
+	-- irgendetwas ihn noch korrigiert. Deshalb wird die 5 auf die neue oberste Stufe 4
+	-- ("Cataclysm Titan") gezogen, in der Ausruestung wie in der Freischaltliste.
+	--
+	-- Wer sie gekauft hatte, behaelt also die hoechste Stufe. Erstattet wird nichts -- die
+	-- 6000 Coins sind in einen Kauf geflossen, den es nicht mehr gibt. Falls das anders
+	-- geregelt werden soll, gehoert die Gutschrift hierher.
+	[4] = function(data)
+		local REMOVED_SKIN_ID = 5
+		local NEW_TOP_SKIN_ID = 4
+
+		if data.EquippedSkin == REMOVED_SKIN_ID then
+			data.EquippedSkin = NEW_TOP_SKIN_ID
+		end
+
+		if type(data.UnlockedSkins) == "table" then
+			local seen = {}
+			local migrated = {}
+			for _, skinId in ipairs(data.UnlockedSkins) do
+				if skinId == REMOVED_SKIN_ID then
+					skinId = NEW_TOP_SKIN_ID
+				end
+				-- Ohne diese Pruefung stuende die 4 doppelt in der Liste, sobald jemand
+				-- beide oberen Stufen besass.
+				if not seen[skinId] then
+					seen[skinId] = true
+					table.insert(migrated, skinId)
+				end
+			end
+			data.UnlockedSkins = migrated
+		end
+
+		return data
+	end,
+
+	-- 5 -> 6: aus einem flachen Stand wird einer mit Kapiteln.
+	--
+	-- Wer bisher gespielt hat, hat das als KAIJU getan -- eine andere Fraktion war nie
+	-- dauerhaft aktiv (siehe FactionUnlockService). Sein ganzer bisheriger Fortschritt
+	-- wandert deshalb unveraendert in das Kaiju-Kapitel, und dieses ist das laufende.
+	--
+	-- Die flachen Felder werden dabei NICHT geloescht. Das kostet ein paar Bytes und ist es
+	-- wert: geht beim Umbau etwas schief, liegt der alte Stand noch daneben, statt weg zu
+	-- sein. Ein spaeteres Schema kann sie raeumen, wenn niemand mehr auf 5 steht.
+	[5] = function(data)
+		data.Chapters = data.Chapters or {}
+		local kaiju = {}
+		for _, feld in ipairs(CHAPTER_FIELDS) do
+			kaiju[feld] = data[feld]
+		end
+		data.Chapters.Kaiju = kaiju
+		data.Chapter = "Kaiju"
+		data.CompletedChapters = data.CompletedChapters or {}
+		return data
+	end,
 }
 
 -- Hebt einen geladenen Stand auf die aktuelle Version.
@@ -139,6 +240,11 @@ end
 
 local EquipSkinEvent = RemoteEventUtils.GetOrCreate("EquipSkinEvent")
 local PurchaseSkinEvent = RemoteEventUtils.GetOrCreate("PurchaseSkinEvent")
+
+-- Meldet einen Stufenaufstieg an ALLE Clients (nicht nur an den Aufsteigenden): die Aura
+-- ist ein Ereignis in der Welt, die anderen Spieler sollen sie an der Figur sehen. Den
+-- Klang spielt nur der Client des Betroffenen -- siehe LevelUpFeedbackClient.
+local LevelUpEvent = RemoteEventUtils.GetOrCreate("LevelUpEvent")
 
 -- ===== Levelkurve =====
 -- Die Stufen kommen aus der Village-Spezifikation. Sie waren dort in ihrer eigenen
@@ -534,10 +640,10 @@ local function applySkinToCharacter(player, character, skinId)
 	-- Sanctuary-Verkleinerung: statt der vollen Basis-Scale (1-6) gilt im Sanctuary
 	-- 1 + Scale*0.1 (also nur noch 1.1-1.6) -- macht die friedliche Startzone spürbar
 	-- "menschlicher"/ruhiger als die Kampfzonen ausserhalb, wo die volle Grösse gilt.
-	local targetScale = skin.Scale
-	if player:GetAttribute("CurrentZone") == "Sanctuary" then
-		targetScale = 0.5 + skin.Scale * 0.1
-	end
+	-- Die Grösse kommt aus SkinsConfig.GetScale -- derselben Stelle, aus der auch die
+	-- Bau-Grösse des Kaiju-Modells kommt. Beide MÜSSEN übereinstimmen, sonst rechnet das
+	-- Rig mit falschen Entfernungen (siehe dort).
+	local targetScale = SkinsConfig.GetScale(skin, player:GetAttribute("CurrentZone") == "Sanctuary")
 
 	local actualAvatarScale = targetScale
 	local scalingWasApplied = false
@@ -749,18 +855,77 @@ local function acquireLockAndLoad(player)
 	return fallbackData, true
 end
 
+-- Der zuletzt geladene Stand je Spieler.
+--
+-- Gebraucht wird er beim SPEICHERN: dort stehen nur die Werte des laufenden Kapitels als
+-- lebende Objekte am Spieler. Die beiden anderen Kapitel liegen ausschliesslich im
+-- geladenen Stand -- ohne diese Kopie wuerde jeder Speichervorgang sie loeschen.
+local geladenerStand = {}
+
+-- Packt die Werte des laufenden Kapitels nach oben, damit der ganze uebrige Code sie
+-- unveraendert dort findet, wo er sie immer gefunden hat.
+--
+-- Das ist der Grund fuer diese Bauform: der Speicherstand kennt Kapitel, die Laufzeit
+-- nicht. Ein Spieler spielt immer genau ein Kapitel, und alle zweihundert Lesestellen im
+-- Projekt duerfen davon nichts wissen muessen.
+local function entpackeKapitel(data)
+	data.Chapters = data.Chapters or {}
+	data.CompletedChapters = data.CompletedChapters or {}
+	data.Chapter = data.Chapter or CHAPTER_ORDER[1]
+
+	local kapitel = data.Chapters[data.Chapter]
+	if not kapitel then
+		-- Ein Kapitel, das noch nie gespielt wurde, beginnt bei null. Das ist der Sinn der
+		-- Aufteilung: Kapitel zwei faengt als Jaeger an, nicht als fertiger Kaiju.
+		local starterStats = computeStarterStats()
+		kapitel = {
+			Level = 0,
+			XP = 0,
+			Kills = 0,
+			Coins = 0,
+			LegPower = starterStats.LegPower,
+			ArmPower = starterStats.ArmPower,
+			BodyPower = starterStats.BodyPower,
+			EquippedSkin = 0,
+			UnlockedSkins = { 0 },
+			EvolutionPoints = 0,
+			EvoSpeedLevel = 0,
+			EvoMoneyLevel = 0,
+			EvoDamageLevel = 0,
+			EvoTrainingLevel = 0,
+			EvoCooldownLevel = 0,
+			EvoLuckLevel = 0,
+			EnergyHeat = 0,
+			EnergyChemical = 0,
+			EnergyElectric = 0,
+			EnergyRadiation = 0,
+			EnergySpirit = 0,
+		}
+		data.Chapters[data.Chapter] = kapitel
+	end
+
+	for _, feld in ipairs(CHAPTER_FIELDS) do
+		data[feld] = kapitel[feld]
+	end
+	return data
+end
+
 local function loadPlayerData(player)
 	local data = acquireLockAndLoad(player)
 
 	if data then
 		-- Bestehender Spieler. Alles, was alte Stände auf den aktuellen Stand hebt,
 		-- läuft in migrateSaveData -- inklusive der früheren Prolog-Sonderregel.
-		return migrateSaveData(player, data)
+		data = entpackeKapitel(migrateSaveData(player, data))
+		geladenerStand[player] = data
+		return data
 	end
 
 	local starterStats = computeStarterStats()
 
-	return {
+	-- Der Erstspieler-Stand wird gleich mit gepackt: entpackeKapitel legt dabei das erste
+	-- Kapitel an und schreibt es in data.Chapters.
+	local frisch = {
 		SchemaVersion = SAVE_SCHEMA_VERSION,
 		Level = 0,
 		XP = 0,
@@ -804,7 +969,15 @@ local function loadPlayerData(player)
 		PrologueCompletedMinor = nil,
 		-- Lebenslange Statistiken -- beim Erstspieler leer.
 		Stats = {},
+		-- Das laufende Kapitel und die abgeschlossenen. Ein Erstspieler beginnt bei Kaiju.
+		Chapter = CHAPTER_ORDER[1],
+		Chapters = {},
+		CompletedChapters = {},
 	}
+
+	frisch = entpackeKapitel(frisch)
+	geladenerStand[player] = frisch
+	return frisch
 end
 
 -- releaseLockAfterwards = true: Sperre im SELBEN Schreibvorgang freigeben, statt danach
@@ -825,7 +998,39 @@ local finalSaveDone = {}
 -- Roblox den Prozess mittendrin.
 local saveInFlight = {}
 
+-- Legt die lebenden Werte in das laufende Kapitel zurueck und haengt die beiden anderen
+-- unveraendert daran.
+--
+-- buildPlayerSaveData liest den Spieler ab und kennt nur EIN Kapitel -- das, das er gerade
+-- spielt. Die anderen beiden stehen ausschliesslich im geladenen Stand. Ohne diesen Schritt
+-- wuerde jeder Speichervorgang sie loeschen, und zwar lautlos: das Ergebnis saehe aus wie
+-- ein gueltiger Stand.
+local function packeKapitelEin(player, data)
+	local vorher = geladenerStand[player]
+	local chapter = (vorher and vorher.Chapter) or data.Chapter or CHAPTER_ORDER[1]
+
+	local kapitel = {}
+	for _, feld in ipairs(CHAPTER_FIELDS) do
+		kapitel[feld] = data[feld]
+	end
+
+	data.Chapter = chapter
+	data.Chapters = {}
+	if vorher and type(vorher.Chapters) == "table" then
+		for key, wert in pairs(vorher.Chapters) do
+			data.Chapters[key] = wert
+		end
+	end
+	data.Chapters[chapter] = kapitel
+	data.CompletedChapters = (vorher and vorher.CompletedChapters) or data.CompletedChapters or {}
+
+	-- Die flachen Felder bleiben stehen: sie sind der Stand, den ein Server mit Schema 5
+	-- lesen wuerde, und kosten ein paar Bytes. Wer sie raeumt, nimmt sich den Rueckweg.
+	return data
+end
+
 local function savePlayerData(player, data, releaseLockAfterwards)
+	data = packeKapitelEin(player, data)
 	if finalSaveDone[player] then
 		print("[Kaiju-Debug] Speichern für " .. player.Name .. " übersprungen -- Abschluss-Speicherung lief bereits.")
 		return
@@ -917,14 +1122,33 @@ Players.PlayerAdded:Connect(function(player)
 	player:SetAttribute("PrologueCompletedMajor", data.PrologueCompletedMajor)
 	player:SetAttribute("PrologueCompletedMinor", data.PrologueCompletedMinor)
 
-	-- Playable Prologue ("The Fall"): bei einem echten Erstspieler soll NICHT der normale
-	-- automatische Charakter-Spawn passieren -- stattdessen übernimmt die (separate)
-	-- Prolog-Orchestrierung das manuelle Spawnen (erst in die Prolog-Zone, am Ende ins
-	-- echte Sanctuary). AutoLoadCharacter MUSS früh (vor jedem Yield) deaktiviert werden,
-	-- sonst hat Roblox den Charakter evtl. schon automatisch gespawnt.
-	if not hasCompletedCurrentPrologue(data) then
-		player.AutoLoadCharacter = false
-	end
+	-- ===== Hier stand ein Fehler, der diesen ganzen Handler abgebrochen hat =====
+	-- Bis hierhin stand an dieser Stelle:
+	--
+	--     if not hasCompletedCurrentPrologue(data) then
+	--         player.AutoLoadCharacter = false
+	--     end
+	--
+	-- "AutoLoadCharacter" gibt es an einem Player nicht. Die Eigenschaft heisst
+	-- CharacterAutoLoads und gehört dem PLAYERS-SERVICE, gilt also server-global -- der
+	-- PrologueOrchestrator schreibt genau das in seinen Kommentar und macht es dort richtig.
+	--
+	-- Die Zuweisung hat deshalb jedes Mal eine Ausnahme geworfen, und zwar mitten im
+	-- PlayerAdded-Handler. Alles danach lief nicht mehr: keine leaderstats, kein XP, kein
+	-- EquippedSkin -- und auch der Prolog-Start weiter unten nicht. Getroffen hat es nur
+	-- Spieler, die den Prolog noch NICHT abgeschlossen haben, deshalb ist es lange nicht
+	-- aufgefallen.
+	--
+	-- Ersatzlos gestrichen statt korrigiert: das automatische Spawnen abzuschalten ist eine
+	-- server-globale Massnahme, und der PrologueOrchestrator führt sie bereits -- bewusst
+	-- erst kurz vor dem inszenierten Tod und gleich danach wieder zurück, damit andere
+	-- Spieler in der Zwischenzeit respawnen können. Sie hier beim Beitritt zu setzen hiesse,
+	-- denselben globalen Schalter von zwei Stellen zu bedienen; bliebe der Prolog irgendwo
+	-- hängen, könnte auf dem ganzen Server niemand mehr respawnen.
+	--
+	-- Folge: ein Erstspieler wird jetzt einmal normal gespawnt, bevor der Prolog übernimmt
+	-- (der ruft selbst LoadCharacter). Falls dabei kurz das Sanctuary aufblitzt, ist das
+	-- hier die Stelle -- dann gehört die Unterdrückung in den Orchestrator, nicht hierher.
 
 	local leaderstats = Instance.new("Folder")
 	leaderstats.Name = "leaderstats"
@@ -1108,8 +1332,9 @@ Players.PlayerAdded:Connect(function(player)
 		end
 	end)
 
-	-- Playable Prologue ("The Fall"): AutoLoadCharacter wurde weiter oben für echte
-	-- Erstspieler bereits deaktiviert -- hier jetzt tatsächlich auslösen. _G.StartPrologue
+	-- Playable Prologue ("The Fall"): hier wird er für echte Erstspieler ausgelöst.
+	-- (Weiter oben stand einmal eine Unterdrückung des automatischen Spawns -- siehe die
+	-- Erklärung dort, warum sie weg ist.) _G.StartPrologue
 	-- wird vom künftigen Prolog-Orchestrierungs-Script bereitgestellt; bis es existiert,
 	-- fällt dies defensiv auf einen normalen Spawn zurück (Spiel bleibt so lange
 	-- durchgehend spielbar, auch während der Prolog noch gebaut wird).
@@ -1205,6 +1430,10 @@ Players.PlayerRemoving:Connect(function(player)
 	-- verzoegert, damit ein BindToClose kurz danach noch am Riegel scheitert.
 	task.delay(60, function()
 		finalSaveDone[player] = nil
+		-- Die Kopie des geladenen Standes geht mit. Sie haelt die Kapitel, die dieser
+		-- Spieler gerade NICHT spielt, und wird nach seinem letzten Speichervorgang von
+		-- niemandem mehr gelesen.
+		geladenerStand[player] = nil
 	end)
 end)
 
@@ -1297,6 +1526,138 @@ EquipSkinEvent.OnServerEvent:Connect(function(player, skinId)
 	end
 end)
 
+-- ===== Der Aufstiegs-Pop: die Figur waechst kurz auf 110% und schnappt zurueck =====
+--
+-- Diese Datei ist der richtige Ort dafuer, und zwar der EINZIGE. Die Groesse der Figur
+-- wird hier verwaltet -- applySkinToCharacter beim Spawn und Stufenwechsel,
+-- applyZoneAwareScale beim Zonenwechsel. Ein zweiter Schreiber anderswo bedeutet einen
+-- Wettlauf um denselben Wert.
+--
+-- Der erste Versuch lief auf dem CLIENT und hat die Figur zerlegt: Model:ScaleTo schreibt
+-- Part.Size, die C0/C1 der Motor6D-Gelenke UND die Groessenwerte des Humanoid. Die
+-- letzten beiden gehoeren dem Server und werden bei seiner naechsten Zuweisung
+-- zurueckgesetzt, die lokal geschriebenen Part.Size bleiben stehen -- uebrig blieb eine
+-- Figur mit zu grossen Gliedern an unveraenderten Gelenken.
+--
+-- Die drei Abschnitte ergeben zusammen eine Sekunde. Das Wachsen darf man kommen sehen,
+-- das Zurueckschnappen nicht.
+local POP_FACTOR = 1.10
+local POP_UP_SECONDS = 0.5
+local POP_HOLD_SECONDS = 0.15 -- steht kurz oben -- das macht den Hoehepunkt erst sichtbar
+local POP_DOWN_SECONDS = 0.35
+-- Nicht jedes Bild: ScaleTo baut die Gelenke der ganzen Figur neu auf. 24 Schritte in der
+-- Sekunde sind fuer eine Groessenaenderung flüssig und kosten ein Drittel davon.
+local POP_STEP_SECONDS = 1 / 24
+
+local popRunning = setmetatable({}, { __mode = "k" })
+
+local function playLevelUpScalePop(character)
+	if popRunning[character] then
+		return
+	end
+
+	-- Kein Pop, solange ein Rig an der Figur hängt (Primal Beast, siehe
+	-- KaijuStageOneService). Das Rig hat Gliedmassenlängen, Gelenk-Ruhelagen und den
+	-- Skalierungsfaktor EINMAL beim Anziehen gemessen und rechnet für immer damit. Ein
+	-- ScaleTo darunter kugelt ihm die Gelenke aus -- Arme in der Höhe, verdrehte
+	-- Handgelenke -- und weil die gespeicherte Beinlänge nicht mehr zur echten passt,
+	-- läuft die Figur an Steigungen auf der Stelle.
+	--
+	-- Es wäre möglich, das Rig nach dem Pop neu aufzubauen. Für eine Sekunde Feier ist
+	-- das den sichtbaren Neuaufbau nicht wert; die Feier hat Klang, Aura und Ring.
+	if character:GetAttribute("KaijuRigActive") == true then
+		return
+	end
+
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid or humanoid.Health <= 0 then
+		return
+	end
+
+	local readOk, baseScale = pcall(function()
+		return character:GetScale()
+	end)
+	if not readOk or type(baseScale) ~= "number" or baseScale <= 0 then
+		return
+	end
+
+	popRunning[character] = true
+
+	task.spawn(function()
+		-- Der Wert, den der Pop zuletzt selbst geschrieben hat. Weicht die tatsaechliche
+		-- Groesse davon ab, hat ein anderer eingegriffen (Skin-Kauf, Portalwechsel) -- dann
+		-- gehoert die Groesse ab sofort ihm, und der Pop steigt aus, OHNE zurueckzusetzen.
+		-- Ohne diese Pruefung wuerde die Wiederherstellung am Ende den frischen Wert des
+		-- anderen mit einem veralteten ueberschreiben.
+		local written = baseScale
+		local startTime = os.clock()
+		local abgebrochen = false
+
+		local function fremdgeschrieben()
+			local ok, current = pcall(function()
+				return character:GetScale()
+			end)
+			return (not ok) or math.abs(current - written) > math.max(0.01, written * 0.005)
+		end
+
+		while character.Parent do
+			if fremdgeschrieben() then
+				abgebrochen = true
+				break
+			end
+
+			local elapsed = os.clock() - startTime
+			local factor
+			if elapsed < POP_UP_SECONDS then
+				-- Sanft an- und abschwellend (Smoothstep): kein Ruck, kein Anschlag oben.
+				local t = elapsed / POP_UP_SECONDS
+				factor = 1 + (POP_FACTOR - 1) * (t * t * (3 - 2 * t))
+			elseif elapsed < POP_UP_SECONDS + POP_HOLD_SECONDS then
+				factor = POP_FACTOR
+			elseif elapsed < POP_UP_SECONDS + POP_HOLD_SECONDS + POP_DOWN_SECONDS then
+				-- Schneller Anfang, weicher Auslauf -- das liest sich als Schnappen.
+				local t = (elapsed - POP_UP_SECONDS - POP_HOLD_SECONDS) / POP_DOWN_SECONDS
+				factor = POP_FACTOR - (POP_FACTOR - 1) * (1 - (1 - t) ^ 3)
+			else
+				break
+			end
+
+			written = baseScale * factor
+			pcall(function()
+				character:ScaleTo(written)
+			end)
+			task.wait(POP_STEP_SECONDS)
+		end
+
+		-- Genau auf den Ausgangswert zurueck. Ohne diese letzte Zuweisung bliebe die Figur
+		-- um den Rest des letzten Schrittes zu gross, und das summierte sich ueber die
+		-- Aufstiege auf.
+		if not abgebrochen and character.Parent and not fremdgeschrieben() then
+			pcall(function()
+				character:ScaleTo(baseScale)
+			end)
+		end
+
+		popRunning[character] = nil
+	end)
+end
+
+-- Loest die Aufstiegs-Rueckmeldung aus (Klang + goldene Aura an der Figur, gebaut im
+-- LevelUpFeedbackClient) und laesst die Figur kurz aufpoppen. Klang und Aura entstehen
+-- lokal, damit rein visuelle Wirkung keine Server-Leistung kostet; die Groesse nicht --
+-- die gehoert dem Server (siehe playLevelUpScalePop).
+local function celebrateLevelUp(player, newLevel)
+	print("[Kaiju Debug] Level-Up:", player.Name, "-> Level", newLevel)
+	LevelUpEvent:FireAllClients(player, newLevel)
+	if player.Character then
+		playLevelUpScalePop(player.Character)
+	end
+end
+
+-- Auch der Debug-Level-Regler (TrainingHandler) soll die Feier ausloesen -- sonst waere
+-- sie nur ueber echtes Sammeln zu pruefen.
+_G.CelebrateLevelUp = celebrateLevelUp
+
 -- Vergibt XP und verwaltet den Level-Aufstieg. Es gibt KEINE Obergrenze mehr -- frueher
 -- deckelte der teuerste gekaufte Skin das Level, und ueberschuessige XP lagen brach, bis
 -- der naechste Kauf die Grenze anhob.
@@ -1318,10 +1679,18 @@ local function awardXP(player, amount)
 	xpValue.Value += amount
 
 	-- Keine Obergrenze mehr: das Level haengt allein an der gesammelten Erfahrung.
+	local levelsGained = 0
 	while xpValue.Value >= xpNeededValue.Value do
 		xpValue.Value -= xpNeededValue.Value
 		leaderstats.Level.Value += 1
 		xpNeededValue.Value = xpNeededForLevel(leaderstats.Level.Value)
+		levelsGained += 1
+	end
+
+	-- Ein einziges Signal, auch wenn ein grosser XP-Batzen mehrere Stufen auf einmal
+	-- hebt -- sonst laegen mehrere Auren und Klaenge uebereinander.
+	if levelsGained > 0 then
+		celebrateLevelUp(player, leaderstats.Level.Value)
 	end
 end
 
@@ -1768,10 +2137,10 @@ local function applyZoneAwareScale(player, character)
 		return
 	end
 
-	local targetScale = skin.Scale
-	if player:GetAttribute("CurrentZone") == "Sanctuary" then
-		targetScale = 0.5 + skin.Scale * 0.1
-	end
+	-- Die Grösse kommt aus SkinsConfig.GetScale -- derselben Stelle, aus der auch die
+	-- Bau-Grösse des Kaiju-Modells kommt. Beide MÜSSEN übereinstimmen, sonst rechnet das
+	-- Rig mit falschen Entfernungen (siehe dort).
+	local targetScale = SkinsConfig.GetScale(skin, player:GetAttribute("CurrentZone") == "Sanctuary")
 
 	local currentScaleOk, currentScale = pcall(function()
 		return character:GetScale()
