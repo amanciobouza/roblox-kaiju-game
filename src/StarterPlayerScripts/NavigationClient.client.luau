@@ -719,8 +719,10 @@ end)
 -- Drei Knoepfe statt eines Umschalters: ein Umschalter kennt zwei Zustaende, hier gibt es
 -- drei -- und "alles" ist kein Zwischenzustand von "offen" und "erreicht", sondern ein
 -- eigener.
-local FILTER_ALLE, FILTER_OFFEN, FILTER_ERREICHT = "all", "open", "done"
+local FILTER_ALLE, FILTER_OFFEN, FILTER_ERREICHT, FILTER_NEU = "all", "open", "done", "recent"
 local achievementsFilter = FILTER_ALLE
+-- Welcher Reiter zuletzt galt. Nur bei einer AENDERUNG wird umgehaengt.
+local letzterFilter = nil
 
 local filterRow = Instance.new("Frame")
 filterRow.Name = "FilterRow"
@@ -741,7 +743,7 @@ local aktualisiereFilterKnoepfe
 local function baueFilterKnopf(order, wert, text)
 	local knopf = Instance.new("TextButton")
 	knopf.Name = "Filter" .. wert
-	knopf.Size = UDim2.new(0, 118, 0, 34)
+	knopf.Size = UDim2.new(0, 104, 0, 34)
 	knopf.LayoutOrder = order
 	knopf.AutoButtonColor = false
 	knopf.Text = text
@@ -765,6 +767,10 @@ end
 baueFilterKnopf(1, FILTER_ALLE, "ALL")
 baueFilterKnopf(2, FILTER_OFFEN, "OPEN")
 baueFilterKnopf(3, FILTER_ERREICHT, "UNLOCKED")
+-- Der vierte Reiter ist kein Filter, sondern eine SORTIERUNG -- er blendet nichts aus,
+-- sondern stellt um. Er steht trotzdem hier: fuer den Spieler ist beides dasselbe, naemlich
+-- "zeig mir die Liste anders".
+baueFilterKnopf(4, FILTER_NEU, "RECENT")
 
 -- Der gewaehlte Knopf traegt einen hellen Rand und hellen Text -- dieselbe Sprache wie der
 -- offene Menuepunkt und die bereite Station auf der Geschenkachse.
@@ -790,10 +796,37 @@ achievementsScroll.CanvasSize = UDim2.new(0, 0, 0, 0) -- wird von UIListLayout a
 achievementsScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 achievementsScroll.Parent = achievementsSchirm.content
 
+-- ===== Ein zweites Raster fuer die zeitliche Reihenfolge =====
+--
+-- Die Zeilen liegen sonst in einem Raster JE KATEGORIE, und Roblox ordnet nur innerhalb
+-- eines Rasters. Eine Reihenfolge ueber alle Kategorien hinweg laesst sich darin nicht
+-- ausdruecken -- egal welche LayoutOrder man setzt.
+--
+-- Deshalb ziehen die Zeilen im RECENT-Modus in ein eigenes Raster um und danach wieder
+-- zurueck. Umhaengen klingt nach viel, ist aber genau einmal je Reiterwechsel -- nicht je
+-- Bild -- und es ist die einzige Loesung, die ohne eine zweite Garnitur von Zeilen
+-- auskommt.
+local recentFrame = Instance.new("Frame")
+local recentGrid = Instance.new("UIGridLayout")
+
 local achievementsListLayout = Instance.new("UIListLayout")
 achievementsListLayout.Padding = UDim.new(0, 6)
 achievementsListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 achievementsListLayout.Parent = achievementsScroll
+
+recentFrame.Name = "RecentGrid"
+recentFrame.Size = UDim2.new(1, 0, 0, 0)
+recentFrame.AutomaticSize = Enum.AutomaticSize.Y
+recentFrame.BackgroundTransparency = 1
+recentFrame.LayoutOrder = 0 -- ganz oben, ueber allen Kategorien
+recentFrame.Visible = false
+recentFrame.Parent = achievementsScroll
+
+recentGrid.CellSize = UDim2.new(0, MIN_CARD_WIDTH, 0, 60)
+recentGrid.CellPadding = UDim2.new(0, 8, 0, 8)
+recentGrid.SortOrder = Enum.SortOrder.LayoutOrder
+recentGrid.Parent = recentFrame
+ResponsiveGridUtils.Bind(achievementsScroll, recentGrid, MAX_ACHIEVEMENT_COLUMNS, MIN_CARD_WIDTH)
 
 -- [achievementId] = { row=, fillBar=, progressLabel= } -- für die laufende Aktualisierung.
 local achievementRows = {}
@@ -939,6 +972,8 @@ for _, achievement in ipairs(AchievementsConfig.List) do
 		newFlag = newFlag,
 		achievement = achievement,
 	}
+	-- Ihr Zuhause: dorthin geht sie zurueck, wenn RECENT wieder verlassen wird.
+	eintrag.heimat = currentCategoryGrid.Parent
 	achievementRows[achievement.id] = eintrag
 	table.insert(achievementCategories[#achievementCategories].rows, eintrag)
 end
@@ -990,19 +1025,50 @@ RunService.Heartbeat:Connect(function()
 		-- Der Filter wirkt HIER und nicht beim Klick: ob ein Achievement erreicht ist,
 		-- aendert sich waehrend das Panel offen steht (man spielt ja weiter), und eine
 		-- Liste, die beim Umschalten einmal gefiltert wurde, waere danach falsch.
+		--
+		-- RECENT zeigt nur Erreichtes -- was noch offen ist, hat keinen Zeitpunkt und
+		-- gehoerte in einer Reihenfolge der Freischaltung nirgendwohin.
 		local passt = (achievementsFilter == FILTER_ALLE)
 			or (achievementsFilter == FILTER_ERREICHT and unlocked)
+			or (achievementsFilter == FILTER_NEU and unlocked)
 			or (achievementsFilter == FILTER_OFFEN and not unlocked)
 		rowInfo.row.Visible = passt
+
+		-- Das Neueste zuoberst: LayoutOrder waechst nach unten, der Rang nach oben --
+		-- also umgekehrt. Ohne Rang (alter Stand, siehe AchievementService) ans Ende.
+		if achievementsFilter == FILTER_NEU then
+			local rang = player:GetAttribute("AchievementOrder_" .. achievementId) or 0
+			rowInfo.row.LayoutOrder = 10000 - rang
+		end
+	end
+
+	-- ===== Umziehen, aber nur beim Wechsel =====
+	--
+	-- Roblox ordnet nur INNERHALB eines Rasters. Eine Reihenfolge ueber alle Kategorien
+	-- hinweg gibt es nur, wenn die Zeilen in EINEM Raster liegen -- deshalb ziehen sie um.
+	-- Das passiert genau einmal je Reiterwechsel und nicht in jedem Bild; die Pruefung
+	-- darauf ist der ganze Grund fuer letzterFilter.
+	if achievementsFilter ~= letzterFilter then
+		letzterFilter = achievementsFilter
+		local nachRecent = (achievementsFilter == FILTER_NEU)
+		for _, rowInfo in pairs(achievementRows) do
+			rowInfo.row.Parent = nachRecent and recentFrame or rowInfo.heimat
+		end
+		recentFrame.Visible = nachRecent
 	end
 
 	-- Eine Kategorie ohne sichtbare Zeile verschwindet mitsamt Ueberschrift.
 	for _, kategorie in ipairs(achievementCategories) do
-		local sichtbar = false
-		for _, eintrag in ipairs(kategorie.rows) do
-			if eintrag.row.Visible then
-				sichtbar = true
-				break
+		-- In der Zeitfolge gibt es keine Kategorien: die Zeilen sind ausgezogen, und eine
+		-- Ueberschrift ueber einer leeren Flaeche saehe aus wie ein Fehler.
+		local sichtbar = (achievementsFilter ~= FILTER_NEU)
+		if sichtbar then
+			sichtbar = false
+			for _, eintrag in ipairs(kategorie.rows) do
+				if eintrag.row.Visible then
+					sichtbar = true
+					break
+				end
 			end
 		end
 		if kategorie.header then
@@ -1095,6 +1161,10 @@ end)
 
 -- ===== Hilfeseite =====
 local HelpConfig = require(ReplicatedStorage:WaitForChild("HelpConfig"))
+-- Fuer die Diagramme: die drei Figuren und die Reihenfolge der fuenf Energien kommen aus
+-- denselben Listen, aus denen sich auch Fraktionsauswahl und Talentbaum bedienen.
+local SkinsConfig = require(ReplicatedStorage:WaitForChild("SkinsConfig"))
+local TalentTreeConfig = require(ReplicatedStorage:WaitForChild("TalentTreeConfig"))
 
 local helpSchirm = HudChrome.Screen(screenGui, {
 	name = "HelpPanel",
@@ -1260,16 +1330,84 @@ local function buildDiagram(diagramType, parent)
 		local ringInnerCorner = Instance.new("UICorner")
 		ringInnerCorner.CornerRadius = UDim.new(0.5, 0)
 		ringInnerCorner.Parent = ringInner
+	elseif diagramType == "energytypes" then
+		-- Die Reihenfolge kommt aus TalentTreeConfig.EnergyOrder: dort werden die Talente
+		-- danach sortiert, und die Hilfe soll dieselbe Reihe zeigen wie der Baum.
+		diagramFrame.Size = UDim2.new(1, 0, 0, 66)
+		for i, key in ipairs(TalentTreeConfig.EnergyOrder) do
+			local farbe = HudChrome.EnergyColor[key] or HudChrome.EnergyColorDefault
+			local zelle = Instance.new("Frame")
+			zelle.Size = UDim2.new(0, 64, 1, 0)
+			zelle.Position = UDim2.new(0, (i - 1) * 70, 0, 0)
+			zelle.BackgroundTransparency = 1
+			zelle.Parent = diagramFrame
+
+			-- Kein Emoji-Rückfall: eine zweite Symbolliste wäre die nächste Stelle, die
+			-- auseinanderläuft. Fehlt das Bild, bleibt der Farbpunkt -- und die Farbe ist
+			-- ohnehin das, woran man die Energie im Spiel erkennt.
+			local punkt = Instance.new("Frame")
+			punkt.Size = UDim2.new(0, 40, 0, 40)
+			punkt.Position = UDim2.new(0.5, -20, 0, 0)
+			punkt.BackgroundColor3 = farbe
+			punkt.BorderSizePixel = 0
+			punkt.Parent = zelle
+			local punktEcke = Instance.new("UICorner")
+			punktEcke.CornerRadius = UDim.new(0.5, 0)
+			punktEcke.Parent = punkt
+
+			local assetId = HudChrome.EnergyIcon[key]
+			if assetId and assetId ~= "" then
+				local bild = HudChrome.IconImage(punkt, assetId)
+				bild.Size = UDim2.new(0, 28, 0, 28)
+				bild.Position = UDim2.new(0.5, -14, 0.5, -14)
+			end
+
+			local name = Instance.new("TextLabel")
+			name.Size = UDim2.new(1, 0, 0, 18)
+			name.Position = UDim2.new(0, 0, 0, 44)
+			name.BackgroundTransparency = 1
+			name.Text = string.upper(key)
+			name.Parent = zelle
+			-- Farbe NACH Label setzen: das setzt sie selbst auf die Standardschrift zurueck.
+			HudChrome.Label(name, HudChrome.TextSize.Sublabel)
+			name.TextColor3 = farbe
+		end
 	elseif diagramType == "factions" then
-		local icons = { "🦖", "🤖", "🐯" }
-		for i, iconText in ipairs(icons) do
-			local icon = Instance.new("TextLabel")
-			icon.Size = UDim2.new(0, 44, 0, 44)
-			icon.Position = UDim2.new(0, (i - 1) * 60, 0, 3)
-			icon.BackgroundTransparency = 1
-			icon.TextScaled = true
-			icon.Text = iconText
-			icon.Parent = diagramFrame
+		-- Die drei Figuren kommen aus SkinsConfig -- derselben Liste, aus der sich auch die
+		-- Fraktionsauswahl und das Archiv bedienen. Hier standen einmal drei Emoji im Code,
+		-- und zwar ein anderes Trio als anderswo.
+		diagramFrame.Size = UDim2.new(1, 0, 0, 66)
+		for i, faction in ipairs(SkinsConfig.Factions) do
+			local zelle = Instance.new("Frame")
+			zelle.Size = UDim2.new(0, 64, 1, 0)
+			zelle.Position = UDim2.new(0, (i - 1) * 76, 0, 0)
+			zelle.BackgroundTransparency = 1
+			zelle.Parent = diagramFrame
+
+			-- Hier IST ein Rückfall richtig: das Emoji steht schon in SkinsConfig neben der
+			-- Fraktion, es entsteht also keine neue Liste.
+			local assetId = HudChrome.FactionIcon[faction.Key]
+			if assetId and assetId ~= "" then
+				local bild = HudChrome.IconImage(zelle, assetId)
+				bild.Size = UDim2.new(0, 44, 0, 44)
+				bild.Position = UDim2.new(0.5, -22, 0, 0)
+			else
+				local emoji = Instance.new("TextLabel")
+				emoji.Size = UDim2.new(0, 44, 0, 44)
+				emoji.Position = UDim2.new(0.5, -22, 0, 0)
+				emoji.BackgroundTransparency = 1
+				emoji.TextScaled = true
+				emoji.Text = faction.Icon or "?"
+				emoji.Parent = zelle
+			end
+
+			local name = Instance.new("TextLabel")
+			name.Size = UDim2.new(1, 0, 0, 18)
+			name.Position = UDim2.new(0, 0, 0, 46)
+			name.BackgroundTransparency = 1
+			name.Text = string.upper(faction.Label or faction.Key)
+			name.Parent = zelle
+			HudChrome.Label(name, HudChrome.TextSize.Sublabel)
 		end
 	end
 

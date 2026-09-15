@@ -27,6 +27,24 @@ local function isUnlocked(player, achievementId)
 	return player:GetAttribute("Achievement_" .. achievementId) == true
 end
 
+-- ===== Die Reihenfolge der Freischaltung =====
+--
+-- Bisher stand nur DASS ein Achievement freigeschaltet ist, nie WANN. Damit liess sich die
+-- Liste nicht nach dem Neuesten sortieren -- und genau das ist die Frage nach dem Spielen:
+-- was habe ich gerade geschafft.
+--
+-- Gespeichert wird ein Rang, keine Uhrzeit. Die Reihenfolge ist, was gefragt ist; eine
+-- Uhrzeit waere mehr, als die Anzeige braucht, und muesste ueber Zeitzonen und
+-- Serverwechsel hinweg stimmen.
+--
+-- Als Attribut je Achievement, weil Attribute von selbst zum Client replizieren -- so wie
+-- Achievement_<id> auch. Eine Liste haette einen eigenen Weg gebraucht.
+local function naechsterRang(player)
+	local rang = (player:GetAttribute("AchievementUnlockCount") or 0) + 1
+	player:SetAttribute("AchievementUnlockCount", rang)
+	return rang
+end
+
 local function unlockAchievement(player, achievementId)
 	if isUnlocked(player, achievementId) then
 		return
@@ -37,6 +55,7 @@ local function unlockAchievement(player, achievementId)
 		return
 	end
 	player:SetAttribute("Achievement_" .. achievementId, true)
+	player:SetAttribute("AchievementOrder_" .. achievementId, naechsterRang(player))
 	achievementUnlockedEvent:FireClient(player, achievementId)
 end
 _G.UnlockAchievement = unlockAchievement
@@ -44,8 +63,10 @@ _G.UnlockAchievement = unlockAchievement
 -- Setzt ALLE Achievements (freigeschaltet + Zähler-Fortschritt) für einen Spieler zurück
 -- -- fürs Debug-Reset-Tool (siehe PlayerSetup.lua, ResetPlayerDataEvent).
 _G.ResetPlayerAchievements = function(player)
+	player:SetAttribute("AchievementUnlockCount", nil)
 	for _, achievement in ipairs(AchievementsConfig.List) do
 		player:SetAttribute("Achievement_" .. achievement.id, nil)
+		player:SetAttribute("AchievementOrder_" .. achievement.id, nil)
 		if achievement.type == "counter" then
 			player:SetAttribute("Counter_" .. (achievement.counterKey or achievement.id), nil)
 		end
@@ -160,7 +181,17 @@ _G.GetAchievementSaveData = function(player)
 			end
 		end
 	end
-	return { unlocked = unlocked, counters = counters }
+	-- Die Raenge getrennt von "unlocked": ein alter Speicherstand hat sie nicht, und ein
+	-- fehlender Rang darf kein fehlendes Achievement bedeuten.
+	local order = {}
+	for _, achievement in ipairs(AchievementsConfig.List) do
+		local rang = player:GetAttribute("AchievementOrder_" .. achievement.id)
+		if rang then
+			order[achievement.id] = rang
+		end
+	end
+
+	return { unlocked = unlocked, counters = counters, order = order }
 end
 
 _G.LoadAchievementSaveData = function(player, saveData)
@@ -172,6 +203,32 @@ _G.LoadAchievementSaveData = function(player, saveData)
 			player:SetAttribute("Achievement_" .. achievementId, true)
 		end
 	end
+
+	-- ===== Raenge zurueckspielen, und die unbekannten nachtragen =====
+	--
+	-- Wer vor dieser Aenderung gespielt hat, hat freigeschaltete Achievements ohne Rang.
+	-- Sie bekommen die niedrigsten Raenge in der Reihenfolge des Configs -- also die
+	-- aeltesten Plaetze. Das ist keine erfundene Wahrheit, sondern die ehrlichste
+	-- verfuegbare: wir wissen nur, dass sie VOR allem Kuenftigen kamen.
+	local hoechster = 0
+	local order = saveData.order or {}
+	for _, rang in pairs(order) do
+		hoechster = math.max(hoechster, rang)
+	end
+
+	local nachtrag = 0
+	for _, achievement in ipairs(AchievementsConfig.List) do
+		if player:GetAttribute("Achievement_" .. achievement.id) == true then
+			local rang = order[achievement.id]
+			if rang then
+				player:SetAttribute("AchievementOrder_" .. achievement.id, rang)
+			else
+				nachtrag += 1
+				player:SetAttribute("AchievementOrder_" .. achievement.id, hoechster + nachtrag)
+			end
+		end
+	end
+	player:SetAttribute("AchievementUnlockCount", hoechster + nachtrag)
 	if saveData.counters then
 		for counterKey, value in pairs(saveData.counters) do
 			player:SetAttribute("Counter_" .. counterKey, value)
