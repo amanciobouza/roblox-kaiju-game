@@ -9,10 +9,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
-local ComicStyleUtils = require(ReplicatedStorage:WaitForChild("ComicStyleUtils"))
-local UiTypography = require(ReplicatedStorage:WaitForChild("UiTypography"))
 local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
-local applyComicStyle = ComicStyleUtils.Apply
 -- Nur fuer das Forschungsfeld im HUD. Der Talentbaum selbst bleibt vorerst im
 -- Comic-Stil -- Menues kommen nach dem HUD dran.
 local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
@@ -26,19 +23,14 @@ local CancelResearchEvent = RemoteEventUtils.GetOrCreate("CancelResearchEvent")
 local ResearchCompleteEvent = RemoteEventUtils.GetOrCreate("ResearchCompleteEvent")
 local GetTalentStateFunction = ReplicatedStorage:WaitForChild("GetTalentStateFunction")
 
-local ENERGY_ICONS = { Heat = "🔥", Chemical = "🧪", Electric = "⚡", Radiation = "☢️", Spirit = "✨" }
-local ENERGY_COLORS = {
-	Heat = Color3.fromRGB(255, 140, 30),
-	Chemical = Color3.fromRGB(255, 45, 190),
-	Electric = Color3.fromRGB(57, 217, 255),
-	Radiation = Color3.fromRGB(126, 255, 16),
-	Spirit = Color3.fromRGB(255, 205, 70),
-}
+-- Farben und Symbole kommen aus HudChrome. Hier standen eigene Kopien -- bei Heat mit einer
+-- anderen Farbe als im Rest des Spiels -- und drei Emoji fuer die Figuren.
+local ENERGY_COLORS = HudChrome.EnergyColor
 
 local FACTION_TABS = {
-	{ key = "Kaiju", icon = "🦖", label = "Kaiju", color = Color3.fromRGB(90, 170, 100) },
-	{ key = "Jaeger", icon = "🤖", label = "Jaeger", color = Color3.fromRGB(90, 130, 220) },
-	{ key = "Ronin", icon = "🐯", label = "Ronin", color = Color3.fromRGB(220, 140, 60) },
+	{ key = "Kaiju", label = "Kaiju" },
+	{ key = "Jaeger", label = "Jaeger" },
+	{ key = "Ronin", label = "Ronin" },
 }
 
 local function formatDuration(seconds)
@@ -61,53 +53,41 @@ screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.DisplayOrder = 100
 screenGui.Parent = playerGui
 
-local panel = Instance.new("Frame")
-panel.Name = "TalentTreePanel"
--- Vollbild: alle Menü-Bildschirme nutzen die ganze Fläche.
--- IgnoreGuiInset am ScreenGui gehört dazu -- ohne das beginnt jedes ScreenGui UNTERHALB
--- der Roblox-Systemleiste, und oben bliebe ein Streifen mit Sicht auf die Welt stehen.
-panel.Size = UDim2.new(1, 0, 1, 0)
-panel.Position = UDim2.new(0, 0, 0, 0)
-panel.AnchorPoint = Vector2.new(0, 0)
-panel.BackgroundColor3 = Color3.fromRGB(20, 18, 28)
-panel.Visible = false
-panel.Parent = screenGui
-applyComicStyle(panel, 18, 4)
+local schirm = HudChrome.Screen(screenGui, {
+	name = "TalentTreePanel",
+	title = "TALENTS",
+	subtitle = "",
+})
+local panel = schirm.panel
 
 -- Inhalt unter der Roblox-Systemleiste hervorholen. IgnoreGuiInset zieht die
 -- Zeichenflaeche bewusst DARUNTER, damit oben kein Streifen mit Sicht auf die Welt bleibt --
 -- das gilt aber nur fuer den Hintergrund. Das Polster wird nachgezogen, siehe TopInsetUtils.
 TopInsetUtils.Bind(panel)
 
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(0, 300, 0, 32)
-titleLabel.Position = UDim2.new(0, 12, 0, 8)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Font = Enum.Font.LuckiestGuy
-titleLabel.TextScaled = true
-titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-titleLabel.TextColor3 = Color3.new(1, 1, 1)
-titleLabel.Text = "🌟 Talent Tree"
-titleLabel.Parent = panel
-
 -- ===== Fraktions-Tabs =====
+-- In der Kopfzeile, mittig -- wie im Skin-Laden. Es sind dieselben drei Figuren, und sie
+-- sollen dort dasselbe tun und gleich aussehen.
 local tabRow = Instance.new("Frame")
-tabRow.Size = UDim2.new(0, 400, 0, 32)
-tabRow.Position = UDim2.new(0, 320, 0, 8)
+tabRow.AnchorPoint = Vector2.new(0.5, 0.5)
+tabRow.Position = UDim2.new(0.5, 0, 0.5, 0)
+tabRow.Size = UDim2.new(0, 3 * 44 + 2 * 8, 0, 44)
 tabRow.BackgroundTransparency = 1
-tabRow.Parent = panel
+tabRow.ZIndex = 4
+tabRow.Parent = schirm.header
 
 local tabLayout = Instance.new("UIListLayout")
 tabLayout.FillDirection = Enum.FillDirection.Horizontal
-tabLayout.Padding = UDim.new(0, 6)
+tabLayout.Padding = UDim.new(0, 8)
+tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
 tabLayout.Parent = tabRow
 
 -- ===== Ressourcen-Leiste (5 Energien + Coins) =====
 local resourceRow = Instance.new("Frame")
-resourceRow.Size = UDim2.new(1, -16, 0, 22)
-resourceRow.Position = UDim2.new(0, 8, 0, 44)
+resourceRow.Size = UDim2.new(1, -24, 0, 30)
+resourceRow.Position = UDim2.new(0, 12, 0, 8)
 resourceRow.BackgroundTransparency = 1
-resourceRow.Parent = panel
+resourceRow.Parent = schirm.content
 
 local resourceLayout = Instance.new("UIListLayout")
 resourceLayout.FillDirection = Enum.FillDirection.Horizontal
@@ -115,81 +95,97 @@ resourceLayout.Padding = UDim.new(0, 12)
 resourceLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 resourceLayout.Parent = resourceRow
 
+-- Bild und Zahl getrennt, nicht beides in einer Zeichenkette. Ein Emoji im Text sitzt auf
+-- der Grundlinie und ist je nach Geraet verschieden breit -- die Zahl sprang dadurch von
+-- Energie zu Energie.
 local resourceLabels = {}
-for _, energyType in ipairs(TalentTreeConfig.EnergyOrder) do
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(0, 90, 1, 0)
-	label.BackgroundTransparency = 1
-	label.Font = Enum.Font.FredokaOne
-	label.TextScaled = true
-	label.TextColor3 = ENERGY_COLORS[energyType]
-	label.Text = ENERGY_ICONS[energyType] .. " 0"
-	label.Parent = resourceRow
-	resourceLabels[energyType] = label
+local function baueRessource(bildId, farbe)
+	local halter = Instance.new("Frame")
+	halter.Size = UDim2.new(0, 96, 1, 0)
+	halter.BackgroundTransparency = 1
+	halter.Parent = resourceRow
+
+	local bild = HudChrome.IconImage(halter, bildId or "")
+	bild.Size = UDim2.new(0, 24, 0, 24)
+	bild.Position = UDim2.new(0, 0, 0.5, -12)
+	bild.Visible = (bildId or "") ~= ""
+
+	local zahl = Instance.new("TextLabel")
+	zahl.Size = UDim2.new(1, -30, 1, 0)
+	zahl.Position = UDim2.new(0, 30, 0, 0)
+	zahl.BackgroundTransparency = 1
+	zahl.TextXAlignment = Enum.TextXAlignment.Left
+	zahl.Text = "0"
+	zahl.Parent = halter
+	HudChrome.Number(zahl, 17)
+	zahl.TextColor3 = farbe
+	return zahl
 end
-local coinsLabel = Instance.new("TextLabel")
-coinsLabel.Size = UDim2.new(0, 90, 1, 0)
-coinsLabel.BackgroundTransparency = 1
-coinsLabel.Font = Enum.Font.FredokaOne
-coinsLabel.TextScaled = true
-coinsLabel.TextColor3 = Color3.fromRGB(255, 220, 80)
-coinsLabel.Text = "💰 0"
-coinsLabel.Parent = resourceRow
+
+for _, energyType in ipairs(TalentTreeConfig.EnergyOrder) do
+	resourceLabels[energyType] = baueRessource(
+		HudChrome.EnergyIcon[energyType],
+		ENERGY_COLORS[energyType] or HudChrome.Color.TextPrimary
+	)
+end
+local coinsLabel = baueRessource(HudChrome.Icon.Coin, Color3.fromRGB(255, 205, 60))
 
 -- ===== Aktive Forschung: Fortschrittsbalken + Abbrechen-Button =====
 local researchBar = Instance.new("Frame")
-researchBar.Size = UDim2.new(1, -16, 0, 30)
-researchBar.Position = UDim2.new(0, 8, 0, 70)
-researchBar.BackgroundColor3 = Color3.fromRGB(40, 36, 55)
+researchBar.Size = UDim2.new(1, -24, 0, 34)
+researchBar.Position = UDim2.new(0, 12, 0, 44)
 researchBar.Visible = false
-researchBar.Parent = panel
-applyComicStyle(researchBar, 8, 2)
+researchBar.Parent = schirm.content
+HudChrome.Panel(researchBar, { radius = HudChrome.Radius.Small, fill = HudChrome.Color.PanelSunken })
 
 -- Fortschritts-Füllung: wächst von links nach rechts, je näher die Forschung am Ende ist.
 local researchProgressFill = Instance.new("Frame")
 researchProgressFill.Size = UDim2.new(0, 0, 1, 0)
-researchProgressFill.BackgroundColor3 = Color3.fromRGB(220, 180, 60)
-researchProgressFill.BackgroundTransparency = 0.6
+researchProgressFill.BackgroundColor3 = HudChrome.Color.Ready
+researchProgressFill.BackgroundTransparency = 0.7
 researchProgressFill.BorderSizePixel = 0
 researchProgressFill.ZIndex = 1
 researchProgressFill.Parent = researchBar
 local researchProgressFillCorner = Instance.new("UICorner")
-researchProgressFillCorner.CornerRadius = UDim.new(0, 8)
+researchProgressFillCorner.CornerRadius = UDim.new(0, HudChrome.Radius.Small)
 researchProgressFillCorner.Parent = researchProgressFill
 
 local researchLabel = Instance.new("TextLabel")
 researchLabel.Size = UDim2.new(1, -100, 1, 0)
 researchLabel.Position = UDim2.new(0, 10, 0, 0)
 researchLabel.BackgroundTransparency = 1
-researchLabel.Font = Enum.Font.FredokaOne
-researchLabel.TextScaled = true
 researchLabel.TextXAlignment = Enum.TextXAlignment.Left
-researchLabel.TextColor3 = Color3.new(1, 1, 1)
 researchLabel.Text = ""
 researchLabel.ZIndex = 2
 researchLabel.Parent = researchBar
+HudChrome.Label(researchLabel, HudChrome.MenuTextSize.Caption)
 
 local cancelResearchButton = Instance.new("TextButton")
 cancelResearchButton.Size = UDim2.new(0, 80, 0, 22)
 cancelResearchButton.AnchorPoint = Vector2.new(1, 0.5)
 cancelResearchButton.Position = UDim2.new(1, -8, 0.5, 0)
-cancelResearchButton.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
-cancelResearchButton.Font = Enum.Font.FredokaOne
-cancelResearchButton.TextScaled = true
-cancelResearchButton.TextColor3 = Color3.new(1, 1, 1)
-cancelResearchButton.Text = "Cancel"
+cancelResearchButton.AutoButtonColor = false
+cancelResearchButton.Text = "CANCEL"
 cancelResearchButton.ZIndex = 2
 cancelResearchButton.Parent = researchBar
-applyComicStyle(cancelResearchButton, 6, 1)
+-- Der Abbruch traegt seinen Rand in Danger und nicht die ganze Flaeche. Rot heisst hier
+-- wirklich etwas -- eine laufende Forschung verwerfen --, aber es ist ein Rand, kein Alarm.
+local _, cancelStroke = HudChrome.Panel(cancelResearchButton, {
+	radius = HudChrome.Radius.Small,
+	fill = HudChrome.Color.Panel,
+})
+cancelStroke.Color = HudChrome.Color.Danger
+HudChrome.Label(cancelResearchButton, 14)
+cancelResearchButton.TextColor3 = HudChrome.Color.Danger
 cancelResearchButton.MouseButton1Click:Connect(function()
 	CancelResearchEvent:FireServer()
 end)
 
 -- ===== Baum-Bereich (scrollbar, absolute Positionierung nach Tier/Zweig) =====
 local treeScroll = Instance.new("ScrollingFrame")
-treeScroll.Size = UDim2.new(0, 960, 1, -110)
-treeScroll.Position = UDim2.new(0, 8, 0, 106)
-treeScroll.BackgroundColor3 = Color3.fromRGB(12, 10, 18)
+treeScroll.Size = UDim2.new(0, 960, 1, -104)
+treeScroll.Position = UDim2.new(0, 12, 0, 88)
+treeScroll.BackgroundColor3 = HudChrome.Color.PanelSunken
 treeScroll.BorderSizePixel = 0
 treeScroll.ScrollBarThickness = 6
 treeScroll.CanvasSize = UDim2.new(0, 960, 0, 900)
@@ -197,8 +193,8 @@ treeScroll.CanvasSize = UDim2.new(0, 960, 0, 900)
 -- erwarten würde) -- ohne das hier explizit zu setzen, konnten Verbindungslinien über
 -- den Fensterrand hinausragen und sogar das restliche HUD überlagern.
 treeScroll.ClipsDescendants = true
-treeScroll.Parent = panel
-applyComicStyle(treeScroll, 12, 2)
+treeScroll.Parent = schirm.content
+HudChrome.Panel(treeScroll, { radius = HudChrome.Radius.Panel, fill = false })
 
 -- Skaliert ALLE Knoten und Verbindungslinien im Baum gemeinsam. Sie stehen auf festen
 -- Koordinaten einer 960x900-Flaeche -- ohne diesen Faktor sah ein Telefon davon nur einen
@@ -248,11 +244,14 @@ local CONTENT_TOP = 106
 -- ===== Detail-Panel: zeigt das AUSGEWÄHLTE Talent -- Icon/Name, Beschreibung, Kosten,
 -- Forschungszeit, und einen "Vorher -> Nachher"-Wertevergleich. =====
 local detailPanel = Instance.new("Frame")
-detailPanel.Size = UDim2.new(0, 268, 1, -110)
-detailPanel.Position = UDim2.new(0, 976, 0, 106)
-detailPanel.BackgroundColor3 = Color3.fromRGB(28, 25, 40)
-detailPanel.Parent = panel
-applyComicStyle(detailPanel, 12, 2)
+detailPanel.Size = UDim2.new(0, 268, 1, -104)
+detailPanel.Position = UDim2.new(0, 980, 0, 88)
+detailPanel.Parent = schirm.content
+HudChrome.Panel(detailPanel, {
+	radius = HudChrome.Radius.Panel,
+	fill = HudChrome.Color.PanelRaised,
+	transparency = 0,
+})
 
 -- Flaeche, die den Kindern des Panels tatsaechlich zur Verfuegung steht.
 --
@@ -289,8 +288,11 @@ local function layoutColumns()
 	-- sie auf 300 plus 400 Pixeln, brauchten also 720 Mindestbreite -- auf einem Telefon
 	-- mit 640 lief die Tab-Reihe rechts aus dem Bild. Sie untereinander zu setzen waere
 	-- der naheliegende Ausweg, kostet im Querformat aber die knappe Hoehe.
+	-- Den Titel setzt seit dem Umbau die Kopfzeile von HudChrome.Screen -- ein eigenes
+	-- TextLabel gibt es hier nicht mehr. Die Breite bleibt trotzdem stehen: die Tab-Reihe
+	-- richtet sich weiter danach aus, und ihre Position von Hand zu ändern wäre eine
+	-- Layout-Entscheidung, keine Fehlerbehebung.
 	local titleWidth = math.clamp(math.floor(width * 0.3), 140, 300)
-	titleLabel.Size = UDim2.new(0, titleWidth, 0, 32)
 	tabRow.Position = UDim2.new(0, titleWidth + 24, 0, 8)
 	tabRow.Size = UDim2.new(0, math.max(width - titleWidth - 36, 120), 0, 32)
 	resourceRow.Position = UDim2.new(0, 8, 0, 44)
@@ -353,25 +355,27 @@ detailEmpty.Position = UDim2.new(0, 10, 0, 20)
 detailEmpty.BackgroundTransparency = 1
 detailEmpty.TextColor3 = Color3.fromRGB(140, 140, 150)
 detailEmpty.Text = "👆 Pick a talent to see its details."
-UiTypography.Body(detailEmpty)
+HudChrome.MenuBody(detailEmpty)
 detailEmpty.Parent = detailPanel
 
 local detailIcon = Instance.new("TextLabel")
 detailIcon.Size = UDim2.new(0, 60, 0, 60)
 detailIcon.Position = UDim2.new(0, 10, 0, 10)
-detailIcon.BackgroundColor3 = Color3.fromRGB(45, 42, 60)
-detailIcon.Font = Enum.Font.LuckiestGuy
 detailIcon.TextScaled = true
 detailIcon.Text = ""
 detailIcon.Visible = false
 detailIcon.Parent = detailPanel
-applyComicStyle(detailIcon, 12, 2)
+HudChrome.Panel(detailIcon, {
+	radius = HudChrome.Radius.Panel,
+	fill = HudChrome.Color.PanelSunken,
+	transparency = 0,
+})
 
 local detailName = Instance.new("TextLabel")
 detailName.Size = UDim2.new(1, -84, 0, 30)
 detailName.Position = UDim2.new(0, 78, 0, 10)
 detailName.BackgroundTransparency = 1
-UiTypography.Subhead(detailName, 18)
+HudChrome.Label(detailName, 18)
 detailName.TextXAlignment = Enum.TextXAlignment.Left
 detailName.TextColor3 = Color3.new(1, 1, 1)
 detailName.TextWrapped = true
@@ -383,7 +387,7 @@ local detailLevel = Instance.new("TextLabel")
 detailLevel.Size = UDim2.new(1, -84, 0, 20)
 detailLevel.Position = UDim2.new(0, 78, 0, 42)
 detailLevel.BackgroundTransparency = 1
-UiTypography.Body(detailLevel, 14)
+HudChrome.MenuBody(detailLevel, 14)
 detailLevel.TextXAlignment = Enum.TextXAlignment.Left
 detailLevel.TextColor3 = Color3.fromRGB(180, 180, 190)
 detailLevel.Text = ""
@@ -394,7 +398,7 @@ local detailDescription = Instance.new("TextLabel")
 detailDescription.Size = UDim2.new(1, -20, 0, 90)
 detailDescription.Position = UDim2.new(0, 10, 0, 78)
 detailDescription.BackgroundTransparency = 1
-UiTypography.Body(detailDescription)
+HudChrome.MenuBody(detailDescription)
 detailDescription.TextXAlignment = Enum.TextXAlignment.Left
 detailDescription.TextYAlignment = Enum.TextYAlignment.Top
 detailDescription.TextColor3 = Color3.fromRGB(210, 210, 220)
@@ -407,7 +411,7 @@ local detailStatsHeader = Instance.new("TextLabel")
 detailStatsHeader.Size = UDim2.new(1, -20, 0, 18)
 detailStatsHeader.Position = UDim2.new(0, 10, 0, 172)
 detailStatsHeader.BackgroundTransparency = 1
-UiTypography.Subhead(detailStatsHeader, 14)
+HudChrome.Label(detailStatsHeader, 14)
 detailStatsHeader.TextXAlignment = Enum.TextXAlignment.Left
 detailStatsHeader.TextColor3 = Color3.fromRGB(255, 210, 80)
 detailStatsHeader.Text = "STATS"
@@ -418,7 +422,7 @@ local detailStatPrimary = Instance.new("TextLabel")
 detailStatPrimary.Size = UDim2.new(1, -20, 0, 22)
 detailStatPrimary.Position = UDim2.new(0, 10, 0, 192)
 detailStatPrimary.BackgroundTransparency = 1
-UiTypography.Body(detailStatPrimary, 14)
+HudChrome.MenuBody(detailStatPrimary, 14)
 detailStatPrimary.TextXAlignment = Enum.TextXAlignment.Left
 detailStatPrimary.TextColor3 = Color3.fromRGB(120, 220, 140)
 detailStatPrimary.Text = ""
@@ -429,7 +433,7 @@ local detailStatTradeoff = Instance.new("TextLabel")
 detailStatTradeoff.Size = UDim2.new(1, -20, 0, 22)
 detailStatTradeoff.Position = UDim2.new(0, 10, 0, 216)
 detailStatTradeoff.BackgroundTransparency = 1
-UiTypography.Body(detailStatTradeoff, 14)
+HudChrome.MenuBody(detailStatTradeoff, 14)
 detailStatTradeoff.TextXAlignment = Enum.TextXAlignment.Left
 detailStatTradeoff.TextColor3 = Color3.fromRGB(230, 140, 40)
 detailStatTradeoff.Text = ""
@@ -441,7 +445,7 @@ local detailCostHeader = Instance.new("TextLabel")
 detailCostHeader.Size = UDim2.new(1, -20, 0, 18)
 detailCostHeader.Position = UDim2.new(0, 10, 0, 250)
 detailCostHeader.BackgroundTransparency = 1
-UiTypography.Subhead(detailCostHeader, 14)
+HudChrome.Label(detailCostHeader, 14)
 detailCostHeader.TextXAlignment = Enum.TextXAlignment.Left
 detailCostHeader.TextColor3 = Color3.fromRGB(255, 210, 80)
 detailCostHeader.Text = "COST"
@@ -452,7 +456,7 @@ local detailCostEnergy = Instance.new("TextLabel")
 detailCostEnergy.Size = UDim2.new(1, -20, 0, 24)
 detailCostEnergy.Position = UDim2.new(0, 10, 0, 270)
 detailCostEnergy.BackgroundTransparency = 1
-UiTypography.Body(detailCostEnergy, 14)
+HudChrome.MenuBody(detailCostEnergy, 14)
 detailCostEnergy.TextXAlignment = Enum.TextXAlignment.Left
 detailCostEnergy.TextColor3 = Color3.new(1, 1, 1)
 detailCostEnergy.Text = ""
@@ -463,7 +467,7 @@ local detailCostCoins = Instance.new("TextLabel")
 detailCostCoins.Size = UDim2.new(1, -20, 0, 24)
 detailCostCoins.Position = UDim2.new(0, 10, 0, 296)
 detailCostCoins.BackgroundTransparency = 1
-UiTypography.Body(detailCostCoins, 14)
+HudChrome.MenuBody(detailCostCoins, 14)
 detailCostCoins.TextXAlignment = Enum.TextXAlignment.Left
 detailCostCoins.TextColor3 = Color3.fromRGB(255, 220, 80)
 detailCostCoins.Text = ""
@@ -474,7 +478,7 @@ local detailResearchTime = Instance.new("TextLabel")
 detailResearchTime.Size = UDim2.new(1, -20, 0, 24)
 detailResearchTime.Position = UDim2.new(0, 10, 0, 322)
 detailResearchTime.BackgroundTransparency = 1
-UiTypography.Body(detailResearchTime, 14)
+HudChrome.MenuBody(detailResearchTime, 14)
 detailResearchTime.TextXAlignment = Enum.TextXAlignment.Left
 detailResearchTime.TextColor3 = Color3.fromRGB(180, 180, 220)
 detailResearchTime.Text = ""
@@ -485,7 +489,7 @@ local detailPrereqLabel = Instance.new("TextLabel")
 detailPrereqLabel.Size = UDim2.new(1, -20, 0, 40)
 detailPrereqLabel.Position = UDim2.new(0, 10, 0, 352)
 detailPrereqLabel.BackgroundTransparency = 1
-UiTypography.Body(detailPrereqLabel, 14)
+HudChrome.MenuBody(detailPrereqLabel, 14)
 detailPrereqLabel.TextWrapped = true
 detailPrereqLabel.TextXAlignment = Enum.TextXAlignment.Left
 detailPrereqLabel.TextColor3 = Color3.fromRGB(230, 100, 100)
@@ -497,25 +501,16 @@ local detailResearchButton = Instance.new("TextButton")
 detailResearchButton.Size = UDim2.new(1, -20, 0, 40)
 detailResearchButton.Position = UDim2.new(0, 10, 1, -50)
 detailResearchButton.BackgroundColor3 = Color3.fromRGB(90, 170, 100)
-detailResearchButton.Font = Enum.Font.LuckiestGuy
+
 detailResearchButton.TextScaled = true
 detailResearchButton.TextColor3 = Color3.new(1, 1, 1)
 detailResearchButton.Text = "🔬 RESEARCH"
 detailResearchButton.Visible = false
 detailResearchButton.Parent = detailPanel
-applyComicStyle(detailResearchButton, 10, 2)
+HudChrome.Panel(detailResearchButton, { radius = HudChrome.Radius.Small })
+HudChrome.Label(detailResearchButton, HudChrome.MenuTextSize.Caption)
 
-local closeButton = Instance.new("TextButton")
-closeButton.Size = UDim2.new(0, 32, 0, 32)
-closeButton.AnchorPoint = Vector2.new(1, 0)
-closeButton.Position = UDim2.new(1, -8, 0, 8)
-closeButton.BackgroundColor3 = Color3.fromRGB(220, 70, 70)
-closeButton.Font = Enum.Font.FredokaOne
-closeButton.TextScaled = true
-closeButton.TextColor3 = Color3.new(1, 1, 1)
-closeButton.Text = "X"
-closeButton.Parent = panel
-applyComicStyle(closeButton, 8, 2)
+local closeButton = schirm.close
 closeButton.MouseButton1Click:Connect(function()
 	panel.Visible = false
 	-- Kehrt zum Hamburger-Menü zurück (ersetzt den früheren separaten "← Back"-Button).
@@ -587,9 +582,9 @@ end
 
 local function updateResourceDisplay()
 	for _, energyType in ipairs(TalentTreeConfig.EnergyOrder) do
-		resourceLabels[energyType].Text = ENERGY_ICONS[energyType] .. " " .. math.floor(talentState.energy[energyType] or 0)
+		resourceLabels[energyType].Text = tostring(math.floor(talentState.energy[energyType] or 0))
 	end
-	coinsLabel.Text = "💰 " .. math.floor(talentState.coins or 0)
+	coinsLabel.Text = tostring(math.floor(talentState.coins or 0))
 end
 
 -- ===== Positions-Berechnung: Zweig-Reihenfolge wird DYNAMISCH aus den Knoten
@@ -789,7 +784,7 @@ local function selectTalent(talent, state, level)
 		detailResearchTime.Text = ""
 	else
 		local cost = TalentTreeConfig.GetNodeCost(talent, level + 1)
-		detailCostEnergy.Text = ENERGY_ICONS[talent.energyType] .. " " .. cost.energyAmount
+		detailCostEnergy.Text = string.format("%s  %d", talent.energyType, cost.energyAmount)
 		if cost.coinAmount > 0 then
 			detailCostCoins.Visible = true
 			detailCostCoins.Text = "💰 " .. cost.coinAmount
@@ -874,7 +869,9 @@ local function buildNode(talent, position, isActiveFaction)
 	button.Text = ""
 	button.ZIndex = 62
 	button.Parent = treeScroll
-	local nodeCorner, nodeStroke = applyComicStyle(button, 44, 3)
+	-- Rund: ein Knoten in einem Baum ist ein Punkt, keine Kachel. HudChrome.Pill setzt
+	-- dafuer einen echten Halbkreis-Radius.
+	local nodeCorner, nodeStroke = HudChrome.Pill(button, { fill = false })
 	if talent.isTradeoff then
 		nodeStroke.Color = Color3.fromRGB(230, 140, 40)
 	elseif ENERGY_COLORS[talent.energyType] then
@@ -885,7 +882,7 @@ local function buildNode(talent, position, isActiveFaction)
 	iconLabel.Size = UDim2.new(1, 0, 0, 38)
 	iconLabel.Position = UDim2.new(0, 0, 0, 4)
 	iconLabel.BackgroundTransparency = 1
-	iconLabel.Font = Enum.Font.LuckiestGuy
+
 	iconLabel.TextScaled = true
 	iconLabel.Text = talent.icon
 	iconLabel.ZIndex = 63
@@ -895,7 +892,7 @@ local function buildNode(talent, position, isActiveFaction)
 	levelLabel.Size = UDim2.new(1, 0, 0, 16)
 	levelLabel.Position = UDim2.new(0, 0, 0, 66)
 	levelLabel.BackgroundTransparency = 1
-	levelLabel.Font = Enum.Font.FredokaOne
+
 	levelLabel.TextScaled = true
 	levelLabel.TextColor3 = Color3.new(1, 1, 1)
 	levelLabel.Text = level .. "/" .. talent.maxLevel
@@ -907,7 +904,7 @@ local function buildNode(talent, position, isActiveFaction)
 	infoLabel.AnchorPoint = Vector2.new(0.5, 0)
 	infoLabel.Position = UDim2.new(0, position.X, 0, position.Y + 48)
 	infoLabel.BackgroundTransparency = 1
-	infoLabel.Font = Enum.Font.FredokaOne
+
 	infoLabel.TextScaled = true
 	infoLabel.TextWrapped = true
 	infoLabel.TextColor3 = Color3.fromRGB(200, 200, 210)
@@ -927,14 +924,16 @@ local function buildNode(talent, position, isActiveFaction)
 	newFlag.Size = UDim2.new(0, 44, 0, 18)
 	newFlag.Position = UDim2.new(0.5, 0, 0, -8)
 	newFlag.BackgroundColor3 = Color3.fromRGB(235, 45, 45)
-	newFlag.Font = Enum.Font.FredokaOne
+
 	newFlag.TextScaled = true
 	newFlag.TextColor3 = Color3.fromRGB(255, 255, 255)
 	newFlag.Text = "NEW"
 	newFlag.ZIndex = 64
 	newFlag.Visible = (_G.GetNavBadgeItems and _G.GetNavBadgeItems("Talents")[talent.id]) == true
 	newFlag.Parent = button
-	applyComicStyle(newFlag, 6, 2)
+	HudChrome.Panel(newFlag, { radius = HudChrome.Radius.Small, fill = HudChrome.Color.Danger })
+	HudChrome.Label(newFlag, 11)
+	newFlag.TextColor3 = Color3.new(1, 1, 1)
 
 	nodeRefs[talent.id] = { button = button, levelLabel = levelLabel, infoLabel = infoLabel, position = position, newFlag = newFlag }
 end
@@ -1003,19 +1002,37 @@ local function renderTree(factionName)
 end
 
 -- ===== Tabs bauen =====
-for _, tabConfig in ipairs(FACTION_TABS) do
+-- Dieselben Symbolknoepfe wie im Skin-Laden. Drei Figuren, zwei Bildschirme, ein Aussehen.
+local tabButtons = {}
+for index, tabConfig in ipairs(FACTION_TABS) do
 	local tabButton = Instance.new("TextButton")
-	tabButton.Size = UDim2.new(0, 126, 1, 0)
-	tabButton.BackgroundColor3 = tabConfig.color
-	tabButton.Font = Enum.Font.LuckiestGuy
-	tabButton.TextScaled = true
-	tabButton.TextColor3 = Color3.new(1, 1, 1)
-	tabButton.Text = tabConfig.icon .. " " .. tabConfig.label
+	tabButton.Name = tabConfig.key .. "Tab"
+	tabButton.Size = UDim2.new(0, 44, 0, 44)
+	tabButton.LayoutOrder = index
+	tabButton.AutoButtonColor = false
+	tabButton.Text = ""
+	tabButton.ZIndex = 5
 	tabButton.Parent = tabRow
-	applyComicStyle(tabButton, 8, 2)
+	local _, tabStroke = HudChrome.Panel(tabButton, {
+		radius = HudChrome.Radius.Small,
+		fill = HudChrome.Color.Panel,
+	})
+	local tabBild = HudChrome.IconImage(tabButton, HudChrome.FactionIcon[tabConfig.key] or "")
+	tabBild.Size = UDim2.new(1, -12, 1, -12)
+	tabBild.Position = UDim2.new(0, 6, 0, 6)
+	tabBild.ZIndex = 6
+
+	tabButtons[tabConfig.key] = { rand = tabStroke, bild = tabBild }
 
 	tabButton.MouseButton1Click:Connect(function()
 		renderTree(tabConfig.key)
+		for key, eintrag in pairs(tabButtons) do
+			local gewaehlt = (key == tabConfig.key)
+			eintrag.rand.Color = gewaehlt and HudChrome.Color.BorderBright or HudChrome.Color.Border
+			eintrag.rand.Thickness = gewaehlt and 2 or HudChrome.BorderThickness
+			eintrag.bild.ImageTransparency = gewaehlt and 0 or 0.45
+		end
+		schirm.subtitle.Text = string.upper(tabConfig.label)
 	end)
 end
 
