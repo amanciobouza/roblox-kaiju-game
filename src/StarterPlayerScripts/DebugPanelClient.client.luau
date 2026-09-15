@@ -58,6 +58,7 @@ local DebugRunSpecCheckEvent = waitForRemote("DebugRunSpecCheckEvent")
 local DebugStartPrologueResultEvent = waitForRemote("DebugStartPrologueResultEvent")
 local DebugRevealArchiveEvent = waitForRemote("DebugRevealArchiveEvent")
 local DebugSetSessionTimeEvent = waitForRemote("DebugSetSessionTimeEvent")
+local DebugSetScaleEvent = waitForRemote("DebugSetScaleEvent")
 
 player:SetAttribute("DebugMode", false)
 
@@ -178,6 +179,7 @@ local ORDER = {
 
 	SpielerKopf = 20,
 	LevelRegler = 30,
+	GroessenRegler = 35,
 	Fraktion = 40,
 
 	StadtKopf = 50,
@@ -448,6 +450,24 @@ local levelSliderRow, resetLevelSliderVisual = createSlider(ORDER.LevelRegler, "
 	sliderLabel.Text = "Level: " .. currentLevel
 	if DebugSetLevelEvent then
 		DebugSetLevelEvent:FireServer(currentLevel)
+	end
+end)
+
+-- ===== Groessen-Regler: setzt die Figurenhoehe von Hand =====
+--
+-- In Studs, nicht als Faktor. Ein Faktor von 1.6 sagt nichts ueber das, was man sieht; eine
+-- Hoehe in Studs laesst sich im Spiel an einem Gebaeude nachmessen.
+--
+-- Null ganz links heisst AUS: dann gilt wieder die Groesse der getragenen Stufe. Ohne
+-- diesen Punkt gaebe es keinen Weg zurueck, ausser den Regler zufaellig genau auf den Wert
+-- der Stufe zu stellen.
+local MAX_DEBUG_STUDS = 100
+
+local scaleSliderRow = createSlider(ORDER.GroessenRegler, "Size: off", function(ratio, sliderLabel)
+	local studs = math.floor(ratio * MAX_DEBUG_STUDS + 0.5)
+	sliderLabel.Text = studs > 0 and ("Size: " .. studs .. " studs") or "Size: off"
+	if DebugSetScaleEvent then
+		DebugSetScaleEvent:FireServer(studs)
 	end
 end)
 
@@ -1017,6 +1037,7 @@ local function updateCheckboxVisual()
 	checkmark.Text = isOn and "✓" or ""
 	checkbox.BackgroundColor3 = isOn and Color3.fromRGB(60, 140, 70) or Color3.fromRGB(80, 80, 90)
 	levelSliderRow.Visible = isOn
+	scaleSliderRow.Visible = isOn
 	cityAlertSliderRow.Visible = isOn
 	sessionSliderRow.Visible = isOn
 	rerollButton.Visible = isOn

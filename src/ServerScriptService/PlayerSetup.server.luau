@@ -582,6 +582,28 @@ local function stabilizeCharacterOnGround(character, humanoid)
 	recalculateJumpPower(character, humanoid)
 end
 
+-- Bezugsgroesse: bei Scale 1.0 ist die Figur rund 30 Studs hoch. Der Wert steht in
+-- SkinsConfig an jeder Stufe als Kommentar; hier als Zahl, damit der Debug-Regler in Studs
+-- rechnen kann -- einer Einheit, die man im Spiel nachmessen kann.
+local SCALE_REFERENCE_STUDS = 30
+
+-- Die Zielgroesse einer Figur, an EINER Stelle.
+--
+-- SkinsConfig.GetScale wurde an zwei Stellen aufgerufen, und beide mussten dieselbe Zahl
+-- bekommen -- der Kommentar dort sagt es ausdruecklich: stimmen sie nicht ueberein, rechnet
+-- das Rig mit falschen Entfernungen. Der Debug-Regler haette daraus drei Stellen gemacht.
+--
+-- Die Ueberschreibung gilt vor allem anderen, auch vor der Sanctuary-Verkleinerung. Wer sie
+-- stellt, will genau diese Groesse sehen und nicht die, die das Spiel gerade fuer richtig
+-- haelt.
+local function zielGroesse(player, skin)
+	local debugHoehe = player:GetAttribute("DebugScaleStuds")
+	if type(debugHoehe) == "number" and debugHoehe > 0 then
+		return debugHoehe / SCALE_REFERENCE_STUDS
+	end
+	return SkinsConfig.GetScale(skin, player:GetAttribute("CurrentZone") == "Sanctuary")
+end
+
 local function applySkinToCharacter(player, character, skinId)
 	if DISABLE_ALL_CHARACTER_CUSTOMIZATION_FOR_TESTING then
 		return -- Charakter bleibt zu 100% unberührter Standard-Roblox-Avatar
@@ -643,7 +665,7 @@ local function applySkinToCharacter(player, character, skinId)
 	-- Die Grösse kommt aus SkinsConfig.GetScale -- derselben Stelle, aus der auch die
 	-- Bau-Grösse des Kaiju-Modells kommt. Beide MÜSSEN übereinstimmen, sonst rechnet das
 	-- Rig mit falschen Entfernungen (siehe dort).
-	local targetScale = SkinsConfig.GetScale(skin, player:GetAttribute("CurrentZone") == "Sanctuary")
+	local targetScale = zielGroesse(player, skin)
 
 	local actualAvatarScale = targetScale
 	local scalingWasApplied = false
@@ -2238,6 +2260,34 @@ _G.EVO_BONUS_PER_LEVEL = EVO_BONUS_PER_LEVEL
 _G.EVO_MAX_LEVEL = EVO_MAX_LEVEL
 _G.ApplySkinToCharacter = applySkinToCharacter
 
+-- ===== Debug: Groessenregler =====
+--
+-- Setzt eine Wunschhoehe in Studs und wendet den getragenen Skin sofort neu an -- sonst
+-- stuende die Zahl im Speicher und die Figur unveraendert im Bild.
+--
+-- Null nimmt die Ueberschreibung zurueck: dann gilt wieder, was die Stufe vorgibt. Deshalb
+-- faengt der Regler bei null an und nicht bei eins.
+local DebugSetScaleEvent = Instance.new("RemoteEvent")
+DebugSetScaleEvent.Name = "DebugSetScaleEvent"
+DebugSetScaleEvent.Parent = ReplicatedStorage
+
+DebugSetScaleEvent.OnServerEvent:Connect(function(player, studs)
+	if not player:GetAttribute("DebugMode") then
+		return
+	end
+	if type(studs) ~= "number" or studs ~= studs then
+		return
+	end
+	studs = math.clamp(math.floor(studs), 0, 100)
+	player:SetAttribute("DebugScaleStuds", studs > 0 and studs or nil)
+
+	local character = player.Character
+	local equippedSkin = player:FindFirstChild("EquippedSkin")
+	if character and equippedSkin then
+		applySkinToCharacter(player, character, equippedSkin.Value)
+	end
+end)
+
 -- Playable Prologue ("The Fall"): vom künftigen Prolog-Orchestrierungs-Script aufzurufen,
 -- sobald die komplette Sequenz (Cold Open bis Awakening) fertig durchlaufen wurde.
 -- Markiert den Prolog als abgeschlossen, speichert SOFORT (nicht erst beim nächsten
@@ -2279,7 +2329,7 @@ local function applyZoneAwareScale(player, character)
 	-- Die Grösse kommt aus SkinsConfig.GetScale -- derselben Stelle, aus der auch die
 	-- Bau-Grösse des Kaiju-Modells kommt. Beide MÜSSEN übereinstimmen, sonst rechnet das
 	-- Rig mit falschen Entfernungen (siehe dort).
-	local targetScale = SkinsConfig.GetScale(skin, player:GetAttribute("CurrentZone") == "Sanctuary")
+	local targetScale = zielGroesse(player, skin)
 
 	local currentScaleOk, currentScale = pcall(function()
 		return character:GetScale()
