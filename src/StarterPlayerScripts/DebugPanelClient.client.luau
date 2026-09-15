@@ -461,10 +461,19 @@ end)
 -- Null ganz links heisst AUS: dann gilt wieder die Groesse der getragenen Stufe. Ohne
 -- diesen Punkt gaebe es keinen Weg zurueck, ausser den Regler zufaellig genau auf den Wert
 -- der Stufe zu stellen.
-local MAX_DEBUG_STUDS = 100
+-- Bis 1000 Studs. Das ist weit jenseits jeder Spielgroesse -- die hoechste Stufe steht bei
+-- rund 60 -- und genau dafuer ist der Regler da: um zu sehen, was passiert, wenn eine Figur
+-- so gross wird, dass sie ueber die Stadt hinausragt.
+local MAX_DEBUG_STUDS = 1000
+
+-- Die Skala ist gekruemmt, nicht linear. Der interessante Bereich liegt unten: die fuenf
+-- Stufen stehen zwischen 24 und 60 Studs, und linear laegen die alle auf den ersten sechs
+-- Prozent des Reglers -- man koennte sie nicht einzeln treffen. Quadratisch liegt die
+-- Haelfte des Reglers bei 250 Studs, das erste Viertel deckt den Spielbereich ab.
+local SCALE_KURVE = 2
 
 local scaleSliderRow = createSlider(ORDER.GroessenRegler, "Size: off", function(ratio, sliderLabel)
-	local studs = math.floor(ratio * MAX_DEBUG_STUDS + 0.5)
+	local studs = math.floor(MAX_DEBUG_STUDS * ratio ^ SCALE_KURVE + 0.5)
 	sliderLabel.Text = studs > 0 and ("Size: " .. studs .. " studs") or "Size: off"
 	if DebugSetScaleEvent then
 		DebugSetScaleEvent:FireServer(studs)

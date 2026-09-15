@@ -2278,7 +2278,7 @@ DebugSetScaleEvent.OnServerEvent:Connect(function(player, studs)
 	if type(studs) ~= "number" or studs ~= studs then
 		return
 	end
-	studs = math.clamp(math.floor(studs), 0, 100)
+	studs = math.clamp(math.floor(studs), 0, 1000)
 	player:SetAttribute("DebugScaleStuds", studs > 0 and studs or nil)
 
 	local character = player.Character
