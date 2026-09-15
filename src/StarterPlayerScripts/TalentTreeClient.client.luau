@@ -380,7 +380,7 @@ detailEmpty.Parent = detailPanel
 local detailIconBild = Instance.new("ImageLabel")
 
 local detailIcon = Instance.new("TextLabel")
-detailIcon.Size = UDim2.new(0, 60, 0, 60)
+detailIcon.Size = UDim2.new(0, 76, 0, 76)
 detailIcon.Position = UDim2.new(0, 10, 0, 10)
 detailIcon.TextScaled = true
 detailIcon.Text = ""
@@ -395,16 +395,16 @@ HudChrome.Panel(detailIcon, {
 -- Das Bild liegt IM Kaestchen, nicht daneben: das Kaestchen traegt Rahmen und Grund, und
 -- die beiden Sorten Symbol teilen es sich.
 detailIconBild.Name = "DetailIconImage"
-detailIconBild.Size = UDim2.new(1, -14, 1, -14)
-detailIconBild.Position = UDim2.new(0, 7, 0, 7)
+detailIconBild.Size = UDim2.new(1, -8, 1, -8)
+detailIconBild.Position = UDim2.new(0, 4, 0, 4)
 detailIconBild.BackgroundTransparency = 1
 detailIconBild.ScaleType = Enum.ScaleType.Fit
 detailIconBild.Visible = false
 detailIconBild.Parent = detailIcon
 
 local detailName = Instance.new("TextLabel")
-detailName.Size = UDim2.new(1, -84, 0, 30)
-detailName.Position = UDim2.new(0, 78, 0, 10)
+detailName.Size = UDim2.new(1, -106, 0, 30)
+detailName.Position = UDim2.new(0, 96, 0, 20)
 detailName.BackgroundTransparency = 1
 HudChrome.Label(detailName, 18)
 detailName.TextXAlignment = Enum.TextXAlignment.Left
@@ -415,8 +415,8 @@ detailName.Visible = false
 detailName.Parent = detailPanel
 
 local detailLevel = Instance.new("TextLabel")
-detailLevel.Size = UDim2.new(1, -84, 0, 20)
-detailLevel.Position = UDim2.new(0, 78, 0, 42)
+detailLevel.Size = UDim2.new(1, -106, 0, 20)
+detailLevel.Position = UDim2.new(0, 96, 0, 52)
 detailLevel.BackgroundTransparency = 1
 HudChrome.MenuBody(detailLevel, 14)
 detailLevel.TextXAlignment = Enum.TextXAlignment.Left
@@ -427,7 +427,7 @@ detailLevel.Parent = detailPanel
 
 local detailDescription = Instance.new("TextLabel")
 detailDescription.Size = UDim2.new(1, -20, 0, 90)
-detailDescription.Position = UDim2.new(0, 10, 0, 78)
+detailDescription.Position = UDim2.new(0, 10, 0, 94)
 detailDescription.BackgroundTransparency = 1
 HudChrome.MenuBody(detailDescription)
 detailDescription.TextXAlignment = Enum.TextXAlignment.Left
@@ -440,7 +440,7 @@ detailDescription.Parent = detailPanel
 -- Vorher/Nachher-Wertevergleich
 local detailStatsHeader = Instance.new("TextLabel")
 detailStatsHeader.Size = UDim2.new(1, -20, 0, 18)
-detailStatsHeader.Position = UDim2.new(0, 10, 0, 172)
+detailStatsHeader.Position = UDim2.new(0, 10, 0, 188)
 detailStatsHeader.BackgroundTransparency = 1
 HudChrome.Label(detailStatsHeader, 14)
 detailStatsHeader.TextXAlignment = Enum.TextXAlignment.Left
@@ -451,7 +451,7 @@ detailStatsHeader.Parent = detailPanel
 
 local detailStatPrimary = Instance.new("TextLabel")
 detailStatPrimary.Size = UDim2.new(1, -20, 0, 22)
-detailStatPrimary.Position = UDim2.new(0, 10, 0, 192)
+detailStatPrimary.Position = UDim2.new(0, 10, 0, 208)
 detailStatPrimary.BackgroundTransparency = 1
 HudChrome.MenuBody(detailStatPrimary, 14)
 detailStatPrimary.TextXAlignment = Enum.TextXAlignment.Left
@@ -462,7 +462,7 @@ detailStatPrimary.Parent = detailPanel
 
 local detailStatTradeoff = Instance.new("TextLabel")
 detailStatTradeoff.Size = UDim2.new(1, -20, 0, 22)
-detailStatTradeoff.Position = UDim2.new(0, 10, 0, 216)
+detailStatTradeoff.Position = UDim2.new(0, 10, 0, 232)
 detailStatTradeoff.BackgroundTransparency = 1
 HudChrome.MenuBody(detailStatTradeoff, 14)
 detailStatTradeoff.TextXAlignment = Enum.TextXAlignment.Left
@@ -474,7 +474,7 @@ detailStatTradeoff.Parent = detailPanel
 -- Kosten + Forschungszeit
 local detailCostHeader = Instance.new("TextLabel")
 detailCostHeader.Size = UDim2.new(1, -20, 0, 18)
-detailCostHeader.Position = UDim2.new(0, 10, 0, 250)
+detailCostHeader.Position = UDim2.new(0, 10, 0, 266)
 detailCostHeader.BackgroundTransparency = 1
 HudChrome.Label(detailCostHeader, 14)
 detailCostHeader.TextXAlignment = Enum.TextXAlignment.Left
@@ -485,7 +485,7 @@ detailCostHeader.Parent = detailPanel
 
 local detailCostEnergy = Instance.new("TextLabel")
 detailCostEnergy.Size = UDim2.new(1, -20, 0, 24)
-detailCostEnergy.Position = UDim2.new(0, 10, 0, 270)
+detailCostEnergy.Position = UDim2.new(0, 10, 0, 286)
 detailCostEnergy.BackgroundTransparency = 1
 HudChrome.MenuBody(detailCostEnergy, 14)
 detailCostEnergy.TextXAlignment = Enum.TextXAlignment.Left
@@ -496,7 +496,7 @@ detailCostEnergy.Parent = detailPanel
 
 local detailCostCoins = Instance.new("TextLabel")
 detailCostCoins.Size = UDim2.new(1, -20, 0, 24)
-detailCostCoins.Position = UDim2.new(0, 10, 0, 296)
+detailCostCoins.Position = UDim2.new(0, 10, 0, 312)
 detailCostCoins.BackgroundTransparency = 1
 HudChrome.MenuBody(detailCostCoins, 14)
 detailCostCoins.TextXAlignment = Enum.TextXAlignment.Left
@@ -507,7 +507,7 @@ detailCostCoins.Parent = detailPanel
 
 local detailResearchTime = Instance.new("TextLabel")
 detailResearchTime.Size = UDim2.new(1, -20, 0, 24)
-detailResearchTime.Position = UDim2.new(0, 10, 0, 322)
+detailResearchTime.Position = UDim2.new(0, 10, 0, 338)
 detailResearchTime.BackgroundTransparency = 1
 HudChrome.MenuBody(detailResearchTime, 14)
 detailResearchTime.TextXAlignment = Enum.TextXAlignment.Left
@@ -518,7 +518,7 @@ detailResearchTime.Parent = detailPanel
 
 local detailPrereqLabel = Instance.new("TextLabel")
 detailPrereqLabel.Size = UDim2.new(1, -20, 0, 40)
-detailPrereqLabel.Position = UDim2.new(0, 10, 0, 352)
+detailPrereqLabel.Position = UDim2.new(0, 10, 0, 368)
 detailPrereqLabel.BackgroundTransparency = 1
 HudChrome.MenuBody(detailPrereqLabel, 14)
 detailPrereqLabel.TextWrapped = true
@@ -892,6 +892,11 @@ local function refreshSelectedTalentDetails()
 	selectTalent(talent, state, level)
 end
 
+-- Das Symbol fuellt den 88 Pixel grossen Knoten fast aus. Fast: der Knoten ist rund,
+-- und einem Quadrat, das groesser ist als 88/Wurzel(2) = 62, stehen die Ecken ueber dem
+-- Ring hinaus. 68 geht, weil die Symbole selbst einen Rand mitbringen.
+local NODE_SYMBOL = 68
+
 local function buildNode(talent, position, isActiveFaction)
 	local level = (talentState.levels[currentFaction] and talentState.levels[currentFaction][talent.id]) or 0
 	local state = getNodeState(talent, level, isActiveFaction)
@@ -915,14 +920,16 @@ local function buildNode(talent, position, isActiveFaction)
 	end
 
 	local iconBild = HudChrome.IconImage(button, "")
-	iconBild.Size = UDim2.new(0, 34, 0, 34)
-	iconBild.Position = UDim2.new(0.5, -17, 0, 6)
+	iconBild.Size = UDim2.new(0, NODE_SYMBOL, 0, NODE_SYMBOL)
+	iconBild.Position = UDim2.new(0.5, -NODE_SYMBOL / 2, 0, 4)
 	iconBild.Visible = false
 	iconBild.ZIndex = 63
 
+	-- Der Notbehelf sitzt auf demselben Platz wie das Bild: wer ein Symbol nachreicht,
+	-- soll nichts verrutschen sehen.
 	local iconLabel = Instance.new("TextLabel")
-	iconLabel.Size = UDim2.new(1, 0, 0, 38)
-	iconLabel.Position = UDim2.new(0, 0, 0, 4)
+	iconLabel.Size = UDim2.new(0, NODE_SYMBOL, 0, NODE_SYMBOL)
+	iconLabel.Position = UDim2.new(0.5, -NODE_SYMBOL / 2, 0, 4)
 	iconLabel.BackgroundTransparency = 1
 	iconLabel.TextScaled = true
 	iconLabel.ZIndex = 63
@@ -930,15 +937,26 @@ local function buildNode(talent, position, isActiveFaction)
 
 	zeigeTalentSymbol(iconBild, iconLabel, talent)
 
+	local levelUnterlage = Instance.new("Frame")
+	levelUnterlage.Name = "LevelBacking"
+	levelUnterlage.Size = UDim2.new(0, 48, 0, 20)
+	levelUnterlage.Position = UDim2.new(0.5, -24, 0, 60)
+	levelUnterlage.BackgroundColor3 = Color3.fromRGB(6, 8, 11)
+	levelUnterlage.BackgroundTransparency = 0.25
+	levelUnterlage.BorderSizePixel = 0
+	levelUnterlage.ZIndex = 63
+	levelUnterlage.Parent = button
+	HudChrome.Pill(levelUnterlage, { fill = false, border = false })
+
 	local levelLabel = Instance.new("TextLabel")
-	levelLabel.Size = UDim2.new(1, 0, 0, 16)
-	levelLabel.Position = UDim2.new(0, 0, 0, 66)
+	levelLabel.Size = UDim2.new(0, 48, 0, 16)
+	levelLabel.Position = UDim2.new(0.5, -24, 0, 62)
 	levelLabel.BackgroundTransparency = 1
 
 	levelLabel.TextScaled = true
 	levelLabel.TextColor3 = Color3.new(1, 1, 1)
 	levelLabel.Text = level .. "/" .. talent.maxLevel
-	levelLabel.ZIndex = 63
+	levelLabel.ZIndex = 64
 	levelLabel.Parent = button
 
 	local infoLabel = Instance.new("TextLabel")
