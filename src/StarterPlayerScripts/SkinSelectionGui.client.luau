@@ -2173,28 +2173,104 @@ shopKopf.close.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Liste links, Steckbrief rechts. Die Liste braucht wenig -- sechs Eintraege mit Name und
--- Zustand --, der Steckbrief traegt Modell, Balken, Beschreibung und den Aktionsknopf.
-local LIST_WIDTH = 0.3
+-- ===== Die Stufenleiter =====
+--
+-- Hier stand eine Liste: sechs Textbalken untereinander, nach Fraktion gruppiert. Das war
+-- als Aufzaehlung richtig und als Bild falsch, denn die Skins SIND keine Aufzaehlung. Sie
+-- sind die Entwicklungsstufen einer Figur -- Level 0, 10, 20, 30, 40, Preise 0, 150, 400,
+-- 1000 --, und jede ist strikt besser als die vorige. Eine Liste ordnet das, aber sie zeigt
+-- den Aufstieg nicht.
+--
+-- Also dieselbe Form wie bei den Zeitgeschenken: eine Bahn, die Stufen an ihrer echten
+-- Stelle darauf, und eine Marke fuer den eigenen Stand. Bei den Geschenken ist die Achse
+-- die Zeit; hier ist sie das LEVEL -- die Groesse, an der die Stufen haengen. Die Marke
+-- steht damit nicht fuer eine Uhr, sondern fuer einen selbst, und was rechts von ihr liegt,
+-- ist sichtbar noch nicht erreichbar.
+local LEITER_HOEHE = 138
+local LEITER_RAND = 56
+local STUFE_BREITE = 104
+local STUFE_PUNKT = 22
+local STUFE_PUNKT_GEWAEHLT = 34
 
-local shopScroll = Instance.new("ScrollingFrame")
-shopScroll.Name = "ShopScroll"
--- Im Inhaltsbereich des Kopfes: die Kopfhoehe ist dort schon abgezogen.
-shopScroll.Size = UDim2.new(LIST_WIDTH, -16, 1, -24)
-shopScroll.Position = UDim2.new(0, 12, 0, 12)
-shopScroll.BackgroundTransparency = 1
-shopScroll.BorderSizePixel = 0
-shopScroll.ScrollBarThickness = 10
-shopScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-shopScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-shopScroll.Parent = shopKopf.content
+local leiter = {}
+do
+	local rahmen = Instance.new("Frame")
+	rahmen.Name = "SkinLadder"
+	rahmen.AnchorPoint = Vector2.new(0, 1)
+	rahmen.Position = UDim2.new(0, LEITER_RAND, 1, -12)
+	rahmen.Size = UDim2.new(1, -LEITER_RAND * 2, 0, LEITER_HOEHE)
+	rahmen.BackgroundTransparency = 1
+	rahmen.Parent = shopKopf.content
+	leiter.rahmen = rahmen
 
-local shopLayout = Instance.new("UIListLayout")
-shopLayout.Padding = UDim.new(0, 8)
--- Ausdruecklich nach LayoutOrder: seit die Liste nach Fraktionen gruppiert ist, haengt die
--- Reihenfolge an den vergebenen Nummern und nicht mehr an der Erzeugungsreihenfolge.
-shopLayout.SortOrder = Enum.SortOrder.LayoutOrder
-shopLayout.Parent = shopScroll
+	local bahn = Instance.new("Frame")
+	bahn.Name = "Track"
+	bahn.AnchorPoint = Vector2.new(0, 0.5)
+	bahn.Position = UDim2.new(0, 0, 0.5, 0)
+	bahn.Size = UDim2.new(1, 0, 0, 4)
+	bahn.BackgroundColor3 = HudChrome.Color.BorderDim
+	bahn.BorderSizePixel = 0
+	bahn.Parent = rahmen
+	leiter.bahn = bahn
+
+	-- Der erreichte Teil ist hell: die Bahn beantwortet "wie weit bin ich" schon, ohne dass
+	-- man eine Zahl liest.
+	local erreicht = Instance.new("Frame")
+	erreicht.Name = "TrackReached"
+	erreicht.Size = UDim2.new(0, 0, 1, 0)
+	erreicht.BackgroundColor3 = HudChrome.Color.Border
+	erreicht.BorderSizePixel = 0
+	erreicht.ZIndex = 2
+	erreicht.Parent = bahn
+	leiter.erreicht = erreicht
+
+	-- Die eigene Marke. Blasse Linie ueber die ganze Hoehe, helle Raute auf der Bahn, das
+	-- Wort darueber -- dieselbe Aufteilung wie bei den Geschenken, und aus demselben Grund:
+	-- ein deckender Strich wuerde die Leiter zerschneiden.
+	local marke = Instance.new("Frame")
+	marke.Name = "LevelMarker"
+	marke.AnchorPoint = Vector2.new(0.5, 0.5)
+	marke.Size = UDim2.new(0, 40, 0, LEITER_HOEHE - 30)
+	marke.Position = UDim2.new(0, 0, 0.5, 0)
+	marke.BackgroundTransparency = 1
+	marke.ZIndex = 200
+	marke.Parent = bahn
+	leiter.marke = marke
+
+	local markeLinie = Instance.new("Frame")
+	markeLinie.AnchorPoint = Vector2.new(0.5, 0.5)
+	markeLinie.Size = UDim2.new(0, 1, 1, 0)
+	markeLinie.Position = UDim2.new(0.5, 0, 0.5, 0)
+	markeLinie.BackgroundColor3 = HudChrome.Color.BorderBright
+	markeLinie.BackgroundTransparency = 0.7
+	markeLinie.BorderSizePixel = 0
+	markeLinie.ZIndex = 201
+	markeLinie.Parent = marke
+
+	local markeRaute = Instance.new("Frame")
+	markeRaute.AnchorPoint = Vector2.new(0.5, 0.5)
+	markeRaute.Size = UDim2.new(0, 11, 0, 11)
+	markeRaute.Position = UDim2.new(0.5, 0, 0.5, 0)
+	markeRaute.Rotation = 45
+	markeRaute.BackgroundColor3 = HudChrome.Color.BorderBright
+	markeRaute.BorderSizePixel = 0
+	markeRaute.ZIndex = 202
+	markeRaute.Parent = marke
+
+	local markeLabel = Instance.new("TextLabel")
+	markeLabel.AnchorPoint = Vector2.new(0.5, 1)
+	markeLabel.Size = UDim2.new(0, 90, 0, 20)
+	markeLabel.Position = UDim2.new(0.5, 0, 0, -2)
+	markeLabel.BackgroundTransparency = 1
+	markeLabel.Text = "YOU"
+	markeLabel.ZIndex = 203
+	markeLabel.Parent = marke
+	HudChrome.Label(markeLabel, 14)
+	markeLabel.TextColor3 = HudChrome.Color.BorderBright
+
+	leiter.stufen = {} -- je Eintrag { knopf, punkt, ring, name, unten }
+	leiter.hoehe = LEITER_HOEHE
+end
 
 -- ===== Steckbrief =====
 -- Kein Unterbildschirm: der Shop ist seit dem Vollbild-Umbau breit genug, beides
@@ -2203,8 +2279,10 @@ shopLayout.Parent = shopScroll
 -- die oberste Stufe ein teures Versehen sein konnte.
 local detailFrame = Instance.new("Frame")
 detailFrame.Name = "SkinDetail"
-detailFrame.Size = UDim2.new(1 - LIST_WIDTH, -24, 1, -24)
-detailFrame.Position = UDim2.new(LIST_WIDTH, 4, 0, 12)
+-- Ueber der Leiter, ueber die volle Breite. Vorher teilte er sich die Flaeche mit der
+-- Liste und bekam knapp siebzig Prozent davon; die Figur war darin eine Briefmarke.
+detailFrame.Size = UDim2.new(1, -24, 1, -(LEITER_HOEHE + 36))
+detailFrame.Position = UDim2.new(0, 12, 0, 12)
 
 local SKIN_TEXT_MAX_WIDTH = 620 -- lesbare Zeilenlaenge, unabhaengig von der Bildschirmbreite
 detailFrame.Parent = shopKopf.content
@@ -2214,9 +2292,11 @@ HudChrome.Panel(detailFrame, {
 	transparency = 0,
 })
 
+-- Die Figur ueber die volle Hoehe des Steckbriefs. Sie ist die Ware in einem Laden fuer
+-- das Aussehen; als halbhohe Briefmarke in der Ecke war sie eine Illustration.
 local detailViewport = Instance.new("Frame")
 detailViewport.Name = "Preview"
-detailViewport.Size = UDim2.new(0.42, -24, 0.52, 0)
+detailViewport.Size = UDim2.new(0.42, -24, 1, -32)
 detailViewport.Position = UDim2.new(0, 16, 0, 16)
 detailViewport.Parent = detailFrame
 HudChrome.Panel(detailViewport, {
@@ -2225,13 +2305,39 @@ HudChrome.Panel(detailViewport, {
 	transparency = 0,
 })
 
+-- ===== Die Spalte rechts ist eine LISTE, keine Anordnung mit festen Hoehen =====
+--
+-- Erst standen Name, Text und die vier Balken auf festen Y-Werten. Zusammen brauchten sie
+-- rund dreihundertachtzig Pixel; auf dem Telefon hat der Steckbrief etwas ueber zweihundert.
+-- Die unteren beiden Balken lagen damit ausserhalb -- und zwar unsichtbar, nicht
+-- abgeschnitten, denn nichts sagt einem, dass dort noch etwas war.
+--
+-- Eine Liste kann das nicht. Sie stapelt, was da ist, und wenn es nicht passt, laesst sie
+-- sich schieben. Der Aktionsknopf bleibt ausserhalb an der Unterkante: er ist das, wofuer
+-- man hergekommen ist, und darf nie weggescrollt sein.
+local detailSpalte = Instance.new("ScrollingFrame")
+detailSpalte.Name = "SkinInfo"
+detailSpalte.Size = UDim2.new(0.58, -32, 1, -92)
+detailSpalte.Position = UDim2.new(0.42, 0, 0, 16)
+detailSpalte.BackgroundTransparency = 1
+detailSpalte.BorderSizePixel = 0
+detailSpalte.ScrollBarThickness = 4
+detailSpalte.CanvasSize = UDim2.new(0, 0, 0, 0)
+detailSpalte.AutomaticCanvasSize = Enum.AutomaticSize.Y
+detailSpalte.Parent = detailFrame
+
+local detailSpalteLayout = Instance.new("UIListLayout")
+detailSpalteLayout.SortOrder = Enum.SortOrder.LayoutOrder
+detailSpalteLayout.Padding = UDim.new(0, 6)
+detailSpalteLayout.Parent = detailSpalte
+
 local detailName = Instance.new("TextLabel")
-detailName.Size = UDim2.new(0.58, -32, 0, 40)
-detailName.Position = UDim2.new(0.42, 0, 0, 16)
+detailName.Size = UDim2.new(1, -8, 0, 40)
+detailName.LayoutOrder = 1
 detailName.BackgroundTransparency = 1
 detailName.TextXAlignment = Enum.TextXAlignment.Left
 detailName.Text = ""
-detailName.Parent = detailFrame
+detailName.Parent = detailSpalte
 HudChrome.Label(detailName, HudChrome.MenuTextSize.Heading)
 
 -- Hoechstbreite der Textspalte. Ohne sie laeuft der Steckbrief auf einem breiten
@@ -2241,17 +2347,15 @@ detailNameWidthCap.MaxSize = Vector2.new(SKIN_TEXT_MAX_WIDTH, math.huge)
 detailNameWidthCap.Parent = detailName
 
 local detailRole = Instance.new("TextLabel")
-detailRole.Size = UDim2.new(0.58, -32, 0, 44)
-detailRole.Position = UDim2.new(0.42, 0, 0, 58)
+detailRole.Size = UDim2.new(1, -8, 0, 0)
+detailRole.AutomaticSize = Enum.AutomaticSize.Y
+detailRole.LayoutOrder = 2
 detailRole.BackgroundTransparency = 1
-detailRole.Font = Enum.Font.Gotham
-detailRole.TextSize = 15
-detailRole.TextWrapped = true
 detailRole.TextXAlignment = Enum.TextXAlignment.Left
 detailRole.TextYAlignment = Enum.TextYAlignment.Top
-detailRole.TextColor3 = Color3.fromRGB(165, 165, 180)
 detailRole.Text = ""
-detailRole.Parent = detailFrame
+detailRole.Parent = detailSpalte
+HudChrome.MenuCaption(detailRole)
 
 -- Hoechstbreite der Textspalte. Ohne sie laeuft der Steckbrief auf einem breiten
 -- Bildschirm ueber die halbe Monitorbreite -- so lange Zeilen liest niemand gern.
@@ -2259,16 +2363,18 @@ local detailRoleWidthCap = Instance.new("UISizeConstraint")
 detailRoleWidthCap.MaxSize = Vector2.new(SKIN_TEXT_MAX_WIDTH, math.huge)
 detailRoleWidthCap.Parent = detailRole
 
+-- Der Charaktertext steht ueber den Balken und ist knapp gehalten: was eine Stufe KANN,
+-- sagen die Balken daneben mit Zahlen. Dieser Text sagt, was sie IST.
 local detailStrength = Instance.new("TextLabel")
-detailStrength.Size = UDim2.new(0.58, -32, 0, 90)
-detailStrength.Position = UDim2.new(0.42, 0, 0, 106)
+detailStrength.Size = UDim2.new(1, -8, 0, 0)
+detailStrength.AutomaticSize = Enum.AutomaticSize.Y
+detailStrength.LayoutOrder = 3
 detailStrength.BackgroundTransparency = 1
-HudChrome.MenuBody(detailStrength)
 detailStrength.TextXAlignment = Enum.TextXAlignment.Left
 detailStrength.TextYAlignment = Enum.TextYAlignment.Top
-detailStrength.TextColor3 = Color3.fromRGB(235, 235, 245)
 detailStrength.Text = ""
-detailStrength.Parent = detailFrame
+detailStrength.Parent = detailSpalte
+HudChrome.MenuBody(detailStrength, HudChrome.MenuTextSize.Caption)
 
 -- Hoechstbreite der Textspalte. Ohne sie laeuft der Steckbrief auf einem breiten
 -- Bildschirm ueber die halbe Monitorbreite -- so lange Zeilen liest niemand gern.
@@ -2281,22 +2387,20 @@ detailStrengthWidthCap.Parent = detailStrength
 -- tritt der Angriffsbonus, der die Stufen weiterhin unterscheidet, ohne den Fortschritt
 -- zu sperren.
 local detailBonus = Instance.new("TextLabel")
-detailBonus.Size = UDim2.new(0.58, -32, 0, 26)
-detailBonus.Position = UDim2.new(0.42, 0, 0, 200)
-detailBonus.BackgroundColor3 = Color3.fromRGB(255, 236, 180)
-HudChrome.MenuBody(detailBonus, HudChrome.MenuTextSize.Caption)
-detailBonus.TextColor3 = Color3.fromRGB(120, 80, 20)
+detailBonus.Size = UDim2.new(1, -8, 0, 28)
+detailBonus.LayoutOrder = 4
 detailBonus.Text = ""
 detailBonus.Visible = false
-detailBonus.Parent = detailFrame
+detailBonus.Parent = detailSpalte
+HudChrome.Panel(detailBonus, { radius = HudChrome.Radius.Small, fill = HudChrome.Color.PanelSunken })
+HudChrome.MenuBody(detailBonus, HudChrome.MenuTextSize.Caption)
+detailBonus.TextColor3 = HudChrome.Color.Ready
 
 -- Hoechstbreite der Textspalte. Ohne sie laeuft der Steckbrief auf einem breiten
 -- Bildschirm ueber die halbe Monitorbreite -- so lange Zeilen liest niemand gern.
 local detailBonusWidthCap = Instance.new("UISizeConstraint")
 detailBonusWidthCap.MaxSize = Vector2.new(SKIN_TEXT_MAX_WIDTH, math.huge)
 detailBonusWidthCap.Parent = detailBonus
-HudChrome.Panel(detailBonus, { radius = HudChrome.Radius.Small, fill = HudChrome.Color.PanelSunken })
-
 -- Vier Balken: Leben, Angriff, Tempo, Groesse. Der Angriffsbalken ist neu und hat eine
 -- Vorgeschichte: hier stand einmal ein Feld "Damage", das entfernt wurde, weil es nirgends
 -- gelesen wurde. DamagePercent ist der Ersatz und wird tatsaechlich angewandt (siehe
@@ -2310,24 +2414,24 @@ local STAT_DEFS = {
 }
 for index, def in ipairs(STAT_DEFS) do
 	local row = Instance.new("Frame")
-	row.Size = UDim2.new(1, -32, 0, 30)
-	row.Position = UDim2.new(0, 16, 0.52, (index - 1) * 34) -- 0.52 statt 0.56: der vierte Balken braucht den Platz
+	-- Rechts neben der Figur, untereinander. Sie standen quer unter allem und mussten sich
+	-- die Breite mit der Vorschau teilen; jetzt haben sie eine eigene Spalte.
+	row.Size = UDim2.new(1, -8, 0, 32)
+	row.LayoutOrder = 10 + index
 	row.BackgroundTransparency = 1
-	row.Parent = detailFrame
+	row.Parent = detailSpalte
 
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(0, 70, 1, 0)
+	label.Size = UDim2.new(0, 84, 1, 0)
 	label.BackgroundTransparency = 1
-
-	label.TextSize = 14
 	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.TextColor3 = Color3.fromRGB(165, 165, 180)
 	label.Text = def.label
 	label.Parent = row
+	HudChrome.MenuCaption(label, 14)
 
 	local track = Instance.new("Frame")
-	track.Size = UDim2.new(1, -230, 0, 14)
-	track.Position = UDim2.new(0, 74, 0.5, -7)
+	track.Size = UDim2.new(1, -230, 0, 10)
+	track.Position = UDim2.new(0, 88, 0.5, -5)
 	track.BackgroundColor3 = Color3.fromRGB(58, 58, 68)
 	track.Parent = row
 	track.BackgroundColor3 = HudChrome.Color.PanelSunken
@@ -2335,30 +2439,30 @@ for index, def in ipairs(STAT_DEFS) do
 
 	local fill = Instance.new("Frame")
 	fill.Size = UDim2.new(0, 0, 1, 0)
-	fill.BackgroundColor3 = Color3.fromRGB(90, 175, 235)
+	fill.BackgroundColor3 = HudChrome.Color.Border
 	fill.BorderSizePixel = 0
 	fill.Parent = track
 	fill.BorderSizePixel = 0
 
 	-- Der Vergleich zum GETRAGENEN Skin -- das ist die Frage, wegen der man herschaut.
 	local delta = Instance.new("TextLabel")
-	delta.Size = UDim2.new(0, 150, 1, 0)
-	delta.Position = UDim2.new(1, -150, 0, 0)
+	delta.Size = UDim2.new(0, 132, 1, 0)
+	delta.Position = UDim2.new(1, -132, 0, 0)
 	delta.BackgroundTransparency = 1
-	delta.Font = Enum.Font.Gotham
-	delta.TextSize = 14
 	delta.TextXAlignment = Enum.TextXAlignment.Right
-	delta.TextColor3 = Color3.fromRGB(165, 165, 180)
 	delta.Text = ""
 	delta.Parent = row
+	HudChrome.Number(delta, 15)
 
 	statRows[def.key] = { fill = fill, delta = delta, row = row }
 end
 
+-- Ausserhalb der Liste, fest an der Unterkante: er ist das, wofuer man hergekommen ist,
+-- und darf nie weggescrollt sein.
 local detailAction = Instance.new("TextButton")
 detailAction.Name = "ActionButton"
-detailAction.Size = UDim2.new(1, -32, 0, 52)
-detailAction.Position = UDim2.new(0, 16, 1, -68)
+detailAction.Size = UDim2.new(0.58, -32, 0, 52)
+detailAction.Position = UDim2.new(0.42, 0, 1, -68)
 
 detailAction.TextScaled = true
 detailAction.TextColor3 = Color3.new(1, 1, 1)
@@ -3137,9 +3241,14 @@ local function refreshDetail()
 			row.row.Visible = false
 		end
 		buildSkinPreview(detailViewport, nil, false)
-		detailAction.Text = "🔒 " .. faction.Chapter
-		detailAction.BackgroundColor3 = Color3.fromRGB(120, 120, 132)
+		detailAction.Text = string.upper(faction.Chapter)
+		detailAction.TextColor3 = HudChrome.Color.TextDim
 		detailAction.AutoButtonColor = false
+		local randPending = detailAction:FindFirstChildOfClass("UIStroke")
+		if randPending then
+			randPending.Color = HudChrome.Color.BorderDim
+			randPending.Thickness = HudChrome.BorderThickness
+		end
 		return
 	end
 	for _, row in pairs(statRows) do
@@ -3168,7 +3277,7 @@ local function refreshDetail()
 	local bonus = attackBonusFor(skin)
 	detailBonus.Visible = bonus ~= nil and not isUnlocked
 	if bonus then
-		detailBonus.Text = "  ⬆  " .. bonus
+		detailBonus.Text = "  " .. bonus
 	end
 
 	for key, row in pairs(statRows) do
@@ -3178,10 +3287,12 @@ local function refreshDetail()
 		if equipped and equipped.Id ~= skin.Id then
 			local diff = value - (equipped[key] or 0)
 			row.delta.Text = string.format("%s  (%s%s)", tostring(value), diff >= 0 and "+" or "", tostring(diff))
-			row.delta.TextColor3 = diff >= 0 and Color3.fromRGB(40, 140, 60) or Color3.fromRGB(180, 60, 60)
+			-- Gruen und Rot waren auf dem dunklen Grund kaum zu unterscheiden. Besser ist
+			-- besser: bernstein heisst Gewinn, gedaempft heisst Verlust.
+			row.delta.TextColor3 = diff >= 0 and HudChrome.Color.Ready or HudChrome.Color.TextDim
 		else
 			row.delta.Text = tostring(value)
-			row.delta.TextColor3 = Color3.fromRGB(165, 165, 180)
+			row.delta.TextColor3 = HudChrome.Color.TextSecondary
 		end
 	end
 
@@ -3190,26 +3301,30 @@ local function refreshDetail()
 
 	-- EIN Knopf, der sich anpasst. Kaufen und Anlegen sind fuer einen noch nicht
 	-- besessenen Skin ohnehin ein Vorgang -- der Server ruestet nach dem Kauf sofort aus.
+	-- Fuenf Zustaende, und wieder traegt sie der Rahmen statt der Flaeche. Bernstein heisst
+	-- "das kannst du jetzt tun" -- hier ist es genau ein Zustand von fuenf, und das ist der
+	-- Punkt: der Knopf sagt mit Farbe nur dann etwas, wenn er auch etwas tut.
+	local rand = detailAction:FindFirstChildOfClass("UIStroke")
+	local function setzeKnopf(text, farbe, dick, aktiv)
+		detailAction.Text = text
+		detailAction.TextColor3 = farbe
+		detailAction.AutoButtonColor = aktiv
+		if rand then
+			rand.Color = farbe
+			rand.Thickness = dick
+		end
+	end
+
 	if isEquipped then
-		detailAction.Text = "✅ Equipped"
-		detailAction.BackgroundColor3 = Color3.fromRGB(80, 200, 90)
-		detailAction.AutoButtonColor = false
+		setzeKnopf("EQUIPPED", HudChrome.Color.BorderBright, 2, false)
 	elseif isUnlocked then
-		detailAction.Text = "👕 Wear"
-		detailAction.BackgroundColor3 = Color3.fromRGB(70, 150, 235)
-		detailAction.AutoButtonColor = true
+		setzeKnopf("WEAR", HudChrome.Color.TextPrimary, 2, true)
 	elseif not meetsLevel then
-		detailAction.Text = "🔒 Level " .. skin.RequiredLevel .. " required"
-		detailAction.BackgroundColor3 = Color3.fromRGB(150, 90, 90)
-		detailAction.AutoButtonColor = false
+		setzeKnopf("LEVEL " .. skin.RequiredLevel .. " REQUIRED", HudChrome.Color.TextDim, 1, false)
 	elseif not canAfford then
-		detailAction.Text = "🔒 " .. skin.Cost .. " coins needed"
-		detailAction.BackgroundColor3 = Color3.fromRGB(160, 160, 160)
-		detailAction.AutoButtonColor = false
+		setzeKnopf(skin.Cost .. " COINS NEEDED", HudChrome.Color.TextDim, 1, false)
 	else
-		detailAction.Text = "💰 Buy for " .. skin.Cost
-		detailAction.BackgroundColor3 = Color3.fromRGB(255, 180, 40)
-		detailAction.AutoButtonColor = true
+		setzeKnopf("BUY FOR " .. skin.Cost, HudChrome.Color.Ready, 3, true)
 	end
 end
 
@@ -3231,131 +3346,267 @@ detailAction.MouseButton1Click:Connect(function()
 	end
 end)
 
-local function refreshShop()
-	-- AUCH die Ueberschriften wegraeumen, nicht nur die Knoepfe: sie kamen mit der
-	-- Gruppierung nach Fraktion dazu und wuerden sich sonst bei jedem Auffrischen doppeln.
-	for _, child in ipairs(shopScroll:GetChildren()) do
-		if child:IsA("TextButton") or child:IsA("TextLabel") then
-			child:Destroy()
-		end
+-- ===== Die Leiter fuellen =====
+--
+-- Eine Fraktion je Ansicht. Die Umschalter dafuer sitzen in der Kopfzeile -- drei Symbole,
+-- dieselben, die auch die Fraktionskarten tragen.
+--
+-- Fuenf Stufen hat jede Fraktion: beim Kaiju als echte Skins, bei Jaeger und Ronin bisher
+-- nur als vorgesehene Namen (PendingStages). Die stehen trotzdem auf der Leiter -- ein Platz
+-- mit Namen sagt "das kommt", ein fehlender Platz sagt gar nichts.
+local sichtbareFraktion = nil
+local refreshShop
+
+local function leiterLeeren()
+	for _, eintrag in ipairs(leiter.stufen) do
+		eintrag.knopf:Destroy()
 	end
+	leiter.stufen = {}
+end
+
+local function baueStufe(order, anteil, name, untenText)
+	local knopf = Instance.new("TextButton")
+	knopf.Name = "Stage" .. order
+	knopf.AnchorPoint = Vector2.new(0.5, 0.5)
+	knopf.Size = UDim2.new(0, STUFE_BREITE, 0, leiter.hoehe)
+	knopf.Position = UDim2.new(anteil, 0, 0.5, 0)
+	knopf.BackgroundTransparency = 1
+	knopf.AutoButtonColor = false
+	knopf.Text = ""
+	-- Frueher liegt ueber spaeter: bei dicht stehenden Stufen bekommt die niedrigere den
+	-- Klick, und das ist die, die man zuerst will.
+	knopf.ZIndex = 20 - order
+	knopf.Parent = leiter.bahn
+
+	-- Name ueber der Bahn, Level und Preis darunter. Zwei Zeilen um einen Punkt herum:
+	-- oben, WAS es ist, unten, was es kostet -- in Stufen und in Muenzen.
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.AnchorPoint = Vector2.new(0.5, 1)
+	nameLabel.Size = UDim2.new(1, 10, 0, 22)
+	nameLabel.Position = UDim2.new(0.5, 0, 0.5, -20)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.Text = name
+	nameLabel.ZIndex = 21
+	nameLabel.Parent = knopf
+	HudChrome.Label(nameLabel, HudChrome.MenuTextSize.Caption)
+
+	local untenLabel = Instance.new("TextLabel")
+	untenLabel.AnchorPoint = Vector2.new(0.5, 0)
+	untenLabel.Size = UDim2.new(1, 10, 0, 20)
+	untenLabel.Position = UDim2.new(0.5, 0, 0.5, 20)
+	untenLabel.BackgroundTransparency = 1
+	untenLabel.Text = untenText
+	untenLabel.ZIndex = 21
+	untenLabel.Parent = knopf
+	HudChrome.Number(untenLabel, 14)
+
+	local punkt = Instance.new("Frame")
+	punkt.AnchorPoint = Vector2.new(0.5, 0.5)
+	punkt.Size = UDim2.new(0, STUFE_PUNKT, 0, STUFE_PUNKT)
+	punkt.Position = UDim2.new(0.5, 0, 0.5, 0)
+	punkt.ZIndex = 22
+	punkt.Parent = knopf
+	local _, ring = HudChrome.Pill(punkt, { fill = HudChrome.Color.PanelSunken, transparency = 0 })
+
+	local eintrag = {
+		knopf = knopf,
+		punkt = punkt,
+		ring = ring,
+		name = nameLabel,
+		unten = untenLabel,
+	}
+	table.insert(leiter.stufen, eintrag)
+	return eintrag
+end
+
+-- Faerbt eine Stufe nach ihrem Zustand. Die Farbe sagt EINE Sache: bernstein heisst "das
+-- kannst du jetzt tun". Dieselbe Bedeutung wie beim bereiten Angriffsknopf und beim
+-- abholbaren Geschenk.
+local function faerbeStufe(eintrag, zustand, gewaehlt)
+	local rand, schrift = HudChrome.Color.BorderDim, HudChrome.Color.TextDim
+	local grund = HudChrome.Color.PanelSunken
+	if zustand == "worn" then
+		rand, schrift, grund = HudChrome.Color.BorderBright, HudChrome.Color.TextPrimary, HudChrome.Color.Border
+	elseif zustand == "owned" then
+		rand, schrift, grund = HudChrome.Color.Border, HudChrome.Color.TextPrimary, HudChrome.Color.PanelRaised
+	elseif zustand == "buy" then
+		rand, schrift, grund = HudChrome.Color.Ready, HudChrome.Color.Ready, HudChrome.Color.PanelRaised
+	end
+
+	eintrag.ring.Color = rand
+	eintrag.ring.Thickness = (zustand == "worn" or zustand == "buy") and 3 or HudChrome.BorderThickness
+	eintrag.punkt.BackgroundColor3 = grund
+	eintrag.name.TextColor3 = schrift
+	eintrag.unten.TextColor3 = schrift
+
+	-- Die GEWAEHLTE Stufe ist groesser. Das ist die einzige Aussage, die nicht am Zustand
+	-- haengt, sondern daran, worueber der Steckbrief darueber gerade spricht.
+	local groesse = gewaehlt and STUFE_PUNKT_GEWAEHLT or STUFE_PUNKT
+	eintrag.punkt.Size = UDim2.new(0, groesse, 0, groesse)
+end
+
+-- Das uebliche Muster, wenn eine Fraktion noch keine echten Stufen hat.
+local GEPLANTE_LEVEL = { 0, 10, 20, 30, 40 }
+
+function refreshShop()
+	leiterLeeren()
 
 	local unlockedFolder = player:WaitForChild("UnlockedSkins")
 	local leaderstats = player:WaitForChild("leaderstats")
 	local equippedSkin = player:WaitForChild("EquippedSkin")
 
+	local faction = sichtbareFraktion
+	if not faction then
+		return
+	end
+
+	local skins = SkinsConfig.GetSkinsByFaction(faction.Key)
+	local pendingStages = faction.PendingStages or {}
+
+	-- Die Achse ist das LEVEL. Ihr Ende ist die hoechste Stufe dieser Fraktion; bei einer
+	-- geplanten Fraktion gibt es keine Levelangaben, dort gilt das uebliche Muster.
+	local maxLevel = 0
+	for _, skin in ipairs(skins) do
+		maxLevel = math.max(maxLevel, skin.RequiredLevel or 0)
+	end
+	if maxLevel <= 0 then
+		maxLevel = GEPLANTE_LEVEL[#GEPLANTE_LEVEL]
+	end
+
 	local order = 0
-	for _, faction in ipairs(SkinsConfig.Factions) do
-		local skins = SkinsConfig.GetSkinsByFaction(faction.Key)
-		local pendingStages = faction.PendingStages or {}
-		local pendingCount = #pendingStages
-		if #skins == 0 and pendingCount == 0 then
-			continue -- eine Fraktion ohne Skins und ohne vorgesehene Plaetze zeigt nichts
-		end
-
+	for _, skin in ipairs(skins) do
 		order += 1
-		local header = Instance.new("TextLabel")
-		header.Name = faction.Key .. "Header"
-		header.Size = UDim2.new(1, -4, 0, 32)
-		header.BackgroundTransparency = 1
-		header.TextXAlignment = Enum.TextXAlignment.Left
-		header.TextYAlignment = Enum.TextYAlignment.Bottom
-		header.Text = string.upper(faction.Label)
-		header.LayoutOrder = order
-		header.Parent = shopScroll
-		HudChrome.Label(header, HudChrome.MenuTextSize.Section)
-		header.TextColor3 = HudChrome.Color.TextSecondary
+		local istGetragen = equippedSkin.Value == skin.Id
+		local istBesessen = unlockedFolder:FindFirstChild("Skin_" .. skin.Id) ~= nil
+		local levelReicht = leaderstats.Level.Value >= (skin.RequiredLevel or 0)
+		local geldReicht = leaderstats.Coins.Value >= (skin.Cost or 0)
 
-		for _, skin in ipairs(skins) do
-			local isUnlocked = unlockedFolder:FindFirstChild("Skin_" .. skin.Id) ~= nil
-			local isEquipped = equippedSkin.Value == skin.Id
-			local meetsLevel = leaderstats.Level.Value >= skin.RequiredLevel
-			local canAfford = leaderstats.Coins.Value >= skin.Cost
-
-			order += 1
-			local button = Instance.new("TextButton")
-			button.Size = UDim2.new(1, -4, 0, 56)
-			button.AutoButtonColor = false
-			button.LayoutOrder = order
-			button.Parent = shopScroll
-			local _, buttonStroke = HudChrome.Panel(button, {
-				radius = HudChrome.Radius.Panel,
-				fill = HudChrome.Color.PanelRaised,
-				transparency = 0,
-			})
-			HudChrome.Label(button, HudChrome.MenuTextSize.Caption)
-
-			-- ===== Fuenf Zustaende, und sie stehen im RAHMEN =====
-			--
-			-- Vorher trug jeder seine eigene Flaechenfarbe: gruen, blau, dunkelrot, gelb,
-			-- grau. Fuenf bunte Kaesten uebereinander, und keine der Farben bedeutete eine
-			-- Messung -- genau das, was Regel 2 ausschliesst. Schlimmer: der KAUFBARE war
-			-- gelb und der zu teure grau, also sah der teuerste Knopf am ruhigsten aus.
-			--
-			-- Jetzt traegt der Rahmen den Zustand, und die Farbe sagt eine Sache: bernstein
-			-- heisst "das kannst du jetzt tun". Das ist dieselbe Bedeutung wie beim bereiten
-			-- Angriffsknopf und bei einem abholbaren Geschenk.
-			button.Text = skin.Name
-			if isEquipped then
-				button.Text = skin.Name .. "  —  worn"
-				buttonStroke.Color = HudChrome.Color.BorderBright
-				buttonStroke.Thickness = 2
-				button.TextColor3 = HudChrome.Color.TextPrimary
-			elseif isUnlocked then
-				buttonStroke.Color = HudChrome.Color.Border
-				button.TextColor3 = HudChrome.Color.TextPrimary
-			elseif not meetsLevel then
-				button.Text = skin.Name .. "  —  level " .. skin.RequiredLevel
-				buttonStroke.Color = HudChrome.Color.BorderDim
-				button.TextColor3 = HudChrome.Color.TextDim
-			elseif canAfford then
-				button.Text = skin.Name .. "  —  " .. skin.Cost
-				buttonStroke.Color = HudChrome.Color.Ready
-				buttonStroke.Thickness = 2
-				button.TextColor3 = HudChrome.Color.Ready
-			else
-				button.Text = skin.Name .. "  —  " .. skin.Cost
-				buttonStroke.Color = HudChrome.Color.BorderDim
-				button.TextColor3 = HudChrome.Color.TextDim
-			end
-
-			-- Ein Klick WAEHLT nur aus. Gekauft und angelegt wird im Steckbrief.
-			button.MouseButton1Click:Connect(function()
-				selectedPending = nil
-				selectedSkinId = skin.Id
-				refreshDetail()
-			end)
+		local unten
+		if (skin.Cost or 0) > 0 then
+			unten = string.format("LV %d  \u{00B7}  %d", skin.RequiredLevel or 0, skin.Cost)
+		else
+			unten = string.format("LV %d", skin.RequiredLevel or 0)
 		end
+		local eintrag = baueStufe(order, (skin.RequiredLevel or 0) / maxLevel, skin.Name, unten)
 
-		-- Vorgesehene, aber noch nicht gebaute Plaetze. Anwaehlbar, damit der Steckbrief
-		-- erklaeren kann, woran es haengt -- kaufbar sind sie nicht.
-		for index = 1, pendingCount do
+		local zustand = "locked"
+		if istGetragen then
+			zustand = "worn"
+		elseif istBesessen then
+			zustand = "owned"
+		elseif levelReicht and geldReicht then
+			zustand = "buy"
+		end
+		faerbeStufe(eintrag, zustand, selectedPending == nil and selectedSkinId == skin.Id)
+
+		local skinId = skin.Id
+		eintrag.knopf.MouseButton1Click:Connect(function()
+			selectedPending = nil
+			selectedSkinId = skinId
+			refreshShop()
+		end)
+	end
+
+	-- Die vorgesehenen Plaetze -- nur, wenn es noch gar keine echten gibt. Kaufbar sind sie
+	-- nicht; anwaehlbar schon, damit der Steckbrief erklaeren kann, woran es haengt.
+	if #skins == 0 then
+		for index, stageName in ipairs(pendingStages) do
 			order += 1
-			local button = Instance.new("TextButton")
-			button.Size = UDim2.new(1, -4, 0, 56)
-			button.AutoButtonColor = false
-			-- Der geplante Name statt "Jaeger 3". Das Fragezeichen bleibt davor: der Platz ist
-			-- weiterhin leer, er hat nur schon einen Namen.
-			button.Text = string.format("?  %s  —  %s", pendingStages[index] or faction.Label, faction.Chapter)
-			button.LayoutOrder = order
-			button.Parent = shopScroll
-			local _, pendingStroke = HudChrome.Panel(button, {
-				radius = HudChrome.Radius.Panel,
-				fill = HudChrome.Color.Panel,
-				transparency = 0,
-			})
-			pendingStroke.Color = HudChrome.Color.BorderDim
-			HudChrome.Label(button, HudChrome.MenuTextSize.Caption)
-			button.TextColor3 = HudChrome.Color.TextDim
+			local level = GEPLANTE_LEVEL[index] or ((index - 1) * 10)
+			local eintrag = baueStufe(order, level / maxLevel, stageName, "PLANNED")
+			local gewaehlt = selectedPending ~= nil
+				and selectedPending.faction.Key == faction.Key
+				and selectedPending.index == index
+			faerbeStufe(eintrag, "locked", gewaehlt)
 
-			button.MouseButton1Click:Connect(function()
-				selectedPending = { faction = faction, index = index }
-				refreshDetail()
+			local pendingIndex = index
+			eintrag.knopf.MouseButton1Click:Connect(function()
+				selectedPending = { faction = faction, index = pendingIndex }
+				refreshShop()
 			end)
 		end
 	end
 
+	-- Die eigene Marke und der erreichte Teil der Bahn.
+	local anteil = math.clamp(leaderstats.Level.Value / maxLevel, 0, 1)
+	leiter.marke.Position = UDim2.new(anteil, 0, 0.5, 0)
+	leiter.erreicht.Size = UDim2.new(anteil, 0, 1, 0)
+
+	shopKopf.subtitle.Text = string.format("%s  \u{00B7}  %s", string.upper(faction.Label), faction.Chapter)
+
 	refreshDetail()
+end
+
+-- ===== Die drei Umschalter in der Kopfzeile =====
+--
+-- Sie stehen dort und nicht ueber der Leiter: die Fraktion ist kein Teil der Leiter, sie
+-- entscheidet, WELCHE Leiter man sieht. Das gehoert zur Ueberschrift des Bildschirms.
+local fraktionsKnoepfe = {}
+local waehleFraktion
+
+do
+	local reihe = Instance.new("Frame")
+	reihe.Name = "FactionTabs"
+	reihe.AnchorPoint = Vector2.new(0.5, 0.5)
+	reihe.Position = UDim2.new(0.5, 0, 0.5, 0)
+	reihe.Size = UDim2.new(0, 3 * 44 + 2 * 8, 0, 44)
+	reihe.BackgroundTransparency = 1
+	reihe.ZIndex = 4
+	reihe.Parent = shopKopf.header
+
+	local layout = Instance.new("UIListLayout")
+	layout.FillDirection = Enum.FillDirection.Horizontal
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Padding = UDim.new(0, 8)
+	layout.Parent = reihe
+
+	for index, faction in ipairs(SkinsConfig.Factions) do
+		local knopf = Instance.new("TextButton")
+		knopf.Name = faction.Key .. "Tab"
+		knopf.Size = UDim2.new(0, 44, 0, 44)
+		knopf.LayoutOrder = index
+		knopf.AutoButtonColor = false
+		knopf.Text = ""
+		knopf.ZIndex = 5
+		knopf.Parent = reihe
+		local _, rand = HudChrome.Panel(knopf, {
+			radius = HudChrome.Radius.Small,
+			fill = HudChrome.Color.Panel,
+		})
+		local bild = HudChrome.IconImage(knopf, HudChrome.FactionIcon[faction.Key] or "")
+		bild.Size = UDim2.new(1, -12, 1, -12)
+		bild.Position = UDim2.new(0, 6, 0, 6)
+		bild.ZIndex = 6
+
+		fraktionsKnoepfe[faction.Key] = { knopf = knopf, rand = rand, bild = bild }
+
+		knopf.MouseButton1Click:Connect(function()
+			waehleFraktion(faction)
+		end)
+	end
+end
+
+function waehleFraktion(faction)
+	sichtbareFraktion = faction
+	selectedPending = nil
+
+	-- Beim Wechsel die erste Stufe der neuen Fraktion waehlen. Sonst bliebe der Steckbrief
+	-- auf einem Skin stehen, der auf dieser Leiter gar nicht vorkommt.
+	local skins = SkinsConfig.GetSkinsByFaction(faction.Key)
+	if skins[1] then
+		selectedSkinId = skins[1].Id
+	else
+		selectedPending = { faction = faction, index = 1 }
+	end
+
+	for key, eintrag in pairs(fraktionsKnoepfe) do
+		local gewaehlt = (key == faction.Key)
+		eintrag.rand.Color = gewaehlt and HudChrome.Color.BorderBright or HudChrome.Color.Border
+		eintrag.rand.Thickness = gewaehlt and 2 or HudChrome.BorderThickness
+		eintrag.bild.ImageTransparency = gewaehlt and 0 or 0.45
+	end
+
+	refreshShop()
 end
 
 -- Erst auf ALLE benötigten Werte warten (blockierend), damit die erste Anzeige garantiert
@@ -3374,7 +3625,55 @@ player:WaitForChild("EquippedSkin")
 
 updateCoinsLabel()
 updateLevelBar()
-refreshShop()
+
+-- ===== Die Hoehe aufteilen, statt sie zu verteilen =====
+--
+-- Die Leiter stand auf festen 138 Pixeln. Auf dem Telefon bleiben dem Bildschirm nach
+-- Kopfzeile und Systemleiste rund 300 -- der Steckbrief haette davon 126 bekommen, und die
+-- Figur darin waere kleiner gewesen als auf der alten Liste. Genau dieselbe Falle wie bei
+-- den Geschenken: ein fester Wert verteilt Platz, den es nicht gibt.
+--
+-- Jetzt bekommt der Steckbrief zuerst, was er braucht, und die Leiter den Rest -- bis zu
+-- einer Untergrenze, ab der eine Stufe keine Beschriftung mehr traegt. Gemessen statt
+-- gerechnet: die Inhaltshoehe haengt am Polster fuer die Systemleiste, und das wird selbst
+-- erst nachgezogen.
+local LEITER_MIN = 96
+local STECKBRIEF_WUNSCH = 240
+
+local function shopLayout()
+	local hoehe = shopKopf.content.AbsoluteSize.Y
+	if hoehe <= 0 then
+		return
+	end
+
+	leiter.hoehe = math.clamp(hoehe - STECKBRIEF_WUNSCH - 36, LEITER_MIN, LEITER_HOEHE)
+	leiter.rahmen.Size = UDim2.new(1, -LEITER_RAND * 2, 0, leiter.hoehe)
+	leiter.marke.Size = UDim2.new(0, 40, 0, leiter.hoehe - 30)
+	detailFrame.Size = UDim2.new(1, -24, 1, -(leiter.hoehe + 36))
+end
+
+shopKopf.content:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+	shopLayout()
+	refreshShop()
+end)
+shopLayout()
+
+-- Die Leiter der EIGENEN Fraktion zuerst. waehleFraktion setzt zugleich die Umschalter in
+-- der Kopfzeile und waehlt eine Stufe aus -- ohne das staende der Bildschirm beim ersten
+-- Oeffnen leer da, weil sichtbareFraktion noch nichts ist.
+do
+	local eigene = player:GetAttribute("Faction")
+	local start = SkinsConfig.Factions[1]
+	for _, faction in ipairs(SkinsConfig.Factions) do
+		if faction.Key == eigene then
+			start = faction
+			break
+		end
+	end
+	if start then
+		waehleFraktion(start)
+	end
+end
 
 player:WaitForChild("leaderstats"):WaitForChild("Coins"):GetPropertyChangedSignal("Value"):Connect(function()
 	updateCoinsLabel()
