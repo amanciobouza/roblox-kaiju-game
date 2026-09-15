@@ -225,7 +225,7 @@ HudChrome.EnergyColorDefault = Color3.fromRGB(255, 140, 40)
 -- im Config steht.
 HudChrome.TalentIcon = {
 	-- Wurzel und Ultimate
-	ApexInstinct = "",
+	ApexInstinct = "rbxassetid://79844094513588",
 	ApexPredator = "rbxassetid://82403049535398",
 
 	-- Berserker (Heat)
@@ -236,7 +236,7 @@ HudChrome.TalentIcon = {
 	-- Assault (Electric)
 	RapidStrikes = "rbxassetid://93424692983279",
 	FocusMastery = "rbxassetid://129293005134281",
-	ComboChain = "rbxassetid://10737312284577",
+	ComboChain = "rbxassetid://107373122845776",
 
 	-- Devastation (Chemical)
 	ChainReaction = "rbxassetid://86953766866904",
