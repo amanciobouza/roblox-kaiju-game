@@ -33,6 +33,25 @@ local FACTION_TABS = {
 	{ key = "Ronin", label = "Ronin" },
 }
 
+-- Bild wenn hochgeladen, sonst das Zeichen aus dem Config.
+--
+-- Beide sitzen an derselben Stelle und in derselben Groesse, damit der Wechsel nichts
+-- verschiebt -- dieselbe Ausweichregel wie bei den Energien und den Geschenken. Solange
+-- Jaeger und Ronin nur Vorschau sind, tragen ihre Knoten weiterhin Zeichen; das ist kein
+-- Zwischenzustand, sondern der ehrliche Stand.
+local function zeigeTalentSymbol(bildLabel, textLabel, talent)
+	local bildId = HudChrome.TalentIcon[talent.id] or ""
+	if bildId ~= "" then
+		bildLabel.Image = bildId
+		bildLabel.Visible = true
+		textLabel.Visible = false
+	else
+		bildLabel.Visible = false
+		textLabel.Text = talent.icon
+		textLabel.Visible = true
+	end
+end
+
 local function formatDuration(seconds)
 	seconds = math.max(math.floor(seconds), 0)
 	if seconds >= 3600 then
@@ -358,6 +377,8 @@ detailEmpty.Text = "👆 Pick a talent to see its details."
 HudChrome.MenuBody(detailEmpty)
 detailEmpty.Parent = detailPanel
 
+local detailIconBild = Instance.new("ImageLabel")
+
 local detailIcon = Instance.new("TextLabel")
 detailIcon.Size = UDim2.new(0, 60, 0, 60)
 detailIcon.Position = UDim2.new(0, 10, 0, 10)
@@ -370,6 +391,16 @@ HudChrome.Panel(detailIcon, {
 	fill = HudChrome.Color.PanelSunken,
 	transparency = 0,
 })
+
+-- Das Bild liegt IM Kaestchen, nicht daneben: das Kaestchen traegt Rahmen und Grund, und
+-- die beiden Sorten Symbol teilen es sich.
+detailIconBild.Name = "DetailIconImage"
+detailIconBild.Size = UDim2.new(1, -14, 1, -14)
+detailIconBild.Position = UDim2.new(0, 7, 0, 7)
+detailIconBild.BackgroundTransparency = 1
+detailIconBild.ScaleType = Enum.ScaleType.Fit
+detailIconBild.Visible = false
+detailIconBild.Parent = detailIcon
 
 local detailName = Instance.new("TextLabel")
 detailName.Size = UDim2.new(1, -84, 0, 30)
@@ -750,8 +781,13 @@ local function selectTalent(talent, state, level)
 	detailCostEnergy.Visible = true
 	detailResearchTime.Visible = true
 
-	detailIcon.Text = talent.icon
-	detailIcon.BackgroundColor3 = ENERGY_COLORS[talent.energyType] or Color3.fromRGB(45, 42, 60)
+	zeigeTalentSymbol(detailIconBild, detailIcon, talent)
+	-- Der Rahmen traegt die Energiefarbe, nicht die Flaeche: sonst kaempft ein farbiger
+	-- Grund mit dem Bild darauf.
+	local detailIconStroke = detailIcon:FindFirstChildOfClass("UIStroke")
+	if detailIconStroke then
+		detailIconStroke.Color = ENERGY_COLORS[talent.energyType] or HudChrome.Color.Border
+	end
 	detailName.Text = talent.name
 	detailLevel.Text = "Level " .. level .. " / " .. talent.maxLevel
 	detailDescription.Text = talent.description
@@ -878,15 +914,21 @@ local function buildNode(talent, position, isActiveFaction)
 		nodeStroke.Color = ENERGY_COLORS[talent.energyType]
 	end
 
+	local iconBild = HudChrome.IconImage(button, "")
+	iconBild.Size = UDim2.new(0, 34, 0, 34)
+	iconBild.Position = UDim2.new(0.5, -17, 0, 6)
+	iconBild.Visible = false
+	iconBild.ZIndex = 63
+
 	local iconLabel = Instance.new("TextLabel")
 	iconLabel.Size = UDim2.new(1, 0, 0, 38)
 	iconLabel.Position = UDim2.new(0, 0, 0, 4)
 	iconLabel.BackgroundTransparency = 1
-
 	iconLabel.TextScaled = true
-	iconLabel.Text = talent.icon
 	iconLabel.ZIndex = 63
 	iconLabel.Parent = button
+
+	zeigeTalentSymbol(iconBild, iconLabel, talent)
 
 	local levelLabel = Instance.new("TextLabel")
 	levelLabel.Size = UDim2.new(1, 0, 0, 16)

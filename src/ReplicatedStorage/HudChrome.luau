@@ -214,6 +214,40 @@ HudChrome.EnergyColor = {
 -- soll sichtbar Energie geben und nicht unsichtbar bleiben.
 HudChrome.EnergyColorDefault = Color3.fromRGB(255, 140, 40)
 
+-- ===== Symbole der Talente =====
+--
+-- Geschluesselt nach der Talent-ID aus TalentTreeConfig, nicht nach dem Namen: der Name
+-- steht in der Oberflaeche und darf sich aendern, die ID steht im Speicherstand.
+--
+-- Nur die dreizehn des Kaiju. Jaeger und Ronin tragen in ihren Beschreibungen ausdruecklich
+-- "(Vorschau)" und haben bis heute keine Mechanik -- Bilder dafuer waeren Arbeit an etwas,
+-- das sich noch aendert. Leer heisst hier wie ueberall: der Aufrufer nimmt das Zeichen, das
+-- im Config steht.
+HudChrome.TalentIcon = {
+	-- Wurzel und Ultimate
+	ApexInstinct = "",
+	ApexPredator = "rbxassetid://82403049535398",
+
+	-- Berserker (Heat)
+	BerserkerFury = "rbxassetid://128720306879535",
+	OverheatSpecialist = "rbxassetid://129089321155079",
+	MeltdownMastery = "rbxassetid://127731007020188",
+
+	-- Assault (Electric)
+	RapidStrikes = "rbxassetid://93424692983279",
+	FocusMastery = "rbxassetid://129293005134281",
+	ComboChain = "rbxassetid://10737312284577",
+
+	-- Devastation (Chemical)
+	ChainReaction = "rbxassetid://86953766866904",
+	BlastRadius = "rbxassetid://106730367964197",
+	Cataclysm = "rbxassetid://73293427375257",
+
+	-- Bruecken
+	OverheatBlast = "rbxassetid://90034280079965",
+	FocusRetarget = "rbxassetid://130087976731633",
+}
+
 -- ===== Symbole der drei Figuren =====
 --
 -- Kaiju, Jaeger, Ronin -- die drei Kapitel des Spiels. Sie erscheinen in der
@@ -280,6 +314,7 @@ local function preloadIcons()
 		HudChrome.GiftIcon,
 		HudChrome.EnergyIcon,
 		HudChrome.FactionIcon,
+		HudChrome.TalentIcon,
 	}) do
 		for name, assetId in pairs(sammlung) do
 			if assetId ~= "" then
