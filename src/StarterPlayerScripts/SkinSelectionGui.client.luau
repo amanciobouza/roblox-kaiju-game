@@ -1559,7 +1559,17 @@ local SPALTE_RAND = 10
 -- "Sanctuary / 12:00" ohne Sterne, also einen leeren Kasten. Die 106 Pixel fehlten unten,
 -- wo der Block sonst in die Angriffsknoepfe und das Weltevent-Feld lief.
 local KRAFT_Y = 86
-local KRAFT_ZEILE = 108
+-- ===== Aufgeklappt und zugeklappt =====
+--
+-- Drei Zeilen zu je 108 Pixeln, jede mit einem Scanfenster: das sind 362 Pixel, und auf dem
+-- Telefon lief der Block damit bis in die Angriffsknoepfe. Er zeigte dabei dreimal
+-- dasselbe -- drei Scans, von denen einen ansieht, wer gerade trainiert.
+--
+-- Jetzt ein Akkordeon: EINE Zeile offen mit ihrem Scan, die anderen beiden auf Wert und
+-- Balken zusammengeschoben. Das Scanfenster ist das, was Platz kostet, und zugleich das,
+-- was man an einer Zeile, die man gerade nicht trainiert, am wenigsten braucht.
+local KRAFT_ZEILE = 108 -- offen: Scanfenster, Wert, Balken, Wirkung
+local KRAFT_ZEILE_ZU = 46 -- zu: nur Name, Wert und Balken
 local SCAN_GROESSE = 100
 
 -- Kameraabstand im Scanfenster: ein Faktor auf den Abstand, nicht auf die Groesse --
@@ -1673,6 +1683,16 @@ local isAnimatingStat = {}
 local updateLevelBar
 local advanceXPBar
 
+-- Welche Kraft gerade aufgeklappt ist, und die Funktion, die es setzt. Beide vor der
+-- Schleife deklariert: die Zeilen verbinden sich darauf, und ein Name, der erst danach
+-- entsteht, loest in Lua still auf eine globale nil auf.
+local offeneKraft = nil
+local oeffneKraft
+-- Wird weiter unten gesetzt, sobald die Boost-Anzeige steht. oeffneKraft ruft sie, wenn es
+-- sie schon gibt -- beim ersten Aufbau gibt es sie noch nicht, und das ist in Ordnung: die
+-- Anzeige setzt ihre Lage dann selbst.
+local aktualisiereBoostLage
+
 local STAT_BAR_CONFIG = {
 	{ key = "ArmPower", label = "ARM", short = "Arm", color = Color3.fromRGB(220, 90, 220), effect = "BASE DAMAGE" },
 	{ key = "LegPower", label = "BEIN", short = "Bein", color = Color3.fromRGB(255, 150, 60), effect = "BONUS DAMAGE" },
@@ -1680,19 +1700,30 @@ local STAT_BAR_CONFIG = {
 }
 
 for index, config in ipairs(STAT_BAR_CONFIG) do
-	local oben = 34 + (index - 1) * KRAFT_ZEILE
 	local textX = SPALTE_RAND + SCAN_GROESSE + 8
 	local textBreite = SPALTE_BREITE - textX - SPALTE_RAND
+
+	-- Die ganze Zeile ist ein Knopf. Ein Aufklapp-Pfeil an der Seite waere ein zweites,
+	-- kleineres Ziel fuer denselben Zweck -- auf dem Telefon das schlechtere.
+	local zeile = Instance.new("TextButton")
+	zeile.Name = config.key .. "Row"
+	zeile.Size = UDim2.new(1, 0, 0, KRAFT_ZEILE)
+	zeile.Position = UDim2.new(0, 0, 0, 34)
+	zeile.BackgroundTransparency = 1
+	zeile.AutoButtonColor = false
+	zeile.Text = ""
+	zeile.ClipsDescendants = true
+	zeile.Parent = statsRowFrame
 
 	-- --- Das Scanfenster ---
 	local scanFrame = Instance.new("Frame")
 	scanFrame.Name = config.key .. "Scan"
 	scanFrame.Size = UDim2.new(0, SCAN_GROESSE, 0, SCAN_GROESSE)
-	scanFrame.Position = UDim2.new(0, SPALTE_RAND, 0, oben)
+	scanFrame.Position = UDim2.new(0, SPALTE_RAND, 0, 4)
 	scanFrame.BackgroundColor3 = HudChrome.Color.PanelSunken
 	scanFrame.BorderSizePixel = 0
 	scanFrame.ClipsDescendants = true
-	scanFrame.Parent = statsRowFrame
+	scanFrame.Parent = zeile
 
 	local scanCorner = Instance.new("UICorner")
 	scanCorner.CornerRadius = UDim.new(0, 3)
@@ -1764,31 +1795,31 @@ for index, config in ipairs(STAT_BAR_CONFIG) do
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.Name = config.key .. "Name"
 	nameLabel.Size = UDim2.new(0, 110, 0, 24)
-	nameLabel.Position = UDim2.new(0, textX, 0, oben + 14)
+	nameLabel.Position = UDim2.new(0, textX, 0, 18)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 	nameLabel.Text = config.label
-	nameLabel.Parent = statsRowFrame
+	nameLabel.Parent = zeile
 	HudChrome.Label(nameLabel, 20)
 	nameLabel.TextColor3 = config.color
 
 	local label = Instance.new("TextLabel")
 	label.Name = config.key .. "Value"
 	label.Size = UDim2.new(0, textBreite, 0, 24)
-	label.Position = UDim2.new(0, textX, 0, oben + 40)
+	label.Position = UDim2.new(0, textX, 0, 44)
 	label.BackgroundTransparency = 1
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.Text = "0 / 0"
-	label.Parent = statsRowFrame
+	label.Parent = zeile
 	HudChrome.NumberBold(label, 19)
 
 	local statBackground = Instance.new("Frame")
 	statBackground.Name = config.key .. "Track"
 	statBackground.Size = UDim2.new(0, textBreite, 0, 10)
-	statBackground.Position = UDim2.new(0, textX, 0, oben + 68)
+	statBackground.Position = UDim2.new(0, textX, 0, 72)
 	statBackground.BackgroundColor3 = HudChrome.Color.PanelSunken
 	statBackground.BorderSizePixel = 0
-	statBackground.Parent = statsRowFrame
+	statBackground.Parent = zeile
 
 	local statBackgroundCorner = Instance.new("UICorner")
 	statBackgroundCorner.CornerRadius = UDim.new(0, 4)
@@ -1809,11 +1840,11 @@ for index, config in ipairs(STAT_BAR_CONFIG) do
 	local effectLabel = Instance.new("TextLabel")
 	effectLabel.Name = config.key .. "Effect"
 	effectLabel.Size = UDim2.new(0, textBreite, 0, 16)
-	effectLabel.Position = UDim2.new(0, textX, 0, oben + 82)
+	effectLabel.Position = UDim2.new(0, textX, 0, 86)
 	effectLabel.BackgroundTransparency = 1
 	effectLabel.TextXAlignment = Enum.TextXAlignment.Left
 	effectLabel.Text = config.effect
-	effectLabel.Parent = statsRowFrame
+	effectLabel.Parent = zeile
 	HudChrome.Number(effectLabel, 13)
 	effectLabel.TextColor3 = HudChrome.Color.TextDim
 
@@ -1826,7 +1857,17 @@ for index, config in ipairs(STAT_BAR_CONFIG) do
 		scanStroke = scanStroke,
 		scanViewport = scanViewport,
 		scanLine = scanLine,
+		zeile = zeile,
+		nameLabel = nameLabel,
+		track = statBackground,
+		effectLabel = effectLabel,
+		textX = textX,
+		textBreite = textBreite,
 	}
+
+	zeile.MouseButton1Click:Connect(function()
+		oeffneKraft(config.key)
+	end)
 end
 
 -- ===== Den Scan mit der eigenen Figur fuellen =====
@@ -2107,6 +2148,92 @@ RunService.Heartbeat:Connect(function()
 		end
 	end
 end)
+
+-- ===== Auf- und zuklappen =====
+--
+-- Die Zeilen stehen untereinander, und ihre Hoehen haengen davon ab, welche offen ist --
+-- also wird die Lage gerechnet und nicht gesetzt. Der ganze Block waechst und schrumpft
+-- mit, und die Boost-Anzeige darunter geht mit ihm.
+--
+-- Zugeklappt verschwindet das Scanfenster, und Name und Wert ruecken in EINE Zeile: der
+-- Name links, der Wert rechts, darunter der Balken ueber die volle Breite. Das ist alles,
+-- was man von einer Kraft wissen muss, die man gerade nicht trainiert.
+local KRAFT_BLOCK_HOEHE = 34 + KRAFT_ZEILE + 2 * KRAFT_ZEILE_ZU + 12
+
+function oeffneKraft(key)
+	offeneKraft = key
+	local y = 34
+
+	for _, config in ipairs(STAT_BAR_CONFIG) do
+		local eintrag = statBars[config.key]
+		if eintrag then
+			local offen = (config.key == key)
+			local hoehe = offen and KRAFT_ZEILE or KRAFT_ZEILE_ZU
+
+			eintrag.zeile.Position = UDim2.new(0, 0, 0, y)
+			eintrag.zeile.Size = UDim2.new(1, 0, 0, hoehe)
+			y += hoehe
+
+			eintrag.scanFrame.Visible = offen
+			eintrag.effectLabel.Visible = offen
+
+			if offen then
+				eintrag.nameLabel.Position = UDim2.new(0, eintrag.textX, 0, 18)
+				eintrag.nameLabel.Size = UDim2.new(0, 110, 0, 24)
+				eintrag.label.Position = UDim2.new(0, eintrag.textX, 0, 44)
+				eintrag.label.Size = UDim2.new(0, eintrag.textBreite, 0, 24)
+				eintrag.label.TextXAlignment = Enum.TextXAlignment.Left
+				eintrag.track.Position = UDim2.new(0, eintrag.textX, 0, 72)
+				eintrag.track.Size = UDim2.new(0, eintrag.textBreite, 0, 10)
+			else
+				local breite = SPALTE_BREITE - 2 * SPALTE_RAND
+				eintrag.nameLabel.Position = UDim2.new(0, SPALTE_RAND, 0, 4)
+				eintrag.nameLabel.Size = UDim2.new(0, 110, 0, 22)
+				-- Der Wert rueckt auf dieselbe Zeile wie der Name, rechtsbuendig: die
+				-- Einerstelle bleibt dort stehen, egal wie lang die Zahl wird.
+				eintrag.label.Position = UDim2.new(0, SPALTE_RAND, 0, 4)
+				eintrag.label.Size = UDim2.new(0, breite, 0, 22)
+				eintrag.label.TextXAlignment = Enum.TextXAlignment.Right
+				eintrag.track.Position = UDim2.new(0, SPALTE_RAND, 0, 30)
+				eintrag.track.Size = UDim2.new(0, breite, 0, 8)
+			end
+		end
+	end
+
+	statsRowFrame.Size = UDim2.new(0, SPALTE_BREITE, 0, y + 12)
+	if aktualisiereBoostLage then
+		aktualisiereBoostLage()
+	end
+end
+
+-- Welche Kraft von selbst aufgeht: die, die gerade trainiert wird.
+--
+-- Wer an der Arm-Station steht, will den Arm sehen -- nicht die Zeile, die zufaellig zuerst
+-- in der Tabelle steht. Steht man an keiner Station, bleibt die erste offen; ein Bildschirm
+-- mit drei zugeklappten Zeilen saehe aus, als waere etwas kaputt.
+local function kraftFuerTraining()
+	if player:GetAttribute("BodyTrainingActive") then
+		return "BodyPower"
+	end
+	local stat = player:GetAttribute("TrainingStat")
+	if stat == "Arm" then
+		return "ArmPower"
+	elseif stat == "Leg" then
+		return "LegPower"
+	end
+	return nil
+end
+
+local function oeffneTrainierte()
+	local key = kraftFuerTraining()
+	if key and key ~= offeneKraft then
+		oeffneKraft(key)
+	end
+end
+
+oeffneKraft(kraftFuerTraining() or STAT_BAR_CONFIG[1].key)
+player:GetAttributeChangedSignal("TrainingStat"):Connect(oeffneTrainierte)
+player:GetAttributeChangedSignal("BodyTrainingActive"):Connect(oeffneTrainierte)
 
 -- ===== Zonenabhängige Umschaltung: Heat/Berserk-Leiste ist ausserhalb von Sanctuary
 -- relevant (Kampf), die Skill-Balken (Arm/Bein/Körper) dagegen speziell IM Sanctuary
@@ -2487,7 +2614,10 @@ local STAT_DISPLAY_NAMES = {
 
 local TRAIN_BREITE = SPALTE_BREITE
 local TRAIN_RAND = SPALTE_RAND
-local BOOST_Y = KRAFT_Y + 34 + KRAFT_ZEILE * 3 - 8 + 12 + 8
+-- Die Boost-Anzeige haengt an der Unterkante des Kraftblocks, und die wandert jetzt mit dem
+-- Akkordeon. Deshalb kein fester Wert mehr, sondern eine Funktion -- aufgerufen von
+-- oeffneKraft, sobald sich die Hoehe geaendert hat.
+local BOOST_Y = KRAFT_Y + KRAFT_BLOCK_HOEHE + 8
 
 -- ===== Boost-Anzeige =====
 -- Eigenes Feld, weil der Boost-Fortschritt bestehen bleibt, auch wenn man gerade an keiner
@@ -2497,6 +2627,13 @@ boostFrame.Name = "BoostFrame"
 boostFrame.Size = UDim2.new(0, TRAIN_BREITE, 0, 52)
 boostFrame.AnchorPoint = Vector2.new(1, 0)
 boostFrame.Position = UDim2.new(1, SPALTE_X, 0, BOOST_Y)
+
+-- Sie sitzt unter dem Kraftblock, und der wandert mit dem Akkordeon. Gemessen statt
+-- gerechnet: statsRowFrame kennt seine Hoehe selbst, nachdem oeffneKraft sie gesetzt hat.
+function aktualisiereBoostLage()
+	boostFrame.Position = UDim2.new(1, SPALTE_X, 0, KRAFT_Y + statsRowFrame.Size.Y.Offset + 8)
+end
+aktualisiereBoostLage()
 boostFrame.Visible = false
 boostFrame.Parent = screenGui
 HudChrome.Panel(boostFrame, { radius = HudChrome.Radius.Small })
