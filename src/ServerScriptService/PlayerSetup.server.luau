@@ -1423,6 +1423,145 @@ local function buildPlayerSaveData(player)
 	}
 end
 
+-- ===== Der Kapitelwechsel =====
+--
+-- Die Fraktion IST das Kapitel: wer die Figur wechselt, wechselt das Kapitel und damit
+-- seinen ganzen Fortschritt. Ohne diese Funktion war das halb gebaut -- der Speicherstand
+-- kannte seit Schema 6 drei Kapitel, aber data.Chapter wurde nur beim Laden gelesen und nie
+-- geaendert. Ein Wechsel setzte deshalb nur das Attribut und liess alle Werte stehen.
+--
+-- Drei Schritte, und die Reihenfolge ist der ganze Punkt:
+--   1. die lebenden Werte in das ALTE Kapitel zurueckschreiben
+--   2. das neue Kapitel zum laufenden machen
+--   3. die Werte des NEUEN Kapitels auf die lebenden Objekte legen
+--
+-- Wer Schritt eins vergisst, verliert das Kapitel, das er gerade verlaesst.
+
+-- Liest die Kapitelwerte vom Spieler ab. Baut auf buildPlayerSaveData auf statt die
+-- Lesestellen ein zweites Mal hinzuschreiben -- zwei Listen derselben Felder waeren die
+-- naechste Stelle, die auseinanderlaeuft.
+local function sammleKapitel(player)
+	local voll = buildPlayerSaveData(player)
+	local kapitel = {}
+	for _, feld in ipairs(CHAPTER_FIELDS) do
+		kapitel[feld] = voll[feld]
+	end
+	return kapitel
+end
+
+-- Legt die Werte eines Kapitels auf die lebenden Objekte. Dieselben Objekte, die
+-- PlayerAdded anlegt -- deshalb hier nur schreiben, nicht erzeugen.
+local function wendeKapitelAn(player, kapitel)
+	local leaderstats = player:FindFirstChild("leaderstats")
+	if not leaderstats then
+		return false
+	end
+
+	leaderstats.Level.Value = kapitel.Level or 0
+	leaderstats.Kills.Value = kapitel.Kills or 0
+	leaderstats.Coins.Value = kapitel.Coins or 0
+
+	local function setzeWert(name, wert)
+		local objekt = player:FindFirstChild(name)
+		if objekt then
+			objekt.Value = wert
+		end
+	end
+
+	setzeWert("XP", kapitel.XP or 0)
+	setzeWert("XPNeeded", xpNeededForLevel(kapitel.Level or 0))
+	setzeWert("LegPower", kapitel.LegPower or 0)
+	setzeWert("ArmPower", kapitel.ArmPower or 0)
+	setzeWert("BodyPower", kapitel.BodyPower or 0)
+	setzeWert("EvolutionPoints", kapitel.EvolutionPoints or 0)
+	for _, key in ipairs({
+		"EvoSpeedLevel",
+		"EvoMoneyLevel",
+		"EvoDamageLevel",
+		"EvoTrainingLevel",
+		"EvoCooldownLevel",
+		"EvoLuckLevel",
+	}) do
+		setzeWert(key, kapitel[key] or 0)
+	end
+
+	for _, key in ipairs({
+		"EnergyHeat",
+		"EnergyChemical",
+		"EnergyElectric",
+		"EnergyRadiation",
+		"EnergySpirit",
+	}) do
+		player:SetAttribute(key, kapitel[key] or 0)
+	end
+
+	-- Die Skins des neuen Kapitels. Der Ordner wird geleert und neu gefuellt -- ein
+	-- Abgleich Eintrag fuer Eintrag waere laenger und haette denselben Ausgang.
+	local unlockedFolder = player:FindFirstChild("UnlockedSkins")
+	if unlockedFolder then
+		unlockedFolder:ClearAllChildren()
+		for _, skinId in ipairs(kapitel.UnlockedSkins or { 0 }) do
+			local marker = Instance.new("BoolValue")
+			marker.Name = "Skin_" .. skinId
+			marker.Value = true
+			marker.Parent = unlockedFolder
+		end
+	end
+
+	-- Zuletzt: der getragene Skin loest den Modellwechsel aus (siehe applySkinToCharacter
+	-- und den Listener bei CharacterAdded). Erst setzen, wenn alles andere steht.
+	setzeWert("EquippedSkin", kapitel.EquippedSkin or 0)
+
+	if _G.RecalculateStrength then
+		_G.RecalculateStrength(player)
+	end
+	return true
+end
+
+_G.SwitchChapter = function(player, neuesKapitel)
+	local stand = geladenerStand[player]
+	if not stand then
+		warn("[Kaiju-Debug] Kapitelwechsel fuer " .. player.Name .. " ohne geladenen Stand -- abgebrochen.")
+		return false
+	end
+	local altesKapitel = stand.Chapter or CHAPTER_ORDER[1]
+	if neuesKapitel == altesKapitel then
+		return true
+	end
+
+	stand.Chapters = stand.Chapters or {}
+	stand.Chapters[altesKapitel] = sammleKapitel(player)
+	stand.Chapter = neuesKapitel
+
+	-- Ein Kapitel, das noch nie gespielt wurde, beginnt bei null -- entpackeKapitel legt es
+	-- an und schreibt es in stand.Chapters.
+	entpackeKapitel(stand)
+
+	local ok = wendeKapitelAn(player, stand.Chapters[neuesKapitel])
+	if not ok then
+		warn("[Kaiju-Debug] Kapitelwechsel fuer " .. player.Name .. ": leaderstats fehlen noch.")
+		return false
+	end
+
+	player:SetAttribute("Chapter", neuesKapitel)
+	player:SetAttribute("SelectedFaction", neuesKapitel)
+	player:SetAttribute("Faction", neuesKapitel)
+
+	print(string.format(
+		"[Kaiju-Debug] Kapitelwechsel %s: %s -> %s (Level %d, Geld %d).",
+		player.Name,
+		altesKapitel,
+		neuesKapitel,
+		stand.Chapters[neuesKapitel].Level or 0,
+		stand.Chapters[neuesKapitel].Coins or 0
+	))
+
+	-- Sofort sichern. Ein Kapitelwechsel ist der Augenblick, in dem am meisten auf dem
+	-- Spiel steht: die Werte zweier Kapitel haben gerade den Platz getauscht.
+	savePlayerData(player, buildPlayerSaveData(player))
+	return true
+end
+
 Players.PlayerRemoving:Connect(function(player)
 	-- Daten schreiben und Sperre freigeben in EINEM Vorgang (siehe savePlayerData).
 	savePlayerData(player, buildPlayerSaveData(player), true)

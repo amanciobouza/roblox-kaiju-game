@@ -96,8 +96,20 @@ DebugSetFactionEvent.OnServerEvent:Connect(function(player, faction)
 	if not VALID_FACTIONS[faction] then
 		return
 	end
-	player:SetAttribute("SelectedFaction", faction)
-	player:SetAttribute("Faction", faction)
+	-- Ueber den Kapitelwechsel, nicht ueber die Attribute.
+	--
+	-- Hier standen zwei SetAttribute-Zeilen, und die reichten, solange alle Werte flach im
+	-- Speicherstand lagen. Seit Schema 6 gehoeren Level, Geld und Skins dem KAPITEL: wer nur
+	-- das Attribut umstellt, sitzt als Jaeger auf den Werten des Kaiju -- und schreibt sie
+	-- beim naechsten Speichern in das Jaeger-Kapitel.
+	--
+	-- _G.SwitchChapter macht die drei Schritte, auf die es ankommt: altes Kapitel sichern,
+	-- umschalten, neues Kapitel anwenden.
+	if _G.SwitchChapter then
+		_G.SwitchChapter(player, faction)
+	else
+		warn("[Kaiju Debug] Kapitelwechsel nicht verfuegbar -- laeuft PlayerSetup?")
+	end
 end)
 
 -- ===== Welt-Events =====
