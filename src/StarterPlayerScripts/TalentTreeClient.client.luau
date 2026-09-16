@@ -677,32 +677,96 @@ local function getNodePosition(node, branchXPositions, branchOrder)
 	return Vector2.new(x, y)
 end
 
+-- ===== Rang: nicht jeder Knoten wiegt gleich viel =====
+--
+-- Dreizehn gleich grosse Kreise sind eine Liste, kein Baum -- man sieht nicht, wo er
+-- anfaengt, wo er hinfuehrt und was unterwegs ein Meilenstein ist.
+--
+-- Der Rang steht nirgends in der Config, und er muss es auch nicht: er STECKT schon in der
+-- Stufe. Abgeleitet statt eingetragen gilt er fuer Jaeger und Ronin ohne Zutun mit, denn
+-- deren Baeume sind nach demselben Muster gebaut.
+--
+--   Stufe 0 und 4   Wurzel und Ultimate -- Anfang und Ende des GANZEN Baums
+--   Stufe 3         das Ende eines Zweigs, die Synergie, auf die er hinauslaeuft
+--   dazwischen      die Arbeitstiere: Einstieg, Trade-off, die beiden Bruecken
+--
+-- Das Symbol behaelt dabei sein Verhaeltnis zum Kreis (0.77). Mehr geht nicht: ein Quadrat
+-- ueber Durchmesser/Wurzel(2) steht mit den Ecken ueber den Ring hinaus -- 0.77 traegt sich
+-- nur, weil die Symbole selbst einen Rand mitbringen.
+local RANG_NORMAL = { durchmesser = 80, namenHoehe = 30, namenBreite = 150, namenFarbe = Color3.fromRGB(148, 158, 174), namenImmer = false }
+local RANG_GROSS = { durchmesser = 108, namenHoehe = 40, namenBreite = 176, namenFarbe = Color3.fromRGB(214, 222, 234), namenImmer = true }
+local RANG_KEYSTONE = { durchmesser = 140, namenHoehe = 48, namenBreite = 210, namenFarbe = Color3.fromRGB(255, 255, 255), namenImmer = true }
+
+local function knotenRang(talent)
+	if talent.tier == 0 or talent.tier >= 4 then
+		return RANG_KEYSTONE
+	elseif talent.tier == 3 then
+		return RANG_GROSS
+	end
+	return RANG_NORMAL
+end
+
 -- Zeichnet ein einzelnes gerades Segment zwischen zwei Punkten -- Baustein für die
 -- gebogene Kurve unten (viele kurze Segmente ergeben zusammen einen glatten Bogen).
-local function drawLineSegment(fromPos, toPos, thickness)
+local function drawLineSegment(fromPos, toPos, dicke, farbe, transparenz, zIndex)
 	local delta = toPos - fromPos
 	local distance = delta.Magnitude
 	if distance < 0.5 then
-		return
+		return nil
 	end
 	local angle = math.deg(math.atan2(delta.Y, delta.X))
 
 	local line = Instance.new("Frame")
 	line.AnchorPoint = Vector2.new(0, 0.5)
-	line.Size = UDim2.new(0, distance + 1, 0, thickness) -- +1 Überlappung, damit keine Mini-Lücken zwischen Segmenten entstehen
+	line.Size = UDim2.new(0, distance + 1, 0, dicke) -- +1 Überlappung, damit keine Mini-Lücken zwischen Segmenten entstehen
 	line.Position = UDim2.new(0, fromPos.X, 0, fromPos.Y)
 	line.Rotation = angle
-	line.BackgroundColor3 = Color3.fromRGB(80, 76, 98)
+	line.BackgroundColor3 = farbe
+	line.BackgroundTransparency = transparenz
 	line.BorderSizePixel = 0
-	line.ZIndex = 60
+	line.ZIndex = zIndex
 	line.Parent = treeScroll
+	return line
 end
+
+-- ===== Verbindungen: Grundpfad und Ader =====
+--
+-- Vorher war eine Verbindung ein graues Kabel, gleich fuer alle -- und damit sagte sie
+-- nichts ausser "hier ist eine Linie".
+--
+-- Jetzt sind es ZWEI Linien uebereinander. Der dunkle Grundpfad liegt immer da: es gibt
+-- hier einen Weg. Die duennere Ader darin traegt die Energiefarbe des ZIELS und sagt, ob
+-- der Weg schon lebt. Die Farbe ist damit weiter eine Messung und kein Schmuck -- es ist
+-- dieselbe Energiefarbe wie am Ring des Knotens, an den Gebaeuden und an den Sammelstrahlen.
+--
+-- Drei Zustaende:
+--   erfuellt   das Ziel ist erforscht -- die Ader steht voll da
+--   offen      die Vorstufe sitzt, das Ziel noch nicht -- die Ader pulsiert langsam
+--   gesperrt   die Vorstufe fehlt -- nur der Grundpfad, fast unsichtbar
+local PFAD_GRUND = Color3.fromRGB(16, 19, 25)
+
+-- Die Adern, die gerade pulsieren. Wird bei jedem Neuaufbau des Baums geleert.
+local pulsAdern = {}
+
+-- EINE Schleife fuer alle pulsierenden Adern, nicht eine je Ader: bei dreizehn Knoten
+-- waeren das bis zu einem Dutzend Tweens, die alle dasselbe tun. Steht der Baum zu, kostet
+-- die Schleife einen Vergleich.
+RunService.Heartbeat:Connect(function()
+	if #pulsAdern == 0 or not panel.Visible then
+		return
+	end
+	local welle = (math.sin(os.clock() * 2.2) + 1) / 2
+	local transparenz = 0.30 + welle * 0.45
+	for _, ader in ipairs(pulsAdern) do
+		ader.BackgroundTransparency = transparenz
+	end
+end)
 
 -- Gebogene Verbindungslinie: quadratische Bezier-Kurve (EIN Kontrollpunkt, wölbt sich
 -- gleichmässig in EINE Richtung -- explizit KEINE S-Kurve, die bräuchte zwei
 -- gegenläufige Kontrollpunkte). Wird aus vielen kurzen geraden Segmenten
 -- zusammengesetzt, da Roblox-UI keine nativen Kurven kennt.
-local function drawConnector(fromPos, toPos)
+local function drawConnector(fromPos, toPos, zielTalent, zustand)
 	local delta = toPos - fromPos
 	local distance = delta.Magnitude
 	if distance < 1 then
@@ -722,15 +786,40 @@ local function drawConnector(fromPos, toPos)
 	local bowDirection = (toPos.X >= fromPos.X) and 1 or -1
 	local controlPoint = midpoint + perpendicular * bowAmount * bowDirection
 
+	-- Erst die Punkte der Kurve sammeln, dann zeichnen. Grundpfad und Ader muessen exakt
+	-- denselben Bogen nehmen -- die Kurve zweimal zu rechnen waere die Gelegenheit, dass
+	-- sie es irgendwann nicht mehr tun.
 	local segments = 14
-	local previousPoint = fromPos
+	local punkte = { fromPos }
 	for i = 1, segments do
 		local t = i / segments
 		local oneMinusT = 1 - t
 		-- Quadratische Bezier-Formel: B(t) = (1-t)²·P0 + 2(1-t)t·P1 + t²·P2
-		local point = fromPos * (oneMinusT * oneMinusT) + controlPoint * (2 * oneMinusT * t) + toPos * (t * t)
-		drawLineSegment(previousPoint, point, 5) -- breiter als vorher (war 3)
-		previousPoint = point
+		table.insert(punkte, fromPos * (oneMinusT * oneMinusT) + controlPoint * (2 * oneMinusT * t) + toPos * (t * t))
+	end
+
+	-- Die Dicke richtet sich nach dem Rang des ZIELS: der Weg zu einem Meilenstein ist
+	-- breiter als der zum naechsten Arbeitstier.
+	local rang = knotenRang(zielTalent)
+	local grundDicke = math.max(4, math.floor(rang.durchmesser * 0.075))
+	local aderDicke = math.max(2, math.floor(rang.durchmesser * 0.032))
+	local aderFarbe = ENERGY_COLORS[zielTalent.energyType] or HudChrome.Color.BorderBright
+	local grundTransparenz = (zustand == "gesperrt") and 0.5 or 0.05
+
+	for i = 1, #punkte - 1 do
+		drawLineSegment(punkte[i], punkte[i + 1], grundDicke, PFAD_GRUND, grundTransparenz, 58)
+	end
+
+	if zustand == "gesperrt" then
+		return
+	end
+
+	local aderTransparenz = (zustand == "erfuellt") and 0 or 0.5
+	for i = 1, #punkte - 1 do
+		local ader = drawLineSegment(punkte[i], punkte[i + 1], aderDicke, aderFarbe, aderTransparenz, 59)
+		if ader and zustand == "offen" then
+			table.insert(pulsAdern, ader)
+		end
 	end
 end
 
@@ -908,35 +997,6 @@ local function refreshSelectedTalentDetails()
 	selectTalent(talent, state, level)
 end
 
--- ===== Rang: nicht jeder Knoten wiegt gleich viel =====
---
--- Dreizehn gleich grosse Kreise sind eine Liste, kein Baum -- man sieht nicht, wo er
--- anfaengt, wo er hinfuehrt und was unterwegs ein Meilenstein ist.
---
--- Der Rang steht nirgends in der Config, und er muss es auch nicht: er STECKT schon in der
--- Stufe. Abgeleitet statt eingetragen gilt er fuer Jaeger und Ronin ohne Zutun mit, denn
--- deren Baeume sind nach demselben Muster gebaut.
---
---   Stufe 0 und 4   Wurzel und Ultimate -- Anfang und Ende des GANZEN Baums
---   Stufe 3         das Ende eines Zweigs, die Synergie, auf die er hinauslaeuft
---   dazwischen      die Arbeitstiere: Einstieg, Trade-off, die beiden Bruecken
---
--- Das Symbol behaelt dabei sein Verhaeltnis zum Kreis (0.77). Mehr geht nicht: ein Quadrat
--- ueber Durchmesser/Wurzel(2) steht mit den Ecken ueber den Ring hinaus -- 0.77 traegt sich
--- nur, weil die Symbole selbst einen Rand mitbringen.
-local RANG_NORMAL = { durchmesser = 80, namenHoehe = 30, namenBreite = 150, namenFarbe = Color3.fromRGB(148, 158, 174), namenImmer = false }
-local RANG_GROSS = { durchmesser = 108, namenHoehe = 40, namenBreite = 176, namenFarbe = Color3.fromRGB(214, 222, 234), namenImmer = true }
-local RANG_KEYSTONE = { durchmesser = 140, namenHoehe = 48, namenBreite = 210, namenFarbe = Color3.fromRGB(255, 255, 255), namenImmer = true }
-
-local function knotenRang(talent)
-	if talent.tier == 0 or talent.tier >= 4 then
-		return RANG_KEYSTONE
-	elseif talent.tier == 3 then
-		return RANG_GROSS
-	end
-	return RANG_NORMAL
-end
-
 local function buildNode(talent, position, isActiveFaction)
 	local rang = knotenRang(talent)
 	local D = rang.durchmesser
@@ -1084,6 +1144,9 @@ local function renderTree(factionName)
 	end
 	currentFaction = factionName
 	nodeRefs = {}
+	-- Die alten Adern sind mit den Segmenten zerstoert worden; die Liste zeigt sonst auf
+	-- Instanzen, die es nicht mehr gibt, und die Puls-Schleife liefe ins Leere.
+	pulsAdern = {}
 	-- WICHTIG: erst ALLE zu löschenden Kinder sammeln, DANN erst löschen -- wer während
 	-- einer ipairs()-Schleife Kinder zerstört, überspringt dabei manche Elemente (Lua-
 	-- Klassiker), wodurch alte Verbindungslinien von früheren Aufrufen liegen bleiben und
@@ -1116,7 +1179,19 @@ local function renderTree(factionName)
 			-- und genau diese Linien haben sich am stärksten mit den Synergie-Linien
 			-- gekreuzt und die Ansicht unübersichtlich gemacht.
 			if positionsById[prereq.id] and prereqTalent and prereqTalent.tier ~= 0 then
-				drawConnector(positionsById[prereq.id], positionsById[talent.id])
+				-- Der Zustand gehoert der VERBINDUNG, nicht einem der beiden Knoten: sie
+				-- lebt erst, wenn das Ziel erforscht ist, und sie ruft, wenn die Vorstufe
+				-- sitzt und das Ziel noch offen steht.
+				local stufen = talentState.levels[factionName] or {}
+				local zustand
+				if (stufen[talent.id] or 0) > 0 then
+					zustand = "erfuellt"
+				elseif (stufen[prereq.id] or 0) >= prereq.level then
+					zustand = "offen"
+				else
+					zustand = "gesperrt"
+				end
+				drawConnector(positionsById[prereq.id], positionsById[talent.id], talent, zustand)
 			end
 		end
 	end
