@@ -361,8 +361,10 @@ local DETAIL_MIN_FRACTION = 0.32 -- so viel darf die Detailspalte hoechstens vom
 -- keine handtellergrossen Knoten entstehen.
 local TREE_MIN_SCALE = 0.55
 local TREE_MAX_SCALE = 1.5
+-- QUADRATISCH, seit der Baum ein Zifferblatt ist: auf einer 960x900-Flaeche waere der
+-- Kreis eine Ellipse, und die Minuterie im Hintergrund wuerde nicht mehr zu ihm passen.
 local TREE_CANVAS_WIDTH = 960
-local TREE_CANVAS_HEIGHT = 900
+local TREE_CANVAS_HEIGHT = 960
 
 -- Oberkante des Inhalts, unter Titelzeile und Ressourcenleiste.
 local CONTENT_TOP = 106
@@ -740,9 +742,41 @@ local function updateResourceDisplay()
 	coinsLabel.Text = tostring(math.floor(talentState.coins or 0))
 end
 
--- ===== Positions-Berechnung: Zweig-Reihenfolge wird DYNAMISCH aus den Knoten
--- abgeleitet (funktioniert für jede Fraktion, unabhängig von den Zweig-Namen). =====
-local function getBranchXPositions(nodes)
+-- ===== Der Baum ist ein Zifferblatt =====
+--
+-- Vorher standen die Knoten in drei Spalten untereinander -- ein Talentbaum, wie ihn jedes
+-- Rollenspiel hat. Der Hintergrund ist aber eine Uhr, und eine Uhr ordnet nicht in
+-- Spalten, sondern in Winkel und Radius. Also tut der Baum es jetzt auch:
+--
+--   die Wurzel liegt im ZENTRUM -- alles kommt von dort
+--   der WINKEL sagt, welcher Zweig       (3, 6 und 9 Uhr)
+--   der RADIUS sagt, wie tief man ist    (Stufe 1 innen, Stufe 3 aussen)
+--   das Ultimate kroent auf 12 UHR       -- allein, in der Luecke zwischen den Zweigen
+--
+-- Die obere Haelfte bleibt bis auf die Krone frei. Das ist keine verschenkte Flaeche,
+-- sondern der Grund, warum die Krone als Ziel liest: sie hat Platz um sich.
+--
+-- Uhrzeit statt Grad, weil es hier wirklich eine Uhr ist. Umgerechnet wird an genau einer
+-- Stelle: Stunde h zeigt in die Richtung (sin, -cos) von h*30 Grad -- das Minus, weil Y
+-- auf dem Bildschirm nach unten waechst, 12 Uhr aber nach oben zeigt.
+local ZIFFER_MITTE = Vector2.new(TREE_CANVAS_WIDTH / 2, TREE_CANVAS_HEIGHT / 2)
+
+-- Radius je Stufe. Nachgerechnet, nicht geschaetzt: aussen ist bei 375 Schluss, weil ein
+-- 108 Pixel grosser Stufe-3-Knoten auf 6 Uhr samt Namen sonst unten aus der Flaeche
+-- laeuft. Innen gibt der Name der Wurzel das Mass -- stuende er unter ihr, muesste der
+-- erste Ring auf 175 und zwischen Stufe 2 und 3 blieben 6 Pixel Luft. Er steht deshalb
+-- UEBER der Wurzel (siehe buildNode), und die drei Ringe verteilen sich gleichmaessig.
+local ZIFFER_RADIUS = { [0] = 0, [1] = 135, [2] = 255, [3] = 375, [4] = 400 }
+local ZIFFER_RADIUS_BRUECKE = 315 -- zwischen Stufe 2 und 3
+
+local function uhrRichtung(stunde)
+	local bogen = math.rad(stunde * 30)
+	return Vector2.new(math.sin(bogen), -math.cos(bogen))
+end
+
+-- ===== Zweig-Reihenfolge wird DYNAMISCH aus den Knoten abgeleitet (funktioniert für jede
+-- Fraktion, unabhängig von den Zweig-Namen). =====
+local function getBranchHours(nodes)
 	local order = {}
 	local seen = {}
 	local EXCLUDED_BRANCHES = { Root = true, Synergy = true, Ultimate = true, Gap1_2 = true, Gap2_3 = true }
@@ -752,50 +786,47 @@ local function getBranchXPositions(nodes)
 			table.insert(order, node.branch)
 		end
 	end
-	local positions = {}
+	-- Drei Zweige auf 3, 6 und 9 Uhr. Damit bleibt die halbe Scheibe von 9 ueber 12 bis 3
+	-- fuer die Krone frei, und die drei Zweige stehen trotzdem gleichmaessig.
+	local hours = {}
 	for i, branchKey in ipairs(order) do
-		positions[branchKey] = 160 + (i - 1) * 320
+		hours[branchKey] = 3 + (i - 1) * 3
 	end
-	return positions, order
+	return hours, order
 end
 
 local GAP_BRANCHES = { Gap1_2 = true, Gap2_3 = true, Synergy = true } -- "Synergy" bleibt als Alias erhalten, falls irgendwo noch verwendet
 
-local function getNodePosition(node, branchXPositions, branchOrder)
-	-- Oberkante der ersten Reihe. War 60, solange jeder Knoten 88 Pixel mass; die Wurzel
-	-- ist jetzt 140 gross und ragte damit 10 Pixel ueber den oberen Rand der Zeichenflaeche
-	-- hinaus. 80 haelt sie drin, und unten bleibt es eng genug: das Ultimate auf Stufe 4
-	-- endet samt Namen bei 864 von 900.
-	local REIHE_OBEN = 80
-	local y
+local function getNodePosition(node, branchHours, branchOrder)
+	-- Die Wurzel IST die Mitte. Kein Radius, kein Winkel.
+	if node.branch == "Root" then
+		return ZIFFER_MITTE
+	end
+
+	-- Die Krone auf 12 Uhr, am weitesten aussen. Sie gehoert allen drei Zweigen und darf
+	-- deshalb an keinem von ihnen haengen.
+	if node.branch == "Ultimate" then
+		return ZIFFER_MITTE + uhrRichtung(12) * ZIFFER_RADIUS[4]
+	end
+
+	-- Die Bruecken liegen ZWISCHEN zwei Zweigen -- also auf der halben Stunde dazwischen,
+	-- und auf halbem Radius zwischen Stufe 2 und 3. Genau da, wo sie im Baum stehen.
 	if GAP_BRANCHES[node.branch] then
-		-- Extra Puffer nach oben UND unten -- sonst kollidiert der Knoten mit den direkt
-		-- benachbarten Zweig-Stufen (Tier 2 und Tier 3).
-		y = REIHE_OBEN + node.tier * 165 + 40
-	else
-		y = REIHE_OBEN + node.tier * 165
-	end
-	local x
-	if node.branch == "Root" or node.branch == "Ultimate" then
-		x = 480 -- Start und Ultimate bleiben mittig -- betreffen ja alle Zweige gleichermassen
-	elseif node.branch == "Gap1_2" or node.branch == "Synergy" then
-		-- Zwischen dem ERSTEN und ZWEITEN Strang platziert.
-		if branchOrder and branchXPositions[branchOrder[1]] and branchXPositions[branchOrder[2]] then
-			x = (branchXPositions[branchOrder[1]] + branchXPositions[branchOrder[2]]) / 2
+		local ersterZweig, zweiterZweig
+		if node.branch == "Gap2_3" then
+			ersterZweig, zweiterZweig = branchOrder[2], branchOrder[3]
 		else
-			x = 320
+			ersterZweig, zweiterZweig = branchOrder[1], branchOrder[2]
 		end
-	elseif node.branch == "Gap2_3" then
-		-- Zwischen dem ZWEITEN und DRITTEN Strang platziert.
-		if branchOrder and branchXPositions[branchOrder[2]] and branchXPositions[branchOrder[3]] then
-			x = (branchXPositions[branchOrder[2]] + branchXPositions[branchOrder[3]]) / 2
-		else
-			x = 640
-		end
-	else
-		x = branchXPositions[node.branch] or 480
+		local a = branchHours[ersterZweig]
+		local b = branchHours[zweiterZweig]
+		local stunde = (a and b) and (a + b) / 2 or 6
+		return ZIFFER_MITTE + uhrRichtung(stunde) * ZIFFER_RADIUS_BRUECKE
 	end
-	return Vector2.new(x, y)
+
+	local stunde = branchHours[node.branch] or 6
+	local radius = ZIFFER_RADIUS[node.tier] or ZIFFER_RADIUS[1]
+	return ZIFFER_MITTE + uhrRichtung(stunde) * radius
 end
 
 -- ===== Rang: nicht jeder Knoten wiegt gleich viel =====
@@ -1200,7 +1231,15 @@ local function buildNode(talent, position, isActiveFaction)
 	local infoLabel = Instance.new("TextLabel")
 	infoLabel.Size = UDim2.new(0, rang.namenBreite, 0, rang.namenHoehe)
 	infoLabel.AnchorPoint = Vector2.new(0.5, 0)
-	infoLabel.Position = UDim2.new(0, position.X, 0, position.Y + D / 2 + 6)
+	-- Unter dem Knoten -- ausser bei der Wurzel. Die sitzt im Zentrum des Zifferblatts,
+	-- und unter ihr beginnt die Speiche auf 6 Uhr. Oberhalb ist dagegen frei: dort liegt
+	-- die Luecke zwischen den Zweigen, die auch die Krone auf 12 Uhr freihaelt.
+	if talent.tier == 0 then
+		infoLabel.AnchorPoint = Vector2.new(0.5, 1)
+		infoLabel.Position = UDim2.new(0, position.X, 0, position.Y - D / 2 - 6)
+	else
+		infoLabel.Position = UDim2.new(0, position.X, 0, position.Y + D / 2 + 6)
+	end
 	infoLabel.BackgroundTransparency = 1
 
 	infoLabel.TextScaled = true
@@ -1283,23 +1322,24 @@ local function renderTree(factionName)
 	end
 
 	local nodes = TalentTreeConfig.GetTalentsForFaction(factionName)
-	local branchXPositions, branchOrder = getBranchXPositions(nodes)
+	local branchHours, branchOrder = getBranchHours(nodes)
 	local isActiveFaction = (talentState.activeFaction == factionName)
 
 	local positionsById = {}
 	local talentsById = {}
 	for _, talent in ipairs(nodes) do
-		positionsById[talent.id] = getNodePosition(talent, branchXPositions, branchOrder)
+		positionsById[talent.id] = getNodePosition(talent, branchHours, branchOrder)
 		talentsById[talent.id] = talent
 	end
 	for _, talent in ipairs(nodes) do
 		for _, prereq in ipairs(talent.prerequisites) do
 			local prereqTalent = talentsById[prereq.id]
-			-- Root->Zweig-Linien bewusst NICHT zeichnen -- durch die Spalten-Ausrichtung
-			-- (Zweig-Knoten stehen exakt unter dem Start-Knoten) ohnehin klar erkennbar,
-			-- und genau diese Linien haben sich am stärksten mit den Synergie-Linien
-			-- gekreuzt und die Ansicht unübersichtlich gemacht.
-			if positionsById[prereq.id] and prereqTalent and prereqTalent.tier ~= 0 then
+			-- Die Linien von der Wurzel zu den Zweigen waren frueher ausgenommen: in der
+			-- Spaltenansicht kreuzten sie sich mit den Synergie-Linien und machten das Bild
+			-- unuebersichtlich. Auf dem Zifferblatt ist genau das Gegenteil der Fall --
+			-- sie laufen radial nach aussen und sind die Speichen, die die Scheibe
+			-- ueberhaupt als Scheibe lesbar machen. Also wieder dabei.
+			if positionsById[prereq.id] and prereqTalent then
 				-- Der Zustand gehoert der VERBINDUNG, nicht einem der beiden Knoten: sie
 				-- lebt erst, wenn das Ziel erforscht ist, und sie ruft, wenn die Vorstufe
 				-- sitzt und das Ziel noch offen steht.
