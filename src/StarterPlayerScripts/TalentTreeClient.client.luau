@@ -776,6 +776,16 @@ local STATE_COLORS = {
 local function selectTalent(talent, state, level)
 	selectedTalentId = talent.id
 
+	-- Der Name des gewaehlten Knotens erscheint, der des vorher gewaehlten verschwindet
+	-- wieder. Die Meilensteine behalten ihren in jedem Fall -- sie sind die Orientierung,
+	-- an der man sich im Baum zurechtfindet, und die darf nicht von der Auswahl abhaengen.
+	-- Der gewaehlte Name wird zusaetzlich hell: er gehoert zu dem, was rechts steht.
+	for id, ref in pairs(nodeRefs) do
+		local gewaehlt = (id == talent.id)
+		ref.infoLabel.Visible = ref.rang.namenImmer or gewaehlt
+		ref.infoLabel.TextColor3 = gewaehlt and Color3.fromRGB(255, 255, 255) or ref.rang.namenFarbe
+	end
+
 	detailEmpty.Visible = false
 	detailIcon.Visible = true
 	detailName.Visible = true
@@ -914,9 +924,9 @@ end
 -- Das Symbol behaelt dabei sein Verhaeltnis zum Kreis (0.77). Mehr geht nicht: ein Quadrat
 -- ueber Durchmesser/Wurzel(2) steht mit den Ecken ueber den Ring hinaus -- 0.77 traegt sich
 -- nur, weil die Symbole selbst einen Rand mitbringen.
-local RANG_NORMAL = { durchmesser = 80, namenHoehe = 30, namenBreite = 150, namenFarbe = Color3.fromRGB(148, 158, 174) }
-local RANG_GROSS = { durchmesser = 108, namenHoehe = 40, namenBreite = 176, namenFarbe = Color3.fromRGB(214, 222, 234) }
-local RANG_KEYSTONE = { durchmesser = 140, namenHoehe = 48, namenBreite = 210, namenFarbe = Color3.fromRGB(255, 255, 255) }
+local RANG_NORMAL = { durchmesser = 80, namenHoehe = 30, namenBreite = 150, namenFarbe = Color3.fromRGB(148, 158, 174), namenImmer = false }
+local RANG_GROSS = { durchmesser = 108, namenHoehe = 40, namenBreite = 176, namenFarbe = Color3.fromRGB(214, 222, 234), namenImmer = true }
+local RANG_KEYSTONE = { durchmesser = 140, namenHoehe = 48, namenBreite = 210, namenFarbe = Color3.fromRGB(255, 255, 255), namenImmer = true }
 
 local function knotenRang(talent)
 	if talent.tier == 0 or talent.tier >= 4 then
@@ -1001,12 +1011,11 @@ local function buildNode(talent, position, isActiveFaction)
 
 	-- Der Name haengt unter dem Knoten und waechst mit seinem Rang. Vorher stand er bei
 	-- allen dreizehn gleich gross da und machte das Bild unruhig -- am dichtesten
-	-- ausgerechnet dort, wo die kleinen Knoten eng beieinander stehen. Jetzt ruft der
-	-- Meilenstein, und das Arbeitstier fluestert.
+	-- ausgerechnet dort, wo die kleinen Knoten eng beieinander stehen.
 	--
-	-- Ausblenden und erst bei Beruehrung zeigen waere der andere Weg. Auf dem Telefon
-	-- gibt es aber kein Hover: dort hiesse "nur bei Beruehrung" in der Praxis "nur nach
-	-- einem Fehlversuch".
+	-- Dauerhaft tragen ihn nur die Meilensteine. Der kleine Knoten zeigt ihn, sobald er
+	-- AUSGEWAEHLT ist. Das ist auf dem Telefon das Gegenstueck zum Hover, das es dort
+	-- nicht gibt, und es kostet keinen zweiten Griff: antippen waehlt ohnehin schon aus.
 	local infoLabel = Instance.new("TextLabel")
 	infoLabel.Size = UDim2.new(0, rang.namenBreite, 0, rang.namenHoehe)
 	infoLabel.AnchorPoint = Vector2.new(0.5, 0)
@@ -1017,6 +1026,7 @@ local function buildNode(talent, position, isActiveFaction)
 	infoLabel.TextWrapped = true
 	infoLabel.TextColor3 = rang.namenFarbe
 	infoLabel.Text = talent.name
+	infoLabel.Visible = rang.namenImmer or (talent.id == selectedTalentId)
 	infoLabel.ZIndex = 61
 	infoLabel.Parent = treeScroll
 
