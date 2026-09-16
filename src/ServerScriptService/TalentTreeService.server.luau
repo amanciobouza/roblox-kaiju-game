@@ -193,8 +193,23 @@ StartResearchEvent.OnServerEvent:Connect(function(player, factionName, talentId)
 end)
 
 -- ===== Forschung abbrechen: Ressourcen werden NICHT erstattet =====
+--
+-- Der Abbruch muss ZURUECK zum Client. Vorher raeumte der Server nur seine eigene Liste
+-- auf und sagte es niemandem: der Balken lief auf dem Bildschirm weiter bis null und blieb
+-- dort stehen, und der ganze Baum blieb bei "Other research active" -- der Knopf sah
+-- deshalb aus, als taete er nichts, obwohl er getan hatte, was er sollte. Das gleiche
+-- RemoteEvent traegt in beide Richtungen; ein zweites dafuer waere eine Verdopplung.
 CancelResearchEvent.OnServerEvent:Connect(function(player)
+	local research = activeResearch[player]
+	if not research then
+		return
+	end
 	activeResearch[player] = nil
+
+	print(string.format("[Kaiju Debug] Forschung ABGEBROCHEN: %s / %s / %s",
+		player.Name, research.faction, research.talentId))
+
+	CancelResearchEvent:FireClient(player, research.faction, research.talentId)
 end)
 
 -- ===== Läuft im Hintergrund: prüft, ob eine Forschung fertig ist =====

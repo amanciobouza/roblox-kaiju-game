@@ -315,7 +315,13 @@ local function layoutColumns()
 	local titleWidth = math.clamp(math.floor(width * 0.3), 140, 300)
 	tabRow.Position = UDim2.new(0, titleWidth + 24, 0, 8)
 	tabRow.Size = UDim2.new(0, math.max(width - titleWidth - 36, 120), 0, 32)
-	resourceRow.Position = UDim2.new(0, 8, 0, 44)
+	-- Die Ressourcenzeile gehoert nach GANZ oben, nicht auf 44: dort sitzt der
+	-- Forschungsbalken, und beide lagen uebereinander -- die Zahlen ueber dem Balken, der
+	-- CANCEL-Knopf unter den Zahlen. Die 44 stammen aus der Zeit, als der Titel noch hier
+	-- im Inhalt stand; seit HudChrome.Screen steht er in der Kopfzeile, und die Zeile
+	-- darunter ist frei geworden. Die drei Hoehen gehen jetzt sauber auf:
+	-- Ressourcen 8..38, Forschung 44..78, Inhalt ab 106.
+	resourceRow.Position = UDim2.new(0, 12, 0, 8)
 
 	-- Die Detailspalte bleibt rechts, darf aber nie mehr als DETAIL_MIN_FRACTION des
 	-- Bildschirms beanspruchen: feste 300 Pixel waeren auf einem 640er Telefon fast die
@@ -1420,6 +1426,21 @@ ResearchCompleteEvent.OnClientEvent:Connect(function(factionName, talentId, newL
 	end
 	talentState.levels[factionName][talentId] = newLevel
 	talentState.research = nil
+	updateResearchBar()
+	updateResearchHud()
+	if factionName == currentFaction then
+		renderTree(currentFaction)
+		refreshSelectedTalentDetails()
+	end
+end)
+
+-- Bestaetigung des Abbruchs. Erst hier faellt talentState.research weg -- nicht schon beim
+-- Druck auf den Knopf: was der Server nicht ausgefuehrt hat, darf der Bildschirm nicht
+-- behaupten. Der Weg ist derselbe wie bei der fertigen Forschung, nur ohne neue Stufe.
+CancelResearchEvent.OnClientEvent:Connect(function(factionName, _talentId)
+	talentState.research = nil
+	requestState()
+	updateResourceDisplay()
 	updateResearchBar()
 	updateResearchHud()
 	if factionName == currentFaction then
