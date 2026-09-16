@@ -204,8 +204,11 @@ end)
 local treeScroll = Instance.new("ScrollingFrame")
 treeScroll.Size = UDim2.new(0, 960, 1, -104)
 treeScroll.Position = UDim2.new(0, 12, 0, 88)
-treeScroll.BackgroundColor3 = HudChrome.Color.PanelSunken
+-- Der Grund liegt jetzt eine Ebene tiefer (siehe Uhrwerk weiter unten) und scheint
+-- durch. Der Rahmen bleibt hier, er gehoert zum Fenster und nicht zum Grund.
+treeScroll.BackgroundTransparency = 1
 treeScroll.BorderSizePixel = 0
+treeScroll.ZIndex = 1
 treeScroll.ScrollBarThickness = 6
 treeScroll.CanvasSize = UDim2.new(0, 960, 0, 900)
 -- WICHTIG: ScrollingFrame clippt seinen Inhalt NICHT automatisch (anders als man
@@ -221,6 +224,110 @@ HudChrome.Panel(treeScroll, { radius = HudChrome.Radius.Panel, fill = false })
 local treeScale = Instance.new("UIScale")
 treeScale.Scale = 1
 treeScale.Parent = treeScroll
+
+-- ===== Der Grund: ein Uhrwerk =====
+--
+-- Der Baum stand auf Schwarz. Schwarz ist kein Ort: es gibt nichts, wogegen der dunkle
+-- Grundpfad der Adern steht, und nichts, was den Rollbereich als Raum lesbar macht.
+--
+-- Was hier liegt, ist bewusst KEIN Dekor aus dem Fundus. Trenchborn ist eine
+-- Uhrenkollektion -- ein Zifferblattkranz mit seiner Minuterie, konzentrische Ringe und
+-- ein Zahnkranz sind die Bildsprache dieser Sammlung. Und sie passen zu dem, was der
+-- Bildschirm tut: eine Forschung LAEUFT, sie dauert, sie ist ein Uhrwerk. Die organischen
+-- Adern des Baums wachsen darueber hinweg.
+--
+-- Alles liegt dicht am Grundton (8,9,12). Es soll den Raum haben, nicht ihn einnehmen --
+-- wer es beim Spielen bemerkt, hat es zu hell.
+local WERK_RING = Color3.fromRGB(23, 27, 35)
+local WERK_STRICH = Color3.fromRGB(31, 37, 47)
+local WERK_HELL = Color3.fromRGB(44, 52, 64)
+
+local himmel = Instance.new("Frame")
+himmel.Name = "Uhrwerk"
+himmel.BackgroundColor3 = HudChrome.Color.PanelSunken
+himmel.BorderSizePixel = 0
+himmel.ClipsDescendants = true
+himmel.ZIndex = 0
+himmel.Parent = schirm.content
+local himmelEcke = Instance.new("UICorner")
+himmelEcke.CornerRadius = UDim.new(0, HudChrome.Radius.Panel)
+himmelEcke.Parent = himmel
+
+-- Das Werk ist QUADRATISCH -- nur in einem Quadrat bleibt ein Kreis ein Kreis, ein
+-- UICorner mit halbem Radius macht aus einem Rechteck sonst eine Ellipse. Seine
+-- Kantenlaenge setzt layoutColumns; alles darin steht in Anteilen davon und ueberlebt
+-- jede Groessenaenderung, ohne neu gebaut zu werden.
+local werk = Instance.new("Frame")
+werk.Name = "Werk"
+werk.AnchorPoint = Vector2.new(0.5, 0.5)
+werk.Position = UDim2.new(0.5, 0, 0.5, 0)
+werk.BackgroundTransparency = 1
+werk.Parent = himmel
+
+local function baueRing(anteil, farbe, transparenz, dicke)
+	local ring = Instance.new("Frame")
+	ring.AnchorPoint = Vector2.new(0.5, 0.5)
+	ring.Position = UDim2.new(0.5, 0, 0.5, 0)
+	ring.Size = UDim2.new(anteil, 0, anteil, 0)
+	ring.BackgroundTransparency = 1
+	ring.Parent = werk
+	local ecke = Instance.new("UICorner")
+	ecke.CornerRadius = UDim.new(0.5, 0)
+	ecke.Parent = ring
+	local strich = Instance.new("UIStroke")
+	strich.Thickness = dicke
+	strich.Color = farbe
+	strich.Transparency = transparenz
+	strich.Parent = ring
+end
+
+-- Striche auf einem Kreis. Minuterie, Zahnkranz und Teilung sind dieselbe Bewegung mit
+-- anderen Zahlen -- deshalb EINE Funktion statt dreier.
+--
+-- Rotation = Winkel + 90: die lange Achse eines Frames ist seine Hoehe, also Y. Die
+-- Vierteldrehung legt sie auf den Radius, und der Strich zeigt nach aussen statt quer.
+local function baueKranz(radius, anzahl, laenge, breite, farbe, transparenz, jeder)
+	for i = 0, anzahl - 1 do
+		local winkel = (i / anzahl) * math.pi * 2
+		local betont = jeder ~= nil and (i % jeder == 0)
+		local strich = Instance.new("Frame")
+		strich.AnchorPoint = Vector2.new(0.5, 0.5)
+		strich.Position = UDim2.new(
+			0.5 + radius * math.cos(winkel), 0,
+			0.5 + radius * math.sin(winkel), 0
+		)
+		strich.Size = UDim2.new(breite, 0, betont and laenge * 1.9 or laenge, 0)
+		strich.Rotation = math.deg(winkel) + 90
+		strich.BackgroundColor3 = betont and WERK_HELL or farbe
+		strich.BackgroundTransparency = transparenz
+		strich.BorderSizePixel = 0
+		strich.Parent = werk
+	end
+end
+
+-- Aussen das Zifferblatt: Kranz und Minuterie, jeder fuenfte Strich laenger und heller --
+-- die Teilung einer Uhr, nicht die eines Diagramms.
+baueRing(0.98, WERK_RING, 0.25, 2)
+baueKranz(0.465, 60, 0.016, 0.0022, WERK_STRICH, 0.35, 5)
+
+-- Darunter das Getriebe.
+baueRing(0.80, WERK_RING, 0.45, 1)
+baueKranz(0.40, 28, 0.026, 0.013, WERK_RING, 0.5)
+
+-- Innen die Teilung und der Kern.
+baueRing(0.58, WERK_RING, 0.5, 1)
+baueKranz(0.22, 12, 0.10, 0.003, WERK_STRICH, 0.6)
+baueRing(0.30, WERK_RING, 0.55, 1)
+baueRing(0.10, WERK_RING, 0.4, 2)
+
+-- Parallaxe: das Werk liegt HINTER dem Baum und geht deshalb langsamer mit. Das ist kein
+-- Effekt um seiner selbst willen -- erst der Unterschied in der Geschwindigkeit macht aus
+-- zwei uebereinanderliegenden Flaechen zwei Ebenen mit Abstand.
+local WERK_MITGANG = 0.35
+treeScroll:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
+	local rollen = treeScroll.CanvasPosition
+	werk.Position = UDim2.new(0.5, -rollen.X * WERK_MITGANG, 0.5, -rollen.Y * WERK_MITGANG)
+end)
 
 -- Baum und Detailspalte teilen sich die Breite. Beide standen vorher auf festen Werten
 -- (960 und 268 Pixel ab Position 8 beziehungsweise 976). Auf einem Vollbild-Bildschirm
@@ -340,6 +447,14 @@ local function layoutColumns()
 
 	treeScroll.Position = UDim2.new(0, COLUMN_GAP, 0, CONTENT_TOP)
 	treeScroll.Size = UDim2.new(0, treeWidth, 0, treeHeight)
+
+	-- Der Grund deckt sich genau mit dem Baumfenster. Das Werk ist anderthalb mal so gross
+	-- wie dessen laengere Kante: es soll an den Raendern hinauslaufen, nicht als Scheibe
+	-- mitten im Fenster liegen -- ein Mechanismus, der groesser ist als der Ausschnitt.
+	himmel.Position = treeScroll.Position
+	himmel.Size = treeScroll.Size
+	local werkSeite = math.floor(math.max(treeWidth, treeHeight) * 1.5)
+	werk.Size = UDim2.new(0, werkSeite, 0, werkSeite)
 	detailPanel.Position = UDim2.new(0, COLUMN_GAP + treeWidth + COLUMN_GAP, 0, CONTENT_TOP)
 	detailPanel.Size = UDim2.new(0, detailWidth, 0, treeHeight)
 
