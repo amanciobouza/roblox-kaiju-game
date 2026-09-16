@@ -641,13 +641,18 @@ end
 local GAP_BRANCHES = { Gap1_2 = true, Gap2_3 = true, Synergy = true } -- "Synergy" bleibt als Alias erhalten, falls irgendwo noch verwendet
 
 local function getNodePosition(node, branchXPositions, branchOrder)
+	-- Oberkante der ersten Reihe. War 60, solange jeder Knoten 88 Pixel mass; die Wurzel
+	-- ist jetzt 140 gross und ragte damit 10 Pixel ueber den oberen Rand der Zeichenflaeche
+	-- hinaus. 80 haelt sie drin, und unten bleibt es eng genug: das Ultimate auf Stufe 4
+	-- endet samt Namen bei 864 von 900.
+	local REIHE_OBEN = 80
 	local y
 	if GAP_BRANCHES[node.branch] then
 		-- Extra Puffer nach oben UND unten -- sonst kollidiert der Knoten mit den direkt
 		-- benachbarten Zweig-Stufen (Tier 2 und Tier 3).
-		y = 60 + node.tier * 165 + 40
+		y = REIHE_OBEN + node.tier * 165 + 40
 	else
-		y = 60 + node.tier * 165
+		y = REIHE_OBEN + node.tier * 165
 	end
 	local x
 	if node.branch == "Root" or node.branch == "Ultimate" then
@@ -893,18 +898,52 @@ local function refreshSelectedTalentDetails()
 	selectTalent(talent, state, level)
 end
 
--- Das Symbol fuellt den 88 Pixel grossen Knoten fast aus. Fast: der Knoten ist rund,
--- und einem Quadrat, das groesser ist als 88/Wurzel(2) = 62, stehen die Ecken ueber dem
--- Ring hinaus. 68 geht, weil die Symbole selbst einen Rand mitbringen.
-local NODE_SYMBOL = 68
+-- ===== Rang: nicht jeder Knoten wiegt gleich viel =====
+--
+-- Dreizehn gleich grosse Kreise sind eine Liste, kein Baum -- man sieht nicht, wo er
+-- anfaengt, wo er hinfuehrt und was unterwegs ein Meilenstein ist.
+--
+-- Der Rang steht nirgends in der Config, und er muss es auch nicht: er STECKT schon in der
+-- Stufe. Abgeleitet statt eingetragen gilt er fuer Jaeger und Ronin ohne Zutun mit, denn
+-- deren Baeume sind nach demselben Muster gebaut.
+--
+--   Stufe 0 und 4   Wurzel und Ultimate -- Anfang und Ende des GANZEN Baums
+--   Stufe 3         das Ende eines Zweigs, die Synergie, auf die er hinauslaeuft
+--   dazwischen      die Arbeitstiere: Einstieg, Trade-off, die beiden Bruecken
+--
+-- Das Symbol behaelt dabei sein Verhaeltnis zum Kreis (0.77). Mehr geht nicht: ein Quadrat
+-- ueber Durchmesser/Wurzel(2) steht mit den Ecken ueber den Ring hinaus -- 0.77 traegt sich
+-- nur, weil die Symbole selbst einen Rand mitbringen.
+local RANG_NORMAL = { durchmesser = 80, namenHoehe = 30, namenBreite = 150, namenFarbe = Color3.fromRGB(148, 158, 174) }
+local RANG_GROSS = { durchmesser = 108, namenHoehe = 40, namenBreite = 176, namenFarbe = Color3.fromRGB(214, 222, 234) }
+local RANG_KEYSTONE = { durchmesser = 140, namenHoehe = 48, namenBreite = 210, namenFarbe = Color3.fromRGB(255, 255, 255) }
+
+local function knotenRang(talent)
+	if talent.tier == 0 or talent.tier >= 4 then
+		return RANG_KEYSTONE
+	elseif talent.tier == 3 then
+		return RANG_GROSS
+	end
+	return RANG_NORMAL
+end
 
 local function buildNode(talent, position, isActiveFaction)
+	local rang = knotenRang(talent)
+	local D = rang.durchmesser
+	local symbol = math.floor(D * 0.77)
+	-- Etwas oberhalb der Mitte, damit unten Platz fuer die Stufenzahl bleibt.
+	local symbolY = math.floor((D - symbol) * 0.35)
+	-- Die Stufenzahl sitzt auf 86% der Hoehe. Weiter unten wuerde die Unterlage im runden
+	-- Knoten seitlich anstossen -- dort ist die Sehne schon schmaler als das Schild.
+	local schildHoehe = math.clamp(math.floor(D * 0.25), 18, 26)
+	local schildBreite = math.floor(D * 0.55)
+	local schildY = math.floor(D * 0.86) - schildHoehe
 	local level = (talentState.levels[currentFaction] and talentState.levels[currentFaction][talent.id]) or 0
 	local state = getNodeState(talent, level, isActiveFaction)
 
 	local button = Instance.new("TextButton")
 	button.Name = talent.id
-	button.Size = UDim2.new(0, 88, 0, 88)
+	button.Size = UDim2.new(0, D, 0, D)
 	button.AnchorPoint = Vector2.new(0.5, 0.5)
 	button.Position = UDim2.new(0, position.X, 0, position.Y)
 	button.BackgroundColor3 = STATE_COLORS[state]
@@ -921,16 +960,16 @@ local function buildNode(talent, position, isActiveFaction)
 	end
 
 	local iconBild = HudChrome.IconImage(button, "")
-	iconBild.Size = UDim2.new(0, NODE_SYMBOL, 0, NODE_SYMBOL)
-	iconBild.Position = UDim2.new(0.5, -NODE_SYMBOL / 2, 0, 4)
+	iconBild.Size = UDim2.new(0, symbol, 0, symbol)
+	iconBild.Position = UDim2.new(0.5, -symbol / 2, 0, symbolY)
 	iconBild.Visible = false
 	iconBild.ZIndex = 63
 
 	-- Der Notbehelf sitzt auf demselben Platz wie das Bild: wer ein Symbol nachreicht,
 	-- soll nichts verrutschen sehen.
 	local iconLabel = Instance.new("TextLabel")
-	iconLabel.Size = UDim2.new(0, NODE_SYMBOL, 0, NODE_SYMBOL)
-	iconLabel.Position = UDim2.new(0.5, -NODE_SYMBOL / 2, 0, 4)
+	iconLabel.Size = UDim2.new(0, symbol, 0, symbol)
+	iconLabel.Position = UDim2.new(0.5, -symbol / 2, 0, symbolY)
 	iconLabel.BackgroundTransparency = 1
 	iconLabel.TextScaled = true
 	iconLabel.ZIndex = 63
@@ -940,8 +979,8 @@ local function buildNode(talent, position, isActiveFaction)
 
 	local levelUnterlage = Instance.new("Frame")
 	levelUnterlage.Name = "LevelBacking"
-	levelUnterlage.Size = UDim2.new(0, 48, 0, 20)
-	levelUnterlage.Position = UDim2.new(0.5, -24, 0, 60)
+	levelUnterlage.Size = UDim2.new(0, schildBreite, 0, schildHoehe)
+	levelUnterlage.Position = UDim2.new(0.5, -schildBreite / 2, 0, schildY)
 	levelUnterlage.BackgroundColor3 = Color3.fromRGB(6, 8, 11)
 	levelUnterlage.BackgroundTransparency = 0.25
 	levelUnterlage.BorderSizePixel = 0
@@ -950,8 +989,8 @@ local function buildNode(talent, position, isActiveFaction)
 	HudChrome.Pill(levelUnterlage, { fill = false, border = false })
 
 	local levelLabel = Instance.new("TextLabel")
-	levelLabel.Size = UDim2.new(0, 48, 0, 16)
-	levelLabel.Position = UDim2.new(0.5, -24, 0, 62)
+	levelLabel.Size = UDim2.new(0, schildBreite, 0, schildHoehe - 6)
+	levelLabel.Position = UDim2.new(0.5, -schildBreite / 2, 0, schildY + 3)
 	levelLabel.BackgroundTransparency = 1
 
 	levelLabel.TextScaled = true
@@ -960,15 +999,23 @@ local function buildNode(talent, position, isActiveFaction)
 	levelLabel.ZIndex = 64
 	levelLabel.Parent = button
 
+	-- Der Name haengt unter dem Knoten und waechst mit seinem Rang. Vorher stand er bei
+	-- allen dreizehn gleich gross da und machte das Bild unruhig -- am dichtesten
+	-- ausgerechnet dort, wo die kleinen Knoten eng beieinander stehen. Jetzt ruft der
+	-- Meilenstein, und das Arbeitstier fluestert.
+	--
+	-- Ausblenden und erst bei Beruehrung zeigen waere der andere Weg. Auf dem Telefon
+	-- gibt es aber kein Hover: dort hiesse "nur bei Beruehrung" in der Praxis "nur nach
+	-- einem Fehlversuch".
 	local infoLabel = Instance.new("TextLabel")
-	infoLabel.Size = UDim2.new(0, 140, 0, 50)
+	infoLabel.Size = UDim2.new(0, rang.namenBreite, 0, rang.namenHoehe)
 	infoLabel.AnchorPoint = Vector2.new(0.5, 0)
-	infoLabel.Position = UDim2.new(0, position.X, 0, position.Y + 48)
+	infoLabel.Position = UDim2.new(0, position.X, 0, position.Y + D / 2 + 6)
 	infoLabel.BackgroundTransparency = 1
 
 	infoLabel.TextScaled = true
 	infoLabel.TextWrapped = true
-	infoLabel.TextColor3 = Color3.fromRGB(200, 200, 210)
+	infoLabel.TextColor3 = rang.namenFarbe
 	infoLabel.Text = talent.name
 	infoLabel.ZIndex = 61
 	infoLabel.Parent = treeScroll
@@ -996,7 +1043,14 @@ local function buildNode(talent, position, isActiveFaction)
 	HudChrome.Label(newFlag, 11)
 	newFlag.TextColor3 = Color3.new(1, 1, 1)
 
-	nodeRefs[talent.id] = { button = button, levelLabel = levelLabel, infoLabel = infoLabel, position = position, newFlag = newFlag }
+	nodeRefs[talent.id] = {
+		button = button,
+		levelLabel = levelLabel,
+		infoLabel = infoLabel,
+		position = position,
+		newFlag = newFlag,
+		rang = rang,
+	}
 end
 
 local function renderTree(factionName)
