@@ -549,18 +549,21 @@ local function blickAufWurzel()
 		if fenster.X <= 0 or fenster.Y <= 0 then
 			return
 		end
-		local skala = treeScale.Scale
-		-- Waagerecht die Wurzel in die Mitte, senkrecht an den unteren Rand -- plus etwas
-		-- Luft, damit ihr Name darunter noch mitkommt.
+		-- Gerechnet wird in ANTEILEN der Zeichenflaeche und umgelegt auf die Flaeche, die
+		-- der Rollbereich wirklich hat (AbsoluteCanvasSize). Damit ist es gleichgueltig, ob
+		-- und wie oft ein Massstab dazwischensteht -- genau der Punkt, an dem es vorher
+		-- schiefging.
+		local flaeche = treeScroll.AbsoluteCanvasSize
+		local anteilX = FAECHER_WURZEL.X / TREE_CANVAS_WIDTH
+		local anteilY = (FAECHER_WURZEL.Y + 90) / TREE_CANVAS_HEIGHT
 		treeScroll.CanvasPosition = Vector2.new(
-			math.max(0, FAECHER_WURZEL.X * skala - fenster.X / 2),
-			math.max(0, (FAECHER_WURZEL.Y + 110) * skala - fenster.Y)
+			math.max(0, flaeche.X * anteilX - fenster.X / 2),
+			math.max(0, flaeche.Y * anteilY - fenster.Y)
 		)
 
 		local meldung = string.format(
 			"[Kaiju Debug] Talentbaum: Massstab %.2f, Fenster %dx%d, Flaeche %dx%d, Blick %d/%d",
-			skala, fenster.X, fenster.Y,
-			treeScroll.CanvasSize.X.Offset, treeScroll.CanvasSize.Y.Offset,
+			treeScale.Scale, fenster.X, fenster.Y, flaeche.X, flaeche.Y,
 			treeScroll.CanvasPosition.X, treeScroll.CanvasPosition.Y)
 		-- Nur bei Aenderung ausgeben: waehrend man ein Fenster zieht, laeuft die Anordnung
 		-- in jedem Bild, und eine Zeile je Bild macht die Ausgabe unlesbar.
@@ -616,8 +619,15 @@ local function layoutColumns()
 	local platzHoehe = math.max(height - oben - COLUMN_GAP, 120)
 
 	-- Baum skalieren statt abschneiden. Die Knoten stehen auf festen Koordinaten der
-	-- Zeichenflaeche; der Faktor passt sie an den vorhandenen Platz an. Die CanvasSize muss
-	-- MITSKALIERT werden -- ein UIScale veraendert sie nicht von selbst.
+	-- Zeichenflaeche; der Faktor passt sie an den vorhandenen Platz an.
+	--
+	-- Die CanvasSize wird dabei NICHT mitgerechnet. Sie stand hier lange mitskaliert, mit
+	-- der Begruendung, ein UIScale veraendere sie nicht von selbst -- und das war falsch:
+	-- das UIScale sitzt IM Rollbereich und skaliert dessen Zeichenflaeche mit. Der Massstab
+	-- wirkte dadurch zweimal. Der Inhalt schrumpfte quadratisch, der Rahmen linear, und
+	-- zwischen beiden klaffte eine Luecke, die mit jedem Verkleinern groesser wurde. Bei
+	-- voller Groesse (Massstab nahe 1) faellt ein Quadrat nicht auf -- genau deshalb sah es
+	-- gross gut aus und klein falsch.
 	local scale = math.clamp(
 		math.min(platzBreite / TREE_CANVAS_WIDTH, platzHoehe / TREE_CANVAS_HEIGHT),
 		mindestMassstab(),
@@ -649,7 +659,9 @@ local function layoutColumns()
 	himmel.Size = UDim2.new(0, fensterBreite, 0, fensterHoehe)
 	treeScroll.Position = UDim2.new(0, blockX, 0, baumY)
 	treeScroll.Size = UDim2.new(0, fensterBreite, 0, fensterHoehe)
-	treeScroll.CanvasSize = UDim2.new(0, inhaltBreite, 0, inhaltHoehe)
+	-- In Koordinaten der Zeichenflaeche, nicht in Pixeln: das UIScale rechnet daraus die
+	-- Pixel. Was dabei herauskommt, steht als AbsoluteCanvasSize in der Debug-Zeile.
+	treeScroll.CanvasSize = UDim2.new(0, TREE_CANVAS_WIDTH, 0, TREE_CANVAS_HEIGHT)
 
 	-- Die Detailspalte behaelt die VOLLE Hoehe. Sie ist eine Textspalte -- sie mit dem
 	-- quadratischen Baumfenster mitschrumpfen zu lassen, verschenkte genau den Platz, den
