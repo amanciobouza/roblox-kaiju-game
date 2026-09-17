@@ -219,7 +219,10 @@ treeScroll.ScrollingDirection = Enum.ScrollingDirection.XY
 treeScroll.ScrollBarThickness = 8
 treeScroll.ScrollBarImageColor3 = HudChrome.Color.BorderBright
 treeScroll.ScrollBarImageTransparency = 0.4
-treeScroll.CanvasSize = UDim2.new(0, 960, 0, 900)
+-- Die Groesse der Zeichenflaeche RECHNET Roblox aus, sie wird nicht gesetzt. Warum, steht
+-- bei der Leinwand weiter unten.
+treeScroll.AutomaticCanvasSize = Enum.AutomaticSize.XY
+treeScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 -- WICHTIG: ScrollingFrame clippt seinen Inhalt NICHT automatisch (anders als man
 -- erwarten würde) -- ohne das hier explizit zu setzen, konnten Verbindungslinien über
 -- den Fensterrand hinausragen und sogar das restliche HUD überlagern.
@@ -229,13 +232,6 @@ treeScroll.Parent = schirm.content
 -- selbst und ist nicht mehr das Fenster. Der Rahmen gehoert zum Fenster -- er sitzt
 -- deshalb am Untergrund.
 HudChrome.Panel(treeScroll, { radius = HudChrome.Radius.Panel, fill = false, border = false })
-
--- Skaliert ALLE Knoten und Verbindungslinien im Baum gemeinsam. Sie stehen auf festen
--- Koordinaten einer 960x900-Flaeche -- ohne diesen Faktor sah ein Telefon davon nur einen
--- Ausschnitt, und ein grosser Monitor liess den Rest der Flaeche leer.
-local treeScale = Instance.new("UIScale")
-treeScale.Scale = 1
-treeScale.Parent = treeScroll
 
 -- ===== Der Faecher: die Masse =====
 --
@@ -284,6 +280,35 @@ local function faecherRichtung(grad)
 	local bogen = math.rad(grad)
 	return Vector2.new(math.sin(bogen), -math.cos(bogen))
 end
+
+-- ===== Die Leinwand =====
+--
+-- Alles, was gezeichnet wird, haengt hier drin und nicht direkt im Rollbereich. Sie loest
+-- zwei Dinge, an denen ich mich nacheinander verrechnet habe.
+--
+-- Erstens die GROESSE der Zeichenflaeche. Ob ein UIScale im Rollbereich dessen CanvasSize
+-- mitskaliert oder nicht, habe ich zweimal geraten und beide Male anders -- einmal war der
+-- Inhalt zu klein fuer seinen Rahmen, einmal die Flaeche zu gross fuer das Fenster. Jetzt
+-- rechnet Roblox sie aus (AutomaticCanvasSize) und ich MESSE das Ergebnis an
+-- AbsoluteCanvasSize. Die Frage stellt sich damit nicht mehr.
+--
+-- Zweitens das Uhrwerk. Es ist mit Absicht groesser als die Flaeche -- ein Mechanismus,
+-- der ueber den Rand hinauslaeuft. Eine automatisch gerechnete Flaeche wuerde genau
+-- deshalb bis zum Uhrwerk wachsen und einen Rollbereich voller Leere erzeugen. Die
+-- Leinwand hat eine feste Groesse und schneidet ab, was darueber hinaussteht.
+local leinwand = Instance.new("Frame")
+leinwand.Name = "Leinwand"
+leinwand.Size = UDim2.new(0, TREE_CANVAS_WIDTH, 0, TREE_CANVAS_HEIGHT)
+leinwand.BackgroundTransparency = 1
+leinwand.ClipsDescendants = true
+leinwand.Parent = treeScroll
+
+-- Skaliert ALLE Knoten, Linien und das Uhrwerk gemeinsam. Sie stehen auf festen
+-- Koordinaten der Zeichenflaeche -- ohne diesen Faktor sah ein Telefon davon nur einen
+-- Ausschnitt, und ein grosser Monitor liess den Rest der Flaeche leer.
+local treeScale = Instance.new("UIScale")
+treeScale.Scale = 1
+treeScale.Parent = leinwand
 
 -- ===== Der Grund: ein Uhrwerk =====
 --
@@ -344,7 +369,7 @@ werk.Position = UDim2.new(0, FAECHER_WURZEL.X, 0, FAECHER_WURZEL.Y)
 werk.Size = UDim2.new(0, WERK_SEITE, 0, WERK_SEITE)
 werk.BackgroundTransparency = 1
 werk.ZIndex = 50 -- unter den Adern (58/59) und den Knoten (62)
-werk.Parent = treeScroll
+werk.Parent = leinwand
 
 -- Alle Masse hier stehen in BAUM-Koordinaten -- demselben Radius, mit dem auch die Knoten
 -- gesetzt werden. Umgerechnet wird an genau einer Stelle.
@@ -530,6 +555,11 @@ local function meldeMass(breite, hoehe)
 	end
 end
 
+-- Vorwaerts deklariert: layoutColumns ruft passeFensterAn, das ruft blickAufWurzel -- und
+-- ein Name, der erst danach entsteht, loest in Lua still auf eine globale nil auf.
+local blickAufWurzel
+local passeFensterAn
+
 -- ===== Der Blick faengt bei der Wurzel an =====
 --
 -- Und zwar ERST IM NAECHSTEN BILD. Roblox begrenzt CanvasPosition sofort auf das, was der
@@ -543,7 +573,50 @@ end
 -- Zahl aus zweiter Hand.
 local letzteBlickmeldung = ""
 
-local function blickAufWurzel()
+-- Was die Anordnung im ersten Durchgang ausgerechnet hat. Der zweite braucht es wieder.
+local letzterPlatz = nil
+
+function passeFensterAn()
+	task.defer(function()
+		local platz = letzterPlatz
+		if not platz then
+			return
+		end
+
+		-- DIE Messung. AbsoluteCanvasSize ist die Flaeche, die der Rollbereich wirklich
+		-- hat -- gerechnet von Roblox, mit allem Massstab, der dazwischensteht. Alles,
+		-- was ich hier selbst gerechnet haette, waere wieder eine Annahme darueber, wie
+		-- UIScale und CanvasSize zusammenwirken, und genau die war zweimal falsch.
+		local flaeche = treeScroll.AbsoluteCanvasSize
+		if flaeche.X <= 0 or flaeche.Y <= 0 then
+			return
+		end
+
+		local fensterBreite = math.min(platz.platzBreite, math.ceil(flaeche.X))
+		local fensterHoehe = math.min(platz.platzHoehe, math.ceil(flaeche.Y))
+
+		-- Fenster und Detailspalte werden als EIN Block zentriert. Der uebrige Platz liegt
+		-- damit aussen als Rand und nicht innen als Loch.
+		local blockBreite = fensterBreite + COLUMN_GAP + platz.detailWidth
+		local blockX = math.max(COLUMN_GAP, math.floor((platz.breite - blockBreite) / 2))
+		local baumY = platz.oben + math.floor((platz.platzHoehe - fensterHoehe) / 2)
+
+		himmel.Position = UDim2.new(0, blockX, 0, baumY)
+		himmel.Size = UDim2.new(0, fensterBreite, 0, fensterHoehe)
+		treeScroll.Position = UDim2.new(0, blockX, 0, baumY)
+		treeScroll.Size = UDim2.new(0, fensterBreite, 0, fensterHoehe)
+
+		-- Die Detailspalte behaelt die VOLLE Hoehe. Sie ist eine Textspalte -- sie mit dem
+		-- Baumfenster mitschrumpfen zu lassen, verschenkte genau den Platz, den die
+		-- Beschreibung und der Forschungsknopf brauchen.
+		detailPanel.Position = UDim2.new(0, blockX + fensterBreite + COLUMN_GAP, 0, platz.oben)
+		detailPanel.Size = UDim2.new(0, platz.detailWidth, 0, platz.platzHoehe)
+
+		blickAufWurzel()
+	end)
+end
+
+function blickAufWurzel()
 	task.defer(function()
 		local fenster = treeScroll.AbsoluteWindowSize
 		if fenster.X <= 0 or fenster.Y <= 0 then
@@ -620,57 +693,31 @@ local function layoutColumns()
 
 	-- Baum skalieren statt abschneiden. Die Knoten stehen auf festen Koordinaten der
 	-- Zeichenflaeche; der Faktor passt sie an den vorhandenen Platz an.
-	--
-	-- Die CanvasSize wird dabei NICHT mitgerechnet. Sie stand hier lange mitskaliert, mit
-	-- der Begruendung, ein UIScale veraendere sie nicht von selbst -- und das war falsch:
-	-- das UIScale sitzt IM Rollbereich und skaliert dessen Zeichenflaeche mit. Der Massstab
-	-- wirkte dadurch zweimal. Der Inhalt schrumpfte quadratisch, der Rahmen linear, und
-	-- zwischen beiden klaffte eine Luecke, die mit jedem Verkleinern groesser wurde. Bei
-	-- voller Groesse (Massstab nahe 1) faellt ein Quadrat nicht auf -- genau deshalb sah es
-	-- gross gut aus und klein falsch.
 	local scale = math.clamp(
 		math.min(platzBreite / TREE_CANVAS_WIDTH, platzHoehe / TREE_CANVAS_HEIGHT),
 		mindestMassstab(),
 		TREE_MAX_SCALE
 	)
 	treeScale.Scale = scale
+	leinwand.Size = UDim2.new(0, TREE_CANVAS_WIDTH, 0, TREE_CANVAS_HEIGHT)
 
-	-- ===== Das Fenster umschliesst den Baum, und der Block wird zentriert =====
-	--
-	-- Zuerst nahm der Rollbereich die ganze Spalte, und die Zeichenflaeche lag darin oben
-	-- links -- ein Rollbereich zentriert seinen Inhalt nicht. Dann sass der Baum zwar
-	-- mittig, aber das Fenster war weiter so breit wie die Spalte: die Zeichenflaeche ist
-	-- quadratisch, die Spalte auf dem Monitor breit, und links und rechts blieb leerer
-	-- versenkter Grund stehen. Ein Rahmen um Nichts.
-	--
-	-- Jetzt ist das Fenster genau so gross wie der skalierte Baum, und Fenster plus
-	-- Detailspalte werden als EIN Block in der Breite zentriert. Der uebrige Platz liegt
-	-- damit aussen als Rand und nicht innen als Loch.
-	local inhaltBreite = math.floor(TREE_CANVAS_WIDTH * scale)
-	local inhaltHoehe = math.floor(TREE_CANVAS_HEIGHT * scale)
-	local fensterBreite = math.min(platzBreite, inhaltBreite)
-	local fensterHoehe = math.min(platzHoehe, inhaltHoehe)
+	-- Vorlaeufige Lage: das Fenster bekommt erst einmal den ganzen Platz. Die endgueltige
+	-- Groesse setzt passeFensterAn, sobald Roblox die Flaeche gerechnet hat -- der Aufruf
+	-- steht unten.
+	himmel.Position = UDim2.new(0, COLUMN_GAP, 0, oben)
+	himmel.Size = UDim2.new(0, platzBreite, 0, platzHoehe)
+	treeScroll.Position = UDim2.new(0, COLUMN_GAP, 0, oben)
+	treeScroll.Size = UDim2.new(0, platzBreite, 0, platzHoehe)
 
-	local blockBreite = fensterBreite + COLUMN_GAP + detailWidth
-	local blockX = math.max(COLUMN_GAP, math.floor((width - blockBreite) / 2))
-	local baumY = oben + math.floor((platzHoehe - fensterHoehe) / 2)
+	letzterPlatz = {
+		breite = width,
+		platzBreite = platzBreite,
+		platzHoehe = platzHoehe,
+		detailWidth = detailWidth,
+		oben = oben,
+	}
 
-	himmel.Position = UDim2.new(0, blockX, 0, baumY)
-	himmel.Size = UDim2.new(0, fensterBreite, 0, fensterHoehe)
-	treeScroll.Position = UDim2.new(0, blockX, 0, baumY)
-	treeScroll.Size = UDim2.new(0, fensterBreite, 0, fensterHoehe)
-	-- In Koordinaten der Zeichenflaeche, nicht in Pixeln: das UIScale rechnet daraus die
-	-- Pixel. Was dabei herauskommt, steht als AbsoluteCanvasSize in der Debug-Zeile.
-	treeScroll.CanvasSize = UDim2.new(0, TREE_CANVAS_WIDTH, 0, TREE_CANVAS_HEIGHT)
-
-	-- Die Detailspalte behaelt die VOLLE Hoehe. Sie ist eine Textspalte -- sie mit dem
-	-- quadratischen Baumfenster mitschrumpfen zu lassen, verschenkte genau den Platz, den
-	-- die Beschreibung und der Forschungsknopf brauchen.
-	detailPanel.Position = UDim2.new(0, blockX + fensterBreite + COLUMN_GAP, 0, oben)
-	detailPanel.Size = UDim2.new(0, detailWidth, 0, platzHoehe)
-
-	-- Der Blick wird ERST im naechsten Bild gesetzt, siehe blickAufWurzel.
-	blickAufWurzel()
+	passeFensterAn()
 end
 
 -- Auf BEIDE hoeren. Gemessen wird an schirm.content -- und dessen Groesse aendert sich
@@ -1074,7 +1121,7 @@ local function drawLineSegment(fromPos, toPos, dicke, farbe, transparenz, zIndex
 	line.BackgroundTransparency = transparenz
 	line.BorderSizePixel = 0
 	line.ZIndex = zIndex
-	line.Parent = treeScroll
+	line.Parent = leinwand
 	return line
 end
 
@@ -1368,7 +1415,7 @@ local function buildNode(talent, position, isActiveFaction)
 	button.BackgroundColor3 = STATE_COLORS[state]
 	button.Text = ""
 	button.ZIndex = 62
-	button.Parent = treeScroll
+	button.Parent = leinwand
 	-- Rund: ein Knoten in einem Baum ist ein Punkt, keine Kachel. HudChrome.Pill setzt
 	-- dafuer einen echten Halbkreis-Radius.
 	local nodeCorner, nodeStroke = HudChrome.Pill(button, { fill = false })
@@ -1473,7 +1520,7 @@ local function buildNode(talent, position, isActiveFaction)
 	infoLabel.Text = talent.name
 	infoLabel.Visible = rang.namenImmer or (talent.id == selectedTalentId)
 	infoLabel.ZIndex = 61
-	infoLabel.Parent = treeScroll
+	infoLabel.Parent = leinwand
 
 	button.MouseButton1Click:Connect(function()
 		selectTalent(talent, state, level)
@@ -1544,7 +1591,7 @@ local function renderTree(factionName)
 	-- angepasst wird. Es verschwand beim ersten Neuaufbau, und jede spaetere Zuweisung an
 	-- treeScale.Scale lief ins Leere, ohne zu murren.
 	local toDestroy = {}
-	for _, child in ipairs(treeScroll:GetChildren()) do
+	for _, child in ipairs(leinwand:GetChildren()) do
 		if child:IsA("GuiObject") and child.Name ~= "Werk" then
 			table.insert(toDestroy, child)
 		end
