@@ -225,6 +225,32 @@ local treeScale = Instance.new("UIScale")
 treeScale.Scale = 1
 treeScale.Parent = treeScroll
 
+-- ===== Der Faecher: die Masse =====
+--
+-- QUADRATISCH, weil der Grund eine Uhr ist: auf einer 960x900-Flaeche waere jeder Kreis
+-- darauf eine Ellipse.
+local TREE_CANVAS_WIDTH = 960
+local TREE_CANVAS_HEIGHT = 960
+
+-- Die Wurzel sitzt UNTEN, auf 6 Uhr. Von dort faechert der Baum nach oben auf, und die
+-- Krone ist die Spitze auf 12 Uhr. Alle Radien zaehlen ab der Wurzel, nicht ab der Mitte
+-- der Flaeche -- der Faecher ist der Mittelpunkt, nicht das Bild.
+--
+-- Die Zahlen sind nachgerechnet, nicht geschaetzt: ein Pruefskript ueber der echten Config
+-- stellt fuer alle drei Fraktionen sicher, dass kein Knoten aus der Flaeche laeuft und
+-- zwischen zwei Raendern ueberall mindestens 16 Pixel Luft bleiben.
+local FAECHER_WURZEL = Vector2.new(TREE_CANVAS_WIDTH / 2, 885)
+local FAECHER_RADIUS = { [0] = 0, [1] = 190, [2] = 370, [3] = 550, [4] = 790 }
+local FAECHER_RADIUS_BRUECKE = 460 -- zwischen Stufe 2 und 3
+local FAECHER_WINKEL = 36 -- Grad, die ein Zweig neben der Senkrechten liegt
+
+-- Grad ab der Senkrechten nach oben. Das Minus, weil Y auf dem Bildschirm nach unten
+-- waechst, 12 Uhr aber nach oben zeigt.
+local function faecherRichtung(grad)
+	local bogen = math.rad(grad)
+	return Vector2.new(math.sin(bogen), -math.cos(bogen))
+end
+
 -- ===== Der Grund: ein Uhrwerk =====
 --
 -- Der Baum stand auf Schwarz. Schwarz ist kein Ort: es gibt nichts, wogegen der dunkle
@@ -242,34 +268,55 @@ local WERK_RING = Color3.fromRGB(23, 27, 35)
 local WERK_STRICH = Color3.fromRGB(31, 37, 47)
 local WERK_HELL = Color3.fromRGB(44, 52, 64)
 
+-- Der GRUND der Flaeche. Er bleibt eine Ebene ueber dem Panel und rollt nicht mit; das
+-- Werk selbst liegt seit dem Faecher IM Baum (siehe unten).
 local himmel = Instance.new("Frame")
-himmel.Name = "Uhrwerk"
+himmel.Name = "Untergrund"
 himmel.BackgroundColor3 = HudChrome.Color.PanelSunken
 himmel.BorderSizePixel = 0
-himmel.ClipsDescendants = true
 himmel.ZIndex = 0
 himmel.Parent = schirm.content
 local himmelEcke = Instance.new("UICorner")
 himmelEcke.CornerRadius = UDim.new(0, HudChrome.Radius.Panel)
 himmelEcke.Parent = himmel
 
--- Das Werk ist QUADRATISCH -- nur in einem Quadrat bleibt ein Kreis ein Kreis, ein
--- UICorner mit halbem Radius macht aus einem Rechteck sonst eine Ellipse. Seine
--- Kantenlaenge setzt layoutColumns; alles darin steht in Anteilen davon und ueberlebt
--- jede Groessenaenderung, ohne neu gebaut zu werden.
+-- ===== Das Werk sitzt auf der WURZEL =====
+--
+-- Zuerst lag es in der Bildmitte und ging beim Rollen langsamer mit -- Parallaxe, zwei
+-- Ebenen mit Abstand. Das war huebsch und ging an der Sache vorbei: die Stufen des
+-- Faechers sind Boegen um die Wurzel, und wenn die Ringe des Zifferblatts um einen ANDEREN
+-- Punkt liegen, schneiden sie diese Boegen irgendwo schief. Dann ist die Uhr Tapete.
+--
+-- Jetzt teilen sie einen Mittelpunkt: das Werk liegt IM Baum, auf der Wurzel, und jede
+-- Stufe des Faechers sitzt auf einem Ring des Zifferblatts. Damit skaliert und rollt es
+-- mit dem Baum mit -- die Parallaxe ist dafuer weg. Ein Bild, das zusammenpasst, ist mehr
+-- wert als zwei, die sich gegeneinander verschieben.
+--
+-- Die Kantenlaenge ist fest in Baum-Koordinaten: doppelter Kronenradius plus etwas Luft.
+local WERK_SEITE = 2 * FAECHER_RADIUS[4] + 140
+
 local werk = Instance.new("Frame")
 werk.Name = "Werk"
 werk.AnchorPoint = Vector2.new(0.5, 0.5)
-werk.Position = UDim2.new(0.5, 0, 0.5, 0)
+werk.Position = UDim2.new(0, FAECHER_WURZEL.X, 0, FAECHER_WURZEL.Y)
+werk.Size = UDim2.new(0, WERK_SEITE, 0, WERK_SEITE)
 werk.BackgroundTransparency = 1
-werk.Parent = himmel
+werk.ZIndex = 50 -- unter den Adern (58/59) und den Knoten (62)
+werk.Parent = treeScroll
 
-local function baueRing(anteil, farbe, transparenz, dicke)
+-- Alle Masse hier stehen in BAUM-Koordinaten -- demselben Radius, mit dem auch die Knoten
+-- gesetzt werden. Umgerechnet wird an genau einer Stelle.
+local function anteil(radius)
+	return (radius * 2) / WERK_SEITE
+end
+
+local function baueRing(radius, farbe, transparenz, dicke)
 	local ring = Instance.new("Frame")
 	ring.AnchorPoint = Vector2.new(0.5, 0.5)
 	ring.Position = UDim2.new(0.5, 0, 0.5, 0)
-	ring.Size = UDim2.new(anteil, 0, anteil, 0)
+	ring.Size = UDim2.new(anteil(radius), 0, anteil(radius), 0)
 	ring.BackgroundTransparency = 1
+	ring.ZIndex = 50
 	ring.Parent = werk
 	local ecke = Instance.new("UICorner")
 	ecke.CornerRadius = UDim.new(0.5, 0)
@@ -287,47 +334,45 @@ end
 -- Rotation = Winkel + 90: die lange Achse eines Frames ist seine Hoehe, also Y. Die
 -- Vierteldrehung legt sie auf den Radius, und der Strich zeigt nach aussen statt quer.
 local function baueKranz(radius, anzahl, laenge, breite, farbe, transparenz, jeder)
+	local r = anteil(radius) / 2
 	for i = 0, anzahl - 1 do
 		local winkel = (i / anzahl) * math.pi * 2
 		local betont = jeder ~= nil and (i % jeder == 0)
 		local strich = Instance.new("Frame")
 		strich.AnchorPoint = Vector2.new(0.5, 0.5)
 		strich.Position = UDim2.new(
-			0.5 + radius * math.cos(winkel), 0,
-			0.5 + radius * math.sin(winkel), 0
+			0.5 + r * math.cos(winkel), 0,
+			0.5 + r * math.sin(winkel), 0
 		)
-		strich.Size = UDim2.new(breite, 0, betont and laenge * 1.9 or laenge, 0)
+		strich.Size = UDim2.new(anteil(breite), 0, anteil(betont and laenge * 1.9 or laenge), 0)
 		strich.Rotation = math.deg(winkel) + 90
 		strich.BackgroundColor3 = betont and WERK_HELL or farbe
 		strich.BackgroundTransparency = transparenz
 		strich.BorderSizePixel = 0
+		strich.ZIndex = 50
 		strich.Parent = werk
 	end
 end
 
--- Aussen das Zifferblatt: Kranz und Minuterie, jeder fuenfte Strich laenger und heller --
--- die Teilung einer Uhr, nicht die eines Diagramms.
-baueRing(0.98, WERK_RING, 0.25, 2)
-baueKranz(0.465, 60, 0.016, 0.0022, WERK_STRICH, 0.35, 5)
+-- Jede Stufe des Faechers bekommt ihren Ring. Das ist der ganze Punkt: die Knoten stehen
+-- nicht VOR einer Uhr, sie stehen AUF ihren Teilungen.
+baueRing(FAECHER_RADIUS[1], WERK_RING, 0.55, 1)
+baueRing(FAECHER_RADIUS[2], WERK_RING, 0.5, 1)
+baueRing(FAECHER_RADIUS[3], WERK_RING, 0.45, 1)
 
--- Darunter das Getriebe.
-baueRing(0.80, WERK_RING, 0.45, 1)
-baueKranz(0.40, 28, 0.026, 0.013, WERK_RING, 0.5)
+-- Der Kronenring ist der aeussere Rand des Zifferblatts, mit seiner Minuterie dicht
+-- darunter: jeder fuenfte Strich laenger und heller -- die Teilung einer Uhr, nicht die
+-- eines Diagramms. Die Krone auf 12 Uhr sitzt genau darauf.
+baueRing(FAECHER_RADIUS[4], WERK_RING, 0.25, 2)
+baueKranz(FAECHER_RADIUS[4] - 34, 60, 28, 4, WERK_STRICH, 0.35, 5)
 
--- Innen die Teilung und der Kern.
-baueRing(0.58, WERK_RING, 0.5, 1)
-baueKranz(0.22, 12, 0.10, 0.003, WERK_STRICH, 0.6)
-baueRing(0.30, WERK_RING, 0.55, 1)
-baueRing(0.10, WERK_RING, 0.4, 2)
+-- Das Getriebe sitzt auf dem Ring der zweiten Stufe.
+baueKranz(FAECHER_RADIUS[2], 28, 44, 22, WERK_RING, 0.55)
 
--- Parallaxe: das Werk liegt HINTER dem Baum und geht deshalb langsamer mit. Das ist kein
--- Effekt um seiner selbst willen -- erst der Unterschied in der Geschwindigkeit macht aus
--- zwei uebereinanderliegenden Flaechen zwei Ebenen mit Abstand.
-local WERK_MITGANG = 0.35
-treeScroll:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
-	local rollen = treeScroll.CanvasPosition
-	werk.Position = UDim2.new(0.5, -rollen.X * WERK_MITGANG, 0.5, -rollen.Y * WERK_MITGANG)
-end)
+-- Um die Wurzel die Lagerung: eine Teilung und zwei enge Ringe.
+baueKranz(140, 12, 90, 5, WERK_STRICH, 0.6)
+baueRing(96, WERK_RING, 0.5, 1)
+baueRing(74, WERK_RING, 0.35, 2)
 
 -- Baum und Detailspalte teilen sich die Breite. Beide standen vorher auf festen Werten
 -- (960 und 268 Pixel ab Position 8 beziehungsweise 976). Auf einem Vollbild-Bildschirm
@@ -361,10 +406,6 @@ local DETAIL_MIN_FRACTION = 0.32 -- so viel darf die Detailspalte hoechstens vom
 -- keine handtellergrossen Knoten entstehen.
 local TREE_MIN_SCALE = 0.55
 local TREE_MAX_SCALE = 1.5
--- QUADRATISCH, seit der Baum ein Zifferblatt ist: auf einer 960x900-Flaeche waere der
--- Kreis eine Ellipse, und die Minuterie im Hintergrund wuerde nicht mehr zu ihm passen.
-local TREE_CANVAS_WIDTH = 960
-local TREE_CANVAS_HEIGHT = 960
 
 -- Oberkante des Inhalts, unter Titelzeile und Ressourcenleiste.
 local CONTENT_TOP = 106
@@ -450,13 +491,10 @@ local function layoutColumns()
 	treeScroll.Position = UDim2.new(0, COLUMN_GAP, 0, CONTENT_TOP)
 	treeScroll.Size = UDim2.new(0, treeWidth, 0, treeHeight)
 
-	-- Der Grund deckt sich genau mit dem Baumfenster. Das Werk ist anderthalb mal so gross
-	-- wie dessen laengere Kante: es soll an den Raendern hinauslaufen, nicht als Scheibe
-	-- mitten im Fenster liegen -- ein Mechanismus, der groesser ist als der Ausschnitt.
+	-- Der Grund deckt sich genau mit dem Baumfenster. Das Werk braucht hier nichts mehr:
+	-- es liegt in Baum-Koordinaten im Rollbereich und wird von treeScale mitskaliert.
 	himmel.Position = treeScroll.Position
 	himmel.Size = treeScroll.Size
-	local werkSeite = math.floor(math.max(treeWidth, treeHeight) * 1.5)
-	werk.Size = UDim2.new(0, werkSeite, 0, werkSeite)
 	detailPanel.Position = UDim2.new(0, COLUMN_GAP + treeWidth + COLUMN_GAP, 0, CONTENT_TOP)
 	detailPanel.Size = UDim2.new(0, detailWidth, 0, treeHeight)
 
@@ -742,41 +780,26 @@ local function updateResourceDisplay()
 	coinsLabel.Text = tostring(math.floor(talentState.coins or 0))
 end
 
--- ===== Der Baum ist ein Zifferblatt =====
+-- ===== Der Baum ist ein Faecher von 6 nach 12 =====
 --
--- Vorher standen die Knoten in drei Spalten untereinander -- ein Talentbaum, wie ihn jedes
--- Rollenspiel hat. Der Hintergrund ist aber eine Uhr, und eine Uhr ordnet nicht in
--- Spalten, sondern in Winkel und Radius. Also tut der Baum es jetzt auch:
+-- Zuerst standen die Knoten in drei Spalten untereinander -- ein Talentbaum, wie ihn jedes
+-- Rollenspiel hat. Dann lag die Wurzel im Zentrum der Scheibe und die Zweige zeigten auf
+-- 3, 6 und 9 Uhr; das nutzte zwar die Form, aber der Bogen von 6 Uhr zur Krone lief quer
+-- durch die Mitte und sah nach Versehen aus.
 --
---   die Wurzel liegt im ZENTRUM -- alles kommt von dort
---   der WINKEL sagt, welcher Zweig       (3, 6 und 9 Uhr)
---   der RADIUS sagt, wie tief man ist    (Stufe 1 innen, Stufe 3 aussen)
---   das Ultimate kroent auf 12 UHR       -- allein, in der Luecke zwischen den Zweigen
+-- Jetzt:
+--   die WURZEL sitzt unten auf 6 Uhr
+--   drei Strahlen FAECHERN nach oben auf   (36 Grad neben der Senkrechten)
+--   der RADIUS sagt, wie tief man ist      (Stufe 1 innen, Stufe 3 aussen)
+--   die KRONE ist die Spitze auf 12 Uhr
 --
--- Die obere Haelfte bleibt bis auf die Krone frei. Das ist keine verschenkte Flaeche,
--- sondern der Grund, warum die Krone als Ziel liest: sie hat Platz um sich.
---
--- Uhrzeit statt Grad, weil es hier wirklich eine Uhr ist. Umgerechnet wird an genau einer
--- Stelle: Stunde h zeigt in die Richtung (sin, -cos) von h*30 Grad -- das Minus, weil Y
--- auf dem Bildschirm nach unten waechst, 12 Uhr aber nach oben zeigt.
-local ZIFFER_MITTE = Vector2.new(TREE_CANVAS_WIDTH / 2, TREE_CANVAS_HEIGHT / 2)
-
--- Radius je Stufe. Nachgerechnet, nicht geschaetzt: aussen ist bei 375 Schluss, weil ein
--- 108 Pixel grosser Stufe-3-Knoten auf 6 Uhr samt Namen sonst unten aus der Flaeche
--- laeuft. Innen gibt der Name der Wurzel das Mass -- stuende er unter ihr, muesste der
--- erste Ring auf 175 und zwischen Stufe 2 und 3 blieben 6 Pixel Luft. Er steht deshalb
--- UEBER der Wurzel (siehe buildNode), und die drei Ringe verteilen sich gleichmaessig.
-local ZIFFER_RADIUS = { [0] = 0, [1] = 135, [2] = 255, [3] = 375, [4] = 400 }
-local ZIFFER_RADIUS_BRUECKE = 315 -- zwischen Stufe 2 und 3
-
-local function uhrRichtung(stunde)
-	local bogen = math.rad(stunde * 30)
-	return Vector2.new(math.sin(bogen), -math.cos(bogen))
-end
+-- Damit ist jede Stufe ein Bogen um die Wurzel -- und weil das Zifferblatt seinen
+-- Mittelpunkt ebenfalls auf der Wurzel hat, ist jeder dieser Boegen einer seiner Ringe.
+-- Nichts kreuzt, und die Richtung ist auf einen Blick lesbar: von unten nach oben.
 
 -- ===== Zweig-Reihenfolge wird DYNAMISCH aus den Knoten abgeleitet (funktioniert für jede
 -- Fraktion, unabhängig von den Zweig-Namen). =====
-local function getBranchHours(nodes)
+local function getBranchAngles(nodes)
 	local order = {}
 	local seen = {}
 	local EXCLUDED_BRANCHES = { Root = true, Synergy = true, Ultimate = true, Gap1_2 = true, Gap2_3 = true }
@@ -786,30 +809,31 @@ local function getBranchHours(nodes)
 			table.insert(order, node.branch)
 		end
 	end
-	-- Drei Zweige auf 3, 6 und 9 Uhr. Damit bleibt die halbe Scheibe von 9 ueber 12 bis 3
-	-- fuer die Krone frei, und die drei Zweige stehen trotzdem gleichmaessig.
-	local hours = {}
+	-- Der mittlere Zweig steht senkrecht, die beiden anderen 36 Grad daneben. Der Faecher
+	-- ist damit 72 Grad weit -- breiter laufen die aeusseren Stufe-3-Knoten seitlich aus
+	-- der Flaeche, schmaler draengt sich der Faecher zu einer Saeule zusammen.
+	local winkel = {}
 	for i, branchKey in ipairs(order) do
-		hours[branchKey] = 3 + (i - 1) * 3
+		winkel[branchKey] = (i - 2) * FAECHER_WINKEL
 	end
-	return hours, order
+	return winkel, order
 end
 
 local GAP_BRANCHES = { Gap1_2 = true, Gap2_3 = true, Synergy = true } -- "Synergy" bleibt als Alias erhalten, falls irgendwo noch verwendet
 
-local function getNodePosition(node, branchHours, branchOrder)
-	-- Die Wurzel IST die Mitte. Kein Radius, kein Winkel.
+local function getNodePosition(node, branchAngles, branchOrder)
+	-- Die Wurzel IST der Ursprung des Faechers. Kein Radius, kein Winkel.
 	if node.branch == "Root" then
-		return ZIFFER_MITTE
+		return FAECHER_WURZEL
 	end
 
-	-- Die Krone auf 12 Uhr, am weitesten aussen. Sie gehoert allen drei Zweigen und darf
-	-- deshalb an keinem von ihnen haengen.
+	-- Die Krone senkrecht ueber der Wurzel, am weitesten aussen -- 12 Uhr. Sie gehoert
+	-- allen drei Zweigen und darf deshalb an keinem von ihnen haengen.
 	if node.branch == "Ultimate" then
-		return ZIFFER_MITTE + uhrRichtung(12) * ZIFFER_RADIUS[4]
+		return FAECHER_WURZEL + faecherRichtung(0) * FAECHER_RADIUS[4]
 	end
 
-	-- Die Bruecken liegen ZWISCHEN zwei Zweigen -- also auf der halben Stunde dazwischen,
+	-- Die Bruecken liegen ZWISCHEN zwei Zweigen -- also auf dem halben Winkel dazwischen,
 	-- und auf halbem Radius zwischen Stufe 2 und 3. Genau da, wo sie im Baum stehen.
 	if GAP_BRANCHES[node.branch] then
 		local ersterZweig, zweiterZweig
@@ -818,15 +842,15 @@ local function getNodePosition(node, branchHours, branchOrder)
 		else
 			ersterZweig, zweiterZweig = branchOrder[1], branchOrder[2]
 		end
-		local a = branchHours[ersterZweig]
-		local b = branchHours[zweiterZweig]
-		local stunde = (a and b) and (a + b) / 2 or 6
-		return ZIFFER_MITTE + uhrRichtung(stunde) * ZIFFER_RADIUS_BRUECKE
+		local a = branchAngles[ersterZweig]
+		local b = branchAngles[zweiterZweig]
+		local grad = (a and b) and (a + b) / 2 or 0
+		return FAECHER_WURZEL + faecherRichtung(grad) * FAECHER_RADIUS_BRUECKE
 	end
 
-	local stunde = branchHours[node.branch] or 6
-	local radius = ZIFFER_RADIUS[node.tier] or ZIFFER_RADIUS[1]
-	return ZIFFER_MITTE + uhrRichtung(stunde) * radius
+	local grad = branchAngles[node.branch] or 0
+	local radius = FAECHER_RADIUS[node.tier] or FAECHER_RADIUS[1]
+	return FAECHER_WURZEL + faecherRichtung(grad) * radius
 end
 
 -- ===== Rang: nicht jeder Knoten wiegt gleich viel =====
@@ -1231,9 +1255,9 @@ local function buildNode(talent, position, isActiveFaction)
 	local infoLabel = Instance.new("TextLabel")
 	infoLabel.Size = UDim2.new(0, rang.namenBreite, 0, rang.namenHoehe)
 	infoLabel.AnchorPoint = Vector2.new(0.5, 0)
-	-- Unter dem Knoten -- ausser bei der Wurzel. Die sitzt im Zentrum des Zifferblatts,
-	-- und unter ihr beginnt die Speiche auf 6 Uhr. Oberhalb ist dagegen frei: dort liegt
-	-- die Luecke zwischen den Zweigen, die auch die Krone auf 12 Uhr freihaelt.
+	-- Unter dem Knoten -- ausser bei der Wurzel. Die sitzt ganz unten auf 6 Uhr; unter ihr
+	-- ist die Flaeche zu Ende, ihr Name stuende ausserhalb. Ueber ihr ist Platz, bis der
+	-- erste Ring beginnt.
 	if talent.tier == 0 then
 		infoLabel.AnchorPoint = Vector2.new(0.5, 1)
 		infoLabel.Position = UDim2.new(0, position.X, 0, position.Y - D / 2 - 6)
@@ -1311,9 +1335,16 @@ local function renderTree(factionName)
 	-- einer ipairs()-Schleife Kinder zerstört, überspringt dabei manche Elemente (Lua-
 	-- Klassiker), wodurch alte Verbindungslinien von früheren Aufrufen liegen bleiben und
 	-- sich mit den neuen kreuzen.
+	-- Nur die gezeichneten Sachen. Was hier NICHT wegdarf: das Uhrwerk (es gehoert zur
+	-- Flaeche, nicht zum Baum) und alles, was kein GuiObject ist.
+	--
+	-- Letzteres war ein stiller Fehler: die Bedingung nahm frueher jedes Kind ausser
+	-- UICorner und UIStroke -- also auch das UIScale, mit dem der Baum an den Bildschirm
+	-- angepasst wird. Es verschwand beim ersten Neuaufbau, und jede spaetere Zuweisung an
+	-- treeScale.Scale lief ins Leere, ohne zu murren.
 	local toDestroy = {}
 	for _, child in ipairs(treeScroll:GetChildren()) do
-		if not child:IsA("UICorner") and not child:IsA("UIStroke") then
+		if child:IsA("GuiObject") and child.Name ~= "Werk" then
 			table.insert(toDestroy, child)
 		end
 	end
@@ -1322,13 +1353,13 @@ local function renderTree(factionName)
 	end
 
 	local nodes = TalentTreeConfig.GetTalentsForFaction(factionName)
-	local branchHours, branchOrder = getBranchHours(nodes)
+	local branchAngles, branchOrder = getBranchAngles(nodes)
 	local isActiveFaction = (talentState.activeFaction == factionName)
 
 	local positionsById = {}
 	local talentsById = {}
 	for _, talent in ipairs(nodes) do
-		positionsById[talent.id] = getNodePosition(talent, branchHours, branchOrder)
+		positionsById[talent.id] = getNodePosition(talent, branchAngles, branchOrder)
 		talentsById[talent.id] = talent
 	end
 	for _, talent in ipairs(nodes) do
