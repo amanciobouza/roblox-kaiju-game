@@ -7,6 +7,7 @@
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
 local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
@@ -436,23 +437,32 @@ local DETAIL_MIN_FRACTION = 0.32 -- so viel darf die Detailspalte hoechstens vom
 -- Grenzen der Baum-Skalierung. Nach unten, damit die Beschriftung lesbar bleibt -- lieber
 -- rollen als eine unleserliche Uebersicht. Nach oben, damit auf einem grossen Monitor
 -- keine handtellergrossen Knoten entstehen.
--- ===== Der Mindestmassstab ist eine Entscheidung ueber das Telefon =====
+-- ===== Der Mindestmassstab haengt davon ab, WOMIT gezeigt wird =====
 --
--- Im Querformat bleiben fuer den Baum rund 260 Pixel Hoehe. Ein 960er Faecher passt da nur
--- hinein, wenn alles auf etwa 0.27 schrumpft -- dann ist ein gewoehnlicher Knoten 22 Pixel
--- gross und mit dem Finger nicht mehr zu treffen. Ganz zu sehen und nicht bedienbar ist
--- keine Loesung.
+-- Er war eine feste Zahl, und das war der Fehler: 0.45, gewaehlt fuer den Finger, damit ein
+-- gewoehnlicher Knoten 36 Pixel gross bleibt und noch zu treffen ist. Am Monitor hat diese
+-- Untergrenze dann den Baum abgeschnitten, sobald das Fenster kleiner wurde -- unten fehlte
+-- der Faecher, obwohl ringsum Platz war. Eine Grenze fuer den Finger, die dem Mauszeiger
+-- etwas wegnimmt.
 --
--- Deshalb 0.45: ein gewoehnlicher Knoten bleibt 36 Pixel, ein Meilenstein 49, die Krone
--- 63. Auf dem Telefon passt der Faecher damit NICHT ganz ins Bild -- und das ist in
--- Ordnung, solange der Blick an der richtigen Stelle anfaengt. Er faengt bei der Wurzel
--- an (siehe blickAufWurzel), und von dort schiebt man sich nach oben zur Krone. Die Reise
--- von 6 nach 12 wird so zu der Bewegung, die der Finger ohnehin macht.
-local TREE_MIN_SCALE = 0.45
+-- Mit der Maus darf er schrumpfen, bis er passt: ein 22 Pixel grosser Knoten ist mit einem
+-- Zeiger muehelos zu treffen, und GANZ zu sehen ist mehr wert als gross. Mit dem Finger
+-- bleibt es bei 0.45 -- dort passt der Faecher dann nicht ins Bild, und das ist in Ordnung,
+-- solange der Blick an der richtigen Stelle anfaengt. Er faengt bei der Wurzel an (siehe
+-- blickAufWurzel), und von dort schiebt man sich nach oben zur Krone. Die Reise von 6 nach
+-- 12 wird so zu der Bewegung, die der Finger ohnehin macht.
+local function mindestMassstab()
+	local nurFinger = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
+	return nurFinger and 0.45 or 0.22
+end
 local TREE_MAX_SCALE = 1.5
 
 -- Oberkante des Inhalts, unter Titelzeile und Ressourcenleiste.
-local CONTENT_TOP = 106
+-- Oberkante des Inhalts. Zwei Werte, weil der Forschungsbalken nur dasteht, wenn wirklich
+-- geforscht wird -- und das ist die Ausnahme. Ihm dauerhaft 58 Pixel freizuhalten, kostete
+-- den Baum ein Fuenftel seiner Hoehe fuer eine leere Zeile.
+local CONTENT_TOP_MIT_FORSCHUNG = 106
+local CONTENT_TOP_OHNE = 48
 
 -- ===== Detail-Panel: zeigt das AUSGEWÄHLTE Talent -- Icon/Name, Beschreibung, Kosten,
 -- Forschungszeit, und einen "Vorher -> Nachher"-Wertevergleich. =====
@@ -593,14 +603,15 @@ local function layoutColumns()
 	-- gross das Fenster wirklich wird, entscheidet sich weiter unten, wenn der Massstab
 	-- feststeht.
 	local platzBreite = math.max(width - detailWidth - 3 * COLUMN_GAP, 160)
-	local platzHoehe = math.max(height - CONTENT_TOP - COLUMN_GAP, 120)
+	local oben = researchBar.Visible and CONTENT_TOP_MIT_FORSCHUNG or CONTENT_TOP_OHNE
+	local platzHoehe = math.max(height - oben - COLUMN_GAP, 120)
 
 	-- Baum skalieren statt abschneiden. Die Knoten stehen auf festen Koordinaten der
 	-- Zeichenflaeche; der Faktor passt sie an den vorhandenen Platz an. Die CanvasSize muss
 	-- MITSKALIERT werden -- ein UIScale veraendert sie nicht von selbst.
 	local scale = math.clamp(
 		math.min(platzBreite / TREE_CANVAS_WIDTH, platzHoehe / TREE_CANVAS_HEIGHT),
-		TREE_MIN_SCALE,
+		mindestMassstab(),
 		TREE_MAX_SCALE
 	)
 	treeScale.Scale = scale
@@ -623,7 +634,7 @@ local function layoutColumns()
 
 	local blockBreite = fensterBreite + COLUMN_GAP + detailWidth
 	local blockX = math.max(COLUMN_GAP, math.floor((width - blockBreite) / 2))
-	local baumY = CONTENT_TOP + math.floor((platzHoehe - fensterHoehe) / 2)
+	local baumY = oben + math.floor((platzHoehe - fensterHoehe) / 2)
 
 	himmel.Position = UDim2.new(0, blockX, 0, baumY)
 	himmel.Size = UDim2.new(0, fensterBreite, 0, fensterHoehe)
@@ -634,7 +645,7 @@ local function layoutColumns()
 	-- Die Detailspalte behaelt die VOLLE Hoehe. Sie ist eine Textspalte -- sie mit dem
 	-- quadratischen Baumfenster mitschrumpfen zu lassen, verschenkte genau den Platz, den
 	-- die Beschreibung und der Forschungsknopf brauchen.
-	detailPanel.Position = UDim2.new(0, blockX + fensterBreite + COLUMN_GAP, 0, CONTENT_TOP)
+	detailPanel.Position = UDim2.new(0, blockX + fensterBreite + COLUMN_GAP, 0, oben)
 	detailPanel.Size = UDim2.new(0, detailWidth, 0, platzHoehe)
 
 	-- Der Blick wird ERST im naechsten Bild gesetzt, siehe blickAufWurzel.
@@ -646,6 +657,10 @@ end
 -- Panel allein waere die Meldung dann ausgeblieben.
 panel:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutColumns)
 schirm.content:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutColumns)
+-- Der Forschungsbalken bestimmt die Oberkante des Inhalts mit. Erscheint oder verschwindet
+-- er, muss der Baum darunter neu gesetzt werden -- sonst behaelt er die Hoehe des anderen
+-- Zustands und ragt entweder in den Balken oder laesst dessen Zeile leer stehen.
+researchBar:GetPropertyChangedSignal("Visible"):Connect(layoutColumns)
 
 -- Auch auf das Polster hören, nicht nur auf die Fenstergrösse. TopInsetUtils liest die
 -- Höhe der Roblox-Systemleiste nicht nur einmal, sondern zieht sie nach -- bei jeder
