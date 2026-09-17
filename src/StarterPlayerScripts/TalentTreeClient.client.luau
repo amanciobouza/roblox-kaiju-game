@@ -230,9 +230,16 @@ treeScale.Parent = treeScroll
 
 -- ===== Der Faecher: die Masse =====
 --
--- QUADRATISCH, weil der Grund eine Uhr ist: auf einer 960x900-Flaeche waere jeder Kreis
--- darauf eine Ellipse.
-local TREE_CANVAS_WIDTH = 960
+-- BREITER ALS HOCH, und zwar bewusst. Die Zeichenflaeche war quadratisch; der Platz, den
+-- sie bekommt, ist es nie: neben ihr steht immer die Detailspalte, und was uebrig bleibt,
+-- ist breit und flach. Ein quadratischer Inhalt in einem breiten Platz wird von der HOEHE
+-- begrenzt und laesst die Breite liegen -- auf einem grossen Monitor blieb links und
+-- rechts fast ein Drittel ungenutzt.
+--
+-- 1180x960 passt zu dem, was der Baum bekommt, und der Faecher geht dafuer weiter auf:
+-- 58 statt 42 Grad. Die Kreise im Hintergrund bleiben trotzdem Kreise -- das Uhrwerk hat
+-- seine eigene, quadratische Kantenlaenge und haengt nicht an der Flaeche.
+local TREE_CANVAS_WIDTH = 1180
 local TREE_CANVAS_HEIGHT = 960
 
 -- Die Wurzel sitzt UNTEN, auf 6 Uhr. Von dort faechert der Baum nach oben auf, und die
@@ -245,13 +252,13 @@ local TREE_CANVAS_HEIGHT = 960
 local FAECHER_WURZEL = Vector2.new(TREE_CANVAS_WIDTH / 2, 830)
 local FAECHER_RADIUS = { [0] = 0, [1] = 180, [2] = 340, [3] = 500, [4] = 744 }
 local FAECHER_RADIUS_BRUECKE = 420 -- zwischen Stufe 2 und 3
-local FAECHER_WINKEL = 42 -- Grad, die ein Zweig neben der Senkrechten liegt
+local FAECHER_WINKEL = 58 -- Grad, die ein Zweig neben der Senkrechten liegt
 
 -- Warum gerade diese Zahlen: der Abstand von Stufe 3 zur Krone ist mit 244 der groesste im
 -- Faecher, und das muss er sein -- dazwischen stehen ZWEI dauerhafte Namen uebereinander.
--- Und 42 Grad ist der weiteste Winkel, bei dem der Name eines aeusseren Stufe-3-Knotens
--- noch in die Flaeche passt: er steht nach aussen versetzt und braucht dort seine halbe
--- Breite. Beides kam aus dem Pruefskript, nicht aus dem Gefuehl.
+-- Und 58 Grad ist der weiteste Winkel, bei dem der Name eines aeusseren Stufe-3-Knotens
+-- noch in die 1180 Pixel breite Flaeche passt: er steht nach aussen versetzt und braucht
+-- dort seine halbe Breite. Beides kam aus dem Pruefskript, nicht aus dem Gefuehl.
 
 -- Grad ab der Senkrechten nach oben. Das Minus, weil Y auf dem Bildschirm nach unten
 -- waechst, 12 Uhr aber nach oben zeigt.
@@ -506,54 +513,56 @@ local function layoutColumns()
 		DETAIL_MAX_WIDTH
 	)
 
-	-- Der Baum bekommt den GANZEN Rest -- nicht mehr hoechstens 960 Pixel. Damit bleibt auf
-	-- einem breiten Monitor rechts und links kein Rand mehr leer.
-	local treeWidth = math.max(width - detailWidth - 3 * COLUMN_GAP, 160)
-	local treeHeight = math.max(height - CONTENT_TOP - COLUMN_GAP, 120)
-
-	-- Der Untergrund ist das FENSTER und nimmt die ganze Spalte.
-	himmel.Position = UDim2.new(0, COLUMN_GAP, 0, CONTENT_TOP)
-	himmel.Size = UDim2.new(0, treeWidth, 0, treeHeight)
-	detailPanel.Position = UDim2.new(0, COLUMN_GAP + treeWidth + COLUMN_GAP, 0, CONTENT_TOP)
-	detailPanel.Size = UDim2.new(0, detailWidth, 0, treeHeight)
+	-- Der PLATZ, der zur Verfuegung steht -- nicht schon die Groesse des Fensters. Wie
+	-- gross das Fenster wirklich wird, entscheidet sich weiter unten, wenn der Massstab
+	-- feststeht.
+	local platzBreite = math.max(width - detailWidth - 3 * COLUMN_GAP, 160)
+	local platzHoehe = math.max(height - CONTENT_TOP - COLUMN_GAP, 120)
 
 	-- Baum skalieren statt abschneiden. Die Knoten stehen auf festen Koordinaten der
 	-- Zeichenflaeche; der Faktor passt sie an den vorhandenen Platz an. Die CanvasSize muss
 	-- MITSKALIERT werden -- ein UIScale veraendert sie nicht von selbst.
 	local scale = math.clamp(
-		math.min(treeWidth / TREE_CANVAS_WIDTH, treeHeight / TREE_CANVAS_HEIGHT),
+		math.min(platzBreite / TREE_CANVAS_WIDTH, platzHoehe / TREE_CANVAS_HEIGHT),
 		TREE_MIN_SCALE,
 		TREE_MAX_SCALE
 	)
 	treeScale.Scale = scale
 
-	-- ===== Mittig, nicht linksbuendig =====
+	-- ===== Das Fenster umschliesst den Baum, und der Block wird zentriert =====
 	--
-	-- Vorher fuellte der Rollbereich die ganze Spalte, und die Zeichenflaeche lag darin
-	-- oben links -- ein Rollbereich zentriert seinen Inhalt nicht. Auf einem breiten Bild
-	-- klebte der Faecher deshalb am linken Rand, und unten fehlte ihm der Rest: der
-	-- Ausschnitt war kleiner als der Baum, und die Wurzel, die ganz unten sitzt, lag
-	-- ausserhalb.
+	-- Zuerst nahm der Rollbereich die ganze Spalte, und die Zeichenflaeche lag darin oben
+	-- links -- ein Rollbereich zentriert seinen Inhalt nicht. Dann sass der Baum zwar
+	-- mittig, aber das Fenster war weiter so breit wie die Spalte: die Zeichenflaeche ist
+	-- quadratisch, die Spalte auf dem Monitor breit, und links und rechts blieb leerer
+	-- versenkter Grund stehen. Ein Rahmen um Nichts.
 	--
-	-- Jetzt ist der Rollbereich genau so gross wie der skalierte Baum und sitzt mittig im
-	-- Fenster. Passt der Baum hinein -- und das ist nach dem gesenkten Mindestmassstab der
-	-- Normalfall, auch auf dem Telefon --, gibt es gar nichts mehr zu rollen und alles ist
-	-- zu sehen.
+	-- Jetzt ist das Fenster genau so gross wie der skalierte Baum, und Fenster plus
+	-- Detailspalte werden als EIN Block in der Breite zentriert. Der uebrige Platz liegt
+	-- damit aussen als Rand und nicht innen als Loch.
 	local inhaltBreite = math.floor(TREE_CANVAS_WIDTH * scale)
 	local inhaltHoehe = math.floor(TREE_CANVAS_HEIGHT * scale)
-	local fensterBreite = math.min(treeWidth, inhaltBreite)
-	local fensterHoehe = math.min(treeHeight, inhaltHoehe)
+	local fensterBreite = math.min(platzBreite, inhaltBreite)
+	local fensterHoehe = math.min(platzHoehe, inhaltHoehe)
 
+	local blockBreite = fensterBreite + COLUMN_GAP + detailWidth
+	local blockX = math.max(COLUMN_GAP, math.floor((width - blockBreite) / 2))
+	local baumY = CONTENT_TOP + math.floor((platzHoehe - fensterHoehe) / 2)
+
+	himmel.Position = UDim2.new(0, blockX, 0, baumY)
+	himmel.Size = UDim2.new(0, fensterBreite, 0, fensterHoehe)
+	treeScroll.Position = UDim2.new(0, blockX, 0, baumY)
 	treeScroll.Size = UDim2.new(0, fensterBreite, 0, fensterHoehe)
-	treeScroll.Position = UDim2.new(
-		0, COLUMN_GAP + math.floor((treeWidth - fensterBreite) / 2),
-		0, CONTENT_TOP + math.floor((treeHeight - fensterHoehe) / 2)
-	)
 	treeScroll.CanvasSize = UDim2.new(0, inhaltBreite, 0, inhaltHoehe)
 
+	-- Die Detailspalte behaelt die VOLLE Hoehe. Sie ist eine Textspalte -- sie mit dem
+	-- quadratischen Baumfenster mitschrumpfen zu lassen, verschenkte genau den Platz, den
+	-- die Beschreibung und der Forschungsknopf brauchen.
+	detailPanel.Position = UDim2.new(0, blockX + fensterBreite + COLUMN_GAP, 0, CONTENT_TOP)
+	detailPanel.Size = UDim2.new(0, detailWidth, 0, platzHoehe)
+
 	-- Passt nicht alles ins Fenster, faengt der Blick bei der WURZEL an -- da, wo man im
-	-- Baum anfaengt, und das war die Stelle, die vorher fehlte. Passt alles, rechnet das
-	-- hier auf null und es gibt nichts zu rollen.
+	-- Baum anfaengt. Passt alles, rechnet das hier auf null und es gibt nichts zu rollen.
 	treeScroll.CanvasPosition = Vector2.new(
 		math.max(0, FAECHER_WURZEL.X * scale - fensterBreite / 2),
 		math.max(0, (FAECHER_WURZEL.Y + 110) * scale - fensterHoehe)
