@@ -245,11 +245,22 @@ treeScale.Parent = treeScroll
 -- begrenzt und laesst die Breite liegen -- auf einem grossen Monitor blieb links und
 -- rechts fast ein Drittel ungenutzt.
 --
--- 1180x960 passt zu dem, was der Baum bekommt, und der Faecher geht dafuer weiter auf:
--- 58 statt 42 Grad. Die Kreise im Hintergrund bleiben trotzdem Kreise -- das Uhrwerk hat
--- seine eigene, quadratische Kantenlaenge und haengt nicht an der Flaeche.
+-- 1180x820 ist das Ergebnis davon, die HOEHE zu straffen -- denn sie ist es, die bindet.
+-- Der Platz neben der Detailspalte ist breit und flach; jede Zeile, die die Flaeche hoeher
+-- macht, macht den ganzen Baum kleiner, waehrend Breite gratis ist.
+--
+-- Gestrafft wurde da, wo Hoehe fuer NAMEN reserviert war:
+--   Der Name der Krone tritt zur SEITE, statt unter ihr zu stehen. Oben neben ihr ist die
+--   Flaeche leer, und damit faellt der grosse Abstand zwischen Stufe 3 und Krone weg -- er
+--   war nur da, weil dort zwei Namen uebereinander passen mussten (244 Einheiten, jetzt 186).
+--   Die Stufen ruecken enger: 150/285/420 statt 180/340/500.
+--
+-- Der Faecher geht dafuer auf 66 Grad auf und nutzt die gewonnene Breite.
+--
+-- Die Kreise im Hintergrund bleiben trotzdem Kreise -- das Uhrwerk hat seine eigene,
+-- quadratische Kantenlaenge und haengt nicht an der Flaeche.
 local TREE_CANVAS_WIDTH = 1180
-local TREE_CANVAS_HEIGHT = 960
+local TREE_CANVAS_HEIGHT = 820
 
 -- Die Wurzel sitzt UNTEN, auf 6 Uhr. Von dort faechert der Baum nach oben auf, und die
 -- Krone ist die Spitze auf 12 Uhr. Alle Radien zaehlen ab der Wurzel, nicht ab der Mitte
@@ -258,16 +269,14 @@ local TREE_CANVAS_HEIGHT = 960
 -- Die Zahlen sind nachgerechnet, nicht geschaetzt: ein Pruefskript ueber der echten Config
 -- stellt fuer alle drei Fraktionen sicher, dass kein Knoten aus der Flaeche laeuft und
 -- zwischen zwei Raendern ueberall mindestens 16 Pixel Luft bleiben.
-local FAECHER_WURZEL = Vector2.new(TREE_CANVAS_WIDTH / 2, 830)
-local FAECHER_RADIUS = { [0] = 0, [1] = 180, [2] = 340, [3] = 500, [4] = 744 }
-local FAECHER_RADIUS_BRUECKE = 420 -- zwischen Stufe 2 und 3
-local FAECHER_WINKEL = 58 -- Grad, die ein Zweig neben der Senkrechten liegt
+local FAECHER_WURZEL = Vector2.new(TREE_CANVAS_WIDTH / 2, 686)
+local FAECHER_RADIUS = { [0] = 0, [1] = 150, [2] = 285, [3] = 420, [4] = 606 }
+local FAECHER_RADIUS_BRUECKE = 352 -- zwischen Stufe 2 und 3
+local FAECHER_WINKEL = 66 -- Grad, die ein Zweig neben der Senkrechten liegt
 
--- Warum gerade diese Zahlen: der Abstand von Stufe 3 zur Krone ist mit 244 der groesste im
--- Faecher, und das muss er sein -- dazwischen stehen ZWEI dauerhafte Namen uebereinander.
--- Und 58 Grad ist der weiteste Winkel, bei dem der Name eines aeusseren Stufe-3-Knotens
--- noch in die 1180 Pixel breite Flaeche passt: er steht nach aussen versetzt und braucht
--- dort seine halbe Breite. Beides kam aus dem Pruefskript, nicht aus dem Gefuehl.
+-- Alle diese Zahlen kommen aus dem Pruefskript ueber der echten Config und nicht aus dem
+-- Gefuehl: kein Knoten und kein dauerhafter Name laeuft aus der Flaeche, keine zwei Raender
+-- kommen sich naeher als 16 Pixel, und das in allen drei Fraktionen.
 
 -- Grad ab der Senkrechten nach oben. Das Minus, weil Y auf dem Bildschirm nach unten
 -- waechst, 12 Uhr aber nach oben zeigt.
@@ -1414,20 +1423,36 @@ local function buildNode(talent, position, isActiveFaction)
 	-- versetzt setzt er die Speiche fort, und dort ist per Bauart Platz -- der naechste
 	-- Knoten kommt erst eine Stufe weiter.
 	--
-	-- Zwei Ausnahmen, beide an den Enden: die Wurzel hat keine Richtung (Radius null), und
-	-- bei der Krone waere aussen der Rand der Flaeche. Beide nehmen gerade nach unten.
-	local hinaus = position - FAECHER_WURZEL
-	if talent.tier == 0 or talent.tier >= 4 or hinaus.Magnitude < 1 then
-		hinaus = Vector2.new(0, 1)
-	else
-		hinaus = hinaus.Unit
-	end
-	local namenAbstand = D / 2 + rang.namenHoehe / 2 + 6
+	-- Zwei Ausnahmen, beide an den Enden des Faechers.
+	--
+	-- Die Wurzel hat keine Richtung (Radius null) und nimmt gerade nach unten -- unter ihr
+	-- ist ohnehin nichts mehr.
+	--
+	-- Bei der Krone waere aussen der Rand der Flaeche. Ihr Name tritt deshalb zur SEITE.
+	-- Das ist nicht nur eine Notloesung: oben neben der Krone ist die Flaeche leer, und
+	-- weil der Name dort keine Hoehe mehr braucht, darf die Krone viel naeher an Stufe 3
+	-- ruecken. Der ganze Baum wird dadurch auf jedem Bildschirm groesser -- die Hoehe der
+	-- Flaeche ist es, die den Massstab begrenzt.
 	infoLabel.AnchorPoint = Vector2.new(0.5, 0.5)
-	infoLabel.Position = UDim2.new(
-		0, position.X + hinaus.X * namenAbstand,
-		0, position.Y + hinaus.Y * namenAbstand
-	)
+	if talent.tier >= 4 then
+		infoLabel.Position = UDim2.new(
+			0, position.X + D / 2 + rang.namenBreite / 2 + 14,
+			0, position.Y
+		)
+		infoLabel.TextXAlignment = Enum.TextXAlignment.Left
+	else
+		local hinaus = position - FAECHER_WURZEL
+		if talent.tier == 0 or hinaus.Magnitude < 1 then
+			hinaus = Vector2.new(0, 1)
+		else
+			hinaus = hinaus.Unit
+		end
+		local namenAbstand = D / 2 + rang.namenHoehe / 2 + 6
+		infoLabel.Position = UDim2.new(
+			0, position.X + hinaus.X * namenAbstand,
+			0, position.Y + hinaus.Y * namenAbstand
+		)
+	end
 	infoLabel.BackgroundTransparency = 1
 
 	infoLabel.TextScaled = true
