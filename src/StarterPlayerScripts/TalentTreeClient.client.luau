@@ -209,7 +209,14 @@ treeScroll.Position = UDim2.new(0, 12, 0, 88)
 treeScroll.BackgroundTransparency = 1
 treeScroll.BorderSizePixel = 0
 treeScroll.ZIndex = 1
-treeScroll.ScrollBarThickness = 6
+-- Rollen ausdruecklich einschalten und sichtbar machen. Beides sind zwar die Vorgaben --
+-- aber wenn der Baum groesser ist als sein Fenster, ist der Balken das EINZIGE, woran man
+-- sieht, dass es unten weitergeht. Auf dem Telefon ist das der Normalfall.
+treeScroll.ScrollingEnabled = true
+treeScroll.ScrollingDirection = Enum.ScrollingDirection.XY
+treeScroll.ScrollBarThickness = 8
+treeScroll.ScrollBarImageColor3 = HudChrome.Color.BorderBright
+treeScroll.ScrollBarImageTransparency = 0.4
 treeScroll.CanvasSize = UDim2.new(0, 960, 0, 900)
 -- WICHTIG: ScrollingFrame clippt seinen Inhalt NICHT automatisch (anders als man
 -- erwarten würde) -- ohne das hier explizit zu setzen, konnten Verbindungslinien über
@@ -477,6 +484,47 @@ local function contentSize()
 	return schirm.content.AbsoluteSize.X, schirm.content.AbsoluteSize.Y
 end
 
+-- ===== Der Blick faengt bei der Wurzel an =====
+--
+-- Und zwar ERST IM NAECHSTEN BILD. Roblox begrenzt CanvasPosition sofort auf das, was der
+-- Rollbereich GERADE noch hergibt -- setzt man sie im selben Durchlauf, in dem auch Size
+-- und CanvasSize neu gesetzt wurden, wird sie gegen die ALTEN Masse beschnitten. Beim
+-- Wechsel der Bildschirmgroesse landete der Baum dadurch irgendwo: mal beim Endknoten, mal
+-- dazwischen, und der Wurzelknoten war nicht mehr zu sehen.
+--
+-- Gemessen wird deshalb an AbsoluteWindowSize -- der Flaeche, die der Rollbereich
+-- tatsaechlich zeigt, ohne den Rollbalken. Gerechnet mit fensterHoehe waere wieder eine
+-- Zahl aus zweiter Hand.
+local letzteBlickmeldung = ""
+
+local function blickAufWurzel()
+	task.defer(function()
+		local fenster = treeScroll.AbsoluteWindowSize
+		if fenster.X <= 0 or fenster.Y <= 0 then
+			return
+		end
+		local skala = treeScale.Scale
+		-- Waagerecht die Wurzel in die Mitte, senkrecht an den unteren Rand -- plus etwas
+		-- Luft, damit ihr Name darunter noch mitkommt.
+		treeScroll.CanvasPosition = Vector2.new(
+			math.max(0, FAECHER_WURZEL.X * skala - fenster.X / 2),
+			math.max(0, (FAECHER_WURZEL.Y + 110) * skala - fenster.Y)
+		)
+
+		local meldung = string.format(
+			"[Kaiju Debug] Talentbaum: Massstab %.2f, Fenster %dx%d, Flaeche %dx%d, Blick %d/%d",
+			skala, fenster.X, fenster.Y,
+			treeScroll.CanvasSize.X.Offset, treeScroll.CanvasSize.Y.Offset,
+			treeScroll.CanvasPosition.X, treeScroll.CanvasPosition.Y)
+		-- Nur bei Aenderung ausgeben: waehrend man ein Fenster zieht, laeuft die Anordnung
+		-- in jedem Bild, und eine Zeile je Bild macht die Ausgabe unlesbar.
+		if meldung ~= letzteBlickmeldung then
+			letzteBlickmeldung = meldung
+			print(meldung)
+		end
+	end)
+end
+
 -- Kopfbereich und beide Spalten neu setzen, sobald sich die Fenstergroesse aendert.
 local function layoutColumns()
 	local width, height = contentSize()
@@ -561,12 +609,8 @@ local function layoutColumns()
 	detailPanel.Position = UDim2.new(0, blockX + fensterBreite + COLUMN_GAP, 0, CONTENT_TOP)
 	detailPanel.Size = UDim2.new(0, detailWidth, 0, platzHoehe)
 
-	-- Passt nicht alles ins Fenster, faengt der Blick bei der WURZEL an -- da, wo man im
-	-- Baum anfaengt. Passt alles, rechnet das hier auf null und es gibt nichts zu rollen.
-	treeScroll.CanvasPosition = Vector2.new(
-		math.max(0, FAECHER_WURZEL.X * scale - fensterBreite / 2),
-		math.max(0, (FAECHER_WURZEL.Y + 110) * scale - fensterHoehe)
-	)
+	-- Der Blick wird ERST im naechsten Bild gesetzt, siehe blickAufWurzel.
+	blickAufWurzel()
 end
 
 panel:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutColumns)
@@ -584,6 +628,12 @@ if panelPadding then
 end
 
 layoutColumns()
+-- Und gleich nochmal im naechsten Bild. Beim Laden kann schirm.content noch keine Groesse
+-- haben -- dann steigt layoutColumns oben aus, und AbsoluteSize meldet spaeter NICHTS
+-- mehr, weil sich danach nichts mehr aendert. Der Baum bliebe dann fuer immer in seinem
+-- Anfangszustand stehen: Massstab 1 auf einer Flaeche, die dafuer zu klein ist -- man saehe
+-- die obere linke Ecke, also die Krone, und kaeme nicht an die Wurzel.
+task.defer(layoutColumns)
 
 local detailEmpty = Instance.new("TextLabel")
 detailEmpty.Size = UDim2.new(1, -20, 0, 80)
@@ -1708,6 +1758,10 @@ panel:GetPropertyChangedSignal("Visible"):Connect(function()
 		updateResourceDisplay()
 		updateResearchBar()
 		renderTree(currentFaction)
+		-- Beim Oeffnen neu anordnen: solange das Panel zu war, kann sich die
+		-- Bildschirmgroesse geaendert haben, ohne dass AbsoluteSize etwas gemeldet hat.
+		-- Und der Blick gehoert beim Oeffnen wieder auf die Wurzel.
+		layoutColumns()
 	end
 end)
 
