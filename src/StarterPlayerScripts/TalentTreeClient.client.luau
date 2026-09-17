@@ -202,8 +202,9 @@ end)
 
 -- ===== Baum-Bereich (scrollbar, absolute Positionierung nach Tier/Zweig) =====
 local treeScroll = Instance.new("ScrollingFrame")
-treeScroll.Size = UDim2.new(0, 960, 1, -104)
-treeScroll.Position = UDim2.new(0, 12, 0, 88)
+-- Siehe Untergrund: ein Anfangsmass, das die Flaeche fuellt, statt eines festen Kastens.
+treeScroll.Size = UDim2.new(1, -2 * 8, 1, -106 - 8)
+treeScroll.Position = UDim2.new(0, 8, 0, 106)
 -- Der Grund liegt jetzt eine Ebene tiefer (siehe Uhrwerk weiter unten) und scheint
 -- durch. Der Rahmen bleibt hier, er gehoert zum Fenster und nicht zum Grund.
 treeScroll.BackgroundTransparency = 1
@@ -295,6 +296,12 @@ local WERK_HELL = Color3.fromRGB(44, 52, 64)
 -- Werk selbst liegt seit dem Faecher IM Baum (siehe unten).
 local himmel = Instance.new("Frame")
 himmel.Name = "Untergrund"
+-- Anfangsmass, das die Flaeche schon FUELLT. layoutColumns setzt es gleich richtig -- aber
+-- wenn dieser Durchlauf einmal nicht greift, ist der Unterschied zwischen "etwas zu breit"
+-- und dem Vorgabewert eines Frames (100x100) der zwischen "sieht komisch aus" und "der
+-- halbe Bildschirm fehlt".
+himmel.Size = UDim2.new(1, -2 * 8, 1, -106 - 8)
+himmel.Position = UDim2.new(0, 8, 0, 106)
 himmel.BackgroundColor3 = HudChrome.Color.PanelSunken
 himmel.BorderSizePixel = 0
 himmel.ZIndex = 0
@@ -484,6 +491,26 @@ local function contentSize()
 	return schirm.content.AbsoluteSize.X, schirm.content.AbsoluteSize.Y
 end
 
+-- Damit ein Durchlauf, der NICHT greift, sichtbar wird statt still zu bleiben. Genau das
+-- war der Fall, in dem der Bildschirm nur einen Bruchteil des Platzes einnahm: die
+-- Anordnung stieg wegen einer Groesse von null oben aus, und danach meldete AbsoluteSize
+-- nichts mehr, weil sich nichts mehr aenderte.
+local letzteMassmeldung = ""
+
+local function meldeMass(breite, hoehe)
+	local meldung = string.format("%dx%d", breite, hoehe)
+	if meldung == letzteMassmeldung then
+		return
+	end
+	letzteMassmeldung = meldung
+	if breite <= 0 or hoehe <= 0 then
+		warn("[Kaiju Debug] Talentbaum: Inhaltsflaeche misst " .. meldung
+			.. " -- die Anordnung laeuft nicht. Sie wird beim Oeffnen wiederholt.")
+	else
+		print("[Kaiju Debug] Talentbaum: Inhaltsflaeche " .. meldung)
+	end
+end
+
 -- ===== Der Blick faengt bei der Wurzel an =====
 --
 -- Und zwar ERST IM NAECHSTEN BILD. Roblox begrenzt CanvasPosition sofort auf das, was der
@@ -528,6 +555,7 @@ end
 -- Kopfbereich und beide Spalten neu setzen, sobald sich die Fenstergroesse aendert.
 local function layoutColumns()
 	local width, height = contentSize()
+	meldeMass(width, height)
 	if width <= 0 or height <= 0 then
 		return
 	end
@@ -613,7 +641,11 @@ local function layoutColumns()
 	blickAufWurzel()
 end
 
+-- Auf BEIDE hoeren. Gemessen wird an schirm.content -- und dessen Groesse aendert sich
+-- nicht nur mit dem Panel, sondern auch, wenn TopInsetUtils das Polster nachzieht. Am
+-- Panel allein waere die Meldung dann ausgeblieben.
 panel:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutColumns)
+schirm.content:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutColumns)
 
 -- Auch auf das Polster hören, nicht nur auf die Fenstergrösse. TopInsetUtils liest die
 -- Höhe der Roblox-Systemleiste nicht nur einmal, sondern zieht sie nach -- bei jeder
