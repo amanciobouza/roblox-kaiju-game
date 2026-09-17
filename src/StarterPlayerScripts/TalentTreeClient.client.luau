@@ -216,7 +216,10 @@ treeScroll.CanvasSize = UDim2.new(0, 960, 0, 900)
 -- den Fensterrand hinausragen und sogar das restliche HUD überlagern.
 treeScroll.ClipsDescendants = true
 treeScroll.Parent = schirm.content
-HudChrome.Panel(treeScroll, { radius = HudChrome.Radius.Panel, fill = false })
+-- Kein Rahmen mehr: der Rollbereich umschliesst seit der Zentrierung nur noch den Baum
+-- selbst und ist nicht mehr das Fenster. Der Rahmen gehoert zum Fenster -- er sitzt
+-- deshalb am Untergrund.
+HudChrome.Panel(treeScroll, { radius = HudChrome.Radius.Panel, fill = false, border = false })
 
 -- Skaliert ALLE Knoten und Verbindungslinien im Baum gemeinsam. Sie stehen auf festen
 -- Koordinaten einer 960x900-Flaeche -- ohne diesen Faktor sah ein Telefon davon nur einen
@@ -239,10 +242,16 @@ local TREE_CANVAS_HEIGHT = 960
 -- Die Zahlen sind nachgerechnet, nicht geschaetzt: ein Pruefskript ueber der echten Config
 -- stellt fuer alle drei Fraktionen sicher, dass kein Knoten aus der Flaeche laeuft und
 -- zwischen zwei Raendern ueberall mindestens 16 Pixel Luft bleiben.
-local FAECHER_WURZEL = Vector2.new(TREE_CANVAS_WIDTH / 2, 885)
-local FAECHER_RADIUS = { [0] = 0, [1] = 190, [2] = 370, [3] = 550, [4] = 790 }
-local FAECHER_RADIUS_BRUECKE = 460 -- zwischen Stufe 2 und 3
-local FAECHER_WINKEL = 36 -- Grad, die ein Zweig neben der Senkrechten liegt
+local FAECHER_WURZEL = Vector2.new(TREE_CANVAS_WIDTH / 2, 830)
+local FAECHER_RADIUS = { [0] = 0, [1] = 180, [2] = 340, [3] = 500, [4] = 744 }
+local FAECHER_RADIUS_BRUECKE = 420 -- zwischen Stufe 2 und 3
+local FAECHER_WINKEL = 42 -- Grad, die ein Zweig neben der Senkrechten liegt
+
+-- Warum gerade diese Zahlen: der Abstand von Stufe 3 zur Krone ist mit 244 der groesste im
+-- Faecher, und das muss er sein -- dazwischen stehen ZWEI dauerhafte Namen uebereinander.
+-- Und 42 Grad ist der weiteste Winkel, bei dem der Name eines aeusseren Stufe-3-Knotens
+-- noch in die Flaeche passt: er steht nach aussen versetzt und braucht dort seine halbe
+-- Breite. Beides kam aus dem Pruefskript, nicht aus dem Gefuehl.
 
 -- Grad ab der Senkrechten nach oben. Das Minus, weil Y auf dem Bildschirm nach unten
 -- waechst, 12 Uhr aber nach oben zeigt.
@@ -276,9 +285,11 @@ himmel.BackgroundColor3 = HudChrome.Color.PanelSunken
 himmel.BorderSizePixel = 0
 himmel.ZIndex = 0
 himmel.Parent = schirm.content
-local himmelEcke = Instance.new("UICorner")
-himmelEcke.CornerRadius = UDim.new(0, HudChrome.Radius.Panel)
-himmelEcke.Parent = himmel
+HudChrome.Panel(himmel, {
+	radius = HudChrome.Radius.Panel,
+	fill = HudChrome.Color.PanelSunken,
+	transparency = 0,
+})
 
 -- ===== Das Werk sitzt auf der WURZEL =====
 --
@@ -293,7 +304,7 @@ himmelEcke.Parent = himmel
 -- wert als zwei, die sich gegeneinander verschieben.
 --
 -- Die Kantenlaenge ist fest in Baum-Koordinaten: doppelter Kronenradius plus etwas Luft.
-local WERK_SEITE = 2 * FAECHER_RADIUS[4] + 140
+local WERK_SEITE = 2 * FAECHER_RADIUS[4] + 160
 
 local werk = Instance.new("Frame")
 werk.Name = "Werk"
@@ -404,7 +415,19 @@ local DETAIL_MIN_FRACTION = 0.32 -- so viel darf die Detailspalte hoechstens vom
 -- Grenzen der Baum-Skalierung. Nach unten, damit die Beschriftung lesbar bleibt -- lieber
 -- rollen als eine unleserliche Uebersicht. Nach oben, damit auf einem grossen Monitor
 -- keine handtellergrossen Knoten entstehen.
-local TREE_MIN_SCALE = 0.55
+-- ===== Der Mindestmassstab ist eine Entscheidung ueber das Telefon =====
+--
+-- Im Querformat bleiben fuer den Baum rund 260 Pixel Hoehe. Ein 960er Faecher passt da nur
+-- hinein, wenn alles auf etwa 0.27 schrumpft -- dann ist ein gewoehnlicher Knoten 22 Pixel
+-- gross und mit dem Finger nicht mehr zu treffen. Ganz zu sehen und nicht bedienbar ist
+-- keine Loesung.
+--
+-- Deshalb 0.45: ein gewoehnlicher Knoten bleibt 36 Pixel, ein Meilenstein 49, die Krone
+-- 63. Auf dem Telefon passt der Faecher damit NICHT ganz ins Bild -- und das ist in
+-- Ordnung, solange der Blick an der richtigen Stelle anfaengt. Er faengt bei der Wurzel
+-- an (siehe blickAufWurzel), und von dort schiebt man sich nach oben zur Krone. Die Reise
+-- von 6 nach 12 wird so zu der Bewegung, die der Finger ohnehin macht.
+local TREE_MIN_SCALE = 0.45
 local TREE_MAX_SCALE = 1.5
 
 -- Oberkante des Inhalts, unter Titelzeile und Ressourcenleiste.
@@ -488,29 +511,52 @@ local function layoutColumns()
 	local treeWidth = math.max(width - detailWidth - 3 * COLUMN_GAP, 160)
 	local treeHeight = math.max(height - CONTENT_TOP - COLUMN_GAP, 120)
 
-	treeScroll.Position = UDim2.new(0, COLUMN_GAP, 0, CONTENT_TOP)
-	treeScroll.Size = UDim2.new(0, treeWidth, 0, treeHeight)
-
-	-- Der Grund deckt sich genau mit dem Baumfenster. Das Werk braucht hier nichts mehr:
-	-- es liegt in Baum-Koordinaten im Rollbereich und wird von treeScale mitskaliert.
-	himmel.Position = treeScroll.Position
-	himmel.Size = treeScroll.Size
+	-- Der Untergrund ist das FENSTER und nimmt die ganze Spalte.
+	himmel.Position = UDim2.new(0, COLUMN_GAP, 0, CONTENT_TOP)
+	himmel.Size = UDim2.new(0, treeWidth, 0, treeHeight)
 	detailPanel.Position = UDim2.new(0, COLUMN_GAP + treeWidth + COLUMN_GAP, 0, CONTENT_TOP)
 	detailPanel.Size = UDim2.new(0, detailWidth, 0, treeHeight)
 
-	-- Baum skalieren statt abschneiden. Die Knoten stehen auf festen Koordinaten einer
-	-- 960x900-Flaeche; der Faktor passt sie an den vorhandenen Platz an. Die CanvasSize
-	-- muss MITSKALIERT werden -- ein UIScale veraendert sie nicht von selbst, und ohne die
-	-- Anpassung liefe der Rollbereich ins Leere oder schnitte ab.
+	-- Baum skalieren statt abschneiden. Die Knoten stehen auf festen Koordinaten der
+	-- Zeichenflaeche; der Faktor passt sie an den vorhandenen Platz an. Die CanvasSize muss
+	-- MITSKALIERT werden -- ein UIScale veraendert sie nicht von selbst.
 	local scale = math.clamp(
 		math.min(treeWidth / TREE_CANVAS_WIDTH, treeHeight / TREE_CANVAS_HEIGHT),
 		TREE_MIN_SCALE,
 		TREE_MAX_SCALE
 	)
 	treeScale.Scale = scale
-	treeScroll.CanvasSize = UDim2.new(
-		0, math.floor(TREE_CANVAS_WIDTH * scale),
-		0, math.floor(TREE_CANVAS_HEIGHT * scale)
+
+	-- ===== Mittig, nicht linksbuendig =====
+	--
+	-- Vorher fuellte der Rollbereich die ganze Spalte, und die Zeichenflaeche lag darin
+	-- oben links -- ein Rollbereich zentriert seinen Inhalt nicht. Auf einem breiten Bild
+	-- klebte der Faecher deshalb am linken Rand, und unten fehlte ihm der Rest: der
+	-- Ausschnitt war kleiner als der Baum, und die Wurzel, die ganz unten sitzt, lag
+	-- ausserhalb.
+	--
+	-- Jetzt ist der Rollbereich genau so gross wie der skalierte Baum und sitzt mittig im
+	-- Fenster. Passt der Baum hinein -- und das ist nach dem gesenkten Mindestmassstab der
+	-- Normalfall, auch auf dem Telefon --, gibt es gar nichts mehr zu rollen und alles ist
+	-- zu sehen.
+	local inhaltBreite = math.floor(TREE_CANVAS_WIDTH * scale)
+	local inhaltHoehe = math.floor(TREE_CANVAS_HEIGHT * scale)
+	local fensterBreite = math.min(treeWidth, inhaltBreite)
+	local fensterHoehe = math.min(treeHeight, inhaltHoehe)
+
+	treeScroll.Size = UDim2.new(0, fensterBreite, 0, fensterHoehe)
+	treeScroll.Position = UDim2.new(
+		0, COLUMN_GAP + math.floor((treeWidth - fensterBreite) / 2),
+		0, CONTENT_TOP + math.floor((treeHeight - fensterHoehe) / 2)
+	)
+	treeScroll.CanvasSize = UDim2.new(0, inhaltBreite, 0, inhaltHoehe)
+
+	-- Passt nicht alles ins Fenster, faengt der Blick bei der WURZEL an -- da, wo man im
+	-- Baum anfaengt, und das war die Stelle, die vorher fehlte. Passt alles, rechnet das
+	-- hier auf null und es gibt nichts zu rollen.
+	treeScroll.CanvasPosition = Vector2.new(
+		math.max(0, FAECHER_WURZEL.X * scale - fensterBreite / 2),
+		math.max(0, (FAECHER_WURZEL.Y + 110) * scale - fensterHoehe)
 	)
 end
 
@@ -1255,15 +1301,27 @@ local function buildNode(talent, position, isActiveFaction)
 	local infoLabel = Instance.new("TextLabel")
 	infoLabel.Size = UDim2.new(0, rang.namenBreite, 0, rang.namenHoehe)
 	infoLabel.AnchorPoint = Vector2.new(0.5, 0)
-	-- Unter dem Knoten -- ausser bei der Wurzel. Die sitzt ganz unten auf 6 Uhr; unter ihr
-	-- ist die Flaeche zu Ende, ihr Name stuende ausserhalb. Ueber ihr ist Platz, bis der
-	-- erste Ring beginnt.
-	if talent.tier == 0 then
-		infoLabel.AnchorPoint = Vector2.new(0.5, 1)
-		infoLabel.Position = UDim2.new(0, position.X, 0, position.Y - D / 2 - 6)
+	-- Der Name zeigt nach AUSSEN, die Speiche entlang -- nicht stur nach unten.
+	--
+	-- Auf einem Faecher, der nach oben waechst, zeigt "unter dem Knoten" zurueck in die
+	-- eigene Speiche: der Name von Stufe 3 landete auf dem Knoten von Stufe 2. Nach aussen
+	-- versetzt setzt er die Speiche fort, und dort ist per Bauart Platz -- der naechste
+	-- Knoten kommt erst eine Stufe weiter.
+	--
+	-- Zwei Ausnahmen, beide an den Enden: die Wurzel hat keine Richtung (Radius null), und
+	-- bei der Krone waere aussen der Rand der Flaeche. Beide nehmen gerade nach unten.
+	local hinaus = position - FAECHER_WURZEL
+	if talent.tier == 0 or talent.tier >= 4 or hinaus.Magnitude < 1 then
+		hinaus = Vector2.new(0, 1)
 	else
-		infoLabel.Position = UDim2.new(0, position.X, 0, position.Y + D / 2 + 6)
+		hinaus = hinaus.Unit
 	end
+	local namenAbstand = D / 2 + rang.namenHoehe / 2 + 6
+	infoLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+	infoLabel.Position = UDim2.new(
+		0, position.X + hinaus.X * namenAbstand,
+		0, position.Y + hinaus.Y * namenAbstand
+	)
 	infoLabel.BackgroundTransparency = 1
 
 	infoLabel.TextScaled = true
