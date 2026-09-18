@@ -59,6 +59,7 @@ local DebugStartPrologueResultEvent = waitForRemote("DebugStartPrologueResultEve
 local DebugRevealArchiveEvent = waitForRemote("DebugRevealArchiveEvent")
 local DebugSetSessionTimeEvent = waitForRemote("DebugSetSessionTimeEvent")
 local DebugSetScaleEvent = waitForRemote("DebugSetScaleEvent")
+local DebugQuickResearchEvent = waitForRemote("DebugQuickResearchEvent")
 -- Blanker Avatar: siehe den Knopf weiter unten.
 local DebugPlainAvatarEvent = waitForRemote("DebugPlainAvatarEvent")
 
@@ -1011,6 +1012,47 @@ plainAvatarButton.TextColor3 = Color3.new(1, 1, 1)
 plainAvatarButton.Text = "🧍 Avatar: OFF"
 plainAvatarButton.AutoButtonColor = true
 plainAvatarButton.Parent = schalterRowD
+
+-- ===== Schnellforschung =====
+--
+-- Eine Talentforschung dauert Minuten. Das ist im Spiel richtig und beim Pruefen
+-- unbrauchbar: wer die Zeremonie, den Freischalt-Effekt oder die Wirkung eines Talents
+-- ansehen will, wartet sonst jedes Mal von vorn. Mit dem Schalter dauert jede zehn
+-- Sekunden -- lang genug, um den laufenden Balken noch zu sehen.
+--
+-- Der Zustand kommt vom SERVER zurueck und wird nicht hier mitgezaehlt: waer er hier
+-- gezaehlt, zeigte der Knopf nach einem verlorenen Ereignis das Gegenteil dessen an, was
+-- wirklich gilt -- und niemand wuesste, welchem der beiden zu glauben ist.
+local quickResearchButton = Instance.new("TextButton")
+quickResearchButton.Name = "QuickResearchButton"
+quickResearchButton.Size = halbeBreite()
+quickResearchButton.LayoutOrder = 2
+quickResearchButton.BackgroundColor3 = Color3.fromRGB(90, 90, 140)
+quickResearchButton.Font = Enum.Font.FredokaOne
+quickResearchButton.TextScaled = true
+quickResearchButton.TextColor3 = Color3.new(1, 1, 1)
+quickResearchButton.Text = "🔬 Forschung: NORMAL"
+quickResearchButton.AutoButtonColor = true
+quickResearchButton.Parent = schalterRowD
+applyComicStyle(quickResearchButton, 10, 2)
+
+quickResearchButton.MouseButton1Click:Connect(function()
+	if DebugQuickResearchEvent then
+		DebugQuickResearchEvent:FireServer()
+	end
+end)
+
+if DebugQuickResearchEvent then
+	DebugQuickResearchEvent.OnClientEvent:Connect(function(aktiv)
+		if aktiv then
+			quickResearchButton.Text = "🔬 Forschung: 10s"
+			quickResearchButton.BackgroundColor3 = Color3.fromRGB(60, 140, 90)
+		else
+			quickResearchButton.Text = "🔬 Forschung: NORMAL"
+			quickResearchButton.BackgroundColor3 = Color3.fromRGB(90, 90, 140)
+		end
+	end)
+end
 applyComicStyle(plainAvatarButton, 10, 2)
 
 -- ===== Die Beschriftung folgt dem ECHTEN Zustand =====

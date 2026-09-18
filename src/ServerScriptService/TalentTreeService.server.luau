@@ -52,6 +52,37 @@ local TalentUnlockedEvent = RemoteEventUtils.GetOrCreate("TalentUnlockedEvent")
 -- waehrend man spielt, und das kann mitten im Guardian-Kampf sein.
 local TalentCeremonyEvent = RemoteEventUtils.GetOrCreate("TalentCeremonyEvent")
 
+-- ===== Schnellforschung (Debug) =====
+--
+-- Eine Forschung dauert Minuten. Das ist im Spiel richtig und beim Pruefen unbrauchbar:
+-- wer die Zeremonie, den Freischalt-Effekt oder die Wirkung eines Talents ansehen will,
+-- wartet sonst jedes Mal von vorn.
+--
+-- Der Schalter gilt je SPIELER, nicht global. Er gehoert dem, der gerade prueft -- ein
+-- zweiter Spieler auf demselben Server soll davon nichts merken.
+local DebugQuickResearchEvent = RemoteEventUtils.GetOrCreate("DebugQuickResearchEvent")
+local SCHNELLFORSCHUNG_SEKUNDEN = 10
+local schnelleForschung = {}
+
+DebugQuickResearchEvent.OnServerEvent:Connect(function(player)
+	schnelleForschung[player] = not schnelleForschung[player]
+	print("[Kaiju Debug] Schnellforschung fuer " .. player.Name .. ": "
+		.. (schnelleForschung[player] and "AN (10s)" or "AUS"))
+	-- Zurueck an den Client, damit der Knopf den WIRKLICHEN Zustand zeigt und nicht den,
+	-- den er selbst mitgezaehlt hat.
+	DebugQuickResearchEvent:FireClient(player, schnelleForschung[player])
+end)
+
+-- Wie lange eine Forschung dauert. EINE Stelle, die das beantwortet -- die Dauer steht
+-- sonst dreimal im Ablauf (Endzeitpunkt, Gesamtdauer, Meldung an den Client), und zwei
+-- davon zu aendern und eine zu vergessen waere ein Balken, der nicht zur Uhr passt.
+local function forschungsDauer(player, talent)
+	if schnelleForschung[player] then
+		return SCHNELLFORSCHUNG_SEKUNDEN
+	end
+	return talent.researchSeconds
+end
+
 -- Was vor der Zeremonie galt, je Spieler: Tempo, Sprungkraft und das Kraftfeld. Ohne das
 -- gaebe es kein Zurueck -- WalkSpeed haengt am Skin und ist nicht fuer alle gleich.
 local zeremonieStand = {}
@@ -127,6 +158,7 @@ Players.PlayerAdded:Connect(function(player)
 end)
 Players.PlayerRemoving:Connect(function(player)
 	zeremonieStand[player] = nil
+	schnelleForschung[player] = nil
 end)
 
 -- Die Notbremse fuer den Fall, dass die Rueckmeldung nie kommt.
@@ -291,15 +323,16 @@ StartResearchEvent.OnServerEvent:Connect(function(player, factionName, talentId)
 	end
 
 	local now = Workspace:GetServerTimeNow()
+	local dauer = forschungsDauer(player, talent)
 	activeResearch[player] = {
 		faction = factionName,
 		talentId = talentId,
 		startedAt = now,
-		completesAt = now + talent.researchSeconds,
-		totalDuration = talent.researchSeconds,
+		completesAt = now + dauer,
+		totalDuration = dauer,
 	}
 
-	StartResearchEvent:FireClient(player, factionName, talentId, now + talent.researchSeconds, talent.researchSeconds)
+	StartResearchEvent:FireClient(player, factionName, talentId, now + dauer, dauer)
 end)
 
 -- ===== Forschung abbrechen: Ressourcen werden NICHT erstattet =====
