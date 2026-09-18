@@ -9,18 +9,25 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local NumberFormat = require(ReplicatedStorage:WaitForChild("NumberFormat"))
 
-local NAME_TAG_MARGIN = 2.5 -- Studs Puffer über dem höchsten Punkt des Charakters
+-- Abstand über dem höchsten Punkt der Figur.
+--
+-- Nicht fest, sondern ein Anteil ihrer Höhe: 2.5 Studs sind über einem normalen Avatar ein
+-- deutlicher Abstand und über einem hundert Studs hohen Kaiju ein Hauch. Das Schild klebte
+-- dadurch auf den Hörnern.
+local NAME_TAG_MARGIN_MIN = 2.5
+local NAME_TAG_MARGIN_SHARE = 0.10 -- Anteil der Figurenhöhe
 
 -- Positioniert das Schild dynamisch über dem tatsächlich höchsten Punkt des Charakters
--- (nicht fest über dem Kopf-Teil) -- wichtig, weil die Charaktergröße sich durch Training
--- laufend ändert.
+-- (nicht fest über dem Kopf-Teil) -- wichtig, weil die Charaktergröße sich durch Training,
+-- Stufenwechsel UND das angezogene Kaiju-Modell laufend ändert.
 local function updateBillboardOffset(character, billboard, head)
 	local ok, cframe, size = pcall(function()
 		return character:GetBoundingBox()
 	end)
-	if ok then
+	if ok and head.Parent then
 		local topY = cframe.Position.Y + size.Y / 2
-		local offsetY = (topY - head.Position.Y) + NAME_TAG_MARGIN
+		local margin = math.max(NAME_TAG_MARGIN_MIN, size.Y * NAME_TAG_MARGIN_SHARE)
+		local offsetY = (topY - head.Position.Y) + margin
 		billboard.StudsOffset = Vector3.new(0, offsetY, 0)
 	end
 end
@@ -86,6 +93,32 @@ local function createNameTag(player, character)
 		-- Position gleich mit aktualisieren, damit es nicht in den Kopf hineinrutscht.
 		updateBillboardOffset(character, billboard, head)
 	end)
+
+	-- ===== Und wenn die Figur ein Modell dazubekommt =====
+	-- Das Kaiju-Modell wird erst nach dem Charakter angezogen (siehe KaijuStageOneService)
+	-- und ist um ein Vielfaches höher als der Avatar darunter. Bis hierhin wurde die Höhe
+	-- NUR bei einer Änderung von "Damage" neu gemessen -- das Anziehen ändert die aber
+	-- nicht, und das Schild blieb auf Avatarhöhe stehen, also mitten im Körper.
+	--
+	-- Ein Modell kommt als direktes Kind der Figur dazu und verschwindet genauso wieder.
+	-- Gemessen wird erst im nächsten Durchlauf: beim Auslösen ist das Modell zwar da, seine
+	-- Teile sind aber noch nicht alle eingehängt, und der Hüllquader wäre zu klein.
+	local ausstehend = false
+	local function spaeterMessen()
+		if ausstehend then
+			return
+		end
+		ausstehend = true
+		task.defer(function()
+			ausstehend = false
+			if character.Parent then
+				updateBillboardOffset(character, billboard, head)
+			end
+		end)
+	end
+
+	character.ChildAdded:Connect(spaeterMessen)
+	character.ChildRemoved:Connect(spaeterMessen)
 end
 
 local function onPlayerAdded(player)

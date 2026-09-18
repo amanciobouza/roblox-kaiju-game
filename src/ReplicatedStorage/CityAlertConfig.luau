@@ -21,6 +21,7 @@ CityAlertConfig.CityOrder = { "Village", "SmallTown", "City", "LargeCity", "Mega
 -- CityName-Attributen in Studio übereinstimmen.
 CityAlertConfig.Cities = {
 	Village = {
+		ExpectedSkinStage = 1, -- Riftborn; die Spec verlangt die Angabe je Stadt
 		-- Alert Level 1 -> 2: wie viel Alert-Fortschritt nötig ist, bis die Feuerwehr anrückt
 		--
 		-- Die Zahlen kommen aus der Village-Spezifikation und sind dort in Durchgängen
@@ -33,9 +34,19 @@ CityAlertConfig.Cities = {
 		-- war und City Broken damit unerreichbar blieb. Der Fortschritt zerfällt übrigens
 		-- nur, solange KEIN Spieler in der Stadt ist -- Aussitzen hilft also nicht, die
 		-- Schwellen sind das Einzige, was zählt.
-		AlertThresholdLevel2 = 50,
+		-- ===== Die Schwellen zaehlen in DURCHGAENGEN (18.09.2026) =====
+		-- Ein Durchgang ist das einmalige Abraeumen aller Gebaeude der Stadt. Brasshaven ist
+		-- darauf ausgelegt und bestaetigt sich selbst: 0.39 / 0.90 / 1.42 / 2.26. Daran sind
+		-- jetzt alle Staedte gemessen.
+		--
+		-- Das Village ergibt gemessene 48 Alarmpunkte je Durchgang (23 Gebaeude, alle mit
+		-- eigenem AlertValue-Attribut aus Studio -- AlertPerHP unten ist hier nur Rueckfall
+		-- und ohne Wirkung). Vorher standen die Schwellen bei 50 / 225 / 1600 / 6400, also
+		-- 1.0 / 4.7 / 33 / 133 Durchgaengen: Stufe 4 haette 33 vollstaendige Dorfrunden
+		-- verlangt und war damit unerreichbar.
+		AlertThresholdLevel2 = 19, -- 0.40 Durchgaenge
 		-- Alert Level 2 -> 3: Barrikaden-Schild-Cluster (siehe BarricadeClusterService.lua)
-		AlertThresholdLevel3 = 225,
+		AlertThresholdLevel3 = 43, -- 0.90 Durchgaenge
 		-- Alert-Wert pro HP eines zerstörten Gebäudes (AlertValue = MaxHealth * AlertPerHP),
 		-- falls das Gebäude kein eigenes "AlertValue"-Attribut in Studio gesetzt hat.
 		AlertPerHP = 0.5,
@@ -58,7 +69,10 @@ CityAlertConfig.Cities = {
 		FireEngineSpeed = 14, -- Studs/Sekunde
 		FirefightingRate = 8, -- Energie/Sekunde, die ein Feuerwehrauto einer Feuerquelle entzieht
 		FirefightingRange = 45, -- Studs -- muss so nah dran sein, um zu löschen
-		FireEngineDestroyAlertValue = 15, -- deutlich mehr Alert als ein normales Haus
+		-- FireEngineDestroyAlertValue ist ENTFALLEN (war 15), wie in SmallTown: besiegte
+		-- Verteidigung darf die Lage nicht verschärfen (Specs/BalancingSpec,
+		-- balancing.defense-does-not-escalate). Sonst bestraft das Spiel genau das, wozu es
+		-- auffordert -- und die Feuerwehr stehen zu lassen wird zur vernünftigen Spielweise.
 
 		WaterTowerEfficiencyBonus = 0.5, -- +50% Löschrate, solange der Wasserturm intakt ist
 
@@ -78,19 +92,41 @@ CityAlertConfig.Cities = {
 		AlertDecayRate = 0.5,
 
 		-- ===== Stufe 3: Barrikaden-Schild-Cluster =====
+		-- ===== Auf denselben Massstab gebracht wie Brasshaven (18.09.2026) =====
+		-- Das Village ist fuer den Spieler ausgelegt, der es mit dem Riftborn BETRITT: 18
+		-- Schaden je Schlag, 270 ueber einen Fokusstrahl, 100 Lebenspunkte.
+		--
+		-- Gemessen an den Trefferzahlen Brasshavens war hier alles zugleich zu zaeh UND zu
+		-- toedlich: der Panzer hielt 277 Schlaege (Brasshaven: 74) und toetete in acht
+		-- Treffern (Brasshaven: 33). Wer die erste Stadt des Spiels betritt, traf damit auf
+		-- den haertesten Gegner, den das Spiel ueberhaupt kennt.
+		--
+		-- Feuerwehr (50 Schlaege) und Elektrozaun (33 Treffer) standen bereits richtig.
+		--
+		-- Die Schadenswerte sind grob gestuft, weil der Riftborn nur 100 Leben hat: ein
+		-- ganzzahliger Schritt ist hier gleich ein Sprung von acht Treffern. Die Reihenfolge
+		-- Brasshavens bleibt erhalten -- Helikopter am mildesten, Raketenwerfer am haertesten.
 		BarricadeScale = 1.0,
-		ShieldMaxHealth = 3000,
+		ShieldMaxHealth = 1050,
 		ShieldRegenDelay = 8,
 		ShieldRegenRate = 0.05,
-		GeneratorMaxHealth = 400,
-		ElectricDamage = 10, -- Schaden pro Stromschlag am Elektrozaun (skaliert mit Stadtgrösse)
+		GeneratorMaxHealth = 250,
+		-- Dasselbe Grundmass wie in Brasshaven: rund 32 Treffer, bis die Figur fällt. Der
+		-- Riftborn hat 100 Leben, also 3 Schaden je Stromschlag.
+		--
+		-- Vorher 10, und das waren zehn Treffer. Der Zaun ist die einzige Verteidigung, die
+		-- das Village in Kapitel I überhaupt einsetzt -- Militär und Guardian kommen dort
+		-- erst in den späteren Kapiteln --, und damit war er die härteste Bedrohung des
+		-- ganzen ersten Kapitels. Die übrigen Village-Werte bleiben unangetastet, solange
+		-- sie nicht gespielt werden.
+		ElectricDamage = 3, -- Stromschlag am Elektrozaun -- 33 Treffer
 		EscalationStepSize = 5,
 		MaxActiveReactiveBarricades = 3,
 		ReactiveSpawnSearchRadius = 150,
 		FlankAutoDetectRadius = 40,
 
 		-- ===== Stufe 4: Militär (Panzer, Raketenwerfer, Militär-Helikopter) =====
-		AlertThresholdLevel4 = 1600,
+		AlertThresholdLevel4 = 68, -- 1.42 Durchgaenge
 		MaxAlertLevel = 3, -- Konzept-Vorgabe: nicht jede Stadt kennt alle Alert-Stufen
 		-- Kapitel I / II / III. Dieselbe Karte härtet sich über die Kapitel: das Village
 		-- lernt in Kapitel II das Militär kennen und bekommt in Kapitel III einen Guardian.
@@ -102,15 +138,15 @@ CityAlertConfig.Cities = {
 		MilitaryTankCount = 1,
 		MilitaryRocketLauncherCount = 1,
 		MilitaryHelicopterCount = 1,
-		TankHP = 5000,
-		TankDamage = 12,
+		TankHP = 1350,
+		TankDamage = 3, -- 33 Treffer,
 		TankAttackRange = 60,
 		TankSpeed = 12,
-		RocketLauncherHP = 3000,
-		RocketLauncherDamage = 14,
+		RocketLauncherHP = 1000,
+		RocketLauncherDamage = 4, -- 25 Treffer -- der haerteste des Militaers,
 		RocketLauncherAttackRange = 100,
-		HelicopterHP = 2500,
-		HelicopterDamage = 10,
+		HelicopterHP = 800,
+		HelicopterDamage = 2, -- 50 Treffer,
 		HelicopterAttackRange = 80,
 		HelicopterSpeed = 18,
 
@@ -118,16 +154,40 @@ CityAlertConfig.Cities = {
 		-- ===== Stufe 5: Guardian =====
 		-- Erreichbar erst ab Kapitel III (siehe MaxAlertLevelByChapter oben) -- in Kapitel I
 		-- bleibt diese Stadt darunter, die Werte liegen dann brach.
-		AlertThresholdLevel5 = 6400, -- setzt das 4x-Muster der Stufen 2-4 fort
-		GuardianHP = 20000,
-		GuardianShieldHP = 8000, -- 40% der HP, wie bei LargeCity und MegaCity
+		AlertThresholdLevel5 = 110, -- 2.29 Durchgaenge
+		-- ===== Was der Guardian einbringt =====
+		-- FEST, nicht zur Laufzeit gerechnet -- so verlangt es die Spec
+		-- (balancing.every-defeat-pays). Bis hierher gab dieser Guardian GAR NICHTS: ein
+		-- Kampf ohne Ertrag, den zu umgehen die vernuenftige Spielweise war.
+		--
+		-- Hergeleitet aus dem einzigen durchgerechneten Fall, Brasshaven: dort sind 30 000
+		-- Lebenspunkte 80 000 Erfahrung wert, also 35 mal HP^0.75 -- dieselbe gedaempfte
+		-- Kurve wie bei Gebaeuden und Verteidigung, nur hoeher angesetzt. Der Village-Guardian erscheint erst in Kapitel III.
+		--
+		-- VORLAEUFIG: diese Stadt ist noch nicht durchgespielt. Die Zahl ist eine
+		-- begruendete Ausgangsgroesse, keine gemessene -- sie gehoert nachgeschaerft, sobald
+		-- die Stadt tatsaechlich gespielt wird.
+		-- ===== Der Guardian muss eine Herausforderung bleiben =====
+		-- Massstab ist Brasshaven, die einzige durchgerechnete Stadt: 310 Schlaege (rund 21
+		-- Fokusstrahlen) bis der Guardian faellt, und 16 Fausttreffer bis der Spieler faellt
+		-- -- doppelt so gefaehrlich wie alles andere in der Stadt.
+		--
+		-- Der Eintrittsschaden hier ist 18 je Schlag (Trainingskappe auf Level 0 mal
+		-- DamagePercent). Vorher: 1 556 Schlaege -- fuenfmal Brasshaven, und die Faust toetete in vier Treffern.
+		--
+		-- Die alten Werte hingen an nichts: in allen drei oberen Staedten stand derselbe
+		-- kopierte Satz "bei 2200 Schaden je Schlag".
+		GuardianXPReward = 18000,
+		GuardianCoinsReward = 270,
+		GuardianHP = 4000,
+		GuardianShieldHP = 1600, -- 40% der HP, wie bei LargeCity und MegaCity
 		GuardianShieldRegenDelay = 10,
 		GuardianShieldRegenRate = 0.005,
-		GuardianImpactFistDamage = 26,
+		GuardianImpactFistDamage = 6,
 		GuardianImpactFistCooldown = 3,
 		GuardianImpactFistRange = 14,
 		GuardianImpactFistKnockback = 112,
-		GuardianRepulsorDamage = 13,
+		GuardianRepulsorDamage = 3,
 		GuardianRepulsorCooldown = 6,
 		GuardianRepulsorRadius = 22,
 		GuardianRepulsorKnockback = 150,
@@ -135,36 +195,138 @@ CityAlertConfig.Cities = {
 		GuardianProtectRadius = 30,
 	},
 
+	-- ===== Brasshaven, durchgerechnet =====
+	-- Ausgelegt für den Spieler, der die Stadt mit Level 10 und dem Ironpulse BETRITT. Sein
+	-- Schaden ist dann 135 je Schlag, 2025 über einen vollen Fokusstrahl, 675 je Fläche
+	-- (Arm auf der Obergrenze, keine Talente, allein). Zum Vergleich: im Village sind es 18,
+	-- 270 und 90 -- der Spieler schlägt hier also siebeneinhalbmal so hart zu.
+	--
+	-- GENAU DAS war der Fehler in den alten Zahlen: sie waren gegenüber dem Village mal drei
+	-- gerechnet, nicht mal siebeneinhalb. Das Feuerwehrauto fiel dadurch in elf Schlägen
+	-- statt in fünfzig, der Generator in sieben. Brasshaven war in Trefferzahlen LEICHTER
+	-- als das Dorf davor.
+	--
+	-- Die Stadt trägt den Spieler von Level 10 auf 20. Das kostet 561 138 XP -- das
+	-- 8,4-fache der gesamten Village-Strecke, weil die XP-Kurve ab Level 10 geometrisch mit
+	-- 1.25 wächst.
+	--
+	-- GEMESSEN am 18.09.2026 (Serverbericht "Durchgang SmallTown", siehe CityAlertService):
+	-- ein voller Durchgang gibt 319 274 XP. Die Strecke sind also 1,8 Durchgänge. Das ist
+	-- der kürzeste Wert aller Städte und damit die Vorlage -- im Village sind es gemessen
+	-- 3,3, in City 9,6.
+	--
+	-- Die Gebäude-Lebenspunkte dazu stehen NICHT hier, sondern in Studio an den Modellen
+	-- (siehe balancing.building-values-live-in-config im Rückstand). Die Rechnung geht von
+	-- Stufen aus -- L1 2 000, L2 6 000, L3 12 000 --, das sind 15, 45 und 89 Schläge beim
+	-- Eintritt. Wer die Werte dort ändert, muss die Schwellen hier nachziehen.
+	--
+	-- ACHTUNG bei den mehrteiligen Bauwerken: Supermarkt, Schule, Motel und die zwei
+	-- Brücken bestehen aus je DREI angreifbaren Abschnitten. In Studio stehen sie auf
+	-- 3 500 je Flügel und 5 000 für den Kern -- zusammen also die 12 000 der Stufe L3, und
+	-- damit bleibt die Trefferzahl fürs ganze Bauwerk bei 89. Der Kern hält mit 38 Schlägen
+	-- am längsten, die Flügel fallen in 26.
+	--
+	-- Der Ertrag steigt durch die Aufteilung, und das ist kein Fehler: die Belohnung wächst
+	-- mit HP^0.75, drei Teile geben also mehr als ein Ganzes derselben Grösse. Ein
+	-- zerlegbares Bauwerk lohnt sich mehr als ein massives -- 59 angreifbare Teile statt 49.
+	--
+	-- Die Alarmpunkte folgen der Gesamt-HP. Ob die Brücken auf L2 oder wie die drei anderen
+	-- auf L3 stehen, verschiebt einen Durchgang nur zwischen 1 560 und 1 680 Punkten -- die
+	-- Schwellen unten liegen in beiden Fällen im Zielband.
 	SmallTown = {
-		AlertThresholdLevel2 = 400,
-		AlertThresholdLevel3 = 1600,
-		AlertPerHP = 0.35,
+		ExpectedSkinStage = 2, -- Ironpulse; die Spec verlangt die Angabe je Stadt
 
-		FireEngineHP = 1500,
+		-- ===== Die Alarmschwellen in Durchgängen =====
+		-- GEMESSEN am 18.09.2026: ein Durchgang sind 59 angreifbare Teile, 155 200
+		-- Lebenspunkte und 1 552 Alarmpunkte (AlertPerHP 0.01, kein Gebäude trägt ein
+		-- eigenes AlertValue). Die Schwellen unten liegen damit bei 0.39, 0.90, 1.42 und
+		-- 2.26 Durchgängen. City Broken fällt so mit dem Ende der Level-Strecke zusammen,
+		-- statt weit dahinter.
+		--
+		-- Diese vier Verhältnisse sind der Massstab, an dem inzwischen ALLE Städte gemessen
+		-- werden (siehe die Schwellen-Kommentare dort).
+		--
+		-- Vorher: 400 / 1 600 / 6 400 bei AlertPerHP 0.35. Ein einziges L1-Haus gab damit
+		-- 700 Punkte -- Alarmstufe 2 nach EINEM Haus, Stufe 4 nach neun. Die Eskalation war
+		-- vorbei, bevor der Spieler die Stadt gesehen hatte.
+		AlertThresholdLevel2 = 600,
+		AlertThresholdLevel3 = 1400,
+		AlertPerHP = 0.01,
+
+		-- Fünfzig Schläge oder dreieinhalb Fokusstrahlen, also rund eine Minute mit
+		-- Verfolgung -- dieselbe Referenz, die im Village ausdrücklich gesetzt wurde.
+		FireEngineHP = 6800,
 		FireEngineCount = 2,
 		FireEngineSpeed = 16,
-		FirefightingRate = 30,
+		-- ===== So viel, dass Ignorieren etwas kostet =====
+		-- Ein brennendes Gebäude gibt 60 Prozent seiner Energie über die Brenndauer ab: bei
+		-- 2 000 Lebenspunkten sind das 2 692 Energie über 30 Sekunden, also rund 90 je
+		-- Sekunde. Zwei Fahrzeuge zu je 30 schafften davon zwei Drittel.
+		--
+		-- Im Village ist es genau austariert: zwei Fahrzeuge zu je 8 gegen 15.9 je Sekunde --
+		-- sie neutralisieren ein Feuer vollständig. Genau das ist laut Spezifikation ihre
+		-- Aufgabe, den Ertrag spürbar zu drücken. 45 stellt dasselbe Verhältnis her.
+		--
+		-- Damit war die Feuerwehr doppelt folgenlos: sie fiel in elf Schlägen (siehe
+		-- FireEngineHP darüber, inzwischen korrigiert), UND sie zu ignorieren kostete kaum
+		-- etwas. Das eine ohne das andere zu beheben hätte die Hälfte stehen gelassen.
+		FirefightingRate = 45,
 		FirefightingRange = 50,
-		FireEngineDestroyAlertValue = 50,
+		-- FireEngineDestroyAlertValue ist ENTFALLEN: besiegte Verteidigung darf die Lage
+		-- nicht verschärfen (Specs/BalancingSpec, balancing.defense-does-not-escalate). Der
+		-- Aufrufer in FireEngineController verträgt das Fehlen -- addCityAlert steigt bei
+		-- fehlendem Betrag aus.
 
-		WaterTowerEfficiencyBonus = 0, -- SmallTown hat (aktuell) keinen eigenen Wasserturm
+		-- Brasshaven HAT einen Wasserturm (SmallTown_WaterTower_L1), aber er ist Kulisse:
+		-- bewusst ohne Wirkung auf die Löschrate der Feuerwehr. Hier stand vorher "hat
+		-- aktuell keinen eigenen Wasserturm" -- das war schlicht falsch und hätte beim
+		-- nächsten Durchgang zu der Frage geführt, warum das Ding dort steht.
+		--
+		-- Soll er wirken wie im Village, braucht es zweierlei: diesen Wert über null UND das
+		-- Attribut HeatEffect = "WaterTower" am Modell in Studio. Eines allein tut nichts.
+		WaterTowerEfficiencyBonus = 0,
 
 		AlertDecayDelay = 20,
-		AlertDecayRate = 12,
+		-- Von 12 auf 3: bei den neuen Schwellen hätte 12/s den Fortschritt bis Stufe 3 in
+		-- zwei Minuten Abwesenheit gelöscht. Genau dieser Fehler ist im Village schon
+		-- einmal aufgefallen -- ein Trainingsausflug darf eine Stadt nicht zurücksetzen.
+		AlertDecayRate = 3,
 
 		BarricadeScale = 1.5,
-		ShieldMaxHealth = 7000,
+		-- Sechzig Schläge, vier Fokusstrahlen. Der Generator ist der Schwachpunkt und fällt
+		-- in fünfzehn -- wer ihn findet, spart sich die Wand.
+		--
+		-- IM SPIEL BESTÄTIGT am 18.09.2026: "Ich musste Zeit investieren, lange. Es hat
+		-- sich aber nicht unnötig blöd angefühlt." Das ist die einzige Art Nachweis, die es
+		-- für diese Länge gibt -- sie steht hier, damit die 8 000 nicht bei der nächsten
+		-- Runde als "zu zäh" gekürzt werden. Wer sie ändert, verwirft ein Spielurteil, kein
+		-- Rechenergebnis.
+		ShieldMaxHealth = 8000,
 		ShieldRegenDelay = 8,
 		ShieldRegenRate = 0.05,
-		GeneratorMaxHealth = 1000,
-		ElectricDamage = 30, -- Schaden pro Stromschlag am Elektrozaun (skaliert mit Stadtgrösse)
+		GeneratorMaxHealth = 2000,
+		-- ===== Wie hart die Stadt zurückschlägt =====
+		-- Das Grundmass: der Ironpulse hat 200 Leben und soll rund 32 Treffer des
+		-- gewöhnlichen Verteidigers aushalten -- also gut 6 Schaden je Treffer. Die Werte
+		-- unten behalten die bisherigen Verhältnisse zwischen den Systemen und sind nur auf
+		-- dieses Mass heruntergerechnet; vorher lagen sie bei 25 bis 35, was sieben Treffer
+		-- bedeutet hätte.
+		--
+		-- Der Guardian ist die Ausnahme und soll es sein: seine Faust nimmt in sechzehn
+		-- Treffern alles, ist also doppelt so gefährlich wie der Rest.
+		--
+		-- Schaden wird ungemindert über Humanoid:TakeDamage angewandt -- es gibt keine
+		-- Rüstung und keine Abschwächung, die Rechnung ist also direkt.
+		ElectricDamage = 6, -- Stromschlag am Elektrozaun -- 33 Treffer
 		EscalationStepSize = 5,
 		MaxActiveReactiveBarricades = 3,
 		ReactiveSpawnSearchRadius = 150,
 		FlankAutoDetectRadius = 40,
 
 		-- ===== Stufe 4: Militär (Panzer, Raketenwerfer, Militär-Helikopter) =====
-		AlertThresholdLevel4 = 6400,
+		-- 1.4 Durchgänge. Danach ist alles Besiegbare besiegt und City Broken fällt mit dem
+		-- Ende der Level-Strecke zusammen.
+		AlertThresholdLevel4 = 2200,
 		MaxAlertLevel = 4, -- Konzept-Vorgabe: nicht jede Stadt kennt alle Alert-Stufen
 		-- Ab Kapitel II erreicht SmallTown Stufe 5 samt Guardian. Wie beim Village gilt:
 		-- ohne AlertThresholdLevel5 bleibt es faktisch bei 4, bis die Schwelle gesetzt ist.
@@ -172,31 +334,54 @@ CityAlertConfig.Cities = {
 		MilitaryTankCount = 2,
 		MilitaryRocketLauncherCount = 1,
 		MilitaryHelicopterCount = 1,
-		TankHP = 15000,
-		TankDamage = 30,
+		-- 75 / 55 / 45 Schläge beim Eintritt, also 5 / 3.7 / 3 Fokusstrahlen. Bewusst NICHT
+		-- aus den Village-Zahlen fortgeschrieben: dessen Militär ist nie gespielt worden,
+		-- das Village endet in Kapitel I bei Alarmstufe 3. 278 Schläge für einen Panzer,
+		-- wie sie sich dort ergäben, wären ein Ausdauertest und kein Kampf.
+		TankHP = 10000,
+		TankDamage = 6, -- 33 Treffer
 		TankAttackRange = 65,
 		TankSpeed = 13,
-		RocketLauncherHP = 9000,
-		RocketLauncherDamage = 35,
+		RocketLauncherHP = 7500,
+		RocketLauncherDamage = 7, -- 28 Treffer -- der härteste des Militärs
 		RocketLauncherAttackRange = 110,
-		HelicopterHP = 7500,
-		HelicopterDamage = 25,
+		HelicopterHP = 6000,
+		HelicopterDamage = 5, -- 40 Treffer -- er stört mehr, als er wehtut
 		HelicopterAttackRange = 85,
 		HelicopterSpeed = 19,
 
 		-- ===== Stufe 5: Guardian =====
 		-- Erreichbar erst ab Kapitel II (siehe MaxAlertLevelByChapter oben) -- in Kapitel I
 		-- bleibt diese Stadt darunter, die Werte liegen dann brach.
-		AlertThresholdLevel5 = 25600, -- setzt das 4x-Muster der Stufen 2-4 fort
-		GuardianHP = 60000,
-		GuardianShieldHP = 24000, -- 40% der HP, wie bei LargeCity und MegaCity
+		AlertThresholdLevel5 = 3500, -- 2.2 Durchgänge, knapp hinter Stufe 4
+		-- ===== Was der Guardian einbringt =====
+		-- FEST, nicht aus seinen Lebenspunkten gerechnet -- so verlangt es die Spec
+		-- (balancing.every-defeat-pays): sein Wert soll für eine zügige Entwicklung fast
+		-- notwendig erscheinen, ohne sie hart zu blockieren, und er darf NICHT dynamisch bis
+		-- zum nächsten Level auffüllen. Nur so bleiben andere Spielweisen möglich.
+		--
+		-- 80 000 sind rund 14 Prozent der Strecke von Level 10 auf 20, oder knapp zwei
+		-- Drittel eines Levelaufstiegs am oberen Ende. Gemessen an der Arbeit: ein voller
+		-- Durchgang durch alle 59 Teile gibt gemessen 319 274 -- der Guardian ist also ein
+		-- Viertel davon, für einen einzigen Kampf. Das ist deutlich, ohne alles andere
+		-- überflüssig zu machen.
+		--
+		-- Die Münzen sind bewusst kein gleicher Anteil: der Preis der nächsten Stufe
+		-- (Epochbreaker, 400) ist ohnehin schnell zusammen. Geld ist hier eine Zugabe, die
+		-- Erfahrung ist der Grund.
+		GuardianXPReward = 80000,
+		GuardianCoinsReward = 1200,
+		-- 220 Schläge plus 90 auf den Schild, zusammen rund 21 Fokusstrahlen. Der Guardian
+		-- ist der längste Kampf der Stadt und soll es sein -- aber ein Kampf, kein Belagern.
+		GuardianHP = 30000,
+		GuardianShieldHP = 12000, -- 40% der HP, wie bei LargeCity und MegaCity
 		GuardianShieldRegenDelay = 10,
 		GuardianShieldRegenRate = 0.005,
-		GuardianImpactFistDamage = 70,
+		GuardianImpactFistDamage = 12, -- 16 Treffer -- doppelt so gefährlich wie der Rest
 		GuardianImpactFistCooldown = 3,
 		GuardianImpactFistRange = 14,
 		GuardianImpactFistKnockback = 112,
-		GuardianRepulsorDamage = 35,
+		GuardianRepulsorDamage = 6, -- 33 Treffer, dafür im Umkreis und mit Rückstoss
 		GuardianRepulsorCooldown = 6,
 		GuardianRepulsorRadius = 22,
 		GuardianRepulsorKnockback = 150,
@@ -205,8 +390,9 @@ CityAlertConfig.Cities = {
 	},
 
 	City = {
-		AlertThresholdLevel2 = 1600,
-		AlertThresholdLevel3 = 6400,
+		ExpectedSkinStage = 3, -- Epochbreaker; die Spec verlangt die Angabe je Stadt
+		AlertThresholdLevel2 = 28000, -- 0.39 Durchgaenge
+		AlertThresholdLevel3 = 65000, -- 0.90 Durchgaenge
 		AlertPerHP = 0.25,
 
 		FireEngineHP = 8000,
@@ -214,7 +400,9 @@ CityAlertConfig.Cities = {
 		FireEngineSpeed = 18,
 		FirefightingRate = 140,
 		FirefightingRange = 55,
-		FireEngineDestroyAlertValue = 180,
+		-- FireEngineDestroyAlertValue ist ENTFALLEN (war 180), wie in SmallTown: besiegte
+		-- Verteidigung darf die Lage nicht verschärfen (Specs/BalancingSpec,
+		-- balancing.defense-does-not-escalate).
 
 		WaterTowerEfficiencyBonus = 0,
 
@@ -233,7 +421,7 @@ CityAlertConfig.Cities = {
 		FlankAutoDetectRadius = 40,
 
 		-- ===== Stufe 4: Militär (Panzer, Raketenwerfer, Militär-Helikopter) =====
-		AlertThresholdLevel4 = 25600,
+		AlertThresholdLevel4 = 100000, -- 1.38 Durchgaenge
 		MaxAlertLevel = 5, -- Konzept-Vorgabe: nicht jede Stadt kennt alle Alert-Stufen
 		MilitaryTankCount = 2,
 		MilitaryRocketLauncherCount = 2,
@@ -252,9 +440,33 @@ CityAlertConfig.Cities = {
 
 		-- ===== Stufe 5: Guardian (erste Stadt mit Guardian -- Village/SmallTown haben
 		-- laut Konzept keinen) =====
-		AlertThresholdLevel5 = 102400, -- konsistent zum bestehenden 4x-Muster (1600 -> 6400 -> 25600 -> 102400)
-		GuardianHP = 180000,
-		GuardianShieldHP = 72000,
+		AlertThresholdLevel5 = 160000, -- 2.20 Durchgaenge
+		-- ===== Was der Guardian einbringt =====
+		-- FEST, nicht zur Laufzeit gerechnet -- so verlangt es die Spec
+		-- (balancing.every-defeat-pays). Bis hierher gab dieser Guardian GAR NICHTS: ein
+		-- Kampf ohne Ertrag, den zu umgehen die vernuenftige Spielweise war.
+		--
+		-- Hergeleitet aus dem einzigen durchgerechneten Fall, Brasshaven: dort sind 30 000
+		-- Lebenspunkte 80 000 Erfahrung wert, also 35 mal HP^0.75 -- dieselbe gedaempfte
+		-- Kurve wie bei Gebaeuden und Verteidigung, nur hoeher angesetzt. Gut anderthalb Levelaufstiege auf dieser Hoehe der Kurve.
+		--
+		-- VORLAEUFIG: diese Stadt ist noch nicht durchgespielt. Die Zahl ist eine
+		-- begruendete Ausgangsgroesse, keine gemessene -- sie gehoert nachgeschaerft, sobald
+		-- die Stadt tatsaechlich gespielt wird.
+		-- ===== Der Guardian muss eine Herausforderung bleiben =====
+		-- Massstab ist Brasshaven, die einzige durchgerechnete Stadt: 310 Schlaege (rund 21
+		-- Fokusstrahlen) bis der Guardian faellt, und 16 Fausttreffer bis der Spieler faellt
+		-- -- doppelt so gefaehrlich wie alles andere in der Stadt.
+		--
+		-- Der Eintrittsschaden hier ist 614 je Schlag (Trainingskappe auf Level 20 mal
+		-- DamagePercent). Vorher: 411 Schlaege, aber die Faust toetete in ZWEI Treffern.
+		--
+		-- Die alten Werte hingen an nichts: in allen drei oberen Staedten stand derselbe
+		-- kopierte Satz "bei 2200 Schaden je Schlag".
+		GuardianXPReward = 254000,
+		GuardianCoinsReward = 3800,
+		GuardianHP = 140000,
+		GuardianShieldHP = 56000,
 		GuardianShieldRegenDelay = 10,
 		-- Anteil des MAXIMALSCHILDS pro Sekunde. War 0.04 und damit staerker als der
 		-- Spielerschaden: bei 2200 Schaden je Schlag regenerierte der Schild mit rund
@@ -262,11 +474,11 @@ CityAlertConfig.Cities = {
 		-- Schildfortschritt, und der Kampf war nach einer Unterbrechung praktisch
 		-- zurueckgesetzt. Jetzt 0.005 -- eine Achtelung.
 		GuardianShieldRegenRate = 0.005,
-		GuardianImpactFistDamage = 188,
+		GuardianImpactFistDamage = 25,
 		GuardianImpactFistCooldown = 3,
 		GuardianImpactFistRange = 14,
 		GuardianImpactFistKnockback = 112,
-		GuardianRepulsorDamage = 94,
+		GuardianRepulsorDamage = 12,
 		GuardianRepulsorCooldown = 6,
 		GuardianRepulsorRadius = 22,
 		GuardianRepulsorKnockback = 150,
@@ -275,8 +487,9 @@ CityAlertConfig.Cities = {
 	},
 
 	LargeCity = {
-		AlertThresholdLevel2 = 6400,
-		AlertThresholdLevel3 = 25600,
+		ExpectedSkinStage = 4, -- Chronovore; die Spec verlangt die Angabe je Stadt
+		AlertThresholdLevel2 = 19000, -- 0.38 Durchgaenge
+		AlertThresholdLevel3 = 45000, -- 0.91 Durchgaenge
 		AlertPerHP = 0.18,
 
 		FireEngineHP = 50000,
@@ -284,7 +497,9 @@ CityAlertConfig.Cities = {
 		FireEngineSpeed = 20,
 		FirefightingRate = 700,
 		FirefightingRange = 60,
-		FireEngineDestroyAlertValue = 650,
+		-- FireEngineDestroyAlertValue ist ENTFALLEN (war 650), wie in SmallTown: besiegte
+		-- Verteidigung darf die Lage nicht verschärfen (Specs/BalancingSpec,
+		-- balancing.defense-does-not-escalate).
 
 		WaterTowerEfficiencyBonus = 0,
 
@@ -303,7 +518,7 @@ CityAlertConfig.Cities = {
 		FlankAutoDetectRadius = 40,
 
 		-- ===== Stufe 4: Militär (Panzer, Raketenwerfer, Militär-Helikopter) =====
-		AlertThresholdLevel4 = 102400,
+		AlertThresholdLevel4 = 70000, -- 1.42 Durchgaenge
 		MaxAlertLevel = 5, -- Konzept-Vorgabe: nicht jede Stadt kennt alle Alert-Stufen
 		MilitaryTankCount = 3,
 		MilitaryRocketLauncherCount = 2,
@@ -328,9 +543,33 @@ CityAlertConfig.Cities = {
 		-- Ohne AlertThresholdLevel5 war Stufe 5 hier UNERREICHBAR, obwohl MaxAlertLevel
 		-- sie versprach -- die Stadt liess sich damit nicht abschliessen, denn die
 		-- CITY-BROKEN-Aufgabe "Guardian eliminated" setzt einen Guardian voraus.
-		AlertThresholdLevel5 = 409600, -- Level4: 102400 x4
-		GuardianHP = 540000,
-		GuardianShieldHP = 216000,
+		AlertThresholdLevel5 = 110000, -- 2.22 Durchgaenge
+		-- ===== Was der Guardian einbringt =====
+		-- FEST, nicht zur Laufzeit gerechnet -- so verlangt es die Spec
+		-- (balancing.every-defeat-pays). Bis hierher gab dieser Guardian GAR NICHTS: ein
+		-- Kampf ohne Ertrag, den zu umgehen die vernuenftige Spielweise war.
+		--
+		-- Hergeleitet aus dem einzigen durchgerechneten Fall, Brasshaven: dort sind 30 000
+		-- Lebenspunkte 80 000 Erfahrung wert, also 35 mal HP^0.75 -- dieselbe gedaempfte
+		-- Kurve wie bei Gebaeuden und Verteidigung, nur hoeher angesetzt. Die Daempfung laesst den Guardian hier hinter die Levelkurve zuruecktreten -- bewusst: er soll die Entwicklung nicht ersetzen.
+		--
+		-- VORLAEUFIG: diese Stadt ist noch nicht durchgespielt. Die Zahl ist eine
+		-- begruendete Ausgangsgroesse, keine gemessene -- sie gehoert nachgeschaerft, sobald
+		-- die Stadt tatsaechlich gespielt wird.
+		-- ===== Der Guardian muss eine Herausforderung bleiben =====
+		-- Massstab ist Brasshaven, die einzige durchgerechnete Stadt: 310 Schlaege (rund 21
+		-- Fokusstrahlen) bis der Guardian faellt, und 16 Fausttreffer bis der Spieler faellt
+		-- -- doppelt so gefaehrlich wie alles andere in der Stadt.
+		--
+		-- Der Eintrittsschaden hier ist 1 780 je Schlag (Trainingskappe auf Level 30 mal
+		-- DamagePercent). Vorher: 425 Schlaege, und die Faust toetete in eineinhalb Treffern.
+		--
+		-- Die alten Werte hingen an nichts: in allen drei oberen Staedten stand derselbe
+		-- kopierte Satz "bei 2200 Schaden je Schlag".
+		GuardianXPReward = 550000,
+		GuardianCoinsReward = 8200,
+		GuardianHP = 390000,
+		GuardianShieldHP = 160000,
 		GuardianShieldRegenDelay = 10,
 		-- Anteil des MAXIMALSCHILDS pro Sekunde. War 0.04 und damit staerker als der
 		-- Spielerschaden: bei 2200 Schaden je Schlag regenerierte der Schild mit rund
@@ -338,11 +577,11 @@ CityAlertConfig.Cities = {
 		-- Schildfortschritt, und der Kampf war nach einer Unterbrechung praktisch
 		-- zurueckgesetzt. Jetzt 0.005 -- eine Achtelung.
 		GuardianShieldRegenRate = 0.005,
-		GuardianImpactFistDamage = 500,
+		GuardianImpactFistDamage = 50,
 		GuardianImpactFistCooldown = 3,
 		GuardianImpactFistRange = 14,
 		GuardianImpactFistKnockback = 112,
-		GuardianRepulsorDamage = 250,
+		GuardianRepulsorDamage = 25,
 		GuardianRepulsorCooldown = 6,
 		GuardianRepulsorRadius = 22,
 		GuardianRepulsorKnockback = 150,
@@ -351,8 +590,9 @@ CityAlertConfig.Cities = {
 	},
 
 	MegaCity = {
-		AlertThresholdLevel2 = 25600,
-		AlertThresholdLevel3 = 102400,
+		ExpectedSkinStage = 5, -- Aeon Tyrant; die Spec verlangt die Angabe je Stadt
+		AlertThresholdLevel2 = 5400000, -- 0.39 Durchgaenge
+		AlertThresholdLevel3 = 12000000, -- 0.87 Durchgaenge
 		AlertPerHP = 0.12,
 
 		FireEngineHP = 300000,
@@ -360,7 +600,9 @@ CityAlertConfig.Cities = {
 		FireEngineSpeed = 22,
 		FirefightingRate = 3200,
 		FirefightingRange = 65,
-		FireEngineDestroyAlertValue = 2400,
+		-- FireEngineDestroyAlertValue ist ENTFALLEN (war 2400), wie in SmallTown: besiegte
+		-- Verteidigung darf die Lage nicht verschärfen (Specs/BalancingSpec,
+		-- balancing.defense-does-not-escalate).
 
 		WaterTowerEfficiencyBonus = 0, -- Megacity hat einen Reaktor statt Wasserturm -- kein Bonus hier
 
@@ -379,7 +621,7 @@ CityAlertConfig.Cities = {
 		FlankAutoDetectRadius = 40,
 
 		-- ===== Stufe 4: Militär (Panzer, Raketenwerfer, Militär-Helikopter) =====
-		AlertThresholdLevel4 = 409600,
+		AlertThresholdLevel4 = 20000000, -- 1.45 Durchgaenge
 		MaxAlertLevel = 5, -- Konzept-Vorgabe: nicht jede Stadt kennt alle Alert-Stufen
 		MilitaryTankCount = 4,
 		MilitaryRocketLauncherCount = 3,
@@ -404,9 +646,33 @@ CityAlertConfig.Cities = {
 		-- Ohne AlertThresholdLevel5 war Stufe 5 hier UNERREICHBAR, obwohl MaxAlertLevel
 		-- sie versprach -- die Stadt liess sich damit nicht abschliessen, denn die
 		-- CITY-BROKEN-Aufgabe "Guardian eliminated" setzt einen Guardian voraus.
-		AlertThresholdLevel5 = 1638400, -- Level4: 409600 x4
-		GuardianHP = 1620000,
-		GuardianShieldHP = 648000,
+		AlertThresholdLevel5 = 31000000, -- 2.25 Durchgaenge
+		-- ===== Was der Guardian einbringt =====
+		-- FEST, nicht zur Laufzeit gerechnet -- so verlangt es die Spec
+		-- (balancing.every-defeat-pays). Bis hierher gab dieser Guardian GAR NICHTS: ein
+		-- Kampf ohne Ertrag, den zu umgehen die vernuenftige Spielweise war.
+		--
+		-- Hergeleitet aus dem einzigen durchgerechneten Fall, Brasshaven: dort sind 30 000
+		-- Lebenspunkte 80 000 Erfahrung wert, also 35 mal HP^0.75 -- dieselbe gedaempfte
+		-- Kurve wie bei Gebaeuden und Verteidigung, nur hoeher angesetzt. Wie bei LargeCity traegt der Guardian hier nur noch einen Bruchteil eines Levels bei.
+		--
+		-- VORLAEUFIG: diese Stadt ist noch nicht durchgespielt. Die Zahl ist eine
+		-- begruendete Ausgangsgroesse, keine gemessene -- sie gehoert nachgeschaerft, sobald
+		-- die Stadt tatsaechlich gespielt wird.
+		-- ===== Der Guardian muss eine Herausforderung bleiben =====
+		-- Massstab ist Brasshaven, die einzige durchgerechnete Stadt: 310 Schlaege (rund 21
+		-- Fokusstrahlen) bis der Guardian faellt, und 16 Fausttreffer bis der Spieler faellt
+		-- -- doppelt so gefaehrlich wie alles andere in der Stadt.
+		--
+		-- Der Eintrittsschaden hier ist 34 568 je Schlag (Trainingskappe auf Level 40 mal
+		-- DamagePercent). Vorher: nur 66 Schlaege -- der letzte Guardian des Spiels war der leichteste.
+		--
+		-- Die alten Werte hingen an nichts: in allen drei oberen Staedten stand derselbe
+		-- kopierte Satz "bei 2200 Schaden je Schlag".
+		GuardianXPReward = 5100000,
+		GuardianCoinsReward = 77000,
+		GuardianHP = 7700000,
+		GuardianShieldHP = 3100000,
 		GuardianShieldRegenDelay = 10,
 		-- Anteil des MAXIMALSCHILDS pro Sekunde. War 0.04 und damit staerker als der
 		-- Spielerschaden: bei 2200 Schaden je Schlag regenerierte der Schild mit rund
@@ -414,11 +680,11 @@ CityAlertConfig.Cities = {
 		-- Schildfortschritt, und der Kampf war nach einer Unterbrechung praktisch
 		-- zurueckgesetzt. Jetzt 0.005 -- eine Achtelung.
 		GuardianShieldRegenRate = 0.005,
-		GuardianImpactFistDamage = 1375,
+		GuardianImpactFistDamage = 100,
 		GuardianImpactFistCooldown = 3,
 		GuardianImpactFistRange = 14,
 		GuardianImpactFistKnockback = 112,
-		GuardianRepulsorDamage = 690,
+		GuardianRepulsorDamage = 50,
 		GuardianRepulsorCooldown = 6,
 		GuardianRepulsorRadius = 22,
 		GuardianRepulsorKnockback = 150,
@@ -441,7 +707,9 @@ CityAlertConfig.Cities = {
 		FireEngineSpeed = 14,
 		FirefightingRate = 60,
 		FirefightingRange = 30,
-		FireEngineDestroyAlertValue = 20,
+		-- FireEngineDestroyAlertValue ist ENTFALLEN (war 20), wie in SmallTown: besiegte
+		-- Verteidigung darf die Lage nicht verschärfen (Specs/BalancingSpec,
+		-- balancing.defense-does-not-escalate).
 
 		WaterTowerEfficiencyBonus = 0,
 
@@ -564,6 +832,43 @@ CityAlertConfig.DefaultCity = {
 
 function CityAlertConfig.GetCityConfig(cityName)
 	return CityAlertConfig.Cities[cityName] or CityAlertConfig.DefaultCity
+end
+
+-- ===== Was ein besiegtes Verteidigungssystem einbringt =====
+-- Die Spec verlangt, dass JEDES besiegbare System mit Erfahrung UND Geld belohnt: Feuerwehr,
+-- Barrikaden, Militär, Guardian (Specs/BalancingSpec, balancing.every-defeat-pays). Der
+-- Grund steht dort: jede Stufe kostet Zeit und Risiko, und keine davon zu belohnen macht das
+-- Ausschalten zur reinen Pflichtübung.
+--
+-- ===== Warum gerechnet und nicht je Stadt gesetzt =====
+-- Vier Systeme mal sechs Städte wären vierundzwanzig Zahlenpaare, die jemand im Gleichschritt
+-- halten müsste -- und sie hingen ohnehin alle an denselben Lebenspunkten, die weiter oben
+-- schon stehen. Also aus den Lebenspunkten abgeleitet: wer die HP einer Stadt neu setzt,
+-- bekommt die passende Belohnung geschenkt.
+--
+-- Die Formel ist DIESELBE wie bei den Gebäuden (HouseHandler, rewardFromHP): die Belohnung
+-- wächst mit HP^0.75. Der Exponent unter eins bremst die Erträge bei riesigen Zielen -- ohne
+-- ihn gäbe der MegaCity-Panzer absurde Zahlen.
+--
+-- Der Aufschlag von einem halben ist die einzige eigene Entscheidung hier: ein
+-- Verteidigungssystem zu besiegen kostet mehr als ein Gebäude derselben Grösse einzureissen,
+-- weil es sich wehrt. Das soll man sehen.
+--
+-- NICHT hierüber läuft der Guardian: sein Wert ist laut Spec FEST und steht je Stadt
+-- (GuardianXPReward / GuardianCoinsReward). Er soll für eine zügige Entwicklung fast
+-- notwendig erscheinen, und das lässt sich nicht aus seinen Lebenspunkten ableiten.
+local DEFEAT_REWARD_EXPONENT = 0.75
+local DEFEAT_XP_SCALE = 15 -- wie HouseHandler.XP_SCALE
+local DEFEAT_COINS_SCALE = 1.2 -- wie HouseHandler.COINS_SCALE
+local DEFEAT_RISK_BONUS = 1.5
+
+function CityAlertConfig.DefeatReward(maxHealth)
+	local hp = tonumber(maxHealth) or 0
+	if hp <= 0 then
+		return 0, 0
+	end
+	local basis = (hp ^ DEFEAT_REWARD_EXPONENT) * DEFEAT_RISK_BONUS
+	return math.floor(basis * DEFEAT_XP_SCALE), math.floor(basis * DEFEAT_COINS_SCALE)
 end
 
 return CityAlertConfig

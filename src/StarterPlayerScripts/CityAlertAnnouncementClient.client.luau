@@ -44,13 +44,10 @@ if not cityAlertValues then
 	return
 end
 
-local CITY_DISPLAY_NAMES = {
-	Village = "Village",
-	SmallTown = "Small Town",
-	City = "City",
-	LargeCity = "Large City",
-	MegaCity = "Megacity",
-}
+-- Hier stand eine Tabelle mit den Anzeigenamen der Staedte, die NIRGENDS gelesen wurde.
+-- Beim Umbenennen aller fuenf Staedte waere sie stillschweigend auf dem alten Stand
+-- geblieben und haette beim naechsten Leser falsche Namen geliefert. Die Anzeigenamen
+-- stehen jetzt einmal in CityIdentity.
 
 -- ===== Pro-Level-Persönlichkeit ===== Sound-IDs sind teilweise Platzhalter (leer) --
 -- bitte bei Gelegenheit mit echten Sound-IDs befüllen (Dispatch-Funk, Polizei-Alarm,

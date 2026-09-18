@@ -75,6 +75,28 @@ HelpConfig.Sections = {
 		},
 		diagramType = "energy",
 	},
+	-- ===== Die fünf Energien, nicht die Spezialenergie =====
+	-- Zwei verschiedene Dinge, die beide "Energie" heissen. Der Abschnitt darüber meint die
+	-- Spezialenergie: eine einzelne Leiste, die Fokus und Fläche bezahlt und sich im Kampf
+	-- wieder füllt. Hier geht es um die FÜNF dauerhaften Ressourcen, die beim Absorbieren
+	-- entstehen und die Talente bezahlen.
+	--
+	-- Sie standen bisher nirgends in der Hilfe, obwohl der Talentbaum sie voraussetzt: wer
+	-- nicht weiss, dass ein Talent eine BESTIMMTE Energie kostet, sammelt die falsche.
+	{
+		id = "energytypes",
+		icon = "🔋",
+		title = "Energy Types",
+		summary = "Five permanent resources you collect by absorbing. Separate from your Special Energy bar and from Heat -- and each one pays for different talents.",
+		points = {
+			"Every building carries one type. What you tear down decides what you collect.",
+			"Talents are bought with a SPECIFIC type, not from a shared pool -- check the tree before you pick a target.",
+			"☢️ Radiation is the exception: it buys no talents, it triggers mutations. Collect 100 in one run and one fires.",
+			"Radiation never drops in the Village and gets likelier with every city tier -- from 0.1% in Brasshaven up to 5% in Aeon Prime.",
+			"A world event every 15 minutes boosts one type. 'Reactor Meltdown' multiplies the Radiation chance -- the moment to go hunting for it.",
+		},
+		diagramType = "energytypes",
+	},
 	{
 		id = "factions",
 		icon = "🎭",

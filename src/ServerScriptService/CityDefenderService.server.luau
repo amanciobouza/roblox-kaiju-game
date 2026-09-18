@@ -800,6 +800,20 @@ local function damageGuardian(cityName, amount, attackerPlayer)
 		-- Achievements: "Ersten Guardian besiegt".
 		-- Lebensstatistik. Im Mehrspielerbetrieb zaehlt der LETZTE Treffer: attackerPlayer
 		-- ist der, dessen Schaden den Guardian auf 0 gebracht hat.
+		-- ===== Die Belohnung des Guardians =====
+		-- Fest aus der Config, NICHT aus seinen Lebenspunkten -- siehe GuardianXPReward
+		-- dort. Städte ohne die beiden Werte zahlen nichts; das ist sichtbar als bekannte
+		-- Abweichung im Spec-Prüfer und nicht still.
+		if attackerPlayer then
+			local config = CityAlertConfig.GetCityConfig(cityName)
+			if _G.AwardXP and config.GuardianXPReward then
+				_G.AwardXP(attackerPlayer, config.GuardianXPReward)
+			end
+			if _G.AwardCoins and config.GuardianCoinsReward then
+				_G.AwardCoins(attackerPlayer, config.GuardianCoinsReward)
+			end
+		end
+
 		if attackerPlayer and _G.RecordStat then
 			_G.RecordStat(attackerPlayer, "GuardianDefeated")
 			_G.RecordStat(attackerPlayer, "GuardianDefeated." .. cityName)

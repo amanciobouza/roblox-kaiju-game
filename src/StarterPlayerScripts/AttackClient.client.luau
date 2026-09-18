@@ -7,12 +7,16 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
+local StageModels = require(ReplicatedStorage:WaitForChild("StageModels"))
 local UserInputService = game:GetService("UserInputService")
 local SoundService = game:GetService("SoundService")
 local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 local AttackEvent = RemoteEventUtils.GetOrCreate("AttackEvent")
+-- Meldet dem Server den Beginn eines Kaiju-Schlags, damit er den Cooldown des Spiels setzt
+-- (CombatHandler). Der Schaden kommt in diesem Fall vom Kampf-Adapter, nicht von AttackEvent.
+local PlayerPunchedEvent = RemoteEventUtils.GetOrCreate("PlayerPunchedEvent")
 local AttackCooldownValue = ReplicatedStorage:WaitForChild("AttackCooldown")
 local TrainClickEvent = RemoteEventUtils.GetOrCreate("TrainClickEvent")
 
@@ -32,6 +36,24 @@ local COMBO_WINDOW = 1.5
 
 local comboStep = 1 -- 1-indexiert, zeigt auf die NÄCHSTE zu spielende Animation
 local lastComboHitAt = 0
+
+-- ===== Weiche für das Kaiju-Modell =====
+-- Trägt der Spieler eine Kaiju-Stufe mit gebautem Modell, hängt an seiner Figur das Modell
+-- aus dem Workshop (siehe KaijuStageOneService). Das bringt seine eigene Kombo, seine
+-- eigene Trefferermittlung und ein eigenes RemoteEvent mit.
+--
+-- Dann darf der alte Weg NICHT zusätzlich laufen: AttackEvent würde alles im Umkreis noch
+-- einmal beschädigen, der Schlag zählte also doppelt. Und die Punch-Animation liefe auf
+-- einem Avatar, den der Installer unsichtbar geschaltet hat -- Aufwand ohne Bild.
+--
+-- Gesucht wird über StageModels, NICHT über einen festen Modellnamen: der ist je Stufe ein
+-- anderer. Hier stand einmal "Stage_1_Primal_Beast", und ab Stufe 2 lief der Schlag
+-- deshalb wieder über den alten Weg -- mit Schaden, aber ohne Animation des Rigs.
+local function kaijuAttackRemote()
+	local model = StageModels.FindEquipped(player.Character)
+	local remote = model and model:FindFirstChild("RequestAttack")
+	return (remote and remote:IsA("RemoteEvent")) and remote or nil
+end
 
 local function getNextComboAnimation()
 	local now = Workspace:GetServerTimeNow()
@@ -132,6 +154,26 @@ local function performArmTrainingSwing()
 	-- Sound am Amboss) laufen weiterhin über TrainClickEvent -- hier direkt gefeuert,
 	-- damit der Combo-Schritt garantiert exakt zu der Animation passt, die JETZT
 	-- gerade gespielt wird (kein Timing-Risiko zwischen zwei separaten Scripts).
+	-- ===== Auch an der Schmiede gehört die Bewegung dem Rig =====
+	-- Hier lief bisher immer die alte Punch-Animation -- auf einem Avatar, den der Installer
+	-- unsichtbar geschaltet hat. An der Trainingsstation stand die Figur deshalb still,
+	-- während die Funken flogen.
+	--
+	-- Der Schlag des Rigs richtet hier keinen Schaden an: der Adapter sucht Gebäude mit dem
+	-- KaijuHouse-Tag, und im Sanctuary gibt es keine. Es bleibt bei der Bewegung, genau wie
+	-- es beim Training sein soll.
+	local kaijuRemote = kaijuAttackRemote()
+	if kaijuRemote then
+		kaijuRemote:FireServer()
+		-- Der Combo-Schritt wird trotzdem weitergezählt: daran hängt der Trainingsfortschritt
+		-- (TrainingHandler wertet den dritten Schlag stärker).
+		local _, usedStep = getNextComboAnimation()
+		player:SetAttribute("CurrentComboStep", usedStep)
+		playSwingSound()
+		TrainClickEvent:FireServer(usedStep)
+		return
+	end
+
 	local usedStep = playAttackAnimation()
 	playSwingSound()
 	TrainClickEvent:FireServer(usedStep)
@@ -159,8 +201,23 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		-- Während des Cooldowns komplett ignorieren -- kein Sound, keine Animation, kein
 		-- Server-Event. Vorher hörte man den Schwung-Sound schon während der Cooldown
 		-- noch lief, obwohl der Server den Schaden ohnehin abgelehnt hätte.
+		--
+		-- Das gilt AUCH für den Kaiju-Schlag. Hier stand einmal, das Rig habe seinen eigenen
+		-- Takt und der Cooldown des Spiels gelte nicht -- und damit lief die Sanduhr am Knopf
+		-- nie an, während man beliebig schnell schlagen konnte. Zwei Takte auf einem Knopf
+		-- ergeben eine Anzeige, die lügt; also gilt der des Spiels, und das Rig bekommt den
+		-- Schlag erst danach.
 		local readyAt = player:GetAttribute("AttackReadyAt") or 0
 		if Workspace:GetServerTimeNow() < readyAt then
+			return
+		end
+
+		local kaijuRemote = kaijuAttackRemote()
+		if kaijuRemote then
+			-- Erst die Sperre melden, dann das Rig anstossen: so beginnt die Sanduhr im
+			-- selben Moment wie die Bewegung.
+			PlayerPunchedEvent:FireServer()
+			kaijuRemote:FireServer()
 			return
 		end
 
@@ -193,6 +250,12 @@ touchAttackButtonPressed.Event:Connect(function()
 		-- F-Taste). Touch-Spieler konnten dadurch beim Arm-Training NIE einen Treffer
 		-- auslösen. Jetzt wird dieselbe Funktion wie beim Tastatur/Maus-Weg genutzt.
 		performArmTrainingSwing()
+		return
+	end
+
+	local kaijuRemote = kaijuAttackRemote()
+	if kaijuRemote then
+		kaijuRemote:FireServer()
 		return
 	end
 

@@ -110,8 +110,8 @@ local function characterParts()
 	return character, root, humanoid
 end
 
--- Höhe eines Modells aus seinem Hüllquader. Für die Kamerahöhe: zwischen Baby Kaiju und
--- Radiant Apex liegt Faktor sechs, ein fester Wert kann nicht für beide stimmen.
+-- Höhe eines Modells aus seinem Hüllquader. Für die Kamerahöhe: zwischen Riftborn und
+-- Aeon Tyrant liegt Faktor fünf, ein fester Wert kann nicht für beide stimmen.
 local function modelHeight(model)
 	if not model then
 		return 10

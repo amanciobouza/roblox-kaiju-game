@@ -59,6 +59,8 @@ local DebugStartPrologueResultEvent = waitForRemote("DebugStartPrologueResultEve
 local DebugRevealArchiveEvent = waitForRemote("DebugRevealArchiveEvent")
 local DebugSetSessionTimeEvent = waitForRemote("DebugSetSessionTimeEvent")
 local DebugSetScaleEvent = waitForRemote("DebugSetScaleEvent")
+-- Blanker Avatar: siehe den Knopf weiter unten.
+local DebugPlainAvatarEvent = waitForRemote("DebugPlainAvatarEvent")
 
 player:SetAttribute("DebugMode", false)
 
@@ -192,6 +194,7 @@ local ORDER = {
 	SchalterA = 100, -- Partikel | Einsturz ueberspringen
 	SchalterB = 110, -- Telemetrie | Archiv
 	SchalterC = 120, -- Prolog starten | Spec-Pruefung
+	SchalterD = 125, -- Blanker Avatar
 
 	ShowdownKopf = 130,
 	ShowdownA = 140, -- erzwingen | Kurzdauer
@@ -979,6 +982,59 @@ skipCollapseButton.MouseButton1Click:Connect(function()
 	else
 		skipCollapseButton.Text = "🏚️ Einsturz: OFF"
 		skipCollapseButton.BackgroundColor3 = Color3.fromRGB(90, 90, 140)
+	end
+end)
+
+-- ===== Blanker Avatar =====
+-- Setzt die Figur auf den unveraenderten Roblox-Avatar zurueck: kein Kaiju-Modell, keine
+-- Skalierung. Die Frage, fuer die es das gibt, ist "liegt es am Rig oder am Spiel?" -- und
+-- die war bisher nur zu beantworten, indem man ENABLED in KaijuStageOneService umlegt, den
+-- Server neu startet und alle Spieler mitnimmt.
+--
+-- Der Schalter gilt nur fuer diesen Spieler und nur fuer diese Sitzung; gespeichert wird er
+-- nicht. Ein Klick laedt die Figur neu -- das ist der ehrlichste Weg, weil sich alles, was
+-- an ihr haengt, beim CharacterAdded ohnehin neu einrichtet.
+
+-- Eigene Zeile: in eine Zeile passen genau ZWEI Knoepfe zu halber Breite, und die
+-- Schalterreihe A hat mit Partikeln und Einsturz schon beide. Ein dritter landete
+-- ausserhalb des Rahmens und war schlicht nicht zu sehen.
+local schalterRowD = createButtonRow(ORDER.SchalterD, 40)
+
+local plainAvatarButton = Instance.new("TextButton")
+plainAvatarButton.Name = "PlainAvatarButton"
+plainAvatarButton.Size = halbeBreite()
+plainAvatarButton.LayoutOrder = 1
+plainAvatarButton.BackgroundColor3 = Color3.fromRGB(90, 90, 140)
+plainAvatarButton.Font = Enum.Font.FredokaOne
+plainAvatarButton.TextScaled = true
+plainAvatarButton.TextColor3 = Color3.new(1, 1, 1)
+plainAvatarButton.Text = "🧍 Avatar: OFF"
+plainAvatarButton.AutoButtonColor = true
+plainAvatarButton.Parent = schalterRowD
+applyComicStyle(plainAvatarButton, 10, 2)
+
+-- ===== Die Beschriftung folgt dem ECHTEN Zustand =====
+-- Sie hing vorher an einer eigenen Variablen, die bei jedem Klick umsprang -- auch dann,
+-- wenn der Server die Anfrage ablehnte (ohne gesetzten DebugMode tut er genau das). Der
+-- Knopf behauptete dann "ON", waehrend die Figur unveraendert dastand, und man suchte den
+-- Fehler an der falschen Stelle.
+--
+-- Jetzt zeigt er das Attribut, das der Server setzt. Damit kann er nicht mehr luegen: bleibt
+-- die Beschriftung nach einem Klick stehen, ist die Anfrage nicht durchgekommen -- und der
+-- Grund steht in der Ausgabe.
+local function zeichnePlainAvatar()
+	local an = player:GetAttribute("DebugPlainAvatar") == true
+	plainAvatarButton.Text = an and "🧍 Avatar: ON" or "🧍 Avatar: OFF"
+	plainAvatarButton.BackgroundColor3 = an and Color3.fromRGB(60, 140, 90)
+		or Color3.fromRGB(90, 90, 140)
+end
+
+player:GetAttributeChangedSignal("DebugPlainAvatar"):Connect(zeichnePlainAvatar)
+zeichnePlainAvatar()
+
+plainAvatarButton.MouseButton1Click:Connect(function()
+	if DebugPlainAvatarEvent then
+		DebugPlainAvatarEvent:FireServer(player:GetAttribute("DebugPlainAvatar") ~= true)
 	end
 end)
 

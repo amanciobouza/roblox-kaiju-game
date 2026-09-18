@@ -464,15 +464,21 @@ local function damageFireEngine(engine, amount, attackerPlayer)
 		end
 
 		if attackerPlayer then
-			-- Kleine Coin-Belohnung, bewusst KEINE grosse XP (laut Vorgabe) -- zählt aber
-			-- zum Zerstörungs-Combo des Spielers.
-			local leaderstats = attackerPlayer:FindFirstChild("leaderstats")
-			if leaderstats and leaderstats:FindFirstChild("Coins") then
-				local coinReward = math.max(math.floor((engine:GetAttribute("MaxHealth") or 0) * 0.05), 5)
-				leaderstats.Coins.Value += coinReward
-				if _G.RecordStat then
-					_G.RecordStat(attackerPlayer, "CoinsCollected", coinReward)
-				end
+			-- ===== Erfahrung UND Geld =====
+			-- Hier stand "bewusst KEINE grosse XP (laut Vorgabe)" und nur eine kleine
+			-- Münzgabe von fünf Prozent der Lebenspunkte. Die Vorgabe hat sich gedreht:
+			-- die Spec verlangt inzwischen ausdrücklich beides für jedes besiegbare
+			-- Verteidigungssystem (balancing.every-defeat-pays) -- ein Feuerwehrauto kostet
+			-- rund eine Minute, und eine Minute ohne Erfahrung ist eine Pflichtübung.
+			--
+			-- Die Höhe kommt aus CityAlertConfig.DefeatReward, damit alle vier Systeme
+			-- derselben Rechnung folgen und mit den Lebenspunkten der Stadt mitwachsen.
+			local xp, coins = CityAlertConfig.DefeatReward(engine:GetAttribute("MaxHealth"))
+			if _G.AwardXP then
+				_G.AwardXP(attackerPlayer, xp)
+			end
+			if _G.AwardCoins then
+				_G.AwardCoins(attackerPlayer, coins)
 			end
 
 			-- Zähler für Jaeger-Fraktions-Freischaltung (siehe FactionUnlockService.lua) --

@@ -332,15 +332,23 @@ git commit -am "Workshop-Submodul aktualisiert"
 
 Diese Punkte sind teils erschlossen und teils noch offen:
 
-- [ ] **Zwei wirkungslose `_G`-Funktionen**: `StopArmGauntletSession` und
-      `StopBodyCircuitSession` (je 2 Lesestellen in `TrainingHandler`). Beide werden
-      gelesen, aber **nirgends gesetzt**; die Lesestellen sind nil-geprüft und laufen
-      still ins Leere. **Wo die Setzer hingehören, ist inzwischen klar**: beide Stationen
-      (`TitanImpactGauntlet`, `TitanAssimilationCircuit`) werden von eigenen Skripten
-      *im Modell in Studio* gesteuert, die nicht im Repo liegen. Dort müssten die
-      Funktionen entstehen. Solange sie fehlen, bleibt die Station laut dem Kommentar an
-      der Lesestelle nach "Training verlassen" **besetzt hängen** und lässt sich nicht
-      neu starten -- das wäre im Spiel zu prüfen. (`GetTalentHeatCoolingBonus` war der dritte Fall und ist erledigt:
+- [ ] **`_G.StopArmGauntletSession` ohne Setzer** (2 Lesestellen in `TrainingHandler`).
+      Wird gelesen, aber im Repo **nirgends gesetzt**; die Lesestellen sind nil-geprüft und
+      laufen still ins Leere. Der Setzer gehört ins Skript des `TitanImpactGauntlet` –
+      *im Modell in Studio*, nicht im Repo. Solange er fehlt, bleibt die Station laut dem
+      Kommentar an der Lesestelle nach "Training verlassen" **besetzt hängen** und lässt
+      sich nicht neu starten -- das wäre im Spiel zu prüfen.
+
+      `StopBodyCircuitSession` stand hier einmal daneben und ist **erledigt**: das Skript
+      des `TitanAssimilationCircuit` (in Studio als `BodyTrainerRuntime` am
+      `BodyTrainingStation`-Model) setzt die Funktion. Das Muster dort ist die Vorlage für
+      den Gauntlet. Dabei ist am 14.09.2026 auch gleich ein Wettlauf aufgefallen: in
+      `runSource` gibt `RunService.Heartbeat:Wait()` nach, und in dieser Lücke kann
+      `finishSession` den `activePlayer` auf nil setzen -- alles danach im selben Durchlauf
+      lief ungeprüft weiter. Ein Setzer allein genügt also nicht; wer die Session von
+      aussen beenden kann, muss nach jedem Yield prüfen, ob sie noch läuft.
+
+      (`GetTalentHeatCoolingBonus` war der dritte Fall und ist erledigt:
       der Effekt hängt jetzt als Zweiteffekt an „Meltdown Mastery". Das dort im Kommentar
       genannte Talent „Titan Regeneration" hat es im Baum nie gegeben.)
 - [ ] **Achievement-Vergabe für den Altbestand**: 30 der 41 Achievements hängen an

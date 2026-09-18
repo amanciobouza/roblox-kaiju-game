@@ -65,6 +65,10 @@ function ParentGroupService.Init(dependencies)
 end
 
 -- ===== L3 ParentGroup Helpers =====================================================
+-- Eines dieser Attribute am Wurzelmodell macht es zur Gruppe. Die Liste steht hier
+-- EINMAL, damit Suche und Fehlermeldung nicht auseinanderlaufen können.
+local GRUPPEN_ATTRIBUTE = { "UsesSectionHealth", "SpawnAsSingleAsset" }
+
 -- Sucht für eine Sektion den gemeinsamen Asset-Root (z.B. RoadsideMotel_L3).
 local function resolveParentGroup(house)
 	if house:GetAttribute("RespawnMode") ~= "ParentGroup" then
@@ -73,12 +77,43 @@ local function resolveParentGroup(house)
 
 	local node = house.Parent
 	while node do
-		if node:IsA("Model") and (node:GetAttribute("UsesSectionHealth") == true or node:GetAttribute("SpawnAsSingleAsset") == true) then
-			return node
+		if node:IsA("Model") then
+			for _, attributName in ipairs(GRUPPEN_ATTRIBUTE) do
+				if node:GetAttribute(attributName) == true then
+					return node
+				end
+			end
 		end
 		node = node.Parent
 	end
 	return nil
+end
+
+-- Sagt bei einem Fehlschlag, WAS gesucht wurde und was die Vorfahren stattdessen tragen.
+--
+-- Ein in Studio von Hand getippter Attributname ist sonst unsichtbar: am Supermarkt stand
+-- am 18.09.2026 "UseSectionHealth" statt "UsesSectionHealth", und die Warnung sagte nur,
+-- dass nichts gefunden wurde -- nicht, dass ein Buchstabe fehlte. Wer die Liste der
+-- tatsächlich vorhandenen Attribute danebensieht, erkennt so einen Fehler sofort.
+function ParentGroupService.DescribeMissingGroup(house)
+	local zeilen = {}
+	local node = house.Parent
+	while node do
+		if node:IsA("Model") then
+			local namen = {}
+			for attributName in pairs(node:GetAttributes()) do
+				table.insert(namen, attributName)
+			end
+			table.sort(namen)
+			table.insert(zeilen, string.format("'%s' hat: %s", node.Name,
+				#namen > 0 and table.concat(namen, ", ") or "(keine Attribute)"))
+		end
+		node = node.Parent
+	end
+
+	return string.format("gesucht war '%s' = true an einem Vorfahren-Model -- gefunden: %s",
+		table.concat(GRUPPEN_ATTRIBUTE, "' oder '"),
+		#zeilen > 0 and table.concat(zeilen, " | ") or "(kein Model über dieser Sektion)")
 end
 
 -- Registriert ein Haus als Mitglied seiner ParentGroup (falls vorhanden) -- aufzurufen

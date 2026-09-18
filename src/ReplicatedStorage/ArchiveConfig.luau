@@ -61,10 +61,10 @@ ArchiveConfig.Categories = {
 -- aus SkinsConfig erzeugt werden.
 ArchiveConfig.PendingFactionSkins = {}
 for _, faction in ipairs(SkinsConfig.Factions) do
-	if (faction.PendingCount or 0) > 0 then
+	if faction.PendingStages and #faction.PendingStages > 0 then
 		table.insert(ArchiveConfig.PendingFactionSkins, {
 			faction = faction.Key,
-			count = faction.PendingCount,
+			stages = faction.PendingStages,
 			chapter = faction.Chapter,
 		})
 	end
@@ -280,18 +280,24 @@ ArchiveConfig.Entries = {
 -- Die Kaiju-Stufen kommen aus SkinsConfig, damit die Anzahl nicht an zwei Orten steht --
 -- kommt ein Skin dazu, wächst das Archiv von selbst mit.
 --
--- WICHTIG: Skins haben KEINE eigenen Modelle. SkinsConfig sagt es wörtlich ("Kein
--- Mesh-Tausch"): ein Skin ist Scale, Health, Damage und WalkSpeed, sonst nichts. Die
--- Vorschau zeigt deshalb den Standard-Avatar in der jeweiligen Grösse -- sechs Karten,
--- die sich nur in der Grösse unterscheiden. Sobald es echte Modelle gibt, wird hier aus
--- avatarScale ein Modellverweis.
+-- Jede Stufe nennt BEIDES: die Figur (falls es für sie ein echtes Modell gibt) und den
+-- Avatar in ihrer Grösse als Rückfall. Der Client fragt zuerst nach dem Modell und nimmt
+-- den Avatar nur, wenn keines da ist -- siehe StageModels.
+--
+-- Lange galt hier "Skins haben KEINE eigenen Modelle": ein Skin war Scale, Health, Damage
+-- und WalkSpeed, sonst nichts. Mit den Kaiju-Modellen stimmt das nicht mehr. Weil der
+-- Verweis aus SkinsConfig kommt und nicht aus einer zweiten Liste, wächst das Archiv von
+-- selbst mit, sobald eine weitere Stufe ein Modell bekommt.
 for _, skin in ipairs(SkinsConfig.Skins) do
 	table.insert(ArchiveConfig.Entries, {
 		id = "SkinKaiju" .. skin.Id, -- Id statt Name: der Anzeigename darf sich ändern
 		category = "Figures",
 		name = skin.Name,
 		hint = "Chapter I",
-		model = { avatarScale = skin.Scale },
+		model = {
+			figure = { faction = skin.Faction or "Kaiju", skinId = skin.Id },
+			avatarScale = skin.Scale,
+		},
 		-- Beschreibung aus SkinsConfig, nicht hier: derselbe Text steht auch im
 		-- Skin-Auswahl-Bildschirm, und zweimal gepflegt liefe er auseinander. "weakness"
 		-- bleibt bei Figuren leer -- eine Kaufstufe hat keine, sie ist schlicht besser als
@@ -305,12 +311,18 @@ end
 
 -- Jaeger und Ronin haben heute weder Skins noch ein eigenes Moveset. Die Plätze stehen
 -- trotzdem schon da, weil sie fest geplant sind -- als Fragezeichen ohne Silhouette.
+--
+-- Sie tragen jetzt ihre geplanten NAMEN statt "Jaeger 1" bis "Jaeger 5". Ein Name macht
+-- aus einem leeren Platz ein Versprechen; eine Nummer sagt nur, dass hier etwas fehlt.
+--
+-- Die `id` bleibt bewusst bei der Nummer: sie geht so in den Speicherstand und darf sich
+-- nicht ändern, wenn ein Name später doch noch einmal wechselt.
 for _, faction in ipairs(ArchiveConfig.PendingFactionSkins) do
-	for index = 1, faction.count do
+	for index, stageName in ipairs(faction.stages) do
 		table.insert(ArchiveConfig.Entries, {
 			id = "Skin" .. faction.faction .. index,
 			category = "Figures",
-			name = faction.faction .. " " .. index,
+			name = stageName,
 			hint = faction.chapter,
 			pending = true,
 		})

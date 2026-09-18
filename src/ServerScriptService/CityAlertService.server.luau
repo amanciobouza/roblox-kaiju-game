@@ -105,6 +105,27 @@ local function setCityLevel(cityName, newLevel)
 	if cityLevelValues[cityName] then
 		cityLevelValues[cityName].Value = newLevel
 	end
+
+	-- ===== Die Messung für Balance-Durchläufe =====
+	-- Ein Stufenwechsel wurde bisher nirgends gemeldet. Damit liess sich die einzige Frage,
+	-- die beim Balancieren zählt, nicht beantworten: WANN kommt eine Stufe, und nach wie
+	-- viel Zerstörung? Die Schwellen in CityAlertConfig sind in "Durchgängen" gedacht --
+	-- ohne diese Zeile bleibt das eine Rechnung auf dem Papier.
+	--
+	-- Ausgegeben wird der Fortschritt beim Wechsel und die Zeit seit dem ersten Punkt
+	-- dieser Eskalation. Beides zusammen sagt, ob die Stufe zu früh oder zu spät kommt.
+	if newLevel > oldLevel then
+		state.escalationStartedAt = state.escalationStartedAt or os.clock()
+		local config = CityAlertConfig.GetCityConfig(cityName)
+		print(string.format(
+			"[Kaiju Debug] Alarm %s: Stufe %d -> %d bei %.0f Punkten (Schwelle %s), "
+				.. "%.0f s seit Eskalationsbeginn.",
+			cityName, oldLevel, newLevel, state.progress,
+			tostring(config["AlertThresholdLevel" .. newLevel] or "-"),
+			os.clock() - state.escalationStartedAt))
+	elseif newLevel == 0 then
+		state.escalationStartedAt = nil -- die Stadt hat sich beruhigt, die Uhr läuft neu
+	end
 	-- Lebensstatistik: eine erreichte Alarmstufe ist ein STADT-Ereignis ohne einzelnen
 	-- Verursacher. Sie geht deshalb an alle Spieler, die gerade in dieser Stadt sind --
 	-- im Koop hat sie miterlebt, wer dabei war. Nur AUFSTIEGE zählen.
@@ -656,6 +677,71 @@ RunService.Heartbeat:Connect(function(dt)
 					end
 					checkLevelThresholds(cityName)
 				end
+			end
+		end
+	end
+end)
+
+-- ===== Was ein Durchgang wert ist =====
+-- Die Balance jeder Stadt haengt an einer Zahl, die nirgends steht: wie viele Alarmpunkte
+-- und wie viel Erfahrung das einmalige Abraeumen ALLER Gebaeude ergibt. Erst daran laesst
+-- sich ablesen, ob eine Alarmschwelle nach einem halben oder nach dreissig Durchgaengen
+-- faellt -- und ob die Levelstrecke der Stadt aufgeht.
+--
+-- Von Hand ist die Zahl nicht zu bekommen: die Gebaeude stehen in Studio, nicht im Repo,
+-- und viele tragen ein eigenes AlertValue-Attribut, das den Rueckfall ueber AlertPerHP
+-- ausser Kraft setzt. Fuer das Village fuehrte das zu einem Kommentar, der 49 Punkte je
+-- Durchgang nannte -- bei AlertPerHP 0.5 haette das ganze Dorf damit 98 Lebenspunkte.
+--
+-- Der Bericht laeuft mit demselben Anlauf-Muster wie die Stadtgrenzen darueber: vor den
+-- KaijuHouse-Tags des HouseHandlers gibt es nichts zu zaehlen.
+local DURCHGANG_WARTEZEIT = 20
+
+task.spawn(function()
+	task.wait(DURCHGANG_WARTEZEIT)
+
+	local houseTag = _G.HOUSE_TAG or "KaijuHouse"
+	local proStadt = {}
+	for _, house in ipairs(CollectionService:GetTagged(houseTag)) do
+		local cityName = resolveCityName(house)
+		if cityName then
+			local eintrag = proStadt[cityName]
+			if not eintrag then
+				eintrag = { gebaeude = 0, eigen = 0, alarm = 0, leben = 0, erfahrung = 0 }
+				proStadt[cityName] = eintrag
+			end
+			local maxHealth = house:GetAttribute("MaxHealth") or 0
+			local eigenerWert = house:GetAttribute("AlertValue")
+			local config = CityAlertConfig.GetCityConfig(cityName)
+
+			eintrag.gebaeude += 1
+			eintrag.leben += maxHealth
+			eintrag.erfahrung += math.floor((maxHealth ^ 0.75) * 15)
+			if eigenerWert then
+				eintrag.eigen += 1
+				eintrag.alarm += eigenerWert
+			else
+				eintrag.alarm += maxHealth * (config.AlertPerHP or 0)
+			end
+		end
+	end
+
+	for _, cityName in ipairs(CityAlertConfig.CityOrder) do
+		local e = proStadt[cityName]
+		if e and e.gebaeude > 0 then
+			local config = CityAlertConfig.GetCityConfig(cityName)
+			print(string.format("[Kaiju Debug] Durchgang %s: %d Gebaeude (%d mit eigenem "
+				.. "AlertValue, %d ueber AlertPerHP) -- %d Alarmpunkte, %d Lebenspunkte, "
+				.. "%d Erfahrung.", cityName, e.gebaeude, e.eigen, e.gebaeude - e.eigen,
+				math.floor(e.alarm), math.floor(e.leben), e.erfahrung))
+			if e.alarm > 0 then
+				local function durchgaenge(schwelle)
+					return schwelle and string.format("%.2f", schwelle / e.alarm) or "-"
+				end
+				print(string.format("[Kaiju Debug]   Schwellen in Durchgaengen -- Stufe 2: %s, "
+					.. "Stufe 3: %s, Stufe 4: %s, Stufe 5: %s",
+					durchgaenge(config.AlertThresholdLevel2), durchgaenge(config.AlertThresholdLevel3),
+					durchgaenge(config.AlertThresholdLevel4), durchgaenge(config.AlertThresholdLevel5)))
 			end
 		end
 	end

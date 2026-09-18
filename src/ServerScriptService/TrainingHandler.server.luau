@@ -239,9 +239,8 @@ end
 local stationPositions = {} -- [statType] = Vector3
 local stationCFrames = {} -- [statType] = CFrame (für die Blickrichtung -> "davor" positionieren)
 local stationFrontAnchors = {} -- [statType] = CFrame vom "FrontAnchor"-Teil, falls vorhanden (explizite, verlässliche Ausrichtung statt Raten)
-local stationInstances = {} -- [statType] = Model (nur falls skalierbar, d.h. ein Model)
+local stationInstances = {} -- [statType] = Model -- für Kollision und Bodenhöhe der Station
 local stationPrompts = {} -- [statType] = ProximityPrompt -- zum Ein-/Ausblenden während des Trainings
-local stationOriginalScale = {} -- [statType] = number
 local stationOccupant = {} -- [statType] = Player, solange jemand dort gerade trainiert (nur EINER gleichzeitig)
 
 -- Für Stationen, bei denen der Spieler MITTEN IN der Station steht (z.B. Bein-Training):
@@ -277,43 +276,21 @@ local function restoreStationCollision(statType)
 	stationOriginalCollide[statType] = nil
 end
 
--- Läuft pro Station, um doppelte/überlappende Animationen zu verhindern (z.B. schnelles
--- E-Doppeltippen), falls gerade schon eine Größenänderung für dieselbe Station läuft.
-local stationScaleAnimating = {} -- [statType] = true, solange eine Animation läuft
-
--- Animiert die Größe einer Station sanft von ihrer AKTUELLEN Größe zu "targetScale" --
--- wächst/schrumpft über Zeit, statt sofort zu springen.
--- Skalierung des Start-Skins (Level 0, siehe SkinsConfig.lua Skin_0.Scale) -- die
--- Stationen sind für DIESE Größe gebaut, daher muss relativ dazu skaliert werden.
-local STARTING_AVATAR_SCALE = 4
-
-local STATION_SCALE_ANIM_DURATION = 0.6
-local STATION_SCALE_ANIM_STEPS = 20
-
-local function animateStationScale(statType, stationInstance, targetScale)
-	stationScaleAnimating[statType] = true
-
-	local ok, startScale = pcall(function()
-		return stationInstance:GetScale()
-	end)
-	startScale = ok and startScale or targetScale
-
-	for step = 1, STATION_SCALE_ANIM_STEPS do
-		if not stationInstance.Parent then
-			break -- Station wurde inzwischen entfernt
-		end
-		local alpha = step / STATION_SCALE_ANIM_STEPS
-		-- Sanfteres Ein-/Ausschwingen (Quad-artig) statt linear
-		local eased = 1 - (1 - alpha) ^ 2
-		local currentScale = startScale + (targetScale - startScale) * eased
-		pcall(function()
-			stationInstance:ScaleTo(currentScale)
-		end)
-		task.wait(STATION_SCALE_ANIM_DURATION / STATION_SCALE_ANIM_STEPS)
-	end
-
-	stationScaleAnimating[statType] = nil
-end
+-- ===== Die Stationen behalten ihre Grösse =====
+-- Hier stand eine Mitskalierung: die Station wuchs beim Betreten auf die Grösse des
+-- Spielers und schrumpfte beim Verlassen zurück. Die Absicht war, dass sie immer zur Figur
+-- passt.
+--
+-- Sie ist entfernt, und zwar ersatzlos. Die Rechnung brauchte eine Bezugsgrösse -- "für wie
+-- gross ist diese Station gebaut?" --, und die stand als Zahl im Code, während die
+-- tatsächliche Grösse im Studio-Modell steckt. Diese Zahl ist zweimal auseinandergelaufen:
+-- erst stand dort eine 4 aus der Zeit, als der Startskin `Scale = 4` hatte (die Station
+-- schrumpfte beim Betreten auf ein Achtel), danach zog sie aus SkinsConfig mit und liess die
+-- Station bei der Erhöhung auf 0.8 sichtbar mitwachsen.
+--
+-- Eine Zahl, die nur stimmt, solange sich zwei Dinge an verschiedenen Orten nicht
+-- auseinanderbewegen, kostet mehr als sie einbringt. Die Station steht jetzt so da, wie sie
+-- in Studio gebaut ist -- dort ist ihre Grösse sichtbar und direkt änderbar.
 
 -- Ermittelt per Raycast die echte Bodenhöhe an einer X/Z-Position (von hoch oben nach
 -- unten geschossen) -- verhindert, dass der Spieler nach dem Teleport leicht im Boden
@@ -397,10 +374,6 @@ local function setupStation(instance, statType)
 
 	if instance:IsA("Model") then
 		stationInstances[statType] = instance
-		local ok, currentScale = pcall(function()
-			return instance:GetScale()
-		end)
-		stationOriginalScale[statType] = ok and currentScale or 1
 	end
 
 	prompt.Triggered:Connect(function(player)
@@ -669,18 +642,6 @@ Players.PlayerAdded:Connect(function(player)
 				end
 			end
 
-			-- Station sanft auf die aktuelle Avatar-Größe des Spielers wachsen lassen --
-			-- WICHTIG: relativ zur Level-0-Startgröße (der Startskin ist selbst schon 4x
-			-- skaliert), nicht absolut -- sonst wäre die Station bei einem frischen
-			-- Level-0-Spieler schon 4x zu groß, obwohl sie ja genau für den gebaut wurde.
-			local stationInstance = stationInstances[trainingStat]
-			if stationInstance and humanoid then
-				local avatarScale = humanoid:FindFirstChild("BodyHeightScale")
-				local absoluteScale = avatarScale and avatarScale.Value or STARTING_AVATAR_SCALE
-				local relativeScaleMultiplier = absoluteScale / STARTING_AVATAR_SCALE
-				local baseScale = stationOriginalScale[trainingStat] or 1
-				task.spawn(animateStationScale, trainingStat, stationInstance, baseScale * relativeScaleMultiplier)
-			end
 		else
 			if humanoid and originalWalkSpeed[player] then
 				humanoid.WalkSpeed = originalWalkSpeed[player]
@@ -691,14 +652,7 @@ Players.PlayerAdded:Connect(function(player)
 			player:SetAttribute("BoostCharge", 0)
 			player:SetAttribute("BoostEndsAt", 0)
 
-			-- Station sanft wieder auf Originalgröße zurückschrumpfen lassen -- nutzt den
-			-- zuletzt trainierten Stat-Typ (der jetzt gerade auf nil gewechselt ist, daher
-			-- vorher gespeichert).
 			local lastStat = lastTrainedStat[player]
-			local stationInstance = lastStat and stationInstances[lastStat]
-			if stationInstance and stationOriginalScale[lastStat] then
-				task.spawn(animateStationScale, lastStat, stationInstance, stationOriginalScale[lastStat])
-			end
 
 			-- Belegung der Station wieder freigeben, damit ein anderer Spieler sie nutzen kann
 			if lastStat and stationOccupant[lastStat] == player then
@@ -842,6 +796,14 @@ Players.PlayerAdded:Connect(function(player)
 end)
 
 -- ===== Debug-Werkzeug: Level + alle drei Skill-Werte per Schieberegler setzen =====
+-- [player] = os.clock() der letzten ausgeloesten Aufstiegs-Feier ueber den Regler.
+local debugLevelUpCooldown = {}
+local DEBUG_LEVEL_UP_COOLDOWN = 2
+
+Players.PlayerRemoving:Connect(function(player)
+	debugLevelUpCooldown[player] = nil
+end)
+
 -- Nur wirksam, wenn der Spieler seinen eigenen Debug-Modus aktiviert hat (Sicherheit
 -- gegen versehentliches/missbräuchliches Auslösen durch andere Clients).
 DebugSetLevelEvent.OnServerEvent:Connect(function(player, targetLevel)
@@ -855,7 +817,20 @@ DebugSetLevelEvent.OnServerEvent:Connect(function(player, targetLevel)
 	if not levelValue then
 		return
 	end
+	local previousLevel = levelValue.Value
 	levelValue.Value = targetLevel
+
+	-- Damit sich die Aufstiegs-Rueckmeldung ueberhaupt pruefen laesst, ohne echte XP zu
+	-- sammeln. Die Sperre ist noetig, weil der Regler waehrend des Ziehens bei JEDER
+	-- Mausbewegung feuert -- ohne sie ginge pro Zug ein Schwall Ereignisse an alle
+	-- Clients, statt einer Feier.
+	if targetLevel > previousLevel and _G.CelebrateLevelUp then
+		local now = os.clock()
+		if now - (debugLevelUpCooldown[player] or 0) >= DEBUG_LEVEL_UP_COOLDOWN then
+			debugLevelUpCooldown[player] = now
+			_G.CelebrateLevelUp(player, targetLevel)
+		end
+	end
 
 	-- XP und XPNeeded auf das neue Level zurücksetzen -- fehlte bisher komplett. Ohne
 	-- das blieben nach einem Sprung auf ein NIEDRIGERES Level (z.B. 30 -> 0 über diesen

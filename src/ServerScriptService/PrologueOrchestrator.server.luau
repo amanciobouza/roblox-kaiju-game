@@ -625,48 +625,87 @@ local function playTutorialChecklist(player, character)
 
 	table.insert(connections, TutorialAttackEvent.OnServerEvent:Connect(zaehlePunch))
 
-	local function lauscheAufModellSchlag(aktuellerCharakter)
+	-- Die Anfrage-Ereignisse des Kaiju-Modells. Sie entstehen ERST, wenn der
+	-- KaijuStageOneService das Modell angezogen hat -- das geschieht nach dem Charakter und
+	-- bei jedem Stufenwechsel erneut.
+	--
+	-- Deshalb wird nicht nur einmal gesucht, sondern auch auf spaeter Hinzukommendes
+	-- gehoert. Vorher stand hier eine halbe Sekunde Wartezeit und eine einmalige Suche --
+	-- ein Rennen, das man verliert, sobald das Modell etwas laenger braucht.
+	local function lauscheAufModellAnfrage(aktuellerCharakter, remoteName, handler)
 		if not aktuellerCharakter then
 			return
 		end
-		for _, nachfahre in ipairs(aktuellerCharakter:GetDescendants()) do
-			if nachfahre:IsA("RemoteEvent") and nachfahre.Name == "RequestAttack" then
-				table.insert(connections, nachfahre.OnServerEvent:Connect(zaehlePunch))
+		local function pruefe(nachfahre)
+			if nachfahre:IsA("RemoteEvent") and nachfahre.Name == remoteName then
+				table.insert(connections, nachfahre.OnServerEvent:Connect(handler))
 			end
 		end
+		for _, nachfahre in ipairs(aktuellerCharakter:GetDescendants()) do
+			pruefe(nachfahre)
+		end
+		table.insert(connections, aktuellerCharakter.DescendantAdded:Connect(pruefe))
 	end
-	lauscheAufModellSchlag(character)
 
 	-- ===== Sprung =====
 	--
-	-- Ueber den Humanoid-Zustandswechsel -- das greift unabhaengig davon, ob der Sprung von
-	-- Tastatur, Knopf oder Touch kam.
+	-- ZWEI Wege, weil es zwei Arten zu springen gibt.
 	--
-	-- ABER: die Verbindung haengt an GENAU DIESEM Humanoid. Wird der Charakter waehrend des
-	-- Tutorials ersetzt -- und das tun Skin- und Modellwechsel -- zeigt sie auf eine Leiche
-	-- und zaehlt nie wieder. Deshalb wird sie bei jedem neuen Charakter neu gelegt.
+	-- Ohne Kaiju-Modell springt die Figur normal, und der Humanoid wechselt in den Zustand
+	-- "Jumping". Mit Modell nicht: der Installer setzt JumpPower auf 0 und schaltet
+	-- AutoJumpEnabled ab, weil das Rig einen eigenen Sprung mitbringt. Der Humanoid meldet
+	-- dann gar nichts mehr, und der Sprung im Prolog wurde nie gezaehlt.
+	--
+	-- Der zweite Weg ist deshalb das RequestJump-Ereignis des Modells -- dieselbe Loesung
+	-- wie beim Schlag, der ueber AttackEvent UND RequestAttack zaehlt.
+	--
+	-- Die Sperre von 0.2 Sekunden faengt den Fall ab, dass beide Wege denselben Sprung
+	-- melden. Sonst waere das Tutorial nach einem einzigen Tastendruck erfuellt.
+	local letzterSprungAt = 0
+
+	local function zaehleSprung()
+		local jetzt = os.clock()
+		if jetzt - letzterSprungAt < 0.2 then
+			return
+		end
+		letzterSprungAt = jetzt
+		if progress.Jump >= TUTORIAL_TARGETS.Jump then
+			return
+		end
+		progress.Jump += 1
+		sendUpdate()
+		checkComplete()
+	end
+
+	-- Die Humanoid-Verbindung haengt an GENAU DIESEM Humanoid. Wird der Charakter waehrend
+	-- des Tutorials ersetzt -- und das tun Skin- und Modellwechsel -- zeigt sie auf eine
+	-- Leiche und zaehlt nie wieder. Deshalb wird sie bei jedem neuen Charakter neu gelegt.
 	local function lauscheAufSprung(aktuellerHumanoid)
 		if not aktuellerHumanoid then
 			return
 		end
 		table.insert(connections, aktuellerHumanoid.StateChanged:Connect(function(_, newState)
-			if newState == Enum.HumanoidStateType.Jumping and progress.Jump < TUTORIAL_TARGETS.Jump then
-				progress.Jump += 1
-				sendUpdate()
-				checkComplete()
+			if newState == Enum.HumanoidStateType.Jumping then
+				zaehleSprung()
 			end
 		end))
 	end
-	lauscheAufSprung(humanoid)
+
+	local function lauscheAufCharakter(aktuellerCharakter, aktuellerHumanoid)
+		lauscheAufSprung(aktuellerHumanoid)
+		lauscheAufModellAnfrage(aktuellerCharakter, "RequestAttack", zaehlePunch)
+		lauscheAufModellAnfrage(aktuellerCharakter, "RequestJump", zaehleSprung)
+	end
+
+	lauscheAufCharakter(character, humanoid)
 
 	table.insert(connections, player.CharacterAdded:Connect(function(neuerCharakter)
 		local neuerHumanoid = neuerCharakter:WaitForChild("Humanoid", 5)
-		lauscheAufSprung(neuerHumanoid)
-		task.wait(0.5) -- dem Modell Zeit geben, seine Remotes anzuhaengen
-		lauscheAufModellSchlag(neuerCharakter)
+		lauscheAufCharakter(neuerCharakter, neuerHumanoid)
 	end))
 
-	print("[Kaiju Debug] Tutorial-Checkliste scharf: Punch ueber AttackEvent und RequestAttack, Sprung ueber den Humanoid.")
+	print("[Kaiju Debug] Tutorial-Checkliste scharf: Punch ueber AttackEvent und RequestAttack, "
+		.. "Sprung ueber den Humanoid und RequestJump.")
 
 	-- Absorb: summiert die tatsächlich absorbierte Menge auf, statt nur zu zählen, wie
 	-- oft aktiviert wurde -- der Spieler muss die Taste GEDRÜCKT HALTEN, um die Schwelle

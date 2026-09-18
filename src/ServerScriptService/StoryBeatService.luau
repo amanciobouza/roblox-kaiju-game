@@ -27,6 +27,9 @@
 --   wait              -- reine Pause, { duration }
 --   text              -- Textzeile mittig einblenden, { text, duration, fadeIn, fadeOut }
 --   chapterCard       -- grosse Kapitel-Karte, { number, title, subtitle, duration, fadeIn, fadeOut }
+--   presenterCard     -- leiser Vorspann, { name, sub, duration, fadeIn, fadeOut }. Klein und
+--                         grau statt gross und weiss -- er kündigt einen Urheber an, keine
+--                         Handlung. Siehe playColdOpen im PrologueOrchestrator.
 --   sound             -- Sound abspielen, { soundId, volume, looped, wait } -- "wait=true"
 --                         lässt die Sequenz auf das Sound-Ende warten, sonst läuft er im
 --                         Hintergrund weiter (z.B. für ein durchgehendes Ticken)

@@ -47,7 +47,7 @@ ShowdownConfig.Camera = {
 	RestageDuration = 0.6,
 
 	-- Höhe und Abstand werden aus der Grösse des GRÖSSEREN Kämpfers abgeleitet, nicht fest
-	-- gesetzt: zwischen Baby Kaiju und Radiant Apex liegt Faktor sechs, ein fester Wert
+	-- gesetzt: zwischen Riftborn und Aeon Tyrant liegt Faktor fünf, ein fester Wert
 	-- kann nicht für beide stimmen.
 	HeightFactor = 0.18, -- Anteil der Höhe des grösseren Kämpfers
 	MinHeight = 6,

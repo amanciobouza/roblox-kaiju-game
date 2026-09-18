@@ -7,41 +7,24 @@
 -- (Kaiju/Jaeger/Ronin), da player.Character dabei server-seitig ersetzt wird und
 -- CameraSubject sonst am alten, nicht mehr existierenden Charakter hängen bleibt.
 --
--- Setzt ausserdem Humanoid.CameraOffset: Robloxs Standard-Fokuspunkt liegt ungefähr auf
--- Rückenmitte -- CameraOffset verschiebt ihn nach oben Richtung Schulter/Hals, was sich
--- deutlich natürlicher anfühlt. Proportional zur tatsächlichen Charaktergrösse berechnet
--- (nicht fix), da die Charaktere hier zwischen Scale 1 und 6 variieren.
+-- Den FOKUSPUNKT setzt dieses Skript nicht mehr. Er stand hier als Anteil der
+-- Figurenhöhe, einmalig eine halbe Sekunde nach dem Spawn gemessen -- also bevor ein
+-- Kaiju-Modell überhaupt hing. Er blieb dadurch auf Avatarhöhe und lag bei angezogenem
+-- Modell zwischen den Beinen der Figur.
+--
+-- Fokus und Entfernung gehören ohnehin zusammen: beides ist eine Entscheidung darüber, wie
+-- die Figur im Bild steht. Sie liegen jetzt gemeinsam im CameraFramingClient, der auch
+-- mitbekommt, wenn sich die Figur ändert.
 
 local Players = game:GetService("Players")
 
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
 
-local function updateCameraOffset(character, humanoid)
-	local ok, characterSize = pcall(function()
-		local _, size = character:GetBoundingBox()
-		return size
-	end)
-	if ok then
-		-- ~18% der Gesamthöhe über der Rückenmitte -- empirisch auf Schulter-/Halshöhe
-		-- kalibriert, unabhängig von der tatsächlichen Charaktergrösse.
-		humanoid.CameraOffset = Vector3.new(0, characterSize.Y * 0.18, 0)
-	end
-end
-
 local function updateCameraSubject(character)
 	local humanoid = character:WaitForChild("Humanoid", 5)
 	if humanoid then
 		camera.CameraSubject = humanoid
-		-- Kurz warten, bis die server-seitige Skalierung (PlayerSetup.lua) sicher
-		-- angewendet wurde -- sonst könnte die Grössen-Messung noch den alten,
-		-- unskalierten Wert liefern.
-		task.spawn(function()
-			task.wait(0.5)
-			if character.Parent then
-				updateCameraOffset(character, humanoid)
-			end
-		end)
 	end
 end
 

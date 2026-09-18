@@ -10,6 +10,25 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
 local Workspace = game:GetService("Workspace")
 
+-- Nur fuer die Frage, ob an dieser Figur ein Kaiju-Modell haengt -- davon haengt die
+-- Aufladezeit des Flaechenangriffs ab (siehe KAIJU_AREA_CHARGE_TIME weiter unten).
+local StageModels = require(ReplicatedStorage:WaitForChild("StageModels"))
+
+-- Nur fuer die Ersatz-Entladung, wenn das Rig den Flaechenangriff ablehnt (siehe weiter
+-- unten bei playKaijuAreaFallback). Mit Zeitgrenze: fehlt das Modul, bleibt es bei der
+-- alten Ladekugel -- das ist die sichere Seite.
+local KaijuCombatAdapter = nil
+do
+	local ServerScriptService = game:GetService("ServerScriptService")
+	local module = ServerScriptService:WaitForChild("KaijuStageOneCombatAdapter", 10)
+	if module then
+		local ok, result = pcall(require, module)
+		if ok then
+			KaijuCombatAdapter = result
+		end
+	end
+end
+
 -- WICHTIG: erstellt diese RemoteEvents selbst, falls sie noch nicht existieren, statt nur
 -- darauf zu warten -- reines WaitForChild hier hätte das Script (und alle darauf
 -- wartenden Client-Scripts) für immer hängen lassen, falls keine andere Datei sie
@@ -91,6 +110,17 @@ local AREA_ATTACK_COOLDOWN = 1.5 -- Sekunden -- kurzer Anti-Spam-Schutz, nicht m
 -- Schnittpunkt oben), sondern die Zahl gleichzeitig getroffener Ziele zu begrenzen
 -- oder den Radius zu deckeln.
 local AREA_DAMAGE_MULTIPLIER = 5
+
+-- ===== Der Flaechenangriff am Bein-Trainingsplatz =====
+-- Dort richtet er keinen echten Schaden an -- es gibt nichts zu zerstoeren. Was er tut, ist
+-- Trainingsfortschritt geben, und genau das tat er bisher NICHT: der Fokus belohnte jeden
+-- seiner rund zwanzig Ticks, der Flaechenangriff nichts. Wer ihn ausloeste, sah eine
+-- Schadenszahl und bekam dafuer nichts.
+--
+-- Jetzt belohnt er als EIN Schlag, dafuer entsprechend kraeftig. Der Faktor steht bewusst
+-- getrennt vom Kampfwert: dort zu drehen wuerde die Balance draussen mitverschieben.
+local AREA_TRAINING_DAMAGE_MULTIPLIER = 12
+local AREA_TRAINING_PROGRESS = 12
 -- Der Radius wächst unterproportional (Exponent < 1) mit dem BEIN-Wert -- der alte
 -- Kommentar hier nannte den Körper-Wert, das stimmt seit der Umstellung auf das Bein
 -- nicht mehr (siehe getAreaAttackRadius weiter unten).
@@ -108,6 +138,15 @@ local AREA_ATTACK_RADIUS_BASE = 14 -- Studs bei Bein-Wert 0
 local AREA_ATTACK_RADIUS_SCALE = 2.5
 local AREA_ATTACK_RADIUS_EXPONENT = 0.7
 local AREA_CHARGE_TIME = 1.2 -- Sekunden Aufladezeit, bevor der Schaden passiert
+
+-- Dieselbe Zeit, aber fuer eine Figur mit Kaiju-Modell. Sie entspricht dem Moment, in dem
+-- das Rig entlaedt (KaijuStageOneRig, AREA_TIMING.Discharge = 2.8). Aendert der Workshop
+-- diesen Wert, muss diese Zahl mit -- sonst faellt der Schaden wieder neben den Einschlag.
+--
+-- Ein paar Hundertstel Netzwerklaufzeit liegen dazwischen, weil das Rig erst startet, wenn
+-- die Meldung des Servers beim Client angekommen ist. Das faellt nicht auf: die Entladung
+-- waechst ueber rund eine halbe Sekunde, der Schaden landet also mitten im Effekt.
+local KAIJU_AREA_CHARGE_TIME = 2.8
 
 local AREA_ATTACK_RADIUS_MAX = 90 -- Studs (war 170; mit dem halbierten Radius oben mitgezogen)
 
@@ -266,6 +305,33 @@ local function findFocusTarget(player, rootPart)
 		end
 	end
 
+	-- ===== Barrikaden sind anvisierbar =====
+	-- Sie fehlten hier ganz, und damit war der Fokus an einer Barrikade wirkungslos: man
+	-- konnte sie nicht einmal anvisieren. Damit blieb als einziges Mittel der Flächenangriff
+	-- -- eine Verteidigungsstufe, gegen die nur EIN Angriff hilft, ist keine Entscheidung
+	-- mehr, sondern eine Taste.
+	--
+	-- Gezielt wird auf das Barrikaden-Modell; der Schaden geht an das Schild seines Clusters
+	-- (siehe die Schadensstelle weiter unten). Der Generator ist ein eigenes, kleineres Ziel
+	-- und über den Nahkampf zu erreichen -- er soll die Belohnung für genaues Hinsehen
+	-- bleiben, nicht der bequemste Fernkampfpunkt.
+	if _G.GetClusterIdForModel then
+		for _, barricade in ipairs(CollectionService:GetTagged("Barricade")) do
+			local part = barricade.PrimaryPart
+			if part and barricade:GetAttribute("ShieldEnabled") ~= false then
+				local toTarget = part.Position - originPosition
+				local distance = toTarget.Magnitude
+				if distance > 0 and distance <= bestDistance then
+					local angle = horizontalConeAngle(lookVector, toTarget)
+					if angle <= FOCUS_ATTACK_CONE_ANGLE then
+						bestDistance = distance
+						bestTarget = { type = "barricade", instance = barricade, trackPart = part }
+					end
+				end
+			end
+		end
+	end
+
 	if _G.FIRE_ENGINE_TAG then
 		for _, engine in ipairs(CollectionService:GetTagged(_G.FIRE_ENGINE_TAG)) do
 			if not engine:GetAttribute("Destroyed") then
@@ -349,6 +415,39 @@ local function findFocusTarget(player, rootPart)
 	end
 
 	return bestTarget
+end
+
+-- ===== Dieselbe Zielwahl fuer das Kaiju-Rig =====
+-- Das Rig fragt seinen Adapter, WORAUF es zielen soll, und lehnt den Fokus ganz ab, wenn
+-- die Antwort leer ist. Der Adapter hatte dafuer eine eigene Suche -- und die war enger als
+-- die hier: kuerzere Reichweite, freie Sichtlinie verlangt, und nur Gebaeude. Feuerwehr,
+-- Militaer, Guardian und Spieler in der Arena kannte sie gar nicht.
+--
+-- Ergebnis: das Spiel hatte ein Ziel und schoss, das Rig fand keines und spielte nichts --
+-- und im Bild erschien der alte rote Ersatzstrahl. Fuer den Spieler sah dasselbe Ziel mal
+-- so und mal so aus, ohne erkennbaren Grund.
+--
+-- Zwei Suchen fuer dieselbe Frage sind eine zu viel. Der Adapter fragt jetzt hier.
+-- ===== Wo der Strahl des Spiels ansetzt =====
+-- Am Kopf -- aber bei einem Kaiju ist der Avatar versteckt und winzig gegen das Modell. Sein
+-- Kopf liegt dann ungefaehr auf Kniehoehe der sichtbaren Figur, und der Strahl kam
+-- entsprechend aus dem Knie. Traegt der Spieler ein Modell, gilt dessen Maul.
+local function focusBeamOrigin(character, head)
+	local model = StageModels.FindEquipped(character)
+	if model and KaijuCombatAdapter and KaijuCombatAdapter.GetMouthPosition then
+		local mouth = KaijuCombatAdapter.GetMouthPosition(model)
+		if mouth then
+			return mouth
+		end
+	end
+	return head.Position
+end
+
+_G.FindFocusTarget = function(focusPlayer, rootPart)
+	if not focusPlayer or not rootPart then
+		return nil
+	end
+	return findFocusTarget(focusPlayer, rootPart)
 end
 
 -- Vergibt Kill-XP/Kills, wenn ein Spielertreffer tödlich war (analog zu CombatHandler.lua).
@@ -567,8 +666,9 @@ FocusAttackEvent.OnServerEvent:Connect(function(player)
 		if _G.AwardSpecialEnergy then
 			_G.AwardSpecialEnergy(player, focusCost)
 		end
-		local missPosition = head.Position + rootPart.CFrame.LookVector * FOCUS_ATTACK_RANGE
-		FocusAttackEffectEvent:FireAllClients(player, head.Position, missPosition)
+		local missOrigin = focusBeamOrigin(character, head)
+		local missPosition = missOrigin + rootPart.CFrame.LookVector * FOCUS_ATTACK_RANGE
+		FocusAttackEffectEvent:FireAllClients(player, missOrigin, missPosition)
 		return
 	end
 
@@ -594,6 +694,20 @@ FocusAttackEvent.OnServerEvent:Connect(function(player)
 			if target then
 				if target.type == "house" then
 					if target.instance.Parent and not target.instance:GetAttribute("Destroyed") and target.trackPart and target.trackPart.Parent then
+						hitPosition = target.trackPart.Position
+						targetStillValid = true
+					end
+				elseif target.type == "fireEngine" then
+					-- Dieser Zweig FEHLTE. Die Feuerwehr liess sich anvisieren, galt danach
+					-- aber nie als gueltiges Ziel -- der Strahl lag darauf und richtete
+					-- nichts aus. Genau das war im Spiel zu sehen.
+					if target.instance.Parent and not target.instance:GetAttribute("Destroyed")
+						and target.trackPart and target.trackPart.Parent then
+						hitPosition = target.trackPart.Position
+						targetStillValid = true
+					end
+				elseif target.type == "barricade" then
+					if target.instance.Parent and target.trackPart and target.trackPart.Parent then
 						hitPosition = target.trackPart.Position
 						targetStillValid = true
 					end
@@ -650,7 +764,7 @@ FocusAttackEvent.OnServerEvent:Connect(function(player)
 				end
 			end
 
-			FocusAttackEffectEvent:FireAllClients(player, head.Position, hitPosition)
+			FocusAttackEffectEvent:FireAllClients(player, focusBeamOrigin(character, head), hitPosition)
 
 			if targetStillValid then
 				local damagePerTick = (character:GetAttribute("Damage") or 10)
@@ -664,6 +778,11 @@ FocusAttackEvent.OnServerEvent:Connect(function(player)
 					_G.DamageHouse(target.instance, damagePerTick, player)
 				elseif target.type == "fireEngine" and _G.DamageFireEngine then
 					_G.DamageFireEngine(target.instance, damagePerTick, player)
+				elseif target.type == "barricade" and _G.DamageBarricadeShield and _G.GetClusterIdForModel then
+					local clusterId, cityName = _G.GetClusterIdForModel(target.instance)
+					if clusterId and cityName then
+						_G.DamageBarricadeShield(cityName, clusterId, damagePerTick, player)
+					end
 				elseif target.type == "militaryUnit" and _G.DamageMilitaryUnit and _G.GetMilitaryUnitInfo then
 					local cityName, unitType, unitId = _G.GetMilitaryUnitInfo(target.instance)
 					if cityName and unitType and unitId then
@@ -762,16 +881,64 @@ AreaAttackEvent.OnServerEvent:Connect(function(player)
 
 	local radius = getAreaAttackRadius(player)
 	local chargePosition = rootPart.Position
-	AreaAttackEffectEvent:FireAllClients(player, chargePosition, AREA_CHARGE_TIME, radius)
+
+	-- ===== Aufladezeit an die Figur anpassen =====
+	-- Traegt der Spieler ein Kaiju-Modell, spielt dessen Rig die Bewegung: aufbaeumen,
+	-- abstuetzen, und erst dann die Entladung ueber die Rueckenplatten. Dieser Ablauf
+	-- dauert laenger als die 1.2 Sekunden des Spiels -- der Schaden lag also 1.6 Sekunden
+	-- VOR dem sichtbaren Einschlag.
+	--
+	-- Deshalb richtet sich die Aufladezeit nach der Figur. Die Zahl ist an die Zeitleiste
+	-- des Rigs gebunden und muss ihr folgen, wenn sie sich aendert -- sie steht dort in
+	-- KaijuStageOneRig als AREA_TIMING.Discharge.
+	--
+	-- Die Zeit geht AUCH an die Clients: dort haengen der Aufladeklang und (bei Spielern
+	-- ohne Modell) die wachsende Kugel daran. So bleibt beides im Takt.
+	local chargeTime = AREA_CHARGE_TIME
+	local kaijuModel = StageModels.FindEquipped(character)
+	if kaijuModel then
+		chargeTime = KAIJU_AREA_CHARGE_TIME
+	end
+
+	AreaAttackEffectEvent:FireAllClients(player, chargePosition, chargeTime, radius)
 
 	-- Gleiche Ueberlegung wie beim Fokus: waehrend die Ladung waechst, nicht beim Knall.
 	if _G.NotifyShowdownAttack then
 		_G.NotifyShowdownAttack("AreaAttack", player, player:GetAttribute("CurrentCityName"))
 	end
 
-	task.delay(AREA_CHARGE_TIME, function()
+	task.delay(chargeTime, function()
 		if not character.Parent then
 			return
+		end
+
+		-- ===== Das Rig hat abgelehnt: die Entladung trotzdem zeigen =====
+		-- Es verlangt Boden unter der Figur, der flach genug und nah genug ist. Trifft das
+		-- nicht zu, spielt es gar nichts -- die Bewegung faellt aus, der Schaden faellt
+		-- trotzdem, denn der gehoert dem Spiel und nicht dem Rig.
+		--
+		-- Frueher sprang dort die alte gelbe Ladekugel ein, und derselbe Tastendruck sah je
+		-- nach Bodenneigung voellig anders aus. Jetzt kommt in beiden Faellen dieselbe cyane
+		-- Entladung; lehnt das Rig ab, eben ohne das Aufbaeumen davor.
+		--
+		-- Seit Paket 1.3.2 meldet das Rig die Ablehnung ausdruecklich als "No ground" (auf
+		-- unsere Meldung hin, zusammen mit dem Attribut "AreaRejectReason"). Vorher blieb die
+		-- Phase schlicht auf "Idle" -- beide Faelle stehen deshalb in der Liste, damit ein
+		-- Rueckschritt auf eine aeltere Paketfassung nicht stillschweigend das Bild verliert.
+		local phase = kaijuModel and kaijuModel.Parent and kaijuModel:GetAttribute("AreaPhase")
+		local rigDeclined = phase == nil or phase == "Idle" or phase == "No ground"
+		if kaijuModel and kaijuModel.Parent and rigDeclined
+			and KaijuCombatAdapter and KaijuCombatAdapter.PlayAreaDischarge then
+			-- Der Einschlag gehoert auf den Boden, nicht auf Rumpfhoehe: der Rumpf schwebt um
+			-- seine halbe Hoehe plus die Huefthoehe darueber, und beides waechst mit der Stufe.
+			local groundOrigin = rootPart.Position
+				- Vector3.new(0, rootPart.Size.Y * 0.5 + humanoid.HipHeight, 0)
+			KaijuCombatAdapter.PlayAreaDischarge(kaijuModel, groundOrigin)
+
+			-- Der Grund steht seit 1.3.2 am Modell. Ohne ihn liesse sich nicht unterscheiden,
+			-- ob das Rig den Boden ablehnt oder ob die Anfrage gar nicht erst ankam.
+			print(string.format("[Kaiju Debug] Flaeche ohne Rig -- Phase=%s Grund=%s",
+				tostring(phase), tostring(kaijuModel:GetAttribute("AreaRejectReason"))))
 		end
 
 		local damage = (character:GetAttribute("Damage") or 10)
@@ -785,9 +952,21 @@ AreaAttackEvent.OnServerEvent:Connect(function(player)
 		-- unten stehender Code für echten Schaden während des Trainings bereits von Natur
 		-- aus wirkungslos -- hier trotzdem früh rausspringen für Klarheit + den Reaktor-Aufruf.
 		if player:GetAttribute("TrainingStat") == "Leg" then
-			ShowDamageEvent:FireClient(player, damage)
+			-- Am Trainingsplatz zaehlt der Flaechenangriff kraeftiger als im Kampf -- siehe
+			-- AREA_TRAINING_DAMAGE_MULTIPLIER. Die Zahl ueber dem Kopf und der Reaktor
+			-- bekommen denselben Wert, damit das Auge und die Belohnung dasselbe sagen.
+			local trainingDamage = damage / AREA_DAMAGE_MULTIPLIER * AREA_TRAINING_DAMAGE_MULTIPLIER
+			ShowDamageEvent:FireClient(player, trainingDamage)
 			if _G.LegReactorRegisterAttack then
-				_G.LegReactorRegisterAttack:Fire(player, damage, "AreaAttack", tostring(now))
+				_G.LegReactorRegisterAttack:Fire(player, trainingDamage, "AreaAttack", tostring(now))
+			end
+
+			-- Der eigentliche Fortschritt. Er fehlte hier komplett -- der Fokus-Zweig
+			-- vergibt ihn pro Tick, der Flaechenangriff gar nicht. Wie dort skaliert er mit
+			-- dem Berserker-Bonus, damit der Schadensboost auch beim Training spuerbar ist.
+			if _G.AwardTrainingProgress then
+				local berserkerBonus = (_G.GetBerserkerDamageMultiplier and _G.GetBerserkerDamageMultiplier(player)) or 1.0
+				_G.AwardTrainingProgress(player, "Leg", AREA_TRAINING_PROGRESS * berserkerBonus)
 			end
 
 			return

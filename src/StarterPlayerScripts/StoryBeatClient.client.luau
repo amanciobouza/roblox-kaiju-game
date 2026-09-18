@@ -95,6 +95,54 @@ end
 local lineLabel1 = createStackedLineLabel(0.26)
 local lineLabel2 = createStackedLineLabel(0.74)
 
+-- ===== Vorspann-Karte ("... presents") =====
+-- Bewusst NICHT als "text"-Schritt gebaut: der rendert in LuckiestGuy über ein Drittel der
+-- Bildhöhe, in Weiss, mit Kontur. Das ist die Stimme, mit der die Stadt untergeht -- ein
+-- Vorspann hat die entgegengesetzte Aufgabe. Er soll ruhig sein und wieder verschwinden,
+-- bevor das Stück anfängt.
+--
+-- Und auch keine chapterCard: die hat Nummer, Trennlinien und ein Pop-In. Sie kündigt ein
+-- Kapitel an, nicht einen Urheber.
+--
+-- Deshalb: klein, schmal, mittig, langsam auf- und abblendend. Der Name in Gotham, die
+-- Zeile darunter kleiner und grau. Gesperrt gesetzt wird über eingefügte Leerzeichen im
+-- Text selbst -- Roblox kennt keine Laufweite.
+local presenterFrame = Instance.new("Frame")
+presenterFrame.Name = "PresenterCard"
+presenterFrame.Size = UDim2.new(1, 0, 1, 0)
+presenterFrame.BackgroundTransparency = 1
+presenterFrame.ZIndex = 2
+presenterFrame.Visible = false
+presenterFrame.Parent = screenGui
+
+local presenterNameLabel = Instance.new("TextLabel")
+presenterNameLabel.Name = "PresenterName"
+presenterNameLabel.Size = UDim2.new(0.8, 0, 0, 34)
+presenterNameLabel.Position = UDim2.new(0.5, 0, 0.5, -14)
+presenterNameLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+presenterNameLabel.BackgroundTransparency = 1
+presenterNameLabel.Font = Enum.Font.Gotham
+presenterNameLabel.TextSize = 30
+presenterNameLabel.TextColor3 = Color3.fromRGB(238, 234, 226)
+presenterNameLabel.TextTransparency = 1
+presenterNameLabel.Text = ""
+presenterNameLabel.ZIndex = 3
+presenterNameLabel.Parent = presenterFrame
+
+local presenterSubLabel = Instance.new("TextLabel")
+presenterSubLabel.Name = "PresenterSub"
+presenterSubLabel.Size = UDim2.new(0.8, 0, 0, 18)
+presenterSubLabel.Position = UDim2.new(0.5, 0, 0.5, 18)
+presenterSubLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+presenterSubLabel.BackgroundTransparency = 1
+presenterSubLabel.Font = Enum.Font.Gotham
+presenterSubLabel.TextSize = 13
+presenterSubLabel.TextColor3 = Color3.fromRGB(150, 146, 140)
+presenterSubLabel.TextTransparency = 1
+presenterSubLabel.Text = ""
+presenterSubLabel.ZIndex = 3
+presenterSubLabel.Parent = presenterFrame
+
 -- Kapitel-Titelkarte: Nummer + Titel + Untertitel (z.B. "CHAPTER I / KAIJU / POWER")
 -- Bewusst deutlich "epischer"/prunkvoller als der normale Story-Text gestaltet: Gold-
 -- Farbschema mit Verlauf, dekorative Trennlinien, skalierte Einblend-Animation statt
@@ -376,6 +424,43 @@ local function runHintStep(step)
 	-- vollständigen Play()-Sequenz statt PlayAsync() genutzt wird).
 end
 
+-- Blendet die Vorspann-Karte langsam auf, hält sie und blendet sie wieder ab.
+--
+-- Die Zeiten sind länger als bei den Story-Texten: ein Vorspann wird nicht gelesen wie
+-- eine Ansage, er wird wahrgenommen. Ein schnelles Ein- und Ausblenden liesse ihn wie
+-- einen Fehler aussehen.
+local function runPresenterCardStep(step)
+	presenterNameLabel.Text = step.name or ""
+	presenterSubLabel.Text = step.sub or ""
+	presenterFrame.Visible = true
+
+	local fadeInDuration = step.fadeIn or 1.4
+	local fadeOutDuration = step.fadeOut or 1.2
+	local holdDuration = step.duration or 1.8
+
+	local einblenden = {
+		TweenService:Create(presenterNameLabel, TweenInfo.new(fadeInDuration, Enum.EasingStyle.Sine), { TextTransparency = 0 }),
+		TweenService:Create(presenterSubLabel, TweenInfo.new(fadeInDuration, Enum.EasingStyle.Sine), { TextTransparency = 0.25 }),
+	}
+	for _, tween in ipairs(einblenden) do
+		tween:Play()
+	end
+	einblenden[1].Completed:Wait()
+
+	task.wait(holdDuration)
+
+	local ausblenden = {
+		TweenService:Create(presenterNameLabel, TweenInfo.new(fadeOutDuration, Enum.EasingStyle.Sine), { TextTransparency = 1 }),
+		TweenService:Create(presenterSubLabel, TweenInfo.new(fadeOutDuration, Enum.EasingStyle.Sine), { TextTransparency = 1 }),
+	}
+	for _, tween in ipairs(ausblenden) do
+		tween:Play()
+	end
+	ausblenden[1].Completed:Wait()
+
+	presenterFrame.Visible = false
+end
+
 local function runChapterCardStep(step)
 	print("[Kaiju-Debug] runChapterCardStep AUFGERUFEN: title='" .. tostring(step.title) .. "' number='" .. tostring(step.number) .. "' tick=" .. tostring(os.clock()))
 	chapterNumberLabel.Text = step.number and ("CHAPTER " .. step.number) or ""
@@ -441,6 +526,7 @@ local STEP_HANDLERS = {
 	text = runTextStep,
 	hint = runHintStep,
 	chapterCard = runChapterCardStep,
+	presenterCard = runPresenterCardStep,
 	sound = runSoundStep,
 	revealBackground = runRevealBackgroundStep,
 }
@@ -462,7 +548,7 @@ local function playSequence(sequence)
 	-- Schwarzblende. "hint"/"sound"/"wait" sind bewusst NEUTRAL -- eine Sequenz, die z.B.
 	-- nur einen Ticken-Sound + einen "hint" kombiniert (Guardian-Auftritt: Spieler soll
 	-- dabei weiterspielen können), soll NICHT die Schwarzblende auslösen.
-	local FULLSCREEN_STEP_TYPES = { fadeIn = true, fadeOut = true, text = true, chapterCard = true }
+	local FULLSCREEN_STEP_TYPES = { fadeIn = true, fadeOut = true, text = true, chapterCard = true, presenterCard = true }
 	local requiresFullscreen = false
 	for _, step in ipairs(sequence.steps or {}) do
 		if FULLSCREEN_STEP_TYPES[step.type] then

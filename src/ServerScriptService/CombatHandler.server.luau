@@ -32,6 +32,33 @@ attackCooldownValue.Parent = ReplicatedStorage
 
 local lastAttackTime = {}
 
+-- ===== Der Schlag-Cooldown, wenn das Kaiju-Rig den Schlag führt =====
+-- Trägt der Spieler ein Kaiju-Modell, geht der Schlag nicht über AttackEvent, sondern über
+-- das Anfrage-Ereignis des Rigs -- der Schaden kommt dann vom Kampf-Adapter. Damit lief der
+-- Cooldown des Spiels nie an: die Sanduhr am Knopf blieb leer, und es gab keine Grenze,
+-- wie schnell man schlagen konnte.
+--
+-- Das Rig hat zwar seinen eigenen Takt (ein Combo-Fenster von ein paar Zehntelsekunden),
+-- aber der ist ein ANDERER als der des Spiels -- und zwei Takte auf einem Knopf ergeben
+-- eine Anzeige, die lügt. Deshalb gilt der Cooldown des Spiels, und das Rig bekommt den
+-- Schlag erst, wenn er abgelaufen ist (siehe AttackClient).
+--
+-- Gleiches Muster wie PlayerJumpedEvent in HouseHandler: der Client meldet den Beginn, der
+-- Server setzt die Sperre autoritativ.
+local PlayerPunchedEvent = RemoteEventUtils.GetOrCreate("PlayerPunchedEvent")
+
+PlayerPunchedEvent.OnServerEvent:Connect(function(player)
+	local now = os.clock()
+	local cooldownMultiplier = (_G.GetBerserkerCooldownMultiplier and _G.GetBerserkerCooldownMultiplier(player)) or 1.0
+	local effectiveCooldown = ATTACK_COOLDOWN * cooldownMultiplier
+
+	if lastAttackTime[player] and now - lastAttackTime[player] < effectiveCooldown then
+		return -- Cooldown läuft noch; der Client sollte das schon verhindert haben
+	end
+	lastAttackTime[player] = now
+	player:SetAttribute("AttackReadyAt", Workspace:GetServerTimeNow() + effectiveCooldown)
+end)
+
 -- Berechnet die Distanz von "position" zum NÄCHSTEN Punkt der gesamten Bounding-Box
 -- des Hauses (statt nur zu einem einzelnen Teil) -- so ist das ganze Haus angreifbar,
 -- egal von welcher Seite man kommt, nicht nur eine Ecke.

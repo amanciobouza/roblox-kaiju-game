@@ -323,6 +323,20 @@ local function setupJumpLock(character)
 			return -- Springen während Arm-/Körper-Training soll keinen echten Sprungangriff auslösen
 		end
 
+		-- ===== Traegt der Spieler ein Kaiju-Modell, meldet der Sprung sich selbst =====
+		-- Dieser Weg haengt am Humanoid-Zustand, und Freefall kommt auch, wenn man nur eine
+		-- Kante hinunterfaellt. Beim Avatar faellt das kaum auf; beim Kaiju lief der
+		-- Sprung-Cooldown dadurch an, ohne dass jemand gesprungen waere -- die Sanduhr am
+		-- Knopf war deshalb nie synchron mit dem, was die Figur konnte.
+		--
+		-- Der Sprung des Rigs wird direkt bei der Eingabe gemeldet
+		-- (KaijuStageOneInputClient), also genau dann, wenn er wirklich beginnt. Hier wird
+		-- er deshalb uebersprungen. Die JumpPower-Sperre darunter ebenfalls: der Installer
+		-- setzt JumpPower ohnehin auf 0, der Sprung kommt vom Motor des Pakets.
+		if StageModels.FindEquipped(character) then
+			return
+		end
+
 		jumpLocked = true
 		PlayerJumpedEvent:FireServer()
 
@@ -381,6 +395,20 @@ local function triggerAttack()
 end
 
 local function triggerJump()
+	-- ===== Traegt der Spieler ein Kaiju-Modell, geht der Sprung ueber das Rig =====
+	-- `humanoid.Jump = true` half dort nicht: der Installer setzt die Sprungkraft des
+	-- Avatars auf null, der Sprung kommt allein vom Rig -- und dessen Eingabe haengt an
+	-- UserInputService.JumpRequest, das bei einem programmatisch gesetzten Jump NICHT
+	-- feuert. Dieser Knopf lief also ins Leere, sobald ein Modell haengt.
+	--
+	-- KaijuStageOneInputClient bietet dafuer ein BindableEvent an, gleiches Muster wie
+	-- TouchAttackButtonPressed beim Schlag.
+	local kaijuJump = player:FindFirstChild("RequestKaijuJump")
+	if kaijuJump and StageModels.FindEquipped(player.Character) then
+		kaijuJump:Fire()
+		return
+	end
+
 	-- Löst nur einen ganz normalen Sprung aus (wie die Leertaste) -- keine zusätzliche
 	-- Aktion. Ob der Sprung tatsächlich passiert, entscheidet allein das Sprung-Sperr-
 	-- System oben (JumpPower/JumpHeight ist während des Cooldowns auf 0 gesetzt).
@@ -410,15 +438,101 @@ end
 -- etwa verlangt ein Gebäude in Sicht -- im Sanctuary gibt es keines, er meldet "No target"
 -- und spielt gar nichts. Vorher habe ich den alten Strahl schon dann abgeschaltet, wenn nur
 -- ein Kaiju-Modell an der Figur hing. An der Trainingsstation blieb dadurch beides aus.
-local RIG_PHASE_IDLE = { ["Idle"] = true, ["No target"] = true }
+-- "No ground" kam mit Paket 1.3.2 dazu: das Rig lehnt den Flächenangriff ab, wenn der Boden
+-- unter der Figur zu schräg oder zu weit weg ist, und sagt das jetzt ausdrücklich, statt
+-- stumm auf "Idle" zu bleiben.
+local RIG_PHASE_IDLE = { ["Idle"] = true, ["No target"] = true, ["No ground"] = true }
 
-local function rigEffectRunning(attackerPlayer, attributeName)
+local function rigPhaseActive(attackerPlayer, attributeName)
 	local model = StageModels.FindEquipped(attackerPlayer and attackerPlayer.Character)
 	if not model then
-		return false
+		return nil -- kein Modell: die Frage stellt sich nicht
 	end
 	local phase = model:GetAttribute(attributeName)
 	return phase ~= nil and not RIG_PHASE_IDLE[phase]
+end
+
+-- ===== Der Wettlauf, und wie er aufgeloest wird =====
+-- Der Effekt des Spiels kommt SOFORT, sobald der Server den Angriff annimmt. Das Rig
+-- braucht bis dahin einen Umweg: Client fragt an, Server leitet weiter, das Rig setzt seine
+-- Phase, und die muss erst zurueckrepliziert werden. In diesem Moment ist die Phase noch
+-- "Idle" -- also wurde der alte Effekt gezeichnet, und kurz darauf kam der neue dazu.
+-- Genau das war die gelbe Kugel neben der Entladung.
+--
+-- Deshalb wird kurz GEWARTET, bevor entschieden wird. Ein Drittel einer Sekunde faellt bei
+-- einer Aufladung von 2.8 Sekunden nicht auf; laeuft das Rig bis dahin nicht, hat es
+-- abgelehnt und der alte Effekt ist richtig.
+--
+-- Die Entscheidung wird je Angreifer kurz gemerkt: der Fokus schickt alle 0.25 Sekunden
+-- einen Tick, und jeder davon soll nicht erneut warten.
+local RIG_DECISION_WAIT = 0.35
+local RIG_DECISION_MEMORY = 1.2
+
+local rigDecisions = setmetatable({}, { __mode = "k" }) -- [player] = { [attribut] = {at, playing} }
+
+local function rigWillPlay(attackerPlayer, attributeName)
+	if not attackerPlayer then
+		return false
+	end
+
+	local perPlayer = rigDecisions[attackerPlayer]
+	if not perPlayer then
+		perPlayer = {}
+		rigDecisions[attackerPlayer] = perPlayer
+	end
+
+	-- Solange die Ticks weiterlaufen, bleibt die einmal getroffene Entscheidung stehen --
+	-- und der Zeitstempel wird dabei AUFGEFRISCHT. Ohne das lief das Gedächtnis mitten im
+	-- Strahl ab, es wurde erneut ein Drittel einer Sekunde gewartet, und in dieser Zeit kam
+	-- kein Strahl. Er blitzte deshalb nur kurz auf und verschwand wieder.
+	local remembered = perPlayer[attributeName]
+	if remembered and os.clock() - remembered.at < RIG_DECISION_MEMORY then
+		remembered.at = os.clock()
+		return remembered.playing
+	end
+
+	local active = rigPhaseActive(attackerPlayer, attributeName)
+	if active == nil then
+		perPlayer[attributeName] = { at = os.clock(), playing = false }
+		return false
+	end
+
+	local deadline = os.clock() + RIG_DECISION_WAIT
+	while not active and os.clock() < deadline do
+		task.wait(0.05)
+		active = rigPhaseActive(attackerPlayer, attributeName)
+		if active == nil then
+			active = false
+			break
+		end
+	end
+
+	perPlayer[attributeName] = { at = os.clock(), playing = active }
+
+	-- ===== Warum hat das Rig abgelehnt? =====
+	-- Seit Paket 1.3.4 sagt es das selbst -- auf unsere Meldung hin, und für BEIDE
+	-- Spezialangriffe: "FocusRejectReason" und "AreaRejectReason" nennen die Bedingung, die
+	-- gekippt ist ("Airborne", "Jump active", "Cooldown", "No target", "Too steep" ...).
+	-- Dazu legt es den Zustand ab, in dem die Anfrage ankam.
+	--
+	-- Vorher stand hier eine eigene Zusammenstellung aus dem, was von aussen ablesbar war,
+	-- und die konnte den Grund bestenfalls nahelegen. Jetzt wird er gelesen.
+	if not active and attackerPlayer == player then
+		local model = StageModels.FindEquipped(attackerPlayer.Character)
+		if model then
+			local grundAttribut = attributeName == "FocusPhase" and "FocusRejectReason" or "AreaRejectReason"
+			print(string.format(
+				"[Kaiju Debug] Rig lehnt %s ab -- Grund=%s Boden=%s Senkrecht=%.1f Zustand=%s Phase=%s",
+				attributeName,
+				tostring(model:GetAttribute(grundAttribut)),
+				tostring(model:GetAttribute("SpecialFloorMaterial")),
+				tonumber(model:GetAttribute("SpecialVerticalVelocity")) or 0,
+				tostring(model:GetAttribute("SpecialHumanoidState")),
+				tostring(model:GetAttribute(attributeName))))
+		end
+	end
+
+	return active
 end
 
 local function playKaijuSpecial(remoteName)
@@ -677,19 +791,34 @@ end)
 local activeFocusBeams = {} -- [attackerPlayer] = { beam=, glow=, light=, lastUpdate= }
 local FOCUS_BEAM_TIMEOUT = 0.4
 
+-- ===== Die Farbe des Strahls richtet sich nach der Figur =====
+-- Trägt der Angreifer ein Kaiju-Modell, zeichnet dieser Strahl nur noch den FEHLSCHUSS:
+-- findet das Spiel kein Ziel, erstattet es die Energie und zeigt einen kurzen Strahl ins
+-- Leere als Rückmeldung. Das Rig spielt dabei nichts, denn ohne Ziel gibt es für es nichts
+-- zu tun.
+--
+-- Rot passte dazu nicht mehr. Der Kaiju lädt cyan auf, und ein roter Fehlschuss sah aus wie
+-- ein zweiter, fremder Angriff statt wie derselbe, der ins Leere ging. Es ist die Farbe der
+-- Darstellung des Pakets (KaijuPresentation, focusColor).
+local FOCUS_COLOR_DEFAULT = { Color3.fromRGB(255, 90, 90), Color3.fromRGB(255, 150, 150), Color3.fromRGB(255, 80, 80) }
+local FOCUS_COLOR_KAIJU = { Color3.fromRGB(65, 225, 255), Color3.fromRGB(170, 240, 255), Color3.fromRGB(65, 225, 255) }
+
 local function updateFocusBeam(attackerPlayer, startPos, endPos)
 	local distance = (endPos - startPos).Magnitude
 	local beamCFrame = CFrame.new(startPos, endPos) * CFrame.new(0, 0, -distance / 2)
 
 	local entry = activeFocusBeams[attackerPlayer]
 	if not entry then
+		local farben = StageModels.FindEquipped(attackerPlayer and attackerPlayer.Character)
+			and FOCUS_COLOR_KAIJU or FOCUS_COLOR_DEFAULT
+
 		local beam = Instance.new("Part")
 		beam.Name = "FocusLaser"
 		beam.Anchored = true
 		beam.CanCollide = false
 		beam.CanQuery = false
 		beam.Material = Enum.Material.Neon
-		beam.Color = Color3.fromRGB(255, 90, 90)
+		beam.Color = farben[1]
 		beam.Parent = Workspace
 
 		local glow = Instance.new("Part")
@@ -698,12 +827,12 @@ local function updateFocusBeam(attackerPlayer, startPos, endPos)
 		glow.CanCollide = false
 		glow.CanQuery = false
 		glow.Material = Enum.Material.Neon
-		glow.Color = Color3.fromRGB(255, 150, 150)
+		glow.Color = farben[2]
 		glow.Transparency = 0.55
 		glow.Parent = Workspace
 
 		local light = Instance.new("PointLight")
-		light.Color = Color3.fromRGB(255, 80, 80)
+		light.Color = farben[3]
 		light.Range = 20
 		light.Brightness = 5
 		light.Parent = beam
@@ -755,7 +884,21 @@ FocusAttackEffectEvent.OnClientEvent:Connect(function(attackerPlayer, startPos, 
 	-- Und geprüft wird, ob das Rig gerade WIRKLICH etwas spielt -- nicht bloss, ob ein
 	-- Modell hängt. Lehnt es den Fokus ab (kein Gebäude in Sicht, etwa an der
 	-- Trainingsstation), soll der alte Strahl einspringen statt beides ausfallen zu lassen.
-	if rigEffectRunning(attackerPlayer, "FocusPhase") then
+	if rigWillPlay(attackerPlayer, "FocusPhase") then
+		return
+	end
+
+	-- ===== Und den Fehlschuss zeichnet der Adapter selbst =====
+	-- Findet auch das Spiel kein Ziel, sammelt die Figur Energie über den Rückenplatten, zieht
+	-- sie ans Maul und feuert kurz ins Leere (KaijuStageOneCombatAdapter, playFocusMiss). Der
+	-- Adapter vermerkt das am Modell; hier wird deshalb nicht noch ein zweiter Strahl
+	-- darübergelegt.
+	--
+	-- Der Zeitstempel steht in Serverzeit, damit ihn jeder Zuschauer gleich liest. Das
+	-- Fenster deckt die Aufladung samt Strahl ab.
+	local model = StageModels.FindEquipped(attackerPlayer and attackerPlayer.Character)
+	local missAt = model and model:GetAttribute("AdapterFocusMissAt")
+	if typeof(missAt) == "number" and Workspace:GetServerTimeNow() - missAt < 3 then
 		return
 	end
 
@@ -805,10 +948,19 @@ AreaAttackEffectEvent.OnClientEvent:Connect(function(attackerPlayer, position, c
 		playKaijuSpecial("RequestArea")
 	end
 
-	-- Die alte Ladekugel bleibt aus, SOBALD das Rig wirklich auflädt. Weil das einen Moment
-	-- braucht, wird gleich noch einmal nachgesehen -- läuft es dann, ist die Kugel schon
-	-- weg, bevor sie auffällt; lehnt das Rig ab, bleibt sie stehen.
-	if rigEffectRunning(attackerPlayer, "AreaPhase") then
+	-- ===== Trägt der Angreifer ein Kaiju-Modell, bleibt die alte Kugel IMMER aus =====
+	-- Hier wurde einmal abgewartet, ob das Rig seine Phase wirklich startet, und sonst die
+	-- alte Kugel gezeichnet. Das Rig lehnt den Angriff aber ab, sobald der Boden schräg ist
+	-- -- auf einem Dach sah derselbe Tastendruck deshalb völlig anders aus als auf der
+	-- Strasse.
+	--
+	-- Den Ersatz stellt jetzt der Server: lehnt das Rig ab, spielt er zur Einschlagzeit
+	-- dieselbe cyane Entladung ohne das Rig (SpecialAttackHandler, Ersatz-Entladung). Der
+	-- Client muss deshalb gar nicht mehr wissen, wie das Rig entschieden hat.
+	--
+	-- Beim FOKUS bleibt die Abwägung nötig und steht weiter unten: der verlangt ein Gebäude
+	-- in Sicht, und an der Trainingsstation gäbe es sonst überhaupt kein Bild.
+	if StageModels.FindEquipped(attackerPlayer and attackerPlayer.Character) then
 		return
 	end
 

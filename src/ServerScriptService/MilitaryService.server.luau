@@ -658,6 +658,20 @@ _G.DamageMilitaryUnit = function(cityName, unitType, unitId, amount, attackerPla
 		end
 	end
 
+	-- Erfahrung und Geld fuer die besiegte Einheit. Hoehe aus ihren Lebenspunkten, damit
+	-- Panzer, Raketenwerfer und Helikopter sich unterscheiden und mit der Stadt mitwachsen
+	-- (CityAlertConfig.DefeatReward, Specs/BalancingSpec balancing.every-defeat-pays).
+	if attackerPlayer then
+		local xp, coins = CityAlertConfig.DefeatReward(unit.MaxHealth
+			or (unit.Model and unit.Model:GetAttribute("MaxHealth")))
+		if _G.AwardXP then
+			_G.AwardXP(attackerPlayer, xp)
+		end
+		if _G.AwardCoins then
+			_G.AwardCoins(attackerPlayer, coins)
+		end
+	end
+
 	if attackerPlayer and _G.OnMilitaryUnitDestroyedForAchievements then
 					_G.OnMilitaryUnitDestroyedForAchievements(attackerPlayer)
 				end

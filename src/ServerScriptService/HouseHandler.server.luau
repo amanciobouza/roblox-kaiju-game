@@ -166,7 +166,10 @@ local function connectHouseTouchPart(house, part)
 	if not part:IsA("BasePart") then
 		return
 	end
-	if part:GetAttribute("IsTechnicalPart") then
+	-- Die Kollisionshülle ist technisch UND die einzige Stelle, an der ein Gebäude mit
+	-- Hülle noch berührt werden kann -- sie muss also durch, während alles andere
+	-- Technische draussen bleibt.
+	if part:GetAttribute("IsTechnicalPart") and not part:GetAttribute("IsCollisionShell") then
 		return
 	end
 
@@ -906,6 +909,106 @@ end
 -- Siehe dort für Details. Wird über die schmale API (Register/IsParentGroupHouse/
 -- GetGroup/ScheduleRespawn) genutzt.
 
+-- ===== Die Kollisions-Korrektur meldet sich EINMAL, nicht je Gebäude =====
+-- Sie greift bei fast jedem Modell im Spiel, und zwar bei jedem Start aufs Neue: die
+-- Vorlagen in Studio behalten ihre Teile mit CanCollide=false, hier werden sie nur zur
+-- Laufzeit überschrieben. Das ergab mehrere hundert Warnzeilen beim Serverstart, in denen
+-- alles andere unterging -- Fehlermeldungen eingeschlossen.
+--
+-- Eine Warnung, die immer kommt und auf die niemand reagieren kann, ist keine Warnung. Der
+-- Wert steckt in der SUMME: springt sie plötzlich, hat jemand ein Modell kaputt gemacht.
+-- Deshalb eine Zeile am Ende der Erstregistrierung.
+--
+-- Wer doch wissen will, WELCHES Modell betroffen ist, setzt den Schalter -- dann kommt die
+-- alte Ausgabe je Gebäude zurück.
+local COLLISION_FIX_PER_HOUSE = false
+local collisionFixParts, collisionFixHouses = 0, 0
+
+-- ===== Die Kollisionshülle =====
+-- Bisher trug JEDES Teil eines Gebäudes Kollision, Berührbarkeit UND eine eigene
+-- Touched-Verbindung -- über die ganze Welt rund zwölftausend Stück. Für eine Figur von
+-- dreissig bis neunzig Studs ist der Unterschied zwischen "Hülle" und "jedes Fenstersims"
+-- nicht spürbar; die Kosten sind es.
+--
+-- Stattdessen: ein unsichtbarer Körper je Gebäude trägt beides, die Sichtteile werden reine
+-- Optik. Aus zwölftausend Kollisionskörpern werden rund sechzig, aus zwölftausend
+-- Touched-Verbindungen ebenso viele.
+--
+-- Trägt ein Modell von Hand gesetzte Teile namens "CollisionShell", gelten die. Sonst wird
+-- ein Quader aus dem Hüllquader erzeugt. So behältst du bei einem Kirchturm die Kontrolle
+-- und hast bei neununddreissig Häusern keine Arbeit.
+--
+-- NUR für die Städte in dieser Liste. Brasshaven zuerst, damit sich beides nebeneinander
+-- vergleichen lässt, bevor es für alle gilt. Der Vergleich ist der Sinn der Liste -- wer
+-- sie einfach füllt, ohne die andere Stadt daneben zu spielen, verschenkt ihn.
+local COLLISION_SHELL_CITIES = { smalltown = true }
+local SHELL_NAME = "CollisionShell"
+local shellsBuilt, shellsAdopted = 0, 0
+
+-- Der Stadtname steht am Gebäude erst, nachdem ihn jemand aufgelöst hat -- und das läuft
+-- verzögert (siehe weiter unten). Deshalb hier über die Vorfahren statt über das Attribut:
+-- der Ordner heisst in Studio "Smalltown", in der Config "SmallTown", also ohne Rücksicht
+-- auf Gross- und Kleinschreibung.
+local function usesCollisionShell(house)
+	-- Bis nach ganz oben laufen statt gegen Workspace zu vergleichen: dieses Skript führt
+	-- keinen Workspace-Verweis, und `Workspace` gross geschrieben ist in Luau kein
+	-- garantiertes Global -- es hätte still auf nil aufgelöst und die Schleife wäre bis
+	-- `game` gelaufen. Deren Parent ist nil, die Schleife endet also ohnehin von selbst.
+	local node = house.Parent
+	while node do
+		if COLLISION_SHELL_CITIES[string.lower(node.Name)] then
+			return true
+		end
+		node = node.Parent
+	end
+	return false
+end
+
+-- Liefert die Hüllen-Teile des Gebäudes. Von Hand gesetzte haben Vorrang; fehlen sie, wird
+-- einer aus dem Hüllquader gebaut.
+local function collisionShellParts(house)
+	local vorhanden = {}
+	for _, part in ipairs(house:GetDescendants()) do
+		if part:IsA("BasePart") and part.Name == SHELL_NAME then
+			table.insert(vorhanden, part)
+		end
+	end
+	if #vorhanden > 0 then
+		shellsAdopted += 1
+		return vorhanden
+	end
+
+	local ok, cframe, size = pcall(function()
+		return house:GetBoundingBox()
+	end)
+	if not ok or not size or size.Y <= 0 then
+		return {} -- ohne Hüllquader keine Hülle -- dann bleibt es beim alten Weg
+	end
+
+	local shell = Instance.new("Part")
+	shell.Name = SHELL_NAME
+	shell.Size = size
+	shell.CFrame = cframe
+	shell.Anchored = true
+	shell.Transparency = 1
+	shell.CastShadow = false
+	shell.Parent = house
+	shellsBuilt += 1
+	return { shell }
+end
+
+-- Die Hülle ist als technisches Teil von Einsturz und Respawn ausgenommen -- ihre
+-- Kollision muss deshalb an genau diesen beiden Stellen von Hand geschaltet werden. Bleibt
+-- sie beim Einsturz stehen, rennt man gegen ein Haus, das nicht mehr da ist.
+local function setShellActive(house, active)
+	for _, part in ipairs(house:GetDescendants()) do
+		if part:IsA("BasePart") and part:GetAttribute("IsCollisionShell") then
+			part.CanCollide = active
+			part.CanTouch = active
+		end
+	end
+end
+
 local function initHouse(house)
 	if not house:IsA("Model") then
 		warn("'" .. house.Name .. "' hat den Tag '" .. HOUSE_TAG .. "', ist aber kein Model. Bitte gruppieren.")
@@ -924,23 +1027,53 @@ local function initHouse(house)
 	-- Zusätzlich wird die ursprüngliche CFrame jedes Teils gesichert -- die Einsturz-
 	-- Animation beim Zerstören verschiebt/verdreht die Teile einzeln, und beim Respawn
 	-- muss jedes Teil wieder an seinen korrekten Platz zurück (nicht nur das ganze Model).
+	-- ===== Hülle oder jedes Teil? =====
+	-- Mit Hülle tragen die Sichtteile NICHTS mehr: keine Kollision, keine Berührbarkeit,
+	-- keine Touched-Verbindung. Sie sind dann das, wonach sie aussehen -- Optik.
+	local shellParts = usesCollisionShell(house) and collisionShellParts(house) or {}
+	local hatHuelle = #shellParts > 0
+
+	for _, shell in ipairs(shellParts) do
+		-- Technisch: die Einsturz-Animation und der Energie-Anstrich sollen die Hülle in
+		-- Ruhe lassen. Ihre Kollision wird an denselben Stellen von Hand geschaltet.
+		shell:SetAttribute("IsTechnicalPart", true)
+		shell:SetAttribute("IsCollisionShell", true)
+		shell.CanCollide = true
+		shell.CanTouch = true
+		shell.CanQuery = true
+		connectHouseTouchPart(house, shell)
+	end
+
 	local fixedCollisionCount = 0
 	for _, part in ipairs(house:GetDescendants()) do
 		if part:IsA("BasePart") and not part:GetAttribute("IsTechnicalPart") then
-			if not part.CanCollide then
-				fixedCollisionCount += 1
+			if hatHuelle then
+				part.CanCollide = false
+				part.CanTouch = false
+				part:SetAttribute("OriginalCanCollide", false)
+				part:SetAttribute("OriginalCanTouch", false)
+			else
+				if not part.CanCollide then
+					fixedCollisionCount += 1
+				end
+				part.CanCollide = true
+				part.CanTouch = true
+				part:SetAttribute("OriginalCanCollide", true)
+				part:SetAttribute("OriginalCanTouch", true)
 			end
-			part.CanCollide = true
-			part.CanTouch = true
-			part:SetAttribute("OriginalCanCollide", true)
-			part:SetAttribute("OriginalCanTouch", true)
 			if part:GetAttribute("OriginalCFrame") == nil then
 				part:SetAttribute("OriginalCFrame", part.CFrame)
 			end
 		end
 	end
 	if fixedCollisionCount > 0 then
-		warn("[Kaiju] " .. fixedCollisionCount .. " Teil(e) von '" .. house:GetFullName() .. "' hatten CanCollide=false in Studio -- automatisch auf true korrigiert.")
+		collisionFixParts += fixedCollisionCount
+		collisionFixHouses += 1
+		-- Einzeln gemeldet wird nur auf Wunsch. Der Grund steht bei collisionFixParts.
+		if COLLISION_FIX_PER_HOUSE then
+			warn("[Kaiju] " .. fixedCollisionCount .. " Teil(e) von '" .. house:GetFullName()
+				.. "' hatten CanCollide=false in Studio -- automatisch auf true korrigiert.")
+		end
 	end
 
 	if not house.PrimaryPart then
@@ -1147,7 +1280,8 @@ local function growHouseFromGround(house)
 		end
 	end
 
-	-- Kollision wiederherstellen (vom Attribut, das initHouse() dauerhaft gesichert hat).
+	-- Kollision wiederherstellen (vom Attribut, das initHouse() gesetzt hat -- bei einem
+	-- Gebäude mit Hülle steht dort bewusst `false`, die Sichtteile bleiben durchlässig).
 	for _, part in ipairs(partsToRestore) do
 		if part.Parent then
 			local original = part:GetAttribute("OriginalCanCollide")
@@ -1157,6 +1291,8 @@ local function growHouseFromGround(house)
 			part.CanTouch = (originalCanTouch == nil) or originalCanTouch
 		end
 	end
+
+	setShellActive(house, true)
 end
 
 -- ParentGroupService braucht Zugriff auf diese vier lokalen Funktionen + zwei Konstanten
@@ -1177,6 +1313,8 @@ local function collapseHouse(house, duration)
 	-- Debug-Schalter: überspringt die komplette Einsturz-Animation, alle Teile werden
 	-- sofort in ihren Endzustand versetzt (unsichtbar, keine Kollision) -- praktisch, um
 	-- beim Testen schneller durch mehrere Zerstörungs-Zyklen zu kommen.
+	setShellActive(house, false)
+
 	if _G.DebugSkipCollapseAnimation then
 		for _, part in ipairs(house:GetDescendants()) do
 			if part:IsA("BasePart") and not part:GetAttribute("IsTechnicalPart") then
@@ -1660,7 +1798,7 @@ local function destroyHouse(house, destroyerPlayer, originPosition, isPassiveDam
 		if parentGroup then
 			ParentGroupService.ScheduleRespawn(parentGroup)
 		else
-			warn("[HouseHandler] ParentGroup-Sektion '" .. house:GetFullName() .. "' hat keinen registrierten Gruppen-Root -- kein Einzelrespawn gestartet.")
+			warn("[HouseHandler] ParentGroup-Sektion '" .. house:GetFullName() .. "' hat keinen registrierten Gruppen-Root -- kein Einzelrespawn gestartet. " .. ParentGroupService.DescribeMissingGroup(house))
 		end
 	end
 	-- WICHTIG: Der individuelle Respawn-Timer für NICHT-Gruppen-Häuser startet jetzt
@@ -1748,7 +1886,16 @@ local function damageHouse(house, amount, attackerPlayer, originPosition, isPass
 		-- ausgeschlossen war.
 		local maxHealth = house:GetAttribute("MaxHealth") or 1
 		local healthRatio = newHealth / maxHealth
-		if healthRatio < 0.5 then
+		if healthRatio >= 0.5 then
+			-- Wieder über der Schwelle (Respawn): der nächste Durchbruch soll erneut melden.
+			house:SetAttribute("ShieldClusterGemeldet", nil)
+		elseif not house:GetAttribute("ShieldClusterGemeldet") then
+			-- NUR beim Übertreten der Schwelle melden, nicht bei jedem weiteren Treffer
+			-- darunter. Vorher schickte ein einzelnes fallendes Haus fünf bis sechs
+			-- identische Meldungen, und der Durchgang vom 17.09.2026 bestand zur Hälfte
+			-- aus diesen Zeilen -- die Balance-Zahlen waren darin nicht mehr zu finden.
+			house:SetAttribute("ShieldClusterGemeldet", true)
+
 			local cityNamePart = house
 			local cityName = nil
 			while cityNamePart do
@@ -2196,6 +2343,24 @@ end)
 for _, house in ipairs(CollectionService:GetTagged(HOUSE_TAG)) do
 	initHouse(house)
 end
+
+-- Die Bilanz der Kollisions-Korrektur, einmal für die ganze Welt (siehe oben).
+if collisionFixParts > 0 then
+	print(string.format("[Kaiju Debug] Kollision: %d Teile in %d Gebaeuden auf CanCollide=true "
+		.. "korrigiert. Springt diese Zahl, hat sich eine Modellvorlage in Studio geaendert.",
+		collisionFixParts, collisionFixHouses))
+end
+if shellsBuilt + shellsAdopted > 0 then
+	print(string.format("[Kaiju Debug] Kollisionshuelle: %d Gebaeude, davon %d mit eigener "
+		.. "Huelle aus Studio und %d mit erzeugtem Quader. Deren Sichtteile tragen weder "
+		.. "Kollision noch Touched-Verbindung mehr.", shellsBuilt + shellsAdopted,
+		shellsAdopted, shellsBuilt))
+end
+
+-- Ab hier kommt je Gebäude höchstens noch eines dazu (Respawn, nachgeladene Stadt). Solche
+-- Einzelfälle sind selten genug, um sie wieder einzeln zu melden -- und dann sind sie auch
+-- eine echte Meldung wert, weil mitten im Spiel ein neues Modell aufgetaucht ist.
+COLLISION_FIX_PER_HOUSE = true
 CollectionService:GetInstanceAddedSignal(HOUSE_TAG):Connect(initHouse)
 
 -- Einfache, projektweite Schnittstelle für CombatHandler.lua (analog zu _G.AwardXP)

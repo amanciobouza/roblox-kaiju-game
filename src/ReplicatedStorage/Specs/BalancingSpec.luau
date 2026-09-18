@@ -13,8 +13,14 @@
 -- Guardians -- war gebaut, greift aber wegen eines nie gesetzten Zustands nie.
 --
 -- Genau dafür gibt es dieses Format: die Absicht steht neben den Regeln, die sie
--- durchsetzen, und ein neuer Verstoss hält den Prüfer an. Der heutige Rückstand läuft
--- als knownViolations bewusst durch und bleibt dabei als Aufgabenliste sichtbar.
+-- durchsetzen, und ein neuer Verstoss hält den Prüfer an. Der Rückstand läuft als
+-- knownViolations bewusst durch und bleibt dabei als Aufgabenliste sichtbar.
+--
+-- Stand 18.09.2026: die Belohnung des Guardians und der Alarm für besiegte Verteidigung
+-- sind erledigt, für ALLE Städte -- die Duldungen dieser beiden Regeln sind deshalb
+-- entfernt und nicht etwa stehengelassen. Ein Rückfall hält den Prüfer jetzt an. Offen
+-- bleiben der Respawn-Stopp bei CITY BROKEN (nur in Studio prüfbar) und der Ort für die
+-- Gebäudewerte des Village.
 --
 -- Importiert nichts, alles kommt über den ctx (siehe SpecRunner).
 
@@ -44,6 +50,18 @@ local MAX_ALERT_BY_CITY_AND_CHAPTER = {
 -- Level 40 schaltet die fünfte frei, die Level-Obergrenze liegt damit bei 50.
 local STAGE_LEVEL_MILESTONES = { 0, 10, 20, 30, 40 }
 
+-- Der Schaden des Spielers beim EINTRITT in jede Stadt: die Trainingskappe seines Levels
+-- mal dem DamagePercent seiner Entwicklungsstufe. Von Hand geführt, weil die Kappenkurve
+-- in TrainingHandler steht und eine Spec nichts importiert -- dafür steht die Annahme hier
+-- sichtbar und lässt sich widerlegen, statt in einer Kommentarzeile zu verschwinden.
+local ENTRY_DAMAGE_BY_CITY = {
+	Village = 18,
+	SmallTown = 135,
+	City = 614,
+	LargeCity = 1780,
+	MegaCity = 34568,
+}
+
 local function cityConfig(ctx, cityName)
 	local cities = ctx.config and ctx.config.CityAlert and ctx.config.CityAlert.Cities
 	return cities and cities[cityName]
@@ -61,9 +79,9 @@ return {
 			intent = "Jede Figur hat FÜNF Entwicklungsstufen, mit Meilensteinen bei Level "
 				.. "0, 10, 20, 30 und 40. Die Startform ist Stufe I. Daraus folgt eine "
 				.. "Level-Obergrenze von 50.\n"
-				.. "Der Kaiju hat heute sechs Formen, die sechste bei Level 50. Alle "
-				.. "Kaiju-Modelle werden ohnehin ersetzt; die neue Reihe hat fünf.",
-			knownViolations = { "Kaiju:" },
+				.. "Der Kaiju erfüllt das seit der neuen Reihe (Riftborn, Ironpulse, "
+				.. "Epochbreaker, Chronovore, Aeon Tyrant); die sechste Form bei "
+				.. "Level 50 ist damit entfallen.",
 			check = function(ctx)
 				local violations = {}
 				local skins = ctx.config and ctx.config.Skins
@@ -104,7 +122,6 @@ return {
 				.. "zwischen der ersten und der fünften Stufe liegt ein Vielfaches an "
 				.. "Schadensleistung, und ein Wert, der für die eine stimmt, kann für die "
 				.. "andere nicht stimmen.",
-			knownViolations = { "Village:", "SmallTown:", "City:", "LargeCity:", "MegaCity:" },
 			check = function(ctx)
 				local violations = {}
 				for cityName, expected in pairs(EXPECTED_STAGE_BY_CITY) do
@@ -153,13 +170,9 @@ return {
 			id = "balancing.defense-does-not-escalate",
 			intent = "Verteidigung zu besiegen macht den Weg frei -- es verschärft die Lage "
 				.. "NICHT. Kein besiegtes Verteidigungssystem erzeugt Alarmfortschritt.\n"
-				.. "Heute erzeugt genau eines welchen: ein zerstörtes Feuerwehrauto, über "
-				.. "FireEngineDestroyAlertValue. Eine Ausnahme, die nur für ein System gilt "
-				.. "und nirgends begründet ist, wird beim nächsten Balancing-Durchgang zur "
-				.. "Stolperstelle -- der Wert entfällt.",
-			knownViolations = {
-				"Village:", "SmallTown:", "City:", "LargeCity:", "MegaCity:", "PrologueCity:",
-			},
+				.. "Erfüllt seit 18.09.2026: FireEngineDestroyAlertValue ist in allen Städten "
+				.. "entfallen. Der Wert war die einzige Ausnahme, und sie galt nur für ein "
+				.. "System -- wer die Feuerwehr besiegte, beschleunigte damit die Eskalation.",
 			check = function(ctx)
 				local violations = {}
 				local cityAlert = ctx.config and ctx.config.CityAlert
@@ -190,9 +203,10 @@ return {
 				.. "effiziente Progression fast notwendig erscheinen, ohne sie hart zu "
 				.. "blockieren. Sein Wert ist FEST und füllt nicht dynamisch bis zum "
 				.. "nächsten Level auf; nur so bleiben andere Spielweisen möglich.\n"
-				.. "Heute gibt der Guardian gar nichts, Militär und Barrikaden geben nichts, "
-				.. "die Feuerwehr nur Geld.",
-			knownViolations = { "Village:", "SmallTown:", "City:", "LargeCity:", "MegaCity:" },
+				.. "Erfüllt seit 18.09.2026: jede Stadt mit Guardian nennt seine Belohnung. "
+				.. "Nur Brasshaven ist dabei gemessen -- die übrigen vier sind aus dessen "
+				.. "Verhältnis (35 mal HP^0.75) hergeleitet und gehören nachgeschärft, sobald "
+				.. "die Städte gespielt werden.",
 			check = function(ctx)
 				local violations = {}
 				for cityName in pairs(EXPECTED_STAGE_BY_CITY) do
@@ -203,6 +217,53 @@ return {
 							table.insert(violations, string.format(
 								"%s: Guardian ohne Belohnung -- GuardianXPReward=%s, GuardianCoinsReward=%s",
 								cityName, tostring(city.GuardianXPReward), tostring(city.GuardianCoinsReward)))
+						end
+					end
+				end
+				return violations
+			end,
+		},
+
+		{
+			id = "balancing.guardian-stays-a-challenge",
+			intent = "Der Guardian ist IMMER eine Herausforderung -- in jeder Stadt, auf jeder "
+				.. "Entwicklungsstufe. Er ist der längste Kampf seiner Stadt und der "
+				.. "gefährlichste Gegner darin; keine Stadt darf ihn zur Formsache werden "
+				.. "lassen, nur weil der Spieler inzwischen härter zuschlägt.\n"
+				.. "Gemessen wird das an zwei Zahlen, beide aus Brasshaven, der einzigen "
+				.. "durchgerechneten Stadt: rund 310 Schläge (21 Fokusstrahlen), bis er fällt, "
+				.. "und rund 16 Fausttreffer, bis der Spieler fällt -- doppelt so gefährlich "
+				.. "wie alles andere in der Stadt.\n"
+				.. "Vor dem 18.09.2026 traf das nur auf Brasshaven zu: das Village verlangte "
+				.. "1 556 Schläge, Megacity nur 66 -- der letzte Guardian des Spiels war der "
+				.. "leichteste. Und in City wie Large City tötete die Faust in ZWEI Treffern.",
+			check = function(ctx)
+				local violations = {}
+				local skins = ctx.config and ctx.config.Skins
+				local kaijuStufen = {}
+				for _, skin in ipairs(skins and skins.Skins or {}) do
+					if (skin.Faction or "Kaiju") == "Kaiju" then
+						table.insert(kaijuStufen, skin)
+					end
+				end
+				for cityName, schaden in pairs(ENTRY_DAMAGE_BY_CITY) do
+					local city = cityConfig(ctx, cityName)
+					if city and city.GuardianHP then
+						local schlaege = (city.GuardianHP + (city.GuardianShieldHP or 0)) / schaden
+						if schlaege < 250 or schlaege > 400 then
+							table.insert(violations, string.format(
+								"%s: Guardian faellt in %d Schlaegen, erwartet 250 bis 400",
+								cityName, math.floor(schlaege)))
+						end
+						local stufe = kaijuStufen[city.ExpectedSkinStage or 0]
+						local faust = city.GuardianImpactFistDamage
+						if stufe and stufe.Health and faust and faust > 0 then
+							local treffer = stufe.Health / faust
+							if treffer < 12 or treffer > 20 then
+								table.insert(violations, string.format(
+									"%s: Guardian-Faust toetet in %.1f Treffern, erwartet 12 bis 20",
+									cityName, treffer))
+							end
 						end
 					end
 				end

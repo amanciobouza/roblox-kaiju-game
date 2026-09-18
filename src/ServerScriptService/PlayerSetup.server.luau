@@ -16,6 +16,47 @@ local Workspace = game:GetService("Workspace")
 local StarterPlayer = game:GetService("StarterPlayer")
 
 local SkinsConfig = require(ReplicatedStorage:WaitForChild("SkinsConfig"))
+-- Nur fuer die Hoehe, auf die der blanke Avatar skaliert wird (Debug-Schalter, siehe
+-- applySkinToCharacter). Die Zuordnung Stufe -> Modell steht dort und nirgends sonst.
+local StageModels = require(ReplicatedStorage:WaitForChild("StageModels"))
+
+-- ===== Wie hoch der AVATAR allein ist =====
+-- character:GetBoundingBox() taugt dafuer nicht, sobald ein Kaiju-Modell haengt: das steckt
+-- als Kind im Charakter und geht in den Huellquader ein. Gemessen wuerde dann die sichtbare
+-- Figur, und die Rechnung "wie gross muss der Avatar werden" bekaeme ihr eigenes Ergebnis
+-- als Eingabe -- die Figur waere nach jedem Durchlauf groesser.
+--
+-- Deshalb hier nur Teile, die NICHT in einem Kind-Modell liegen. Das getragene Modell ist
+-- genau so eines; die R15-Glieder des Avatars haengen direkt am Charakter.
+-- Notschalter fuer die Groessenangleichung unten. Auf false zurueckgedreht, verhaelt sich
+-- die Figur wieder wie vor dem 17.09.2026: der Avatar traegt die Skin-Groesse, das Modell
+-- ist sechs- bis neunmal groesser, und die Physik richtet sich nach dem kleinen Koerper.
+local AVATAR_MATCHES_MODEL_HEIGHT = true
+
+local function avatarHeight(character)
+	local min, max = math.huge, -math.huge
+	for _, teil in ipairs(character:GetDescendants()) do
+		if teil:IsA("BasePart") then
+			local inModell = false
+			local node = teil.Parent
+			while node and node ~= character do
+				if node:IsA("Model") then
+					inModell = true
+					break
+				end
+				node = node.Parent
+			end
+			if not inModell then
+				min = math.min(min, teil.Position.Y - teil.Size.Y / 2)
+				max = math.max(max, teil.Position.Y + teil.Size.Y / 2)
+			end
+		end
+	end
+	if min == math.huge or max <= min then
+		return nil
+	end
+	return max - min
+end
 local PlayerDataStore = DataStoreService:GetDataStore("KaijuGame_PlayerData_v1")
 
 -- Prolog-Version (Major/Minor, siehe PrologueConfig.luau). Bewusst als Modul und nicht
@@ -604,6 +645,90 @@ local function zielGroesse(player, skin)
 	return SkinsConfig.GetScale(skin, player:GetAttribute("CurrentZone") == "Sanctuary")
 end
 
+-- ===== Der Avatar auf die HOEHE des Modells =====
+-- Das Kaiju-Modell ist reine Optik; physisch ist der versteckte Avatar die Figur. An ihm
+-- entscheidet Roblox Kollision, Bodenkontakt, Schwimmzustand und Huefthoehe -- und er war
+-- sechs- bis neunmal kleiner als das, was man sieht.
+--
+-- Daher zwei Beobachtungen, die dieselbe Ursache haben: der Kaiju steckt unter einem
+-- Dach fest, unter das nur der kleine Avatar passt; und er schwimmt noch, waehrend sein
+-- sichtbarer Koerper laengst an Land steht -- weil der kleine Humanoid darunter noch im
+-- Wasser haengt.
+--
+-- Dieselbe Zahl an Avatar und Modell hilft dagegen NICHT: ein Avatar ist bei Groesse 1
+-- rund fuenf Studs hoch, das Modell dreissig, und das Verhaeltnis waechst ueber die
+-- Stufen von knapp sechs auf gut neun. Es muss die HOEHE angeglichen werden.
+--
+-- ===== Warum das hier steht und nicht in applySkinToCharacter =====
+-- Es gibt ZWEI Anlaesse, zu skalieren: die Figur entsteht, oder der Spieler wechselt die
+-- Zone (im Sanctuary ist alles kleiner). Die Rechnung stand nur beim ersten -- der
+-- Zonenwechsel benutzte weiter die alte Skalierung aus SkinsConfig. Wer also durchs
+-- Portal ging, bekam den kleinen Avatar zurueck, und mit ihm das Einklemmen unter Daechern
+-- und das Schwimmen an Land. Beide Anlaesse rufen jetzt DIESE Funktion.
+--
+-- ===== Es war ein Versuch und ist jetzt die Regel =====
+-- Eingefuehrt hinter einem Debug-Schalter, weil es die zentrale Figurenerzeugung beruehrt:
+-- Sprungkraft, Laufweite, Kamera und jeder Angriff haengen an der Groesse des Avatars. Im
+-- Vergleich nebeneinander hat es sich als das Bessere erwiesen, also gilt es jetzt immer.
+--
+-- Der Notschalter bleibt: das Rig misst die Welt gegen den Rumpf des Avatars, skaliert
+-- seine Toleranzen aber mit der Groesse des MODELLS -- daran ist der Flaechenangriff auf
+-- Stufe 3 schon einmal gescheitert. Nachgerechnet geht es auf (Stufe 1: Rumpf bei 15
+-- gegen 40 erlaubte Studs, Stufe 5: 45 gegen 74), aber wenn sich doch etwas zeigt, ist
+-- dies die eine Zeile, die es zurueckdreht.
+--
+-- Der blanke Avatar (DebugPlainAvatar) faellt damit von selbst mit ab: ohne Modell steht
+-- er so gross da wie die Figur davor.
+--
+-- ===== Die natuerliche Hoehe wird EINMAL gemessen =====
+-- Sie ist eine Konstante des Koerperbaus, also gibt es keinen Grund, sie zweimal zu
+-- messen -- wohl aber einen Grund, es NICHT zu tun: beim Entstehen der Figur haengt noch
+-- kein Kaiju-Modell am Avatar, beim Zonenwechsel schon. avatarHeight ueberspringt zwar
+-- alles, was in einem Kind-Model steckt, aber ein Rig, das seine Teile direkt in die
+-- Figur haengt, rutscht durch. Genau das erklaert die Messungen vom 18.09.2026, wo
+-- "natuerlich" zwischen 5.9, 27.1 und 21.1 sprang.
+--
+-- Der Schluessel ist die Figur, nicht der Spieler: nach einem Respawn wird neu gemessen,
+-- und die schwache Tabelle raeumt sich von selbst auf.
+local natuerlicheHoehe = setmetatable({}, { __mode = "k" })
+
+local function zielSkalierung(player, skin, character, anlass)
+	local targetScale = zielGroesse(player, skin)
+	if not AVATAR_MATCHES_MODEL_HEIGHT then
+		return targetScale
+	end
+
+	local zielHoehe = StageModels.GetWornHeight(
+		skin.Faction or "Kaiju", skin.Id,
+		player:GetAttribute("CurrentZone") == "Sanctuary")
+	if not (zielHoehe and zielHoehe > 0) then
+		return targetScale
+	end
+
+	local natuerlich = natuerlicheHoehe[character]
+	local herkunft = "gemerkt"
+	if not natuerlich then
+		-- Aktuelle Hoehe geteilt durch die aktuelle Skalierung. So haengt die Rechnung an
+		-- nichts Festem -- jeder Spieler bringt seinen eigenen Koerperbau mit.
+		local istHoehe = avatarHeight(character)
+		local istScaleOk, istScale = pcall(function()
+			return character:GetScale()
+		end)
+		if not (istHoehe and istHoehe > 0 and istScaleOk and istScale and istScale > 0) then
+			return targetScale
+		end
+		natuerlich = istHoehe / istScale
+		natuerlicheHoehe[character] = natuerlich
+		herkunft = string.format("gemessen %.1f bei Skalierung %.2f", istHoehe, istScale)
+	end
+
+	targetScale = zielHoehe / natuerlich
+	print(string.format("[Kaiju Debug] Koerpergroesse (%s): Avatar auf %.2f fuer %.0f Studs "
+		.. "(natuerlich %.1f -- %s).", anlass, targetScale, zielHoehe, natuerlich, herkunft))
+
+	return targetScale
+end
+
 local function applySkinToCharacter(player, character, skinId)
 	if DISABLE_ALL_CHARACTER_CUSTOMIZATION_FOR_TESTING then
 		return -- Charakter bleibt zu 100% unberührter Standard-Roblox-Avatar
@@ -659,17 +784,25 @@ local function applySkinToCharacter(player, character, skinId)
 		return character:GetScale()
 	end)
 
-	-- Sanctuary-Verkleinerung: statt der vollen Basis-Scale (1-6) gilt im Sanctuary
-	-- 1 + Scale*0.1 (also nur noch 1.1-1.6) -- macht die friedliche Startzone spürbar
-	-- "menschlicher"/ruhiger als die Kampfzonen ausserhalb, wo die volle Grösse gilt.
-	-- Die Grösse kommt aus SkinsConfig.GetScale -- derselben Stelle, aus der auch die
-	-- Bau-Grösse des Kaiju-Modells kommt. Beide MÜSSEN übereinstimmen, sonst rechnet das
-	-- Rig mit falschen Entfernungen (siehe dort).
-	local targetScale = zielGroesse(player, skin)
+	-- Im Sanctuary ist die Figur kleiner als in der Stadt -- das macht die friedliche
+	-- Startzone spürbar "menschlicher" als die Kampfzonen. Die Zone steckt in
+	-- zielSkalierung (siehe dort), damit hier und beim Zonenwechsel dieselbe Zahl
+	-- herauskommt; laufen die beiden auseinander, rechnet das Rig mit falschen
+	-- Entfernungen.
+	local targetScale = zielSkalierung(player, skin, character, "Figur")
 
 	local actualAvatarScale = targetScale
 	local scalingWasApplied = false
 
+	-- ===== "DebugPlainAvatar" laesst die GROESSE in Ruhe =====
+	-- Der Schalter im Debug-Panel nimmt nur das Kaiju-MODELL ab, nicht die Skalierung: der
+	-- Avatar steht dann genauso gross da wie die Figur davor. Nur so ist der Vergleich einer
+	-- -- gleiche Groesse, gleiche Reichweiten, gleiche Kamera, und der einzige Unterschied
+	-- ist das Rig. Haette er zusaetzlich auf Originalgroesse zurueckgesetzt, waeren zwei
+	-- Dinge gleichzeitig anders und keine Beobachtung mehr eindeutig.
+	--
+	-- DISABLE_SCALING_FOR_TESTING daneben ist etwas anderes: der Schalter im Quelltext, der
+	-- die Skalierung fuer ALLE abstellt.
 	if DISABLE_SCALING_FOR_TESTING then
 		-- Diagnose-Modus: Skalierung komplett übersprungen, Charakter bleibt beim
 		-- normalen Roblox-Avatar (Scale 1).
@@ -2254,6 +2387,31 @@ ResetPlayerDataEvent.OnServerEvent:Connect(function(player, resetPrologue)
 end)
 
 _G.AwardXP = awardXP
+
+-- ===== Das fehlende Gegenstück zu AwardXP =====
+-- Geld wurde bisher überall von Hand gebucht: leaderstats suchen, Coins suchen, addieren,
+-- danach die Lebensstatistik nicht vergessen. Jede Stelle machte es etwas anders, und die
+-- Statistik fehlte mal.
+--
+-- Der Prolog ist ausgenommen, genau wie bei der Erfahrung: er ist ein abgetrennter Zustand
+-- ohne echten Fortschritt.
+_G.AwardCoins = function(player, amount)
+	amount = math.floor(tonumber(amount) or 0)
+	if amount <= 0 or not player or player:GetAttribute("IsInPrologue") == true then
+		return 0
+	end
+	local leaderstats = player:FindFirstChild("leaderstats")
+	local coins = leaderstats and leaderstats:FindFirstChild("Coins")
+	if not coins then
+		return 0
+	end
+	coins.Value += amount
+	if _G.RecordStat then
+		_G.RecordStat(player, "CoinsCollected", amount)
+	end
+	return amount
+end
+
 _G.RecalculateStrength = recalculateStrength
 _G.STAT_CAP_PER_LEVEL = STAT_CAP_PER_LEVEL
 _G.EVO_BONUS_PER_LEVEL = EVO_BONUS_PER_LEVEL
@@ -2267,6 +2425,66 @@ _G.ApplySkinToCharacter = applySkinToCharacter
 --
 -- Null nimmt die Ueberschreibung zurueck: dann gilt wieder, was die Stufe vorgibt. Deshalb
 -- faengt der Regler bei null an und nicht bei eins.
+-- ===== Blanker Avatar, je Spieler =====
+-- Setzt den Spieler auf den unveraenderten Roblox-Avatar zurueck: kein Kaiju-Modell, keine
+-- Skalierung. Gedacht fuer die Frage "liegt es am Rig oder am Spiel?" -- die sonst nur zu
+-- beantworten waere, indem man einen Schalter im Quelltext umlegt und damit alle Spieler
+-- mitnimmt.
+--
+-- Der Zustand haengt am Spieler, nicht an der Figur: er ueberlebt einen Respawn, und genau
+-- das will man beim Vergleichen. Er wird NICHT gespeichert -- beim naechsten Betreten ist
+-- der Spieler wieder normal ausgestattet.
+local DebugPlainAvatarEvent = Instance.new("RemoteEvent")
+DebugPlainAvatarEvent.Name = "DebugPlainAvatarEvent"
+DebugPlainAvatarEvent.Parent = ReplicatedStorage
+
+DebugPlainAvatarEvent.OnServerEvent:Connect(function(player, wantPlain)
+	if not player:GetAttribute("DebugMode") then
+		-- Nicht stumm aussteigen: der Knopf im Panel sieht funktionsfaehig aus, und ohne
+		-- diese Zeile sucht man den Fehler bei der Figur statt beim fehlenden Haken.
+		warn("[Kaiju Debug] Blanker Avatar abgelehnt -- 'DebugMode' ist aus. "
+			.. "Oben im Debug-Panel das Haekchen setzen.")
+		return
+	end
+	player:SetAttribute("DebugPlainAvatar", wantPlain == true or nil)
+	print(string.format("[Kaiju Debug] Blanker Avatar fuer %s: %s", player.Name,
+		wantPlain == true and "AN" or "AUS"))
+
+	-- ===== Neu laden, aber am selben Ort =====
+	-- Neu laden ist der ehrlichste Weg: das Modell wird vom Installer abgenommen, die
+	-- Skalierung neu gerechnet, und alles, was daran haengt, richtet sich beim
+	-- CharacterAdded ohnehin neu ein.
+	--
+	-- LoadCharacter setzt aber am Spawnpunkt ab, und dieser Schalter ist ein
+	-- VERGLEICHSwerkzeug: man steht vor einer Barrikade, einem Dach, einem Feuerwehrauto und
+	-- will genau dort denselben Moment einmal mit und einmal ohne Modell sehen. Wer dafuer
+	-- jedes Mal zurueckwandern muss, vergleicht nicht mehr.
+	--
+	-- Deshalb die Lage merken und danach wiederherstellen -- dasselbe Muster, das der
+	-- Charakter-Neuaufbau weiter oben schon benutzt.
+	local altesCharacter = player.Character
+	local alterRumpf = altesCharacter and altesCharacter:FindFirstChild("HumanoidRootPart")
+	local ort = alterRumpf and alterRumpf.CFrame or nil
+
+	player:LoadCharacter()
+
+	if ort then
+		task.spawn(function()
+			local neu = player.Character
+			if not neu then
+				neu = player.CharacterAdded:Wait()
+			end
+			-- Auf den Rumpf warten, sonst laeuft PivotTo auf ein halb gebautes Modell.
+			if neu:WaitForChild("HumanoidRootPart", 5) then
+				-- Ein Stueck ueber der alten Lage: die Figur wechselt dabei ihre Groesse,
+				-- und exakt dieselbe Hoehe liesse sie je nach Richtung im Boden stecken.
+				-- Fallen ist harmlos, Steckenbleiben nicht.
+				neu:PivotTo(ort + Vector3.new(0, 5, 0))
+			end
+		end)
+	end
+end)
+
 local DebugSetScaleEvent = Instance.new("RemoteEvent")
 DebugSetScaleEvent.Name = "DebugSetScaleEvent"
 DebugSetScaleEvent.Parent = ReplicatedStorage
@@ -2326,10 +2544,11 @@ local function applyZoneAwareScale(player, character)
 		return
 	end
 
-	-- Die Grösse kommt aus SkinsConfig.GetScale -- derselben Stelle, aus der auch die
-	-- Bau-Grösse des Kaiju-Modells kommt. Beide MÜSSEN übereinstimmen, sonst rechnet das
-	-- Rig mit falschen Entfernungen (siehe dort).
-	local targetScale = zielGroesse(player, skin)
+	-- Dieselbe Rechnung wie beim Entstehen der Figur (siehe zielSkalierung): der Avatar wird
+	-- auf die HOEHE des Kaiju-Modells gebracht, und das Modell ist im Sanctuary kleiner als
+	-- in der Stadt. Hier stand vorher zielGroesse() allein -- die alte Skalierung aus
+	-- SkinsConfig. Damit bekam jeder Portalwechsel den kleinen Avatar zurueck.
+	local targetScale = zielSkalierung(player, skin, character, "Zonenwechsel")
 
 	local currentScaleOk, currentScale = pcall(function()
 		return character:GetScale()

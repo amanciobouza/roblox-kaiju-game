@@ -14,6 +14,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Nur wegen der Energiefarben: sie stehen dort einmal fuer Client UND Server.
 local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
+-- Nur fuer die Hoehe, auf der ein Band an der Figur endet (siehe createStreamBeam).
+local StageModels = require(ReplicatedStorage:WaitForChild("StageModels"))
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
@@ -306,8 +308,17 @@ local function createStreamBeam(player, house, sourcePosition)
 	local sourceAttachment = Instance.new("Attachment")
 	sourceAttachment.Parent = anchorPart
 
+	-- ===== Das Band endet an der Figur, nicht am Avatar =====
+	-- Das Attachment haengt am HumanoidRootPart, und das ist richtig: es folgt der Figur von
+	-- selbst. Sein Nullpunkt liegt aber im Rumpf des VERSTECKTEN Avatars, und der steht bei
+	-- einer grossen Kaiju-Stufe auf Schienbeinhoehe. Die Baender endeten deshalb sichtbar an
+	-- den Fuessen, und je groesser die Figur, desto deutlicher.
+	--
+	-- Der Versatz hebt es auf Brusthoehe der sichtbaren Figur (StageModels.GetBodyOffset).
+	-- Ohne angezogenes Modell ist er null, dann bleibt alles wie zuvor.
 	local targetAttachment = Instance.new("Attachment")
 	targetAttachment.Name = "EnergyStreamTarget"
+	targetAttachment.Position = StageModels.GetBodyOffset(character)
 	targetAttachment.Parent = rootPart
 
 	-- ===== Der EFFEKTIVE Typ, nicht der deklarierte =====

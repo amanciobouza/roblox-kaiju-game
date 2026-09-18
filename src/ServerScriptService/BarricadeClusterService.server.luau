@@ -205,6 +205,17 @@ end
 -- Rückfall unter Level 3 zurückgesetzt (siehe Level-Wechsel-Listener weiter unten).
 local destroyedThisCycle = {}
 
+-- [cityName][clusterId] = true für Cluster, deren Flankengebäude schon unter 50% HP
+-- gefallen ist, SOLANGE die Stadt noch nicht auf Stufe 3 steht.
+--
+-- Warum das nötig ist: der einzige Aufrufer von _G.TryActivateBarricadeCluster ist der
+-- Schadensschritt im HouseHandler. Wer ein Viertel bei Alarmstufe 1 flachlegt, meldet
+-- also genau dann, wenn die Meldung noch nicht zählt -- und ein zerstörtes Gebäude meldet
+-- kein zweites Mal. Diese Cluster erschienen damit nie, obwohl ihre Bedingung erfüllt war.
+-- Bisher fiel das nur deshalb nicht auf, weil der HouseHandler bei JEDEM Treffer unter 50%
+-- erneut meldete und so gelegentlich zufällig in die Stufe-3-Phase traf.
+local pendingClusters = {}
+
 -- Fürs Eskalations-Gate in CityAlertService.lua: Level 2->3 (Defense) soll erst
 -- weitersteigen, sobald KEINE aktiven Barrikaden-Cluster dieser Stadt mehr existieren.
 _G.HasActiveBarricades = function(cityName)
@@ -897,8 +908,6 @@ end
 -- ===== Einzelnen Cluster gezielt aktivieren (statt alle auf einmal bei Level 3) =====
 -- Wird von HouseHandler.lua aufgerufen, sobald ein Flankengebäude unter 50% HP fällt.
 _G.TryActivateBarricadeCluster = function(cityName, clusterId)
-	print("[BarricadeClusterService] TryActivateBarricadeCluster aufgerufen: Stadt='" .. tostring(cityName) .. "', Cluster='" .. tostring(clusterId) .. "'")
-
 	local cityAlertValues = ReplicatedStorage:FindFirstChild("CityAlertValues")
 	local levelValue = cityAlertValues and cityAlertValues:FindFirstChild(cityName .. "Level")
 	if not levelValue then
@@ -906,9 +915,19 @@ _G.TryActivateBarricadeCluster = function(cityName, clusterId)
 		return
 	end
 	if levelValue.Value < 3 then
-		print("[BarricadeClusterService] '" .. cityName .. "' ist noch nicht auf Level 3 (aktuell: " .. levelValue.Value .. ") -- Aktivierung abgebrochen.")
+		-- Jedes Flankengebäude eines Viertels meldet einzeln, und ein Viertel hat mehrere.
+		-- Gemeldet wird deshalb nur die ERSTE Vormerkung je Cluster -- alles Weitere ist
+		-- dieselbe Auskunft ein zweites Mal.
+		pendingClusters[cityName] = pendingClusters[cityName] or {}
+		if not pendingClusters[cityName][clusterId] then
+			pendingClusters[cityName][clusterId] = true
+			print("[BarricadeClusterService] '" .. cityName .. "' ist erst auf Stufe " .. levelValue.Value .. " -- Cluster '" .. clusterId .. "' vorgemerkt für Stufe 3.")
+		end
 		return
 	end
+
+	-- Ab hier kann tatsächlich etwas geschehen, also lohnt die Zeile.
+	print("[BarricadeClusterService] TryActivateBarricadeCluster aufgerufen: Stadt='" .. tostring(cityName) .. "', Cluster='" .. tostring(clusterId) .. "'")
 
 	activeClusters[cityName] = activeClusters[cityName] or {}
 	if activeClusters[cityName][clusterId] then
@@ -1044,8 +1063,23 @@ _G.DamageGenerator = function(cityName, clusterId, side, amount, attackerPlayer)
 
 	-- Lebensstatistik: nur der UEBERGANG lebendig -> zerstoert zaehlt. Ohne wasAlive
 	-- wuerde jeder weitere Treffer auf einen bereits toten Generator mitzaehlen.
-	if wasAlive and cluster[healthKey] <= 0 and attackerPlayer and _G.RecordStat then
-		_G.RecordStat(attackerPlayer, "GeneratorsDestroyed")
+	if wasAlive and cluster[healthKey] <= 0 and attackerPlayer then
+		if _G.RecordStat then
+			_G.RecordStat(attackerPlayer, "GeneratorsDestroyed")
+		end
+
+		-- ===== Bezahlt wird der GENERATOR, nicht das Schild =====
+		-- Der Generator ist das, was man besiegt: faellt er, verliert die Barrikade ihren
+		-- Schutz. Das Schild selbst regeneriert und ist damit kein besiegtes System, sondern
+		-- ein Hindernis -- es mehrfach zu bezahlen waere eine Einladung, darauf einzudreschen
+		-- und auf die Regeneration zu warten.
+		local xp, coins = CityAlertConfig.DefeatReward(cluster.MaxGeneratorHealth)
+		if _G.AwardXP then
+			_G.AwardXP(attackerPlayer, xp)
+		end
+		if _G.AwardCoins then
+			_G.AwardCoins(attackerPlayer, coins)
+		end
 	end
 
 	if cluster.LeftGeneratorHealth <= 0 and cluster.RightGeneratorHealth <= 0 then
@@ -1156,11 +1190,24 @@ if _G.CityAlertLevelChanged then
 			despawnAllClustersForCity(cityName)
 			destroyedThisCycle[cityName] = nil
 		end
+		-- Stufe 3 erreicht: die während der Stufen 1 und 2 vorgemerkten Cluster jetzt
+		-- nachholen. Das ist der Moment, in dem ihre Bedingung zählt.
+		if newLevel >= 3 and oldLevel < 3 then
+			local vorgemerkt = pendingClusters[cityName]
+			pendingClusters[cityName] = nil
+			if vorgemerkt then
+				for clusterId in pairs(vorgemerkt) do
+					print("[BarricadeClusterService] Stufe 3 erreicht -- hole vorgemerkten Cluster '" .. clusterId .. "' nach.")
+					_G.TryActivateBarricadeCluster(cityName, clusterId)
+				end
+			end
+		end
 		-- Markierung "jemals aktiviert" ebenfalls zurücksetzen, sobald die Stadt sich
 		-- komplett beruhigt -- ein neuer Eskalationszyklus soll die CITY-BROKEN-Aufgabe
 		-- wieder von vorne (nicht abgehakt) zeigen.
 		if newLevel == 0 then
 			everActivatedForCity[cityName] = nil
+			pendingClusters[cityName] = nil
 		end
 	end)
 end

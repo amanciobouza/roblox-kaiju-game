@@ -201,6 +201,16 @@ def rule_forward_reference(files):
             if not match:
                 continue
             indent, name = match.group(1), match.group(2)
+            if name == "_":
+                # Der Wegwerf-Name. `for _, x in ipairs(...)` und `local _, y = f()` stehen
+                # in derselben Datei beliebig oft nebeneinander und meinen jedes Mal etwas
+                # anderes -- eine Vorwaerts-Referenz kann das nie sein, weil der Wert nie
+                # gelesen wird. Ohne diese Ausnahme meldet die Regel jede Datei, die beide
+                # Schreibweisen benutzt, und zwar dauerhaft: der einzige Ausweg waere, den
+                # Fund in den Rueckstand zu schreiben. Ein Rueckstand voller Fehlalarme
+                # wird aber nicht gelesen, und dann faellt der naechste echte Fund mit ihm
+                # durch.
+                continue
             if indent:
                 # Derselbe Name auch als eingerueckte lokale Variable: dann ist nicht mehr
                 # zu entscheiden, welche Deklaration eine Fundstelle meint. Solche Namen
