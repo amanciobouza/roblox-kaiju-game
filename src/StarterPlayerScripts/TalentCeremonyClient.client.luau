@@ -269,8 +269,6 @@ local session = nil
 local farbfilter = nil
 local tiefenschaerfe = nil
 local glut = nil
-local scheinwerfer = nil
-local gegenlicht = nil
 local eingaben = {}
 
 local function figurTeile()
@@ -291,14 +289,6 @@ local function raeumeAuf()
 	if glut then
 		glut:Destroy()
 		glut = nil
-	end
-	if scheinwerfer then
-		scheinwerfer:Destroy()
-		scheinwerfer = nil
-	end
-	if gegenlicht then
-		gegenlicht:Destroy()
-		gegenlicht = nil
 	end
 	for _, verbindung in ipairs(eingaben) do
 		verbindung:Disconnect()
@@ -487,41 +477,26 @@ local function starte(factionName, talentId, energyType, effectKey)
 		Saturation = -0.3,
 	}):Play()
 
+	-- ===== Waehrend der Umrundung wird die Figur NICHT beleuchtet =====
+	--
+	-- Hier standen zwei Lampen an ihr, damit sie sich vom Grund abhebt. Sie stoerten: die
+	-- Figur ist keine Vitrine, und eine, die vier Sekunden lang angestrahlt wird, sieht
+	-- ausgestellt aus statt eindrucksvoll.
+	--
+	-- Sie braucht das Licht auch nicht. Freigestellt wird sie ueber die SCHAERFE und den
+	-- Rand (Tiefenschaerfe und Vignette) -- beides trifft die Umgebung, nicht sie. Was
+	-- bleibt, ist ihr eigenes Aussehen in der Beleuchtung der Welt, und das ist der Punkt.
+	--
+	-- Ein Leuchten gibt es weiter, aber nur EINMAL: in dem Augenblick, in dem die Kamera
+	-- vorne ankommt. Bis dahin ist die Glut unsichtbar.
 	glut = Instance.new("Highlight")
 	glut.Name = "TalentCeremonyGlow"
 	glut.FillColor = farbe
 	glut.OutlineColor = Color3.new(1, 1, 1)
 	glut.FillTransparency = 1
-	glut.OutlineTransparency = 0.4
+	glut.OutlineTransparency = 1
 	glut.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 	glut.Parent = character
-
-	-- ===== Die Figur bleibt HELL =====
-	--
-	-- Der Farbfilter nimmt dem ganzen BILD die Helligkeit, also auch der Figur -- ein
-	-- Umriss allein macht sie davon nicht wieder sichtbar. Sie braucht eigenes Licht.
-	--
-	-- Zwei Lampen, weil eine flach aussieht: eine grosse weisse von vorne, die das Gesicht
-	-- zeigt, und eine kleinere in der Energiefarbe, die von unten kommt und die Silhouette
-	-- vom dunklen Grund abhebt. Gegenlicht ist der aelteste Trick, um etwas freizustellen.
-	local kopfTeil = character:FindFirstChild("Head") or root
-	scheinwerfer = Instance.new("PointLight")
-	scheinwerfer.Name = "TalentCeremonyKeyLight"
-	scheinwerfer.Color = Color3.fromRGB(255, 252, 245)
-	scheinwerfer.Brightness = 0
-	scheinwerfer.Range = 40
-	scheinwerfer.Shadows = false
-	scheinwerfer.Parent = kopfTeil
-	TweenService:Create(scheinwerfer, TweenInfo.new(1.2), { Brightness = 3 }):Play()
-
-	gegenlicht = Instance.new("PointLight")
-	gegenlicht.Name = "TalentCeremonyRimLight"
-	gegenlicht.Color = farbe
-	gegenlicht.Brightness = 0
-	gegenlicht.Range = 26
-	gegenlicht.Shadows = false
-	gegenlicht.Parent = root
-	TweenService:Create(gegenlicht, TweenInfo.new(1.2), { Brightness = 3 }):Play()
 
 	schirm.Enabled = true
 	zeigeVignette(true)
@@ -544,10 +519,15 @@ local function starte(factionName, talentId, energyType, effectKey)
 		belohnungSound:Play()
 		spieleAktion(effectKey)
 
-		-- Das Aufleuchten: die Fuellung des Highlights faehrt kurz hoch und wieder zurueck.
+		-- Das Aufleuchten -- das einzige Licht der ganzen Sequenz, und deshalb traegt es
+		-- den Augenblick. Fuellung und Umriss fahren zusammen hoch und blenden wieder aus.
 		if glut then
 			glut.FillTransparency = 0.25
-			TweenService:Create(glut, TweenInfo.new(0.9), { FillTransparency = 0.85 }):Play()
+			glut.OutlineTransparency = 0
+			TweenService:Create(glut, TweenInfo.new(0.9), {
+				FillTransparency = 0.9,
+				OutlineTransparency = 0.6,
+			}):Play()
 		end
 
 		tafelSymbol.Image = HudChrome.TalentIcon[talentId] or ""
