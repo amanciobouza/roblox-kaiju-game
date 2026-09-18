@@ -40,6 +40,13 @@ local FACTION_TABS = {
 -- verschiebt -- dieselbe Ausweichregel wie bei den Energien und den Geschenken. Solange
 -- Jaeger und Ronin nur Vorschau sind, tragen ihre Knoten weiterhin Zeichen; das ist kein
 -- Zwischenzustand, sondern der ehrliche Stand.
+-- Bild oder Schriftzeichen -- je nachdem, ob es fuer dieses Talent schon ein Symbol gibt.
+--
+-- WICHTIG: die beiden muessen GESCHWISTER sein. Die Funktion blendet das Textfeld aus,
+-- wenn ein Bild da ist; liegt das Bild IM Textfeld, verschwindet es mit. Genau so war der
+-- Kasten in der Detailtafel unsichtbar -- und zwar erst, seit alle dreizehn Talente ein
+-- Bild haben: solange zwei davon noch auf das Schriftzeichen fielen, waren ausgerechnet
+-- die beiden zu sehen.
 local function zeigeTalentSymbol(bildLabel, textLabel, talent)
 	local bildId = HudChrome.TalentIcon[talent.id] or ""
 	if bildId ~= "" then
@@ -848,7 +855,8 @@ local detailIconBild = Instance.new("ImageLabel")
 local detailIcon = Instance.new("TextLabel")
 detailIcon.Size = UDim2.new(0, 88, 0, 88)
 detailIcon.Position = UDim2.new(0, DETAIL_RAND, 0, DETAIL_RAND)
-detailIcon.TextScaled = true
+-- Der Kasten traegt nur noch Rahmen und Grund. Sein eigener Text bleibt leer -- das
+-- Schriftzeichen steht in detailIconText darin.
 detailIcon.Text = ""
 detailIcon.Visible = false
 detailIcon.Parent = detailScroll
@@ -867,6 +875,18 @@ detailIconBild.BackgroundTransparency = 1
 detailIconBild.ScaleType = Enum.ScaleType.Fit
 detailIconBild.Visible = false
 detailIconBild.Parent = detailIcon
+
+-- Das Schriftzeichen bekommt ein EIGENES Feld im Kasten, neben dem Bild. Vorher trug der
+-- Kasten selbst den Text -- und wurde damit zu dem Feld, das zeigeTalentSymbol ausblendet.
+local detailIconText = Instance.new("TextLabel")
+detailIconText.Name = "DetailIconText"
+detailIconText.Size = UDim2.new(1, -10, 1, -10)
+detailIconText.Position = UDim2.new(0, 5, 0, 5)
+detailIconText.BackgroundTransparency = 1
+detailIconText.TextScaled = true
+detailIconText.Text = ""
+detailIconText.Visible = false
+detailIconText.Parent = detailIcon
 
 -- ===== Name und Stufe stehen UNTER dem Symbol =====
 --
@@ -1436,7 +1456,7 @@ local function selectTalent(talent, state, level)
 	detailWirkungReihe.Visible = true
 	detailResearchTime.Visible = true
 
-	zeigeTalentSymbol(detailIconBild, detailIcon, talent)
+	zeigeTalentSymbol(detailIconBild, detailIconText, talent)
 	-- Der Rahmen traegt die Energiefarbe, nicht die Flaeche: sonst kaempft ein farbiger
 	-- Grund mit dem Bild darauf.
 	local detailIconStroke = detailIcon:FindFirstChildOfClass("UIStroke")
