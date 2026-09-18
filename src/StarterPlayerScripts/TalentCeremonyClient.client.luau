@@ -130,27 +130,32 @@ schirm.DisplayOrder = 200
 schirm.Enabled = false
 schirm.Parent = playerGui
 
--- Der Schleier liegt UEBER der Welt und unter der Tafel. Er nimmt der Umgebung das Licht,
--- waehrend das Highlight an der Figur sie hell haelt -- so entsteht "dunkel ausser der
--- Spielfigur", ohne dass irgendetwas ausgeschnitten werden muesste.
-local schleier = Instance.new("Frame")
-schleier.Name = "Schleier"
-schleier.Size = UDim2.new(1, 0, 1, 0)
-schleier.BackgroundColor3 = Color3.new(0, 0, 0)
-schleier.BackgroundTransparency = 1
-schleier.BorderSizePixel = 0
-schleier.ZIndex = 1
-schleier.Parent = schirm
-
+-- Kein Schleier mehr.
+--
+-- Hier lag eine schwarze Flaeche ueber dem Bild, die die Welt abdunkeln sollte. Das konnte
+-- nicht funktionieren: eine GUI-Flaeche liegt ueber ALLEM, also auch ueber der Figur --
+-- je dunkler die Umgebung wurde, desto dunkler wurde die Figur mit. Genau davon lebt die
+-- Szene aber nicht.
+--
+-- Getrennt wird jetzt ueber die SCHAERFE statt ueber die Helligkeit: die Figur ist scharf,
+-- alles andere weich (siehe tiefenschaerfe weiter unten). Das ist dasselbe Mittel, mit dem
+-- ein Objektiv einen Gegenstand freistellt -- und es trifft nur die Welt, nicht das Bild.
 local tafel = Instance.new("Frame")
 tafel.Name = "Tafel"
 tafel.AnchorPoint = Vector2.new(1, 0.5)
 tafel.Position = UDim2.new(1, -40, 0.5, 0)
 tafel.Size = UDim2.new(0, 360, 0, 240)
-tafel.BackgroundTransparency = 1
 tafel.Visible = false
 tafel.ZIndex = 2
 tafel.Parent = schirm
+-- Eigener Grund, seit der Schleier weg ist: Text ohne Flaeche darunter steht sonst direkt
+-- auf der Stadt, und die ist zwar unscharf, aber nicht ruhig.
+HudChrome.Panel(tafel, { radius = HudChrome.Radius.Panel, transparency = 0.12 })
+local tafelPolster = Instance.new("UIPadding")
+tafelPolster.PaddingTop = UDim.new(0, 18)
+tafelPolster.PaddingLeft = UDim.new(0, 18)
+tafelPolster.PaddingRight = UDim.new(0, 18)
+tafelPolster.Parent = tafel
 
 local tafelKopf = Instance.new("TextLabel")
 tafelKopf.Size = UDim2.new(1, 0, 0, 22)
@@ -210,6 +215,7 @@ weiterHinweis.Parent = schirm
 local laeuft = false
 local session = nil
 local farbfilter = nil
+local tiefenschaerfe = nil
 local glut = nil
 local scheinwerfer = nil
 local gegenlicht = nil
@@ -225,6 +231,10 @@ local function raeumeAuf()
 	if farbfilter then
 		farbfilter:Destroy()
 		farbfilter = nil
+	end
+	if tiefenschaerfe then
+		tiefenschaerfe:Destroy()
+		tiefenschaerfe = nil
 	end
 	if glut then
 		glut:Destroy()
@@ -246,7 +256,6 @@ local function raeumeAuf()
 	schirm.Enabled = false
 	tafel.Visible = false
 	weiterHinweis.Visible = false
-	schleier.BackgroundTransparency = 1
 
 	local camera = Workspace.CurrentCamera
 	if camera then
@@ -335,6 +344,13 @@ local function umrunde(sessionId, dauer)
 		local auge = ziel + richtung * (abstand * skala) + Vector3.new(0, hoehe * skala, 0)
 		camera.CFrame = CFrame.lookAt(auge, ziel)
 
+		-- Die Schaerfe folgt der Kamera. Gemessen wird der echte Abstand Auge zu Kopf --
+		-- nicht der Radius der Umrundung, denn die Kamera steht auch ueber der Figur.
+		if tiefenschaerfe then
+			tiefenschaerfe.FocusDistance = (auge - ziel).Magnitude
+			tiefenschaerfe.InFocusRadius = 9 * skala
+		end
+
 		if fortschritt >= 1 then
 			verbindung:Disconnect()
 		end
@@ -379,16 +395,38 @@ local function starte(factionName, talentId, energyType, effectKey)
 	-- Die Welt wird dunkel -- ueber das Licht der Szene, nicht ueber eine schwarze Flaeche
 	-- davor. Eine Flaeche wuerde die Figur mit verdecken; der Farbfilter nimmt der ganzen
 	-- Welt die Helligkeit, und das Highlight holt die Figur wieder heraus.
+	-- ===== Alles ausser der Figur wird WEICH =====
+	--
+	-- Tiefenschaerfe: was auf der Entfernung der Figur liegt, bleibt scharf, alles davor
+	-- und dahinter verschwimmt. Der Radius ist klein gehalten -- er bestimmt, wie viel
+	-- ausser der Figur noch mitkommt.
+	--
+	-- Die Entfernung wird in jedem Bild nachgezogen (siehe umrunde), denn die Kamera faehrt
+	-- ja heran. Ein fester Wert waere am Anfang scharf und am Ende daneben.
+	tiefenschaerfe = Instance.new("DepthOfFieldEffect")
+	tiefenschaerfe.Name = "TalentCeremonyFocus"
+	tiefenschaerfe.FocusDistance = 30
+	tiefenschaerfe.InFocusRadius = 12
+	tiefenschaerfe.FarIntensity = 0
+	tiefenschaerfe.NearIntensity = 0
+	tiefenschaerfe.Parent = Lighting
+	TweenService:Create(tiefenschaerfe, TweenInfo.new(0.9), {
+		FarIntensity = 0.85,
+		NearIntensity = 0.6,
+	}):Play()
+
+	-- Die Farbe bleibt, die Helligkeit nicht. Etwas weniger Saettigung und etwas mehr
+	-- Kontrast heben die Energiefarbe an der Figur heraus, ohne das Bild dunkel zu machen
+	-- -- dunkel hat nicht funktioniert und war auch nie die Absicht.
 	farbfilter = Instance.new("ColorCorrectionEffect")
-	farbfilter.Name = "TalentCeremonyDim"
+	farbfilter.Name = "TalentCeremonyGrade"
 	farbfilter.Brightness = 0
 	farbfilter.Contrast = 0
 	farbfilter.Saturation = 0
 	farbfilter.Parent = Lighting
-	TweenService:Create(farbfilter, TweenInfo.new(0.8), {
-		Brightness = -0.35,
-		Contrast = 0.15,
-		Saturation = -0.6,
+	TweenService:Create(farbfilter, TweenInfo.new(0.9), {
+		Contrast = 0.12,
+		Saturation = -0.3,
 	}):Play()
 
 	glut = Instance.new("Highlight")
@@ -416,7 +454,7 @@ local function starte(factionName, talentId, energyType, effectKey)
 	scheinwerfer.Range = 40
 	scheinwerfer.Shadows = false
 	scheinwerfer.Parent = kopfTeil
-	TweenService:Create(scheinwerfer, TweenInfo.new(1.2), { Brightness = 8 }):Play()
+	TweenService:Create(scheinwerfer, TweenInfo.new(1.2), { Brightness = 5 }):Play()
 
 	gegenlicht = Instance.new("PointLight")
 	gegenlicht.Name = "TalentCeremonyRimLight"
@@ -425,10 +463,9 @@ local function starte(factionName, talentId, energyType, effectKey)
 	gegenlicht.Range = 26
 	gegenlicht.Shadows = false
 	gegenlicht.Parent = root
-	TweenService:Create(gegenlicht, TweenInfo.new(1.2), { Brightness = 5 }):Play()
+	TweenService:Create(gegenlicht, TweenInfo.new(1.2), { Brightness = 4 }):Play()
 
 	schirm.Enabled = true
-	TweenService:Create(schleier, TweenInfo.new(0.8), { BackgroundTransparency = 0.45 }):Play()
 
 	if controls then
 		pcall(function()
