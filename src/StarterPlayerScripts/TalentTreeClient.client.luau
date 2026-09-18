@@ -819,12 +819,15 @@ detailScroll.ClipsDescendants = true
 detailScroll.Parent = detailPanel
 
 local detailEmpty = Instance.new("TextLabel")
-detailEmpty.Size = UDim2.new(1, -20, 0, 80)
-detailEmpty.Position = UDim2.new(0, 10, 0, 20)
+detailEmpty.Size = UDim2.new(1, -2 * DETAIL_RAND, 0, 80)
+detailEmpty.Position = UDim2.new(0, DETAIL_RAND, 0, 20)
 detailEmpty.BackgroundTransparency = 1
 detailEmpty.TextColor3 = Color3.fromRGB(140, 140, 150)
 detailEmpty.Text = "👆 Pick a talent to see its details."
 HudChrome.MenuBody(detailEmpty)
+detailEmpty.TextXAlignment = Enum.TextXAlignment.Left
+detailEmpty.TextYAlignment = Enum.TextYAlignment.Top
+detailEmpty.TextWrapped = true
 detailEmpty.Parent = detailScroll
 
 -- ===== Die Detailtafel =====
@@ -909,10 +912,13 @@ detailTrennerEins.Position = UDim2.new(0, DETAIL_RAND, 0, 114)
 
 -- ===== Vorher -> Nachher =====
 --
--- Der Kern der Tafel. Drei Felder in einer Reihe: der Wert von heute, ein Pfeil, der Wert
--- danach. Der Pfeil steht fest in der Mitte, damit die beiden Zahlen unabhaengig von ihrer
--- Laenge immer an derselben Kante beginnen -- sonst wandert der Vergleich beim Durchklicken
--- hin und her.
+-- Der Kern der Tafel: der Wert von heute, ein Pfeil, der Wert danach.
+--
+-- Die drei stehen nicht in festen Spalten, sondern FLIESSEN von links -- wie alles andere
+-- in dieser Tafel. In Spalten mit einem Pfeil in der Mitte richtete sich der Vergleich an
+-- einer eingebildeten Mittellinie aus, die sonst nirgends vorkommt; jetzt beginnt er an
+-- derselben Kante wie Name, Ueberschrift und Beschreibung. Dass die Zahlen dabei
+-- unterschiedlich lang sind, stoert nicht -- sie haben eine gemeinsame linke Kante.
 local function baueVergleich(zahlGroesse)
 	local reihe = Instance.new("Frame")
 	reihe.Size = UDim2.new(1, -2 * DETAIL_RAND, 0, zahlGroesse + 14)
@@ -920,32 +926,31 @@ local function baueVergleich(zahlGroesse)
 	reihe.Visible = false
 	reihe.Parent = detailScroll
 
-	local vorher = Instance.new("TextLabel")
-	vorher.Size = UDim2.new(0.42, 0, 1, 0)
-	vorher.BackgroundTransparency = 1
-	HudChrome.Number(vorher, zahlGroesse)
-	vorher.TextXAlignment = Enum.TextXAlignment.Right
-	vorher.TextColor3 = HudChrome.Color.TextDim
-	vorher.Text = ""
-	vorher.Parent = reihe
+	local fluss = Instance.new("UIListLayout")
+	fluss.FillDirection = Enum.FillDirection.Horizontal
+	fluss.HorizontalAlignment = Enum.HorizontalAlignment.Left
+	fluss.VerticalAlignment = Enum.VerticalAlignment.Center
+	fluss.SortOrder = Enum.SortOrder.LayoutOrder
+	fluss.Padding = UDim.new(0, 10)
+	fluss.Parent = reihe
 
-	local pfeil = Instance.new("TextLabel")
-	pfeil.Size = UDim2.new(0.16, 0, 1, 0)
-	pfeil.Position = UDim2.new(0.42, 0, 0, 0)
-	pfeil.BackgroundTransparency = 1
-	HudChrome.Number(pfeil, zahlGroesse - 4)
-	pfeil.TextColor3 = HudChrome.Color.TextDim
-	pfeil.Text = "→"
-	pfeil.Parent = reihe
+	local function baueZahl(ordnung, groesse, farbe, text)
+		local feld = Instance.new("TextLabel")
+		feld.AutomaticSize = Enum.AutomaticSize.X
+		feld.Size = UDim2.new(0, 0, 1, 0)
+		feld.LayoutOrder = ordnung
+		feld.BackgroundTransparency = 1
+		HudChrome.Number(feld, groesse)
+		feld.TextXAlignment = Enum.TextXAlignment.Left
+		feld.TextColor3 = farbe
+		feld.Text = text
+		feld.Parent = reihe
+		return feld
+	end
 
-	local nachher = Instance.new("TextLabel")
-	nachher.Size = UDim2.new(0.42, 0, 1, 0)
-	nachher.Position = UDim2.new(0.58, 0, 0, 0)
-	nachher.BackgroundTransparency = 1
-	HudChrome.Number(nachher, zahlGroesse)
-	nachher.TextXAlignment = Enum.TextXAlignment.Left
-	nachher.Text = ""
-	nachher.Parent = reihe
+	local vorher = baueZahl(1, zahlGroesse, HudChrome.Color.TextDim, "")
+	local pfeil = baueZahl(2, zahlGroesse - 4, HudChrome.Color.TextDim, "→")
+	local nachher = baueZahl(3, zahlGroesse, HudChrome.Color.TextPrimary, "")
 
 	return reihe, vorher, pfeil, nachher
 end
@@ -1025,6 +1030,7 @@ detailResearchTime.Size = UDim2.new(1, -2 * DETAIL_RAND, 0, 18)
 detailResearchTime.Position = UDim2.new(0, DETAIL_RAND, 1, -84)
 detailResearchTime.BackgroundTransparency = 1
 HudChrome.Sublabel(detailResearchTime, 13)
+detailResearchTime.TextXAlignment = Enum.TextXAlignment.Left
 detailResearchTime.Text = ""
 detailResearchTime.Visible = false
 detailResearchTime.Parent = detailPanel
@@ -1446,19 +1452,13 @@ local function selectTalent(talent, state, level)
 	detailWirkungNachher.Text = formatStatValue(talent.effectKey, newPrimary)
 	detailWirkungNachher.TextColor3 = energieFarbe
 
-	-- Voll ausgebaut gibt es kein Nachher. Dann rueckt der erreichte Wert in die Mitte,
-	-- statt rechtsbuendig neben einem Pfeil ins Leere zu stehen.
+	-- Voll ausgebaut gibt es kein Nachher. Pfeil und Zielwert fallen weg, und der
+	-- erreichte Wert steht allein da -- in der Energiefarbe, weil er jetzt das Ergebnis
+	-- ist und nicht mehr der Ausgangspunkt. Verschieben muss man dafuer nichts: die Reihe
+	-- flieszt von links, und was fehlt, hinterlaesst keine Luecke.
 	detailWirkungPfeil.Visible = not vollAusgebaut
 	detailWirkungNachher.Visible = not vollAusgebaut
-	if vollAusgebaut then
-		detailWirkungVorher.Size = UDim2.new(1, 0, 1, 0)
-		detailWirkungVorher.TextXAlignment = Enum.TextXAlignment.Center
-		detailWirkungVorher.TextColor3 = energieFarbe
-	else
-		detailWirkungVorher.Size = UDim2.new(0.42, 0, 1, 0)
-		detailWirkungVorher.TextXAlignment = Enum.TextXAlignment.Right
-		detailWirkungVorher.TextColor3 = HudChrome.Color.TextDim
-	end
+	detailWirkungVorher.TextColor3 = vollAusgebaut and energieFarbe or HudChrome.Color.TextDim
 
 	local mitTradeoff = (talent.tradeoffEffectKey ~= nil)
 	detailTradeoffKopf.Visible = mitTradeoff
