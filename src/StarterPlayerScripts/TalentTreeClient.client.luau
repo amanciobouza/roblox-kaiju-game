@@ -2343,7 +2343,6 @@ local function feiereFreischaltung(talentId)
 		}):Play()
 	end
 
-	forschungFertigSound:Play()
 end
 
 ResearchCompleteEvent.OnClientEvent:Connect(function(factionName, talentId, newLevel)
@@ -2375,15 +2374,22 @@ CancelResearchEvent.OnClientEvent:Connect(function(factionName, _talentId)
 	updateResourceDisplay()
 	updateResearchBar()
 	updateResearchHud()
+	-- Der Ton IMMER, und zwar zuerst.
+	--
+	-- Er stand einmal IM Effekt, und der laeuft nur bei offenem Panel -- mit der
+	-- Begruendung, niemand solle einen Ton aus einem Bildschirm hoeren, den er nicht sieht.
+	-- Das war verkehrt herum gedacht: eine Forschung dauert Minuten, man steht in aller
+	-- Regel in der Stadt und nicht im Talentbaum, wenn sie fertig wird. Genau dann ist der
+	-- Klang das Einzige, was den Moment ueberhaupt meldet -- und dafuer ist er da. Bei
+	-- geschlossenem Panel waere er nie erklungen.
+	forschungFertigSound:Play()
+
 	if factionName == currentFaction then
 		renderTree(currentFaction)
 		refreshSelectedTalentDetails()
-		-- Erst NACH dem Neuaufbau. renderTree zerstoert alle Knoten und Adern und baut sie
-		-- neu -- ein Effekt auf den alten Instanzen liefe ins Leere.
-		--
-		-- Und nur bei offenem Panel: wer gerade in der Stadt steht, soll keinen Ton aus
-		-- einem Bildschirm hoeren, den er nicht sieht. Fuer ihn ist das Laempchen am
-		-- Menuepunkt der Hinweis.
+		-- Das SICHTBARE erst nach dem Neuaufbau, und nur wenn jemand hinsieht. renderTree
+		-- zerstoert alle Knoten und Adern und baut sie neu -- ein Effekt auf den alten
+		-- Instanzen liefe ins Leere.
 		if panel.Visible then
 			feiereFreischaltung(talentId)
 		end
