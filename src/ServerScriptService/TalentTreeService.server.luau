@@ -44,6 +44,106 @@ ResearchCompleteEvent.Parent = ReplicatedStorage
 -- ueberschreiben.
 local TalentUnlockedEvent = RemoteEventUtils.GetOrCreate("TalentUnlockedEvent")
 
+-- ===== Die Zeremonie =====
+--
+-- Traegt in BEIDE Richtungen: der Server sagt "fang an" und schickt mit, was gezeigt
+-- werden soll; der Client meldet zurueck, wenn der Spieler sie weggeklickt hat. Solange
+-- sie laeuft, steht die Figur still und ist unverwundbar -- die Forschung wird fertig,
+-- waehrend man spielt, und das kann mitten im Guardian-Kampf sein.
+local TalentCeremonyEvent = RemoteEventUtils.GetOrCreate("TalentCeremonyEvent")
+
+-- Was vor der Zeremonie galt, je Spieler: Tempo, Sprungkraft und das Kraftfeld. Ohne das
+-- gaebe es kein Zurueck -- WalkSpeed haengt am Skin und ist nicht fuer alle gleich.
+local zeremonieStand = {}
+
+-- Eine Obergrenze, obwohl der SPIELER entscheidet, wann er weitergeht. Sie gilt nicht ihm,
+-- sondern dem Fall, in dem seine Rueckmeldung nie kommt -- abgestuerzter Client, verlorene
+-- Verbindung. Ohne sie bliebe die Figur fuer immer stehen, und das waere ein Fehler, den
+-- niemand mehr selbst beheben kann.
+local ZEREMONIE_HOECHSTDAUER = 120
+
+local function beendeZeremonie(player)
+	local stand = zeremonieStand[player]
+	if not stand then
+		return
+	end
+	zeremonieStand[player] = nil
+
+	if stand.kraftfeld and stand.kraftfeld.Parent then
+		stand.kraftfeld:Destroy()
+	end
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.WalkSpeed = stand.walkSpeed
+		humanoid.JumpPower = stand.jumpPower
+	end
+	print("[Kaiju Debug] Zeremonie beendet:", player.Name)
+end
+
+local function starteZeremonie(player, factionName, talent)
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		return
+	end
+	-- Laeuft schon eine, wird sie zuerst sauber beendet. Sonst merkte sich die zweite ein
+	-- Tempo von null als "vorheriges" und die Figur bliebe danach stehen.
+	beendeZeremonie(player)
+
+	-- Ein KRAFTFELD statt einer Pruefung an jeder Schadensstelle. Humanoid:TakeDamage
+	-- laesst ein Kraftfeld gelten, und genau diese Funktion benutzen alle acht Stellen, an
+	-- denen der Spieler Schaden nimmt -- Barrikaden, Guardian, Kampf, Hitze, Militaer.
+	-- Unsichtbar, weil die blaue Blase die Inszenierung stoeren wuerde.
+	local kraftfeld = Instance.new("ForceField")
+	kraftfeld.Name = "TalentCeremonyShield"
+	kraftfeld.Visible = false
+	kraftfeld.Parent = character
+
+	zeremonieStand[player] = {
+		walkSpeed = humanoid.WalkSpeed,
+		jumpPower = humanoid.JumpPower,
+		kraftfeld = kraftfeld,
+		startedAt = Workspace:GetServerTimeNow(),
+	}
+	humanoid.WalkSpeed = 0
+	humanoid.JumpPower = 0
+
+	print("[Kaiju Debug] Zeremonie gestartet:", player.Name, talent.id)
+	TalentCeremonyEvent:FireClient(player, factionName, talent.id, talent.energyType, talent.effectKey)
+end
+
+-- Der Spieler hat weitergeklickt.
+TalentCeremonyEvent.OnServerEvent:Connect(function(player)
+	beendeZeremonie(player)
+end)
+
+-- Stirbt die Figur oder kommt eine neue, gilt nichts von vorher mehr -- und eine neue
+-- Figur haette ohnehin ihr eigenes Tempo.
+Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function()
+		zeremonieStand[player] = nil
+	end)
+end)
+Players.PlayerRemoving:Connect(function(player)
+	zeremonieStand[player] = nil
+end)
+
+-- Die Notbremse fuer den Fall, dass die Rueckmeldung nie kommt.
+task.spawn(function()
+	while true do
+		local jetzt = Workspace:GetServerTimeNow()
+		for player, stand in pairs(zeremonieStand) do
+			if jetzt - stand.startedAt > ZEREMONIE_HOECHSTDAUER then
+				warn("[Kaiju Debug] Zeremonie von " .. player.Name
+					.. " lief in die Obergrenze -- keine Rueckmeldung vom Client.")
+				beendeZeremonie(player)
+			end
+		end
+		task.wait(5)
+	end
+end)
+
 local GetTalentStateFunction = Instance.new("RemoteFunction")
 GetTalentStateFunction.Name = "GetTalentStateFunction"
 GetTalentStateFunction.Parent = ReplicatedStorage
@@ -247,6 +347,11 @@ task.spawn(function()
 					research.talentId,
 					talent and talent.energyType or nil
 				)
+
+				-- Und fuer den Forscher selbst die Zeremonie.
+				if talent then
+					starteZeremonie(player, research.faction, talent)
+				end
 
 				if research.faction == "Kaiju" and _G.RecalculateStrength then
 					_G.RecalculateStrength(player)
