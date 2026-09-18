@@ -216,6 +216,7 @@ local laeuft = false
 local session = nil
 local farbfilter = nil
 local tiefenschaerfe = nil
+local bloom = nil
 local glut = nil
 local scheinwerfer = nil
 local gegenlicht = nil
@@ -235,6 +236,10 @@ local function raeumeAuf()
 	if tiefenschaerfe then
 		tiefenschaerfe:Destroy()
 		tiefenschaerfe = nil
+	end
+	if bloom then
+		bloom:Destroy()
+		bloom = nil
 	end
 	if glut then
 		glut:Destroy()
@@ -415,9 +420,24 @@ local function starte(factionName, talentId, energyType, effectKey)
 		NearIntensity = 0.6,
 	}):Play()
 
-	-- Die Farbe bleibt, die Helligkeit nicht. Etwas weniger Saettigung und etwas mehr
-	-- Kontrast heben die Energiefarbe an der Figur heraus, ohne das Bild dunkel zu machen
-	-- -- dunkel hat nicht funktioniert und war auch nie die Absicht.
+	-- ===== Und das Bild glueht aus =====
+	--
+	-- Extremes Bloom: was hell ist, blutet weit ins Bild aus. Das Entscheidende ist die
+	-- SCHWELLE -- sie bestimmt, WAS ausblutet. Sie liegt so hoch, dass die Stadt darunter
+	-- bleibt und nur die Figur darueber kommt, die als Einzige eigene Lampen hat.
+	--
+	-- Zusammen mit dem Abdunkeln darunter ergibt das die Aufteilung, die gemeint war: die
+	-- Welt faellt weg, die Figur brennt. Diesmal funktioniert das Abdunkeln auch -- der
+	-- Farbfilter trifft die WELT, waehrend der Schleier von vorhin das ganze Bild traf,
+	-- Figur eingeschlossen.
+	bloom = Instance.new("BloomEffect")
+	bloom.Name = "TalentCeremonyBloom"
+	bloom.Intensity = 0
+	bloom.Size = 56
+	bloom.Threshold = 0.85
+	bloom.Parent = Lighting
+	TweenService:Create(bloom, TweenInfo.new(1.1), { Intensity = 4 }):Play()
+
 	farbfilter = Instance.new("ColorCorrectionEffect")
 	farbfilter.Name = "TalentCeremonyGrade"
 	farbfilter.Brightness = 0
@@ -425,8 +445,9 @@ local function starte(factionName, talentId, energyType, effectKey)
 	farbfilter.Saturation = 0
 	farbfilter.Parent = Lighting
 	TweenService:Create(farbfilter, TweenInfo.new(0.9), {
-		Contrast = 0.12,
-		Saturation = -0.3,
+		Brightness = -0.45,
+		Contrast = 0.25,
+		Saturation = -0.45,
 	}):Play()
 
 	glut = Instance.new("Highlight")
@@ -454,7 +475,7 @@ local function starte(factionName, talentId, energyType, effectKey)
 	scheinwerfer.Range = 40
 	scheinwerfer.Shadows = false
 	scheinwerfer.Parent = kopfTeil
-	TweenService:Create(scheinwerfer, TweenInfo.new(1.2), { Brightness = 5 }):Play()
+	TweenService:Create(scheinwerfer, TweenInfo.new(1.2), { Brightness = 14 }):Play()
 
 	gegenlicht = Instance.new("PointLight")
 	gegenlicht.Name = "TalentCeremonyRimLight"
@@ -463,7 +484,7 @@ local function starte(factionName, talentId, energyType, effectKey)
 	gegenlicht.Range = 26
 	gegenlicht.Shadows = false
 	gegenlicht.Parent = root
-	TweenService:Create(gegenlicht, TweenInfo.new(1.2), { Brightness = 4 }):Play()
+	TweenService:Create(gegenlicht, TweenInfo.new(1.2), { Brightness = 10 }):Play()
 
 	schirm.Enabled = true
 
