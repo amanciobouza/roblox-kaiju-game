@@ -19,6 +19,10 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 local TalentTreeConfig = require(ReplicatedStorage:WaitForChild("TalentTreeConfig"))
+-- Dasselbe Kurzformat wie im ganzen Spiel -- Haeuser-HP, Coins, Schaden, Evolutionspunkte.
+-- Eine zweite Rechnung fuer "1.1M" waere die Gelegenheit, dass sie irgendwann anders
+-- rundet als die erste.
+local NumberFormat = require(ReplicatedStorage:WaitForChild("NumberFormat"))
 local StartResearchEvent = RemoteEventUtils.GetOrCreate("StartResearchEvent")
 local CancelResearchEvent = RemoteEventUtils.GetOrCreate("CancelResearchEvent")
 local ResearchCompleteEvent = RemoteEventUtils.GetOrCreate("ResearchCompleteEvent")
@@ -111,40 +115,70 @@ tabLayout.Parent = tabRow
 
 -- ===== Ressourcen-Leiste (5 Energien + Coins) =====
 local resourceRow = Instance.new("Frame")
-resourceRow.Size = UDim2.new(1, -24, 0, 30)
+resourceRow.Size = UDim2.new(1, -24, 0, 28)
 resourceRow.Position = UDim2.new(0, 12, 0, 8)
 resourceRow.BackgroundTransparency = 1
 resourceRow.Parent = schirm.content
 
 local resourceLayout = Instance.new("UIListLayout")
 resourceLayout.FillDirection = Enum.FillDirection.Horizontal
-resourceLayout.Padding = UDim.new(0, 12)
+resourceLayout.Padding = UDim.new(0, 8)
 resourceLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 resourceLayout.Parent = resourceRow
 
--- Bild und Zahl getrennt, nicht beides in einer Zeichenkette. Ein Emoji im Text sitzt auf
--- der Grundlinie und ist je nach Geraet verschieden breit -- die Zahl sprang dadurch von
--- Energie zu Energie.
+-- ===== Die Ressourcen sind Chips, keine Liste =====
+--
+-- Sechs Zahlen in festen 96-Pixel-Faechern, eine neben der anderen, alle in voller Laenge:
+-- "1116075  13061  68080  0  86190  323589". Das las sich wie eine Debug-Ausgabe, und die
+-- Faecher standen halb leer, wenn eine Energie bei null war.
+--
+-- Jetzt traegt jede Ressource ihren eigenen kleinen Kasten, der sich um seinen Inhalt legt
+-- statt ihn auf eine feste Breite zu strecken. Und die Zahl steht kurz: was hier zaehlt,
+-- ist die Groessenordnung -- reicht es fuer den naechsten Knoten? -- und nicht die
+-- Einerstelle.
+--
+-- Bild und Zahl bleiben getrennte Felder, nicht beides in einer Zeichenkette. Ein Emoji im
+-- Text sitzt auf der Grundlinie und ist je nach Geraet verschieden breit -- die Zahl sprang
+-- dadurch von Energie zu Energie.
 local resourceLabels = {}
 local function baueRessource(bildId, farbe)
-	local halter = Instance.new("Frame")
-	halter.Size = UDim2.new(0, 96, 1, 0)
-	halter.BackgroundTransparency = 1
-	halter.Parent = resourceRow
+	local chip = Instance.new("Frame")
+	chip.AutomaticSize = Enum.AutomaticSize.X
+	chip.Size = UDim2.new(0, 0, 1, 0)
+	chip.BackgroundTransparency = 1
+	chip.Parent = resourceRow
+	HudChrome.Panel(chip, {
+		radius = HudChrome.Radius.Small,
+		fill = HudChrome.Color.PanelSunken,
+		transparency = 0.2,
+	})
 
-	local bild = HudChrome.IconImage(halter, bildId or "")
-	bild.Size = UDim2.new(0, 24, 0, 24)
-	bild.Position = UDim2.new(0, 0, 0.5, -12)
+	local polster = Instance.new("UIPadding")
+	polster.PaddingLeft = UDim.new(0, 8)
+	polster.PaddingRight = UDim.new(0, 10)
+	polster.Parent = chip
+
+	local innen = Instance.new("UIListLayout")
+	innen.FillDirection = Enum.FillDirection.Horizontal
+	innen.VerticalAlignment = Enum.VerticalAlignment.Center
+	innen.SortOrder = Enum.SortOrder.LayoutOrder
+	innen.Padding = UDim.new(0, 6)
+	innen.Parent = chip
+
+	local bild = HudChrome.IconImage(chip, bildId or "")
+	bild.Size = UDim2.new(0, 18, 0, 18)
+	bild.LayoutOrder = 1
 	bild.Visible = (bildId or "") ~= ""
 
 	local zahl = Instance.new("TextLabel")
-	zahl.Size = UDim2.new(1, -30, 1, 0)
-	zahl.Position = UDim2.new(0, 30, 0, 0)
+	zahl.AutomaticSize = Enum.AutomaticSize.X
+	zahl.Size = UDim2.new(0, 0, 1, 0)
+	zahl.LayoutOrder = 2
 	zahl.BackgroundTransparency = 1
 	zahl.TextXAlignment = Enum.TextXAlignment.Left
 	zahl.Text = "0"
-	zahl.Parent = halter
-	HudChrome.Number(zahl, 17)
+	zahl.Parent = chip
+	HudChrome.Number(zahl, 16)
 	zahl.TextColor3 = farbe
 	return zahl
 end
@@ -1173,9 +1207,9 @@ end
 
 local function updateResourceDisplay()
 	for _, energyType in ipairs(TalentTreeConfig.EnergyOrder) do
-		resourceLabels[energyType].Text = tostring(math.floor(talentState.energy[energyType] or 0))
+		resourceLabels[energyType].Text = NumberFormat.Format(math.floor(talentState.energy[energyType] or 0))
 	end
-	coinsLabel.Text = tostring(math.floor(talentState.coins or 0))
+	coinsLabel.Text = NumberFormat.Format(math.floor(talentState.coins or 0))
 end
 
 -- ===== Der Baum ist ein Faecher von 6 nach 12 =====
