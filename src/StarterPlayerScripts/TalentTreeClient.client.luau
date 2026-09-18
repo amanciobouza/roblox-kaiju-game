@@ -776,7 +776,10 @@ task.defer(layoutColumns)
 --
 -- Also die Teilung: der Text rollt, der Knopf steht fest an der Unterkante. Das ist auch
 -- auf einem grossen Bildschirm richtig -- dort gibt es einfach nichts zu rollen.
-local DETAIL_KNOPF_ZONE = 56
+-- Unten steht, was man TUT, und darueber eine Zeile, wie lange es dauert. Beides rollt
+-- nicht mit -- der Knopf ist das Ziel dieses Bildschirms.
+local DETAIL_KNOPF_ZONE = 88
+local DETAIL_RAND = 12
 -- Wie hoch der Inhalt ist, rechnet Roblox aus -- dieselbe Lehre wie beim Baum. Und es
 -- rechnet dabei nur mit dem, was SICHTBAR ist: solange kein Talent gewaehlt ist, steht dort
 -- ein einziger Satz, und dann gibt es auch nichts zu rollen.
@@ -805,11 +808,24 @@ detailEmpty.Text = "👆 Pick a talent to see its details."
 HudChrome.MenuBody(detailEmpty)
 detailEmpty.Parent = detailScroll
 
+-- ===== Die Detailtafel =====
+--
+-- Sie war eine Liste aus acht Zeilen Text mit zwei gelben Ueberschriften -- die Werte als
+-- "Total Damage: 120 -> 150" mitten im Fliesstext, die Kosten als eigener Abschnitt
+-- darunter. Das liest sich wie eine Ausgabe, nicht wie ein Angebot.
+--
+-- Jetzt drei Teile mit klarer Rangfolge:
+--   OBEN    wer es ist -- grosses Symbol, Name, Stufe
+--   MITTE   was es tut -- der Wert VORHER und NACHHER, gross, mit einem Pfeil dazwischen
+--   UNTEN   was es kostet -- im Knopf selbst, denn dort wird es bezahlt
+--
+-- Die Beschreibung rutscht dabei nach unten. Sie erklaert, der Zahlenvergleich ueberzeugt
+-- -- und ueberzeugen ist die Aufgabe dieses Bildschirms.
 local detailIconBild = Instance.new("ImageLabel")
 
 local detailIcon = Instance.new("TextLabel")
-detailIcon.Size = UDim2.new(0, 76, 0, 76)
-detailIcon.Position = UDim2.new(0, 10, 0, 10)
+detailIcon.Size = UDim2.new(0, 88, 0, 88)
+detailIcon.Position = UDim2.new(0, DETAIL_RAND, 0, DETAIL_RAND)
 detailIcon.TextScaled = true
 detailIcon.Text = ""
 detailIcon.Visible = false
@@ -823,18 +839,23 @@ HudChrome.Panel(detailIcon, {
 -- Das Bild liegt IM Kaestchen, nicht daneben: das Kaestchen traegt Rahmen und Grund, und
 -- die beiden Sorten Symbol teilen es sich.
 detailIconBild.Name = "DetailIconImage"
-detailIconBild.Size = UDim2.new(1, -8, 1, -8)
-detailIconBild.Position = UDim2.new(0, 4, 0, 4)
+detailIconBild.Size = UDim2.new(1, -10, 1, -10)
+detailIconBild.Position = UDim2.new(0, 5, 0, 5)
 detailIconBild.BackgroundTransparency = 1
 detailIconBild.ScaleType = Enum.ScaleType.Fit
 detailIconBild.Visible = false
 detailIconBild.Parent = detailIcon
 
 local detailName = Instance.new("TextLabel")
-detailName.Size = UDim2.new(1, -106, 0, 30)
-detailName.Position = UDim2.new(0, 96, 0, 20)
+-- Zwei Zeilen hoch und eine Stufe kleiner als die Ueberschrift, die man hier zuerst
+-- haben will: neben dem 88 Pixel grossen Symbol bleiben auf dem Telefon nur rund 160 Pixel
+-- Breite, und "BATTLEFIELD CONTROL" braucht sie beide. Ein Name, der in eine Zeile
+-- gezwungen wird, ist abgeschnitten -- und abgeschnitten ist schlimmer als kleiner.
+detailName.Size = UDim2.new(1, -124, 0, 50)
+detailName.Position = UDim2.new(0, 112, 0, 14)
 detailName.BackgroundTransparency = 1
-HudChrome.Label(detailName, 18)
+HudChrome.Label(detailName, HudChrome.MenuTextSize.Section)
+detailName.TextYAlignment = Enum.TextYAlignment.Top
 detailName.TextXAlignment = Enum.TextXAlignment.Left
 detailName.TextColor3 = Color3.new(1, 1, 1)
 detailName.TextWrapped = true
@@ -843,131 +864,180 @@ detailName.Visible = false
 detailName.Parent = detailScroll
 
 local detailLevel = Instance.new("TextLabel")
-detailLevel.Size = UDim2.new(1, -106, 0, 20)
-detailLevel.Position = UDim2.new(0, 96, 0, 52)
+detailLevel.Size = UDim2.new(1, -124, 0, 20)
+detailLevel.Position = UDim2.new(0, 112, 0, 68)
 detailLevel.BackgroundTransparency = 1
-HudChrome.MenuBody(detailLevel, 14)
+HudChrome.Sublabel(detailLevel, 14)
 detailLevel.TextXAlignment = Enum.TextXAlignment.Left
-detailLevel.TextColor3 = Color3.fromRGB(180, 180, 190)
 detailLevel.Text = ""
 detailLevel.Visible = false
 detailLevel.Parent = detailScroll
 
+-- Eine Trennlinie statt einer Ueberschrift. Eine Ueberschrift wie "STATS" benennt nur,
+-- was ohnehin dasteht; ein Strich sagt dasselbe ohne ein Wort.
+local function baueTrenner()
+	local strich = Instance.new("Frame")
+	strich.Size = UDim2.new(1, -2 * DETAIL_RAND, 0, 1)
+	strich.BackgroundColor3 = HudChrome.Color.BorderDim
+	strich.BorderSizePixel = 0
+	strich.Visible = false
+	strich.Parent = detailScroll
+	return strich
+end
+
+local detailTrennerEins = baueTrenner()
+detailTrennerEins.Position = UDim2.new(0, DETAIL_RAND, 0, 114)
+
+-- ===== Vorher -> Nachher =====
+--
+-- Der Kern der Tafel. Drei Felder in einer Reihe: der Wert von heute, ein Pfeil, der Wert
+-- danach. Der Pfeil steht fest in der Mitte, damit die beiden Zahlen unabhaengig von ihrer
+-- Laenge immer an derselben Kante beginnen -- sonst wandert der Vergleich beim Durchklicken
+-- hin und her.
+local function baueVergleich(zahlGroesse)
+	local reihe = Instance.new("Frame")
+	reihe.Size = UDim2.new(1, -2 * DETAIL_RAND, 0, zahlGroesse + 14)
+	reihe.BackgroundTransparency = 1
+	reihe.Visible = false
+	reihe.Parent = detailScroll
+
+	local vorher = Instance.new("TextLabel")
+	vorher.Size = UDim2.new(0.42, 0, 1, 0)
+	vorher.BackgroundTransparency = 1
+	HudChrome.Number(vorher, zahlGroesse)
+	vorher.TextXAlignment = Enum.TextXAlignment.Right
+	vorher.TextColor3 = HudChrome.Color.TextDim
+	vorher.Text = ""
+	vorher.Parent = reihe
+
+	local pfeil = Instance.new("TextLabel")
+	pfeil.Size = UDim2.new(0.16, 0, 1, 0)
+	pfeil.Position = UDim2.new(0.42, 0, 0, 0)
+	pfeil.BackgroundTransparency = 1
+	HudChrome.Number(pfeil, zahlGroesse - 4)
+	pfeil.TextColor3 = HudChrome.Color.TextDim
+	pfeil.Text = "→"
+	pfeil.Parent = reihe
+
+	local nachher = Instance.new("TextLabel")
+	nachher.Size = UDim2.new(0.42, 0, 1, 0)
+	nachher.Position = UDim2.new(0.58, 0, 0, 0)
+	nachher.BackgroundTransparency = 1
+	HudChrome.Number(nachher, zahlGroesse)
+	nachher.TextXAlignment = Enum.TextXAlignment.Left
+	nachher.Text = ""
+	nachher.Parent = reihe
+
+	return reihe, vorher, pfeil, nachher
+end
+
+local detailWirkungKopf = Instance.new("TextLabel")
+detailWirkungKopf.Size = UDim2.new(1, -2 * DETAIL_RAND, 0, 18)
+detailWirkungKopf.Position = UDim2.new(0, DETAIL_RAND, 0, 126)
+detailWirkungKopf.BackgroundTransparency = 1
+HudChrome.Sublabel(detailWirkungKopf, 13)
+detailWirkungKopf.TextXAlignment = Enum.TextXAlignment.Left
+detailWirkungKopf.Text = ""
+detailWirkungKopf.Visible = false
+detailWirkungKopf.Parent = detailScroll
+
+local detailWirkungReihe, detailWirkungVorher, detailWirkungPfeil, detailWirkungNachher =
+	baueVergleich(HudChrome.TextSize.NumberLarge)
+detailWirkungReihe.Position = UDim2.new(0, DETAIL_RAND, 0, 146)
+
+local detailTradeoffKopf = Instance.new("TextLabel")
+detailTradeoffKopf.Size = UDim2.new(1, -2 * DETAIL_RAND, 0, 18)
+detailTradeoffKopf.BackgroundTransparency = 1
+HudChrome.Sublabel(detailTradeoffKopf, 13)
+detailTradeoffKopf.TextXAlignment = Enum.TextXAlignment.Left
+detailTradeoffKopf.TextColor3 = Color3.fromRGB(230, 140, 40)
+detailTradeoffKopf.Text = ""
+detailTradeoffKopf.Visible = false
+detailTradeoffKopf.Parent = detailScroll
+
+local detailTradeoffReihe, detailTradeoffVorher, _detailTradeoffPfeil, detailTradeoffNachher =
+	baueVergleich(HudChrome.TextSize.Number)
+detailTradeoffNachher.TextColor3 = Color3.fromRGB(230, 140, 40)
+
+local detailTrennerZwei = baueTrenner()
+
 local detailDescription = Instance.new("TextLabel")
-detailDescription.Size = UDim2.new(1, -20, 0, 90)
-detailDescription.Position = UDim2.new(0, 10, 0, 94)
+detailDescription.Size = UDim2.new(1, -2 * DETAIL_RAND, 0, 104)
 detailDescription.BackgroundTransparency = 1
 HudChrome.MenuBody(detailDescription)
 detailDescription.TextXAlignment = Enum.TextXAlignment.Left
 detailDescription.TextYAlignment = Enum.TextYAlignment.Top
-detailDescription.TextColor3 = Color3.fromRGB(210, 210, 220)
+detailDescription.TextWrapped = true
+detailDescription.TextColor3 = HudChrome.Color.TextSecondary
 detailDescription.Text = ""
 detailDescription.Visible = false
 detailDescription.Parent = detailScroll
 
--- Vorher/Nachher-Wertevergleich
-local detailStatsHeader = Instance.new("TextLabel")
-detailStatsHeader.Size = UDim2.new(1, -20, 0, 18)
-detailStatsHeader.Position = UDim2.new(0, 10, 0, 188)
-detailStatsHeader.BackgroundTransparency = 1
-HudChrome.Label(detailStatsHeader, 14)
-detailStatsHeader.TextXAlignment = Enum.TextXAlignment.Left
-detailStatsHeader.TextColor3 = Color3.fromRGB(255, 210, 80)
-detailStatsHeader.Text = "STATS"
-detailStatsHeader.Visible = false
-detailStatsHeader.Parent = detailScroll
-
-local detailStatPrimary = Instance.new("TextLabel")
-detailStatPrimary.Size = UDim2.new(1, -20, 0, 22)
-detailStatPrimary.Position = UDim2.new(0, 10, 0, 208)
-detailStatPrimary.BackgroundTransparency = 1
-HudChrome.MenuBody(detailStatPrimary, 14)
-detailStatPrimary.TextXAlignment = Enum.TextXAlignment.Left
-detailStatPrimary.TextColor3 = Color3.fromRGB(120, 220, 140)
-detailStatPrimary.Text = ""
-detailStatPrimary.Visible = false
-detailStatPrimary.Parent = detailScroll
-
-local detailStatTradeoff = Instance.new("TextLabel")
-detailStatTradeoff.Size = UDim2.new(1, -20, 0, 22)
-detailStatTradeoff.Position = UDim2.new(0, 10, 0, 232)
-detailStatTradeoff.BackgroundTransparency = 1
-HudChrome.MenuBody(detailStatTradeoff, 14)
-detailStatTradeoff.TextXAlignment = Enum.TextXAlignment.Left
-detailStatTradeoff.TextColor3 = Color3.fromRGB(230, 140, 40)
-detailStatTradeoff.Text = ""
-detailStatTradeoff.Visible = false
-detailStatTradeoff.Parent = detailScroll
-
--- Kosten + Forschungszeit
-local detailCostHeader = Instance.new("TextLabel")
-detailCostHeader.Size = UDim2.new(1, -20, 0, 18)
-detailCostHeader.Position = UDim2.new(0, 10, 0, 266)
-detailCostHeader.BackgroundTransparency = 1
-HudChrome.Label(detailCostHeader, 14)
-detailCostHeader.TextXAlignment = Enum.TextXAlignment.Left
-detailCostHeader.TextColor3 = Color3.fromRGB(255, 210, 80)
-detailCostHeader.Text = "COST"
-detailCostHeader.Visible = false
-detailCostHeader.Parent = detailScroll
-
-local detailCostEnergy = Instance.new("TextLabel")
-detailCostEnergy.Size = UDim2.new(1, -20, 0, 24)
-detailCostEnergy.Position = UDim2.new(0, 10, 0, 286)
-detailCostEnergy.BackgroundTransparency = 1
-HudChrome.MenuBody(detailCostEnergy, 14)
-detailCostEnergy.TextXAlignment = Enum.TextXAlignment.Left
-detailCostEnergy.TextColor3 = Color3.new(1, 1, 1)
-detailCostEnergy.Text = ""
-detailCostEnergy.Visible = false
-detailCostEnergy.Parent = detailScroll
-
-local detailCostCoins = Instance.new("TextLabel")
-detailCostCoins.Size = UDim2.new(1, -20, 0, 24)
-detailCostCoins.Position = UDim2.new(0, 10, 0, 312)
-detailCostCoins.BackgroundTransparency = 1
-HudChrome.MenuBody(detailCostCoins, 14)
-detailCostCoins.TextXAlignment = Enum.TextXAlignment.Left
-detailCostCoins.TextColor3 = Color3.fromRGB(255, 220, 80)
-detailCostCoins.Text = ""
-detailCostCoins.Visible = false
-detailCostCoins.Parent = detailScroll
-
-local detailResearchTime = Instance.new("TextLabel")
-detailResearchTime.Size = UDim2.new(1, -20, 0, 24)
-detailResearchTime.Position = UDim2.new(0, 10, 0, 338)
-detailResearchTime.BackgroundTransparency = 1
-HudChrome.MenuBody(detailResearchTime, 14)
-detailResearchTime.TextXAlignment = Enum.TextXAlignment.Left
-detailResearchTime.TextColor3 = Color3.fromRGB(180, 180, 220)
-detailResearchTime.Text = ""
-detailResearchTime.Visible = false
-detailResearchTime.Parent = detailScroll
-
 local detailPrereqLabel = Instance.new("TextLabel")
-detailPrereqLabel.Size = UDim2.new(1, -20, 0, 40)
-detailPrereqLabel.Position = UDim2.new(0, 10, 0, 368)
+detailPrereqLabel.Size = UDim2.new(1, -2 * DETAIL_RAND, 0, 44)
 detailPrereqLabel.BackgroundTransparency = 1
-HudChrome.MenuBody(detailPrereqLabel, 14)
+HudChrome.MenuBody(detailPrereqLabel, 16)
 detailPrereqLabel.TextWrapped = true
 detailPrereqLabel.TextXAlignment = Enum.TextXAlignment.Left
-detailPrereqLabel.TextColor3 = Color3.fromRGB(230, 100, 100)
+detailPrereqLabel.TextYAlignment = Enum.TextYAlignment.Top
+detailPrereqLabel.TextColor3 = HudChrome.Color.Danger
 detailPrereqLabel.Text = ""
 detailPrereqLabel.Visible = false
 detailPrereqLabel.Parent = detailScroll
 
-local detailResearchButton = Instance.new("TextButton")
-detailResearchButton.Size = UDim2.new(1, -20, 0, 40)
-detailResearchButton.Position = UDim2.new(0, 10, 1, -50)
-detailResearchButton.BackgroundColor3 = Color3.fromRGB(90, 170, 100)
+-- Der untere Teil steht nicht fest: ohne Trade-off faellt ein ganzer Block weg, und die
+-- Beschreibung darf dann nachruecken. Ein Loch, wo nichts steht, sieht aus wie ein Fehler.
+local function ordneDetailInhalt(mitTradeoff)
+	local y = 196
+	if mitTradeoff then
+		detailTradeoffKopf.Position = UDim2.new(0, DETAIL_RAND, 0, y)
+		detailTradeoffReihe.Position = UDim2.new(0, DETAIL_RAND, 0, y + 20)
+		y += 62
+	end
+	detailTrennerZwei.Position = UDim2.new(0, DETAIL_RAND, 0, y + 6)
+	detailDescription.Position = UDim2.new(0, DETAIL_RAND, 0, y + 18)
+	detailPrereqLabel.Position = UDim2.new(0, DETAIL_RAND, 0, y + 18 + 104 + 8)
+end
 
-detailResearchButton.TextScaled = true
-detailResearchButton.TextColor3 = Color3.new(1, 1, 1)
-detailResearchButton.Text = "🔬 RESEARCH"
+-- Die Forschungszeit ist Nebensache und steht deshalb klein ueber dem Knopf -- nicht als
+-- eigene Zeile mitten im Text, wo sie mit den Werten um Aufmerksamkeit konkurrierte.
+local detailResearchTime = Instance.new("TextLabel")
+detailResearchTime.Size = UDim2.new(1, -2 * DETAIL_RAND, 0, 18)
+detailResearchTime.Position = UDim2.new(0, DETAIL_RAND, 1, -84)
+detailResearchTime.BackgroundTransparency = 1
+HudChrome.Sublabel(detailResearchTime, 13)
+detailResearchTime.Text = ""
+detailResearchTime.Visible = false
+detailResearchTime.Parent = detailPanel
+
+local detailResearchButton = Instance.new("TextButton")
+detailResearchButton.Size = UDim2.new(1, -2 * DETAIL_RAND, 0, 54)
+detailResearchButton.Position = UDim2.new(0, DETAIL_RAND, 1, -62)
+detailResearchButton.AutoButtonColor = false
+detailResearchButton.Text = ""
 detailResearchButton.Visible = false
 detailResearchButton.Parent = detailPanel
 HudChrome.Panel(detailResearchButton, { radius = HudChrome.Radius.Small })
-HudChrome.Label(detailResearchButton, HudChrome.MenuTextSize.Caption)
+
+-- Zwei Zeilen im Knopf: WAS passiert, und WAS es kostet. Die Kosten gehoeren hierher und
+-- nicht in einen eigenen Abschnitt weiter oben -- bezahlt wird beim Druecken, und wer
+-- drueckt, schaut auf den Knopf.
+local knopfHaupt = Instance.new("TextLabel")
+knopfHaupt.Size = UDim2.new(1, 0, 0, 26)
+knopfHaupt.Position = UDim2.new(0, 0, 0, 7)
+knopfHaupt.BackgroundTransparency = 1
+HudChrome.Label(knopfHaupt, 20)
+knopfHaupt.TextColor3 = Color3.new(1, 1, 1)
+knopfHaupt.Text = ""
+knopfHaupt.Parent = detailResearchButton
+
+local knopfKosten = Instance.new("TextLabel")
+knopfKosten.Size = UDim2.new(1, 0, 0, 18)
+knopfKosten.Position = UDim2.new(0, 0, 0, 32)
+knopfKosten.BackgroundTransparency = 1
+HudChrome.Number(knopfKosten, 15)
+knopfKosten.Text = ""
+knopfKosten.Parent = detailResearchButton
 
 local closeButton = schirm.close
 closeButton.MouseButton1Click:Connect(function()
@@ -1322,10 +1392,10 @@ local function selectTalent(talent, state, level)
 	detailName.Visible = true
 	detailLevel.Visible = true
 	detailDescription.Visible = true
-	detailStatsHeader.Visible = true
-	detailStatPrimary.Visible = true
-	detailCostHeader.Visible = true
-	detailCostEnergy.Visible = true
+	detailTrennerEins.Visible = true
+	detailTrennerZwei.Visible = true
+	detailWirkungKopf.Visible = true
+	detailWirkungReihe.Visible = true
 	detailResearchTime.Visible = true
 
 	zeigeTalentSymbol(detailIconBild, detailIcon, talent)
@@ -1336,7 +1406,7 @@ local function selectTalent(talent, state, level)
 		detailIconStroke.Color = ENERGY_COLORS[talent.energyType] or HudChrome.Color.Border
 	end
 	detailName.Text = talent.name
-	detailLevel.Text = "Level " .. level .. " / " .. talent.maxLevel
+	detailLevel.Text = string.format("LEVEL %d / %d", level, talent.maxLevel)
 	detailDescription.Text = talent.description
 
 	-- Vorher -> Nachher: simuliert den Zustand MIT einer Stufe mehr auf diesem Talent,
@@ -1344,37 +1414,59 @@ local function selectTalent(talent, state, level)
 	local currentLevels = talentState.levels[currentFaction] or {}
 	local simulatedLevels = table.clone(currentLevels)
 	simulatedLevels[talent.id] = math.min(level + 1, talent.maxLevel)
+	local vollAusgebaut = (level >= talent.maxLevel)
+
+	local energieFarbe = ENERGY_COLORS[talent.energyType] or HudChrome.Color.Accent
 
 	local primaryLabel = STAT_LABELS[talent.effectKey] or talent.effectKey
 	local currentPrimary = getEffectTotal(currentFaction, talent.effectKey, currentLevels)
 	local newPrimary = getEffectTotal(currentFaction, talent.effectKey, simulatedLevels)
-	detailStatPrimary.Text = string.format("%s: %s -> %s", primaryLabel, formatStatValue(talent.effectKey, currentPrimary), formatStatValue(talent.effectKey, newPrimary))
+	detailWirkungKopf.Text = string.upper(primaryLabel)
+	detailWirkungKopf.TextColor3 = energieFarbe
+	detailWirkungVorher.Text = formatStatValue(talent.effectKey, currentPrimary)
+	detailWirkungNachher.Text = formatStatValue(talent.effectKey, newPrimary)
+	detailWirkungNachher.TextColor3 = energieFarbe
 
-	if talent.tradeoffEffectKey then
-		detailStatTradeoff.Visible = true
+	-- Voll ausgebaut gibt es kein Nachher. Dann rueckt der erreichte Wert in die Mitte,
+	-- statt rechtsbuendig neben einem Pfeil ins Leere zu stehen.
+	detailWirkungPfeil.Visible = not vollAusgebaut
+	detailWirkungNachher.Visible = not vollAusgebaut
+	if vollAusgebaut then
+		detailWirkungVorher.Size = UDim2.new(1, 0, 1, 0)
+		detailWirkungVorher.TextXAlignment = Enum.TextXAlignment.Center
+		detailWirkungVorher.TextColor3 = energieFarbe
+	else
+		detailWirkungVorher.Size = UDim2.new(0.42, 0, 1, 0)
+		detailWirkungVorher.TextXAlignment = Enum.TextXAlignment.Right
+		detailWirkungVorher.TextColor3 = HudChrome.Color.TextDim
+	end
+
+	local mitTradeoff = (talent.tradeoffEffectKey ~= nil)
+	detailTradeoffKopf.Visible = mitTradeoff
+	detailTradeoffReihe.Visible = mitTradeoff
+	if mitTradeoff then
 		local tradeoffLabel = STAT_LABELS[talent.tradeoffEffectKey] or talent.tradeoffEffectKey
 		local currentTradeoff = getEffectTotal(currentFaction, talent.tradeoffEffectKey, currentLevels)
 		local newTradeoff = getEffectTotal(currentFaction, talent.tradeoffEffectKey, simulatedLevels)
-		detailStatTradeoff.Text = string.format("⚠️ %s: %s -> %s", tradeoffLabel, formatStatValue(talent.tradeoffEffectKey, currentTradeoff), formatStatValue(talent.tradeoffEffectKey, newTradeoff))
-	else
-		detailStatTradeoff.Visible = false
+		detailTradeoffKopf.Text = "TRADE-OFF · " .. string.upper(tradeoffLabel)
+		detailTradeoffVorher.Text = formatStatValue(talent.tradeoffEffectKey, currentTradeoff)
+		detailTradeoffNachher.Text = formatStatValue(talent.tradeoffEffectKey, newTradeoff)
 	end
+	ordneDetailInhalt(mitTradeoff)
 
-	-- Kosten
-	if level >= talent.maxLevel then
-		detailCostEnergy.Text = "✅ Fully researched"
-		detailCostCoins.Visible = false
+	-- Die Kosten stehen im KNOPF, nicht in einem eigenen Abschnitt: bezahlt wird beim
+	-- Druecken, und wer drueckt, schaut auf den Knopf.
+	if vollAusgebaut then
+		knopfKosten.Text = ""
 		detailResearchTime.Text = ""
 	else
 		local cost = TalentTreeConfig.GetNodeCost(talent, level + 1)
-		detailCostEnergy.Text = string.format("%s  %d", talent.energyType, cost.energyAmount)
+		local teile = { string.format("%d %s", cost.energyAmount, string.upper(talent.energyType)) }
 		if cost.coinAmount > 0 then
-			detailCostCoins.Visible = true
-			detailCostCoins.Text = "💰 " .. cost.coinAmount
-		else
-			detailCostCoins.Visible = false
+			table.insert(teile, string.format("%d COINS", cost.coinAmount))
 		end
-		detailResearchTime.Text = "⏱️ Research time: " .. formatDuration(talent.researchSeconds)
+		knopfKosten.Text = table.concat(teile, "   ")
+		detailResearchTime.Text = "RESEARCH TIME " .. string.upper(formatDuration(talent.researchSeconds))
 	end
 
 	-- Vorstufen-Hinweis, falls gesperrt
@@ -1393,28 +1485,41 @@ local function selectTalent(talent, state, level)
 		detailPrereqLabel.Visible = false
 	end
 
-	-- Research-Button: nur aktiv, wenn wirklich verfügbar.
+	-- Der Knopf sagt, WAS passiert; die Kostenzeile darunter, was es kostet. Ist nichts zu
+	-- holen, verschwindet sie -- ein Preis an einem Knopf, den man nicht druecken kann, ist
+	-- eine Einladung ins Leere.
+	detailResearchButton.Visible = true
+	local knopfGrund = HudChrome.Color.PanelRaised
 	if state == "available" then
-		detailResearchButton.Visible = true
-		detailResearchButton.Text = "🔬 RESEARCH"
-		detailResearchButton.BackgroundColor3 = Color3.fromRGB(90, 170, 100)
+		knopfHaupt.Text = "RESEARCH"
+		knopfGrund = Color3.fromRGB(46, 128, 74)
 		detailResearchButton.Active = true
 	elseif state == "researching" then
-		detailResearchButton.Visible = true
-		detailResearchButton.Text = "🔬 Researching..."
-		detailResearchButton.BackgroundColor3 = Color3.fromRGB(220, 180, 60)
+		knopfHaupt.Text = "RESEARCHING…"
+		knopfGrund = Color3.fromRGB(120, 86, 24)
 		detailResearchButton.Active = false
 	elseif state == "maxed" then
-		detailResearchButton.Visible = true
-		detailResearchButton.Text = "✅ MAXED"
-		detailResearchButton.BackgroundColor3 = Color3.fromRGB(70, 68, 80)
+		knopfHaupt.Text = "MAXED"
+		detailResearchButton.Active = false
+	elseif state == "blocked" then
+		knopfHaupt.Text = "OTHER RESEARCH ACTIVE"
 		detailResearchButton.Active = false
 	else
-		detailResearchButton.Visible = true
-		detailResearchButton.Text = state == "blocked" and "⏳ Other research active" or "🔒 LOCKED"
-		detailResearchButton.BackgroundColor3 = Color3.fromRGB(70, 68, 80)
+		knopfHaupt.Text = "LOCKED"
 		detailResearchButton.Active = false
 	end
+	detailResearchButton.BackgroundColor3 = knopfGrund
+	knopfKosten.Visible = (state == "available") and knopfKosten.Text ~= ""
+	knopfKosten.TextColor3 = HudChrome.Color.TextSecondary
+	-- Ohne Kostenzeile steht die Beschriftung mittig statt oben.
+	if knopfKosten.Visible then
+		knopfHaupt.Size = UDim2.new(1, 0, 0, 26)
+		knopfHaupt.Position = UDim2.new(0, 0, 0, 7)
+	else
+		knopfHaupt.Size = UDim2.new(1, 0, 1, 0)
+		knopfHaupt.Position = UDim2.new(0, 0, 0, 0)
+	end
+	detailResearchTime.Visible = (state == "available")
 end
 
 detailResearchButton.MouseButton1Click:Connect(function()
@@ -1610,12 +1715,12 @@ local function renderTree(factionName)
 		detailName.Visible = false
 		detailLevel.Visible = false
 		detailDescription.Visible = false
-		detailStatsHeader.Visible = false
-		detailStatPrimary.Visible = false
-		detailStatTradeoff.Visible = false
-		detailCostHeader.Visible = false
-		detailCostEnergy.Visible = false
-		detailCostCoins.Visible = false
+		detailTrennerEins.Visible = false
+		detailTrennerZwei.Visible = false
+		detailWirkungKopf.Visible = false
+		detailWirkungReihe.Visible = false
+		detailTradeoffKopf.Visible = false
+		detailTradeoffReihe.Visible = false
 		detailResearchTime.Visible = false
 		detailPrereqLabel.Visible = false
 		detailResearchButton.Visible = false
