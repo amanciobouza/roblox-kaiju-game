@@ -190,7 +190,8 @@ HudChrome.MenuCaption(sessionCaption, 13)
 -- Ein Geschenk abzuholen ist der einzige Augenblick in diesem Bildschirm, in dem etwas
 -- PASSIERT -- alles andere ist Warten und Zusehen. Ohne Klang bleibt davon ein Rechteck,
 -- das die Farbe wechselt.
-local CLAIM_SOUND_ID = "rbxassetid://4612378364"
+-- Derselbe Belohnungston wie bei einer fertigen Forschung -- siehe HudChrome.Sound.
+local CLAIM_SOUND_ID = HudChrome.Sound.Belohnung
 
 local claimSound = Instance.new("Sound")
 claimSound.Name = "GiftClaimSound"

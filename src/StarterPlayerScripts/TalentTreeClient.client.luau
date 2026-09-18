@@ -2254,19 +2254,16 @@ end)
 --   der RING des Knotens blitzt auf und legt sich wieder
 --   eine WELLE geht von ihm aus und verklingt
 --
--- Der Ton fehlt noch: dafuer braucht es eine Asset-Nummer von Amancio (ein kurzer
--- Bass/Impact). Bleibt die Nummer leer, laeuft alles andere trotzdem -- ein fehlender Ton
--- soll den Moment nicht verhindern.
-local FORSCHUNG_FERTIG_SOUND = ""
+-- Der Ton ist DERSELBE wie beim abgeholten Geschenk. Das ist kein Sparen: beide Male ist
+-- etwas gutgeschrieben worden, auf das man gewartet hat -- ein eigener Klang fuer denselben
+-- Vorgang waere eine Unterscheidung ohne Unterschied. Er steht in HudChrome, damit die
+-- Nummer nur an einer Stelle liegt.
 
-local forschungFertigSound = nil
-if FORSCHUNG_FERTIG_SOUND ~= "" then
-	forschungFertigSound = Instance.new("Sound")
-	forschungFertigSound.Name = "TalentUnlockSound"
-	forschungFertigSound.SoundId = FORSCHUNG_FERTIG_SOUND
-	forschungFertigSound.Volume = 0.8
-	forschungFertigSound.Parent = SoundService
-end
+local forschungFertigSound = Instance.new("Sound")
+forschungFertigSound.Name = "TalentUnlockSound"
+forschungFertigSound.SoundId = HudChrome.Sound.Belohnung
+forschungFertigSound.Volume = 0.8
+forschungFertigSound.Parent = SoundService
 
 -- Das Licht laeuft die Ader entlang. Segment fuer Segment hell, jedes einzelne faellt
 -- danach von selbst zurueck -- deshalb ueberlagert sich nichts, und es sieht aus wie eine
@@ -2346,9 +2343,7 @@ local function feiereFreischaltung(talentId)
 		}):Play()
 	end
 
-	if forschungFertigSound then
-		forschungFertigSound:Play()
-	end
+	forschungFertigSound:Play()
 end
 
 ResearchCompleteEvent.OnClientEvent:Connect(function(factionName, talentId, newLevel)

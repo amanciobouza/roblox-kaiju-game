@@ -202,6 +202,17 @@ HudChrome.EnergyIcon = {
 -- Massgeblich ist die Reihe aus EnergyTypesClient: sie war ausdruecklich als Referenz
 -- angelegt, nur hat sich niemand daran gehalten, weil sie in einem Client-Skript stand und
 -- der Server nicht hineinsehen kann. Hier koennen es beide.
+-- ===== Toene =====
+--
+-- Belohnung: der Ton, der erklingt, wenn etwas gutgeschrieben wird -- ein abgeholtes
+-- Geschenk, eine fertige Forschung. Er steht HIER und nicht in den beiden Bildschirmen,
+-- weil "es klingt wie eine Belohnung" eine Eigenschaft des Spiels ist und nicht des
+-- Geschenkbildschirms. Zwei Kopien derselben Nummer waeren die Gelegenheit, dass sich
+-- eine davon irgendwann aendert.
+HudChrome.Sound = {
+	Belohnung = "rbxassetid://4612378364",
+}
+
 HudChrome.EnergyColor = {
 	Heat = Color3.fromRGB(255, 35, 25),
 	Chemical = Color3.fromRGB(255, 45, 190),
