@@ -66,6 +66,12 @@ local START_WINKEL = END_WINKEL + 340 -- fast eine volle Runde, von hinten herum
 -- Ein eigener waere eine zweite Nummer fuer dieselbe Aussage -- "gleich passiert etwas".
 local LADE_SOUND = "rbxassetid://1336756135"
 
+-- Wie tief der scharfe Bereich ist, in Studs vor der Skalierung. Die entscheidende Zahl
+-- der ganzen Inszenierung: sie bestimmt, wie viel ausser der Figur noch mitkommt. Knapp
+-- gehalten, damit wirklich nur sie scharf steht -- zu knapp, und ihr eigener Ruecken
+-- verschwimmt schon.
+local FOKUS_RADIUS = 6
+
 -- Welche Aktion zeigt die Figur? Nach dem Effekt-Schluessel des Talents: was staerker
 -- geworden ist, soll man sehen. Faellt ein Schluessel durch, schlaegt sie zu -- der Schlag
 -- ist die Aktion, die JEDE Figur kann.
@@ -216,7 +222,6 @@ local laeuft = false
 local session = nil
 local farbfilter = nil
 local tiefenschaerfe = nil
-local bloom = nil
 local glut = nil
 local scheinwerfer = nil
 local gegenlicht = nil
@@ -236,10 +241,6 @@ local function raeumeAuf()
 	if tiefenschaerfe then
 		tiefenschaerfe:Destroy()
 		tiefenschaerfe = nil
-	end
-	if bloom then
-		bloom:Destroy()
-		bloom = nil
 	end
 	if glut then
 		glut:Destroy()
@@ -353,7 +354,7 @@ local function umrunde(sessionId, dauer)
 		-- nicht der Radius der Umrundung, denn die Kamera steht auch ueber der Figur.
 		if tiefenschaerfe then
 			tiefenschaerfe.FocusDistance = (auge - ziel).Magnitude
-			tiefenschaerfe.InFocusRadius = 9 * skala
+			tiefenschaerfe.InFocusRadius = FOKUS_RADIUS * skala
 		end
 
 		if fortschritt >= 1 then
@@ -411,32 +412,17 @@ local function starte(factionName, talentId, energyType, effectKey)
 	tiefenschaerfe = Instance.new("DepthOfFieldEffect")
 	tiefenschaerfe.Name = "TalentCeremonyFocus"
 	tiefenschaerfe.FocusDistance = 30
-	tiefenschaerfe.InFocusRadius = 12
+	tiefenschaerfe.InFocusRadius = FOKUS_RADIUS
 	tiefenschaerfe.FarIntensity = 0
 	tiefenschaerfe.NearIntensity = 0
 	tiefenschaerfe.Parent = Lighting
+	-- Beide auf Anschlag: alles, was nicht auf der Entfernung der Figur liegt, verschwimmt
+	-- so weit, wie Roblox es hergibt. Das ist die ganze Trennung -- deshalb darf sie nicht
+	-- zurueckhaltend sein.
 	TweenService:Create(tiefenschaerfe, TweenInfo.new(0.9), {
-		FarIntensity = 0.85,
-		NearIntensity = 0.6,
+		FarIntensity = 1,
+		NearIntensity = 1,
 	}):Play()
-
-	-- ===== Und das Bild glueht aus =====
-	--
-	-- Extremes Bloom: was hell ist, blutet weit ins Bild aus. Das Entscheidende ist die
-	-- SCHWELLE -- sie bestimmt, WAS ausblutet. Sie liegt so hoch, dass die Stadt darunter
-	-- bleibt und nur die Figur darueber kommt, die als Einzige eigene Lampen hat.
-	--
-	-- Zusammen mit dem Abdunkeln darunter ergibt das die Aufteilung, die gemeint war: die
-	-- Welt faellt weg, die Figur brennt. Diesmal funktioniert das Abdunkeln auch -- der
-	-- Farbfilter trifft die WELT, waehrend der Schleier von vorhin das ganze Bild traf,
-	-- Figur eingeschlossen.
-	bloom = Instance.new("BloomEffect")
-	bloom.Name = "TalentCeremonyBloom"
-	bloom.Intensity = 0
-	bloom.Size = 56
-	bloom.Threshold = 0.85
-	bloom.Parent = Lighting
-	TweenService:Create(bloom, TweenInfo.new(1.1), { Intensity = 4 }):Play()
 
 	farbfilter = Instance.new("ColorCorrectionEffect")
 	farbfilter.Name = "TalentCeremonyGrade"
@@ -444,10 +430,12 @@ local function starte(factionName, talentId, energyType, effectKey)
 	farbfilter.Contrast = 0
 	farbfilter.Saturation = 0
 	farbfilter.Parent = Lighting
+	-- Nur Farbe, keine Helligkeit: das Freistellen macht die Schaerfe. Ein abgedunkeltes
+	-- Bild kam dazu und war ein Umweg -- es nahm auch der Figur etwas, die dafuer heller
+	-- leuchten musste, und am Ende kaempften zwei Mittel um dieselbe Wirkung.
 	TweenService:Create(farbfilter, TweenInfo.new(0.9), {
-		Brightness = -0.45,
-		Contrast = 0.25,
-		Saturation = -0.45,
+		Contrast = 0.12,
+		Saturation = -0.3,
 	}):Play()
 
 	glut = Instance.new("Highlight")
@@ -475,7 +463,7 @@ local function starte(factionName, talentId, energyType, effectKey)
 	scheinwerfer.Range = 40
 	scheinwerfer.Shadows = false
 	scheinwerfer.Parent = kopfTeil
-	TweenService:Create(scheinwerfer, TweenInfo.new(1.2), { Brightness = 14 }):Play()
+	TweenService:Create(scheinwerfer, TweenInfo.new(1.2), { Brightness = 5 }):Play()
 
 	gegenlicht = Instance.new("PointLight")
 	gegenlicht.Name = "TalentCeremonyRimLight"
@@ -484,7 +472,7 @@ local function starte(factionName, talentId, energyType, effectKey)
 	gegenlicht.Range = 26
 	gegenlicht.Shadows = false
 	gegenlicht.Parent = root
-	TweenService:Create(gegenlicht, TweenInfo.new(1.2), { Brightness = 10 }):Play()
+	TweenService:Create(gegenlicht, TweenInfo.new(1.2), { Brightness = 4 }):Play()
 
 	schirm.Enabled = true
 
