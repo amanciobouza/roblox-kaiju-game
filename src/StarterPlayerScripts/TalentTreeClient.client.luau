@@ -1437,7 +1437,15 @@ local STATE_COLORS = {
 -- ===== Zeigt die Details eines Talents im rechten Panel: Beschreibung, Vorher/Nachher-
 -- Werte, Kosten (Energie + Coins), Forschungszeit, Vorstufen-Hinweis falls gesperrt. =====
 local function selectTalent(talent, state, level)
+	-- Ein ANDERES Talent faengt oben an. Die Tafel wird auch dann neu gefuellt, wenn sich
+	-- nur der Zustand desselben Talents aendert -- waehrend einer laufenden Forschung etwa,
+	-- im Sekundentakt. Dort zurueckzuspringen waere kein Dienst, sondern ein Ruck unter dem
+	-- Finger: wer gerade liest, verliert die Stelle.
+	local anderesTalent = (selectedTalentId ~= talent.id)
 	selectedTalentId = talent.id
+	if anderesTalent then
+		detailScroll.CanvasPosition = Vector2.new(0, 0)
+	end
 
 	-- Der Name des gewaehlten Knotens erscheint, der des vorher gewaehlten verschwindet
 	-- wieder. Die Meilensteine behalten ihren in jedem Fall -- sie sind die Orientierung,
