@@ -94,7 +94,13 @@ CityAlertConfig.Cities = {
 		-- ===== Stufe 3: Barrikaden-Schild-Cluster =====
 		-- ===== Auf denselben Massstab gebracht wie Brasshaven (18.09.2026) =====
 		-- Das Village ist fuer den Spieler ausgelegt, der es mit dem Riftborn BETRITT: 18
-		-- Schaden je Schlag, 270 ueber einen Fokusstrahl, 100 Lebenspunkte.
+		-- Schaden je Schlag, 540 ueber einen vollen Fokusstrahl, 100 Lebenspunkte.
+		--
+		-- Die 540 sind am 18.09.2026 nachgezogen worden: hier standen 270, also der halbe
+		-- Wert, waehrend der Brasshaven-Block darueber fuer dasselbe Village schon 540
+		-- nannte. Der Grund ist derselbe wie dort -- der Fokusstrahl wird mit
+		-- getLegMultiplier multipliziert, und der ist bei ausgebildetem Bein 2. Gerechnet:
+		-- 18 mal 1.5 je Tick, zehn Ticks ueber 2.5 Sekunden, mal 2 -- also 18 mal 30.
 		--
 		-- Gemessen an den Trefferzahlen Brasshavens war hier alles zugleich zu zaeh UND zu
 		-- toedlich: der Panzer hielt 277 Schlaege (Brasshaven: 74) und toetete in acht
@@ -168,7 +174,7 @@ CityAlertConfig.Cities = {
 		-- begruendete Ausgangsgroesse, keine gemessene -- sie gehoert nachgeschaerft, sobald
 		-- die Stadt tatsaechlich gespielt wird.
 		-- ===== Der Guardian muss eine Herausforderung bleiben =====
-		-- Massstab ist Brasshaven, die einzige durchgerechnete Stadt: 310 Schlaege (rund 21
+		-- Massstab ist Brasshaven, die einzige durchgerechnete Stadt: 310 Schlaege (rund 10
 		-- Fokusstrahlen) bis der Guardian faellt, und 16 Fausttreffer bis der Spieler faellt
 		-- -- doppelt so gefaehrlich wie alles andere in der Stadt.
 		--
@@ -197,9 +203,18 @@ CityAlertConfig.Cities = {
 
 	-- ===== Brasshaven, durchgerechnet =====
 	-- Ausgelegt für den Spieler, der die Stadt mit Level 10 und dem Ironpulse BETRITT. Sein
-	-- Schaden ist dann 135 je Schlag, 2025 über einen vollen Fokusstrahl, 675 je Fläche
-	-- (Arm auf der Obergrenze, keine Talente, allein). Zum Vergleich: im Village sind es 18,
-	-- 270 und 90 -- der Spieler schlägt hier also siebeneinhalbmal so hart zu.
+	-- Schaden ist dann 135 je Schlag, 4 050 über einen vollen Fokusstrahl und 1 350 je
+	-- getroffenem Gebäude in der Fläche (Arm UND Bein auf der Obergrenze, keine Talente,
+	-- allein). Zum Vergleich: im Village sind es 18, 540 und 180 -- der Spieler schlägt hier
+	-- also siebeneinhalbmal so hart zu.
+	--
+	-- KORRIGIERT am 18.09.2026: hier standen 2 025 und 675, also die HALBEN Werte. Beide
+	-- Specials werden mit getLegMultiplier multipliziert (SpecialAttackHandler), und der ist
+	-- bei ausgebildetem Bein 2 statt 1 -- was auf jeden Spieler zutrifft, der überhaupt
+	-- trainiert. Der Faustschlag kennt diesen Faktor NICHT, er bleibt bei 135.
+	--
+	-- Folge: alle Lebenspunkte unten sind über SCHLÄGE hergeleitet und stimmen. Die
+	-- Angaben in Fokusstrahlen waren daraus abgeleitet und lagen um Faktor zwei daneben.
 	--
 	-- GENAU DAS war der Fehler in den alten Zahlen: sie waren gegenüber dem Village mal drei
 	-- gerechnet, nicht mal siebeneinhalb. Das Feuerwehrauto fiel dadurch in elf Schlägen
@@ -253,10 +268,26 @@ CityAlertConfig.Cities = {
 		AlertThresholdLevel3 = 1400,
 		AlertPerHP = 0.01,
 
-		-- Fünfzig Schläge oder dreieinhalb Fokusstrahlen, also rund eine Minute mit
+		-- Fünfzig Schläge oder 1.7 Fokusstrahlen, also rund eine Minute mit
 		-- Verfolgung -- dieselbe Referenz, die im Village ausdrücklich gesetzt wurde.
 		FireEngineHP = 6800,
-		FireEngineCount = 2,
+		-- ===== Vier statt zwei (18.09.2026) =====
+		-- Die Lebenspunkte bleiben, wo sie sind: 6 800 sind 50 Schlaege, und damit weniger
+		-- als die 59 des Barrikadenschilds. Das ist Absicht -- die Feuerwehr ist Alarmstufe
+		-- 2, die Barrikade Stufe 3, sie MUSS schwaecher sein. Ein einzelnes Fahrzeug zaeher
+		-- zu machen haette diese Ordnung umgekehrt.
+		--
+		-- Stattdessen mehr davon: 59 angreifbare Teile sind zu viel Stadt fuer zwei Wagen.
+		-- Vier decken mehr Brandherde gleichzeitig ab, ohne dass ein einzelner zum
+		-- Ausdauertest wird. Die Vorgabe der Spezifikation nennt 1 bis 3 -- Brasshaven ist
+		-- die erste Stadt, die darueber hinausgeht, und zwar wegen ihrer Groesse.
+		--
+		-- ACHTUNG bei FirefightingRate unten: die 45 sind so gesetzt, dass ZWEI Fahrzeuge
+		-- ein brennendes Gebaeude vollstaendig neutralisieren. Erreichen alle vier
+		-- denselben Brand, sind es 200 Prozent. Ob das vorkommt, haengt an
+		-- FirefightingRange (50 Studs) und daran, wie weit die Wagen auseinanderfahren --
+		-- das ist im naechsten Durchlauf zu beobachten, nicht vorherzusagen.
+		FireEngineCount = 4,
 		FireEngineSpeed = 16,
 		-- ===== So viel, dass Ignorieren etwas kostet =====
 		-- Ein brennendes Gebäude gibt 60 Prozent seiner Energie über die Brenndauer ab: bei
@@ -293,7 +324,7 @@ CityAlertConfig.Cities = {
 		AlertDecayRate = 3,
 
 		BarricadeScale = 1.5,
-		-- Sechzig Schläge, vier Fokusstrahlen. Der Generator ist der Schwachpunkt und fällt
+		-- Sechzig Schläge, zwei Fokusstrahlen. Der Generator ist der Schwachpunkt und fällt
 		-- in fünfzehn -- wer ihn findet, spart sich die Wand.
 		--
 		-- IM SPIEL BESTÄTIGT am 18.09.2026: "Ich musste Zeit investieren, lange. Es hat
@@ -334,7 +365,7 @@ CityAlertConfig.Cities = {
 		MilitaryTankCount = 2,
 		MilitaryRocketLauncherCount = 1,
 		MilitaryHelicopterCount = 1,
-		-- 75 / 55 / 45 Schläge beim Eintritt, also 5 / 3.7 / 3 Fokusstrahlen. Bewusst NICHT
+		-- 75 / 55 / 45 Schläge beim Eintritt, also 2.5 / 1.9 / 1.5 Fokusstrahlen. Bewusst NICHT
 		-- aus den Village-Zahlen fortgeschrieben: dessen Militär ist nie gespielt worden,
 		-- das Village endet in Kapitel I bei Alarmstufe 3. 278 Schläge für einen Panzer,
 		-- wie sie sich dort ergäben, wären ein Ausdauertest und kein Kampf.
@@ -371,7 +402,7 @@ CityAlertConfig.Cities = {
 		-- Erfahrung ist der Grund.
 		GuardianXPReward = 80000,
 		GuardianCoinsReward = 1200,
-		-- 220 Schläge plus 90 auf den Schild, zusammen rund 21 Fokusstrahlen. Der Guardian
+		-- 220 Schläge plus 90 auf den Schild, zusammen rund 10 Fokusstrahlen. Der Guardian
 		-- ist der längste Kampf der Stadt und soll es sein -- aber ein Kampf, kein Belagern.
 		GuardianHP = 30000,
 		GuardianShieldHP = 12000, -- 40% der HP, wie bei LargeCity und MegaCity
@@ -414,7 +445,17 @@ CityAlertConfig.Cities = {
 		ShieldRegenDelay = 8,
 		ShieldRegenRate = 0.04,
 		GeneratorMaxHealth = 1750,
-		ElectricDamage = 87, -- Schaden pro Stromschlag am Elektrozaun (skaliert mit Stadtgrösse)
+		-- ===== Auf den Massstab gebracht (18.09.2026) =====
+		-- Die Verteidiger toeteten den erwarteten Skin (Epochbreaker, 400 Leben) in vier bis sechs Treffern.
+		-- Die Regel lautet rund 32 -- beim Guardian 16, weil er doppelt so gefaehrlich sein
+		-- soll. Dessen Werte standen hier bereits richtig; nur die gewoehnlichen
+		-- Verteidiger sind beim Umrechnen liegen geblieben.
+		--
+		-- Umgerechnet mit den Verhaeltnissen aus Brasshaven, wo sie gespielt und bestaetigt
+		-- sind: Zaun und Panzer 33 Treffer, Raketenwerfer 29 (der haerteste), Helikopter 40
+		-- (er stoert mehr, als er wehtut). Gemessen wird gegen die Lebenspunkte des Skins,
+		-- mit dem die Stadt BETRETEN wird -- siehe ExpectedSkinStage oben.
+		ElectricDamage = 12, -- 33 Treffer
 		EscalationStepSize = 5,
 		MaxActiveReactiveBarricades = 3,
 		ReactiveSpawnSearchRadius = 150,
@@ -427,14 +468,14 @@ CityAlertConfig.Cities = {
 		MilitaryRocketLauncherCount = 2,
 		MilitaryHelicopterCount = 2,
 		TankHP = 45000,
-		TankDamage = 75,
+		TankDamage = 12, -- 33 Treffer
 		TankAttackRange = 70,
 		TankSpeed = 14,
 		RocketLauncherHP = 27000,
-		RocketLauncherDamage = 88,
+		RocketLauncherDamage = 14, -- 29 Treffer -- der haerteste des Militaers
 		RocketLauncherAttackRange = 120,
 		HelicopterHP = 22000,
-		HelicopterDamage = 62,
+		HelicopterDamage = 10, -- 40 Treffer -- er stoert mehr, als er wehtut
 		HelicopterAttackRange = 90,
 		HelicopterSpeed = 20,
 
@@ -454,7 +495,7 @@ CityAlertConfig.Cities = {
 		-- begruendete Ausgangsgroesse, keine gemessene -- sie gehoert nachgeschaerft, sobald
 		-- die Stadt tatsaechlich gespielt wird.
 		-- ===== Der Guardian muss eine Herausforderung bleiben =====
-		-- Massstab ist Brasshaven, die einzige durchgerechnete Stadt: 310 Schlaege (rund 21
+		-- Massstab ist Brasshaven, die einzige durchgerechnete Stadt: 310 Schlaege (rund 10
 		-- Fokusstrahlen) bis der Guardian faellt, und 16 Fausttreffer bis der Spieler faellt
 		-- -- doppelt so gefaehrlich wie alles andere in der Stadt.
 		--
@@ -488,8 +529,16 @@ CityAlertConfig.Cities = {
 
 	LargeCity = {
 		ExpectedSkinStage = 4, -- Chronovore; die Spec verlangt die Angabe je Stadt
-		AlertThresholdLevel2 = 19000, -- 0.38 Durchgaenge
-		AlertThresholdLevel3 = 45000, -- 0.91 Durchgaenge
+		-- Neu gerechnet am 18.09.2026, nachdem Hotel, Spital, Stadion und Arena
+		-- dazugekommen sind: der Durchgang waechst damit von 49 464 auf gemessene 95 544
+		-- Alarmpunkte (26 statt 22 Bauwerke). Die alten Schwellen lagen dadurch bei 0.20 bis
+		-- 1.15 Durchgaengen -- die Stadt waere durcheskaliert, bevor sie halb abgeraeumt ist.
+		--
+		-- WICHTIG: diese vier Zahlen haengen an der Zahl der Bauwerke. Kommt eines dazu,
+		-- sagt der Durchgang-Bericht beim Serverstart die neuen Verhaeltnisse -- weichen sie
+		-- von 0.39 / 0.90 / 1.42 / 2.26 ab, gehoeren sie nachgezogen.
+		AlertThresholdLevel2 = 37000, -- 0.39 Durchgaenge
+		AlertThresholdLevel3 = 86000, -- 0.90 Durchgaenge
 		AlertPerHP = 0.18,
 
 		FireEngineHP = 50000,
@@ -511,27 +560,37 @@ CityAlertConfig.Cities = {
 		ShieldRegenDelay = 8,
 		ShieldRegenRate = 0.04,
 		GeneratorMaxHealth = 2750,
-		ElectricDamage = 225, -- Schaden pro Stromschlag am Elektrozaun (skaliert mit Stadtgrösse)
+		-- ===== Auf den Massstab gebracht (18.09.2026) =====
+		-- Die Verteidiger toeteten den erwarteten Skin (Chronovore, 800 Leben) in dreieinhalb bis fuenf Treffern.
+		-- Die Regel lautet rund 32 -- beim Guardian 16, weil er doppelt so gefaehrlich sein
+		-- soll. Dessen Werte standen hier bereits richtig; nur die gewoehnlichen
+		-- Verteidiger sind beim Umrechnen liegen geblieben.
+		--
+		-- Umgerechnet mit den Verhaeltnissen aus Brasshaven, wo sie gespielt und bestaetigt
+		-- sind: Zaun und Panzer 33 Treffer, Raketenwerfer 29 (der haerteste), Helikopter 40
+		-- (er stoert mehr, als er wehtut). Gemessen wird gegen die Lebenspunkte des Skins,
+		-- mit dem die Stadt BETRETEN wird -- siehe ExpectedSkinStage oben.
+		ElectricDamage = 24, -- 33 Treffer
 		EscalationStepSize = 5,
 		MaxActiveReactiveBarricades = 4,
 		ReactiveSpawnSearchRadius = 150,
 		FlankAutoDetectRadius = 40,
 
 		-- ===== Stufe 4: Militär (Panzer, Raketenwerfer, Militär-Helikopter) =====
-		AlertThresholdLevel4 = 70000, -- 1.42 Durchgaenge
+		AlertThresholdLevel4 = 136000, -- 1.42 Durchgaenge
 		MaxAlertLevel = 5, -- Konzept-Vorgabe: nicht jede Stadt kennt alle Alert-Stufen
 		MilitaryTankCount = 3,
 		MilitaryRocketLauncherCount = 2,
 		MilitaryHelicopterCount = 2,
 		TankHP = 140000,
-		TankDamage = 200,
+		TankDamage = 24, -- 33 Treffer
 		TankAttackRange = 75,
 		TankSpeed = 15,
 		RocketLauncherHP = 85000,
-		RocketLauncherDamage = 227,
+		RocketLauncherDamage = 28, -- 29 Treffer -- der haerteste des Militaers
 		RocketLauncherAttackRange = 130,
 		HelicopterHP = 70000,
-		HelicopterDamage = 165,
+		HelicopterDamage = 20, -- 40 Treffer -- er stoert mehr, als er wehtut
 		HelicopterAttackRange = 95,
 		HelicopterSpeed = 21,
 
@@ -543,7 +602,7 @@ CityAlertConfig.Cities = {
 		-- Ohne AlertThresholdLevel5 war Stufe 5 hier UNERREICHBAR, obwohl MaxAlertLevel
 		-- sie versprach -- die Stadt liess sich damit nicht abschliessen, denn die
 		-- CITY-BROKEN-Aufgabe "Guardian eliminated" setzt einen Guardian voraus.
-		AlertThresholdLevel5 = 110000, -- 2.22 Durchgaenge
+		AlertThresholdLevel5 = 216000, -- 2.26 Durchgaenge
 		-- ===== Was der Guardian einbringt =====
 		-- FEST, nicht zur Laufzeit gerechnet -- so verlangt es die Spec
 		-- (balancing.every-defeat-pays). Bis hierher gab dieser Guardian GAR NICHTS: ein
@@ -557,7 +616,7 @@ CityAlertConfig.Cities = {
 		-- begruendete Ausgangsgroesse, keine gemessene -- sie gehoert nachgeschaerft, sobald
 		-- die Stadt tatsaechlich gespielt wird.
 		-- ===== Der Guardian muss eine Herausforderung bleiben =====
-		-- Massstab ist Brasshaven, die einzige durchgerechnete Stadt: 310 Schlaege (rund 21
+		-- Massstab ist Brasshaven, die einzige durchgerechnete Stadt: 310 Schlaege (rund 10
 		-- Fokusstrahlen) bis der Guardian faellt, und 16 Fausttreffer bis der Spieler faellt
 		-- -- doppelt so gefaehrlich wie alles andere in der Stadt.
 		--
@@ -614,7 +673,17 @@ CityAlertConfig.Cities = {
 		ShieldRegenDelay = 8,
 		ShieldRegenRate = 0.03,
 		GeneratorMaxHealth = 4000,
-		ElectricDamage = 625, -- Schaden pro Stromschlag am Elektrozaun (skaliert mit Stadtgrösse)
+		-- ===== Auf den Massstab gebracht (18.09.2026) =====
+		-- Die Verteidiger toeteten den erwarteten Skin (Aeon Tyrant, 1600 Leben) in zweieinhalb bis dreieinhalb Treffern.
+		-- Die Regel lautet rund 32 -- beim Guardian 16, weil er doppelt so gefaehrlich sein
+		-- soll. Dessen Werte standen hier bereits richtig; nur die gewoehnlichen
+		-- Verteidiger sind beim Umrechnen liegen geblieben.
+		--
+		-- Umgerechnet mit den Verhaeltnissen aus Brasshaven, wo sie gespielt und bestaetigt
+		-- sind: Zaun und Panzer 33 Treffer, Raketenwerfer 29 (der haerteste), Helikopter 40
+		-- (er stoert mehr, als er wehtut). Gemessen wird gegen die Lebenspunkte des Skins,
+		-- mit dem die Stadt BETRETEN wird -- siehe ExpectedSkinStage oben.
+		ElectricDamage = 48, -- 33 Treffer
 		EscalationStepSize = 5,
 		MaxActiveReactiveBarricades = 4,
 		ReactiveSpawnSearchRadius = 150,
@@ -627,14 +696,14 @@ CityAlertConfig.Cities = {
 		MilitaryRocketLauncherCount = 3,
 		MilitaryHelicopterCount = 3,
 		TankHP = 450000,
-		TankDamage = 550,
+		TankDamage = 48, -- 33 Treffer
 		TankAttackRange = 80,
 		TankSpeed = 16,
 		RocketLauncherHP = 270000,
-		RocketLauncherDamage = 630,
+		RocketLauncherDamage = 56, -- 29 Treffer -- der haerteste des Militaers
 		RocketLauncherAttackRange = 140,
 		HelicopterHP = 220000,
-		HelicopterDamage = 450,
+		HelicopterDamage = 40, -- 40 Treffer -- er stoert mehr, als er wehtut
 		HelicopterAttackRange = 100,
 		HelicopterSpeed = 22,
 
@@ -660,7 +729,7 @@ CityAlertConfig.Cities = {
 		-- begruendete Ausgangsgroesse, keine gemessene -- sie gehoert nachgeschaerft, sobald
 		-- die Stadt tatsaechlich gespielt wird.
 		-- ===== Der Guardian muss eine Herausforderung bleiben =====
-		-- Massstab ist Brasshaven, die einzige durchgerechnete Stadt: 310 Schlaege (rund 21
+		-- Massstab ist Brasshaven, die einzige durchgerechnete Stadt: 310 Schlaege (rund 10
 		-- Fokusstrahlen) bis der Guardian faellt, und 16 Fausttreffer bis der Spieler faellt
 		-- -- doppelt so gefaehrlich wie alles andere in der Stadt.
 		--
