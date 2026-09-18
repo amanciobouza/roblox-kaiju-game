@@ -868,13 +868,18 @@ detailIconBild.ScaleType = Enum.ScaleType.Fit
 detailIconBild.Visible = false
 detailIconBild.Parent = detailIcon
 
+-- ===== Name und Stufe stehen UNTER dem Symbol =====
+--
+-- Sie standen daneben, auf x112. Linksbuendig waren sie damit schon -- aber an einer
+-- eigenen Kante: alles darunter beginnt bei x12, und zwei Zeilen, die als einzige um 100
+-- Pixel eingerueckt sind, lesen sich nicht als "links", sondern als verschoben.
+--
+-- Unter dem Symbol hat der Name ausserdem die volle Spaltenbreite. Neben ihm blieben auf
+-- dem Telefon rund 160 Pixel, und "BATTLEFIELD CONTROL" brauchte sie beide -- jetzt passt
+-- er in eine Zeile, ohne dass ich ihn kleiner setzen muss.
 local detailName = Instance.new("TextLabel")
--- Zwei Zeilen hoch und eine Stufe kleiner als die Ueberschrift, die man hier zuerst
--- haben will: neben dem 88 Pixel grossen Symbol bleiben auf dem Telefon nur rund 160 Pixel
--- Breite, und "BATTLEFIELD CONTROL" braucht sie beide. Ein Name, der in eine Zeile
--- gezwungen wird, ist abgeschnitten -- und abgeschnitten ist schlimmer als kleiner.
-detailName.Size = UDim2.new(1, -124, 0, 50)
-detailName.Position = UDim2.new(0, 112, 0, 14)
+detailName.Size = UDim2.new(1, -2 * DETAIL_RAND, 0, 50)
+detailName.Position = UDim2.new(0, DETAIL_RAND, 0, 112)
 detailName.BackgroundTransparency = 1
 HudChrome.Label(detailName, HudChrome.MenuTextSize.Section)
 detailName.TextYAlignment = Enum.TextYAlignment.Top
@@ -886,8 +891,8 @@ detailName.Visible = false
 detailName.Parent = detailScroll
 
 local detailLevel = Instance.new("TextLabel")
-detailLevel.Size = UDim2.new(1, -124, 0, 20)
-detailLevel.Position = UDim2.new(0, 112, 0, 68)
+detailLevel.Size = UDim2.new(1, -2 * DETAIL_RAND, 0, 20)
+detailLevel.Position = UDim2.new(0, DETAIL_RAND, 0, 166)
 detailLevel.BackgroundTransparency = 1
 HudChrome.Sublabel(detailLevel, 14)
 detailLevel.TextXAlignment = Enum.TextXAlignment.Left
@@ -908,7 +913,7 @@ local function baueTrenner()
 end
 
 local detailTrennerEins = baueTrenner()
-detailTrennerEins.Position = UDim2.new(0, DETAIL_RAND, 0, 114)
+detailTrennerEins.Position = UDim2.new(0, DETAIL_RAND, 0, 196)
 
 -- ===== Vorher -> Nachher =====
 --
@@ -957,7 +962,7 @@ end
 
 local detailWirkungKopf = Instance.new("TextLabel")
 detailWirkungKopf.Size = UDim2.new(1, -2 * DETAIL_RAND, 0, 18)
-detailWirkungKopf.Position = UDim2.new(0, DETAIL_RAND, 0, 126)
+detailWirkungKopf.Position = UDim2.new(0, DETAIL_RAND, 0, 208)
 detailWirkungKopf.BackgroundTransparency = 1
 HudChrome.Sublabel(detailWirkungKopf, 13)
 detailWirkungKopf.TextXAlignment = Enum.TextXAlignment.Left
@@ -967,7 +972,7 @@ detailWirkungKopf.Parent = detailScroll
 
 local detailWirkungReihe, detailWirkungVorher, detailWirkungPfeil, detailWirkungNachher =
 	baueVergleich(HudChrome.TextSize.NumberLarge)
-detailWirkungReihe.Position = UDim2.new(0, DETAIL_RAND, 0, 146)
+detailWirkungReihe.Position = UDim2.new(0, DETAIL_RAND, 0, 228)
 
 local detailTradeoffKopf = Instance.new("TextLabel")
 detailTradeoffKopf.Size = UDim2.new(1, -2 * DETAIL_RAND, 0, 18)
@@ -1012,7 +1017,7 @@ detailPrereqLabel.Parent = detailScroll
 -- Der untere Teil steht nicht fest: ohne Trade-off faellt ein ganzer Block weg, und die
 -- Beschreibung darf dann nachruecken. Ein Loch, wo nichts steht, sieht aus wie ein Fehler.
 local function ordneDetailInhalt(mitTradeoff)
-	local y = 196
+	local y = 278
 	if mitTradeoff then
 		detailTradeoffKopf.Position = UDim2.new(0, DETAIL_RAND, 0, y)
 		detailTradeoffReihe.Position = UDim2.new(0, DETAIL_RAND, 0, y + 20)
