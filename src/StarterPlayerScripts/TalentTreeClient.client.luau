@@ -675,17 +675,14 @@ local function layoutColumns()
 		return
 	end
 
-	-- Kopfzeile: Titel und Tabs bleiben NEBENEINANDER, schrumpfen aber mit. Fest standen
-	-- sie auf 300 plus 400 Pixeln, brauchten also 720 Mindestbreite -- auf einem Telefon
-	-- mit 640 lief die Tab-Reihe rechts aus dem Bild. Sie untereinander zu setzen waere
-	-- der naheliegende Ausweg, kostet im Querformat aber die knappe Hoehe.
-	-- Den Titel setzt seit dem Umbau die Kopfzeile von HudChrome.Screen -- ein eigenes
-	-- TextLabel gibt es hier nicht mehr. Die Breite bleibt trotzdem stehen: die Tab-Reihe
-	-- richtet sich weiter danach aus, und ihre Position von Hand zu ändern wäre eine
-	-- Layout-Entscheidung, keine Fehlerbehebung.
-	local titleWidth = math.clamp(math.floor(width * 0.3), 140, 300)
-	tabRow.Position = UDim2.new(0, titleWidth + 24, 0, 8)
-	tabRow.Size = UDim2.new(0, math.max(width - titleWidth - 36, 120), 0, 32)
+	-- Die Tab-Reihe wird hier NICHT mehr angefasst. Sie stand einmal rechts neben einem
+	-- Titel, der im Inhalt lag, und richtete sich an dessen Breite aus. Seit dem Umbau auf
+	-- HudChrome.Screen steht der Titel in der Kopfzeile -- die Rechnung zog die Reihe
+	-- seither an den linken Rand und ueber den Titel, auf dem Telefon besonders deutlich.
+	--
+	-- Sie ist bei ihrer Erzeugung mittig in der Kopfzeile verankert, und genau da gehoert
+	-- sie hin: drei gleich grosse Symbolknoepfe, die fuer die drei Figuren stehen. Ihre
+	-- Breite ist fest (3 mal 44 plus zwei Luecken) und braucht keine Anpassung.
 	-- Die Ressourcenzeile gehoert nach GANZ oben, nicht auf 44: dort sitzt der
 	-- Forschungsbalken, und beide lagen uebereinander -- die Zahlen ueber dem Balken, der
 	-- CANCEL-Knopf unter den Zahlen. Die 44 stammen aus der Zeit, als der Titel noch hier
