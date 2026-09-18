@@ -1047,20 +1047,28 @@ HudChrome.Panel(detailResearchButton, { radius = HudChrome.Radius.Small })
 -- Zwei Zeilen im Knopf: WAS passiert, und WAS es kostet. Die Kosten gehoeren hierher und
 -- nicht in einen eigenen Abschnitt weiter oben -- bezahlt wird beim Druecken, und wer
 -- drueckt, schaut auf den Knopf.
+-- Auch im Knopf linksbuendig, und zwar auf DERSELBEN Kante wie Name, Ueberschrift und
+-- Beschreibung darueber. Ein zentrierter Knopftext waere fuer sich genommen richtig -- in
+-- einer Spalte, in der jede andere Zeile links beginnt, ist er die einzige Ausnahme, und
+-- Ausnahmen sieht man.
+local KNOPF_RAND = 16
+
 local knopfHaupt = Instance.new("TextLabel")
-knopfHaupt.Size = UDim2.new(1, 0, 0, 26)
-knopfHaupt.Position = UDim2.new(0, 0, 0, 7)
+knopfHaupt.Size = UDim2.new(1, -2 * KNOPF_RAND, 0, 26)
+knopfHaupt.Position = UDim2.new(0, KNOPF_RAND, 0, 7)
 knopfHaupt.BackgroundTransparency = 1
 HudChrome.Label(knopfHaupt, 20)
+knopfHaupt.TextXAlignment = Enum.TextXAlignment.Left
 knopfHaupt.TextColor3 = Color3.new(1, 1, 1)
 knopfHaupt.Text = ""
 knopfHaupt.Parent = detailResearchButton
 
 local knopfKosten = Instance.new("TextLabel")
-knopfKosten.Size = UDim2.new(1, 0, 0, 18)
-knopfKosten.Position = UDim2.new(0, 0, 0, 32)
+knopfKosten.Size = UDim2.new(1, -2 * KNOPF_RAND, 0, 18)
+knopfKosten.Position = UDim2.new(0, KNOPF_RAND, 0, 32)
 knopfKosten.BackgroundTransparency = 1
 HudChrome.Number(knopfKosten, 15)
+knopfKosten.TextXAlignment = Enum.TextXAlignment.Left
 knopfKosten.Text = ""
 knopfKosten.Parent = detailResearchButton
 
@@ -1532,11 +1540,11 @@ local function selectTalent(talent, state, level)
 	knopfKosten.TextColor3 = HudChrome.Color.TextSecondary
 	-- Ohne Kostenzeile steht die Beschriftung mittig statt oben.
 	if knopfKosten.Visible then
-		knopfHaupt.Size = UDim2.new(1, 0, 0, 26)
-		knopfHaupt.Position = UDim2.new(0, 0, 0, 7)
+		knopfHaupt.Size = UDim2.new(1, -2 * KNOPF_RAND, 0, 26)
+		knopfHaupt.Position = UDim2.new(0, KNOPF_RAND, 0, 7)
 	else
-		knopfHaupt.Size = UDim2.new(1, 0, 1, 0)
-		knopfHaupt.Position = UDim2.new(0, 0, 0, 0)
+		knopfHaupt.Size = UDim2.new(1, -2 * KNOPF_RAND, 1, 0)
+		knopfHaupt.Position = UDim2.new(0, KNOPF_RAND, 0, 0)
 	end
 	detailResearchTime.Visible = (state == "available")
 end
