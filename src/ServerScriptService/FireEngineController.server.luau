@@ -275,12 +275,47 @@ end
 -- Feuer wählen und andere brennende Gebäude ignorieren.
 local claimedFireTargets = {}
 
+-- ===== Wie stark muss ein Feuer sein, um einen Umweg zu lohnen? =====
+--
+-- Bei dieser Entfernung zaehlt ein Brand nur noch halb. Ein doppelt so weit entferntes
+-- Feuer muss also doppelt so viel Energie haben, um trotzdem gewaehlt zu werden.
+--
+-- 120 Studs sind an Brasshaven gemessen: die Stadt ist gross genug, dass ein Wagen von
+-- einem Ende zum anderen deutlich laenger faehrt als loescht. Kleiner gesetzt kleben die
+-- Wagen an ihrer Ecke, auch wenn woanders das halbe Viertel brennt; groesser gesetzt ist
+-- es wieder die alte Fahrt quer durch die Stadt.
+local FEUER_BEZUGSWEITE = 120
+
+local function ortVon(instanz)
+	local ok, pivot = pcall(function()
+		return instanz:GetPivot()
+	end)
+	if ok and pivot then
+		return pivot.Position
+	end
+	return nil
+end
+
+-- Sucht das LOHNENDSTE Feuer fuer dieses eine Fahrzeug -- nicht das staerkste der Stadt.
+--
+-- Vorher gewann allein die verbleibende Energie. Bei zwei Fahrzeugen ging das noch: der
+-- Anspruch unten verhindert, dass beide dasselbe Feuer nehmen, also fuhr das zweite zum
+-- zweitstaerksten. Bei vier faellt auf, was daran fehlt -- alle vier fahren zu den vier
+-- staerksten Braenden, egal wo die liegen, und kreuzen sich dabei quer durch die Stadt.
+-- Waehrend der Fahrt loescht niemand.
+--
+-- Jetzt wird die Energie durch die Entfernung geteilt. Das Ergebnis ist beides zugleich:
+-- jedes Fahrzeug nimmt den staerksten Brand IN SEINER NAEHE, und weil jedes von woanders
+-- startet, verteilen sie sich von selbst. Eine Aufteilung in Zonen waere der andere Weg --
+-- sie waere starr, und eine Stadt, in der nur eine Ecke brennt, haette drei Wagen im
+-- Leerlauf.
 local function findBestFireTargetInCity(cityName, requestingEngine)
 	if not _G.ActiveFireSources or not _G.ResolveCityName then
 		return nil
 	end
 
-	local bestHouse, best, bestEnergy = nil, nil, 0
+	local vonHier = requestingEngine and ortVon(requestingEngine)
+	local bestHouse, best, bestWert = nil, nil, 0
 	for house, source in pairs(_G.ActiveFireSources) do
 		if source.remainingEnergy > 0 and house.Parent then
 			local claimedBy = claimedFireTargets[house]
@@ -290,8 +325,15 @@ local function findBestFireTargetInCity(cityName, requestingEngine)
 				and claimedBy ~= requestingEngine
 				and claimedBy.Parent
 				and not claimedBy:GetAttribute("Destroyed")
-			if not isClaimedByOtherActiveEngine and _G.ResolveCityName(house) == cityName and source.remainingEnergy > bestEnergy then
-				bestHouse, best, bestEnergy = house, source, source.remainingEnergy
+			if not isClaimedByOtherActiveEngine and _G.ResolveCityName(house) == cityName then
+				local wert = source.remainingEnergy
+				local dort = vonHier and ortVon(house)
+				if dort then
+					wert = wert / (1 + (dort - vonHier).Magnitude / FEUER_BEZUGSWEITE)
+				end
+				if wert > bestWert then
+					bestHouse, best, bestWert = house, source, wert
+				end
 			end
 		end
 	end
@@ -424,6 +466,16 @@ end
 -- Wird von CombatHandler.lua / HouseHandler.lua (Sprung) / SpecialAttackHandler.lua
 -- (Fokus/Fläche) genauso aufgerufen wie _G.DamageHouse -- gleiche Angriffe, gleiches
 -- Prinzip, nur ein anderes Ziel.
+-- ===== Wie oft wurde wirklich getroffen =====
+-- "Zu schnell" ist ein Gefuehl, und Gefuehle lassen sich nicht gegen eine Config pruefen.
+-- Gezaehlt werden Treffer und Gesamtschaden je Fahrzeug; beim Zerstoeren steht beides im
+-- Log, zusammen mit dem groessten Einzeltreffer. Daran ist ablesbar, WOMIT es gefallen
+-- ist: ein Faustschlag ist beim Eintritt in Brasshaven 135, ein Flaechentreffer 1 350,
+-- ein Fokus-Tick 405 (zehn davon je Strahl).
+local treffer = {}
+local gesamtschaden = {}
+local groesster = {}
+
 local function damageFireEngine(engine, amount, attackerPlayer)
 	if not engine or not engine.Parent or engine:GetAttribute("Destroyed") then
 		return
@@ -432,9 +484,19 @@ local function damageFireEngine(engine, amount, attackerPlayer)
 	engine:SetAttribute("Health", health)
 	updateFireEngineHealthBar(engine)
 
+	treffer[engine] = (treffer[engine] or 0) + 1
+	gesamtschaden[engine] = (gesamtschaden[engine] or 0) + amount
+	groesster[engine] = math.max(groesster[engine] or 0, amount)
+
 	if health <= 0 then
 		engine:SetAttribute("Destroyed", true)
 		GroundVehicleSeparation.Unregister(engine)
+
+		print(string.format("[Kaiju Debug] Feuerwehrauto zerstoert nach %d Treffern, "
+			.. "%d Schaden gesamt (Maximalleben %d), groesster Einzeltreffer %d.",
+			treffer[engine], math.floor(gesamtschaden[engine]),
+			math.floor(engine:GetAttribute("MaxHealth") or 0), math.floor(groesster[engine])))
+		treffer[engine], gesamtschaden[engine], groesster[engine] = nil, nil, nil
 
 		-- Achievements: "Erste Feuerwehr besiegt".
 		if attackerPlayer and _G.RecordStat then
