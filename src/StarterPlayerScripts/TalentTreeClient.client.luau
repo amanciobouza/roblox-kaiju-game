@@ -219,9 +219,8 @@ treeScroll.ScrollingDirection = Enum.ScrollingDirection.XY
 treeScroll.ScrollBarThickness = 8
 treeScroll.ScrollBarImageColor3 = HudChrome.Color.BorderBright
 treeScroll.ScrollBarImageTransparency = 0.4
--- Die Groesse der Zeichenflaeche RECHNET Roblox aus, sie wird nicht gesetzt. Warum, steht
--- bei der Leinwand weiter unten.
-treeScroll.AutomaticCanvasSize = Enum.AutomaticSize.XY
+-- Die Groesse der Zeichenflaeche wird GEMESSEN, nicht gerechnet: sie ist die
+-- AbsoluteSize der Leinwand. Warum das eindeutig ist, steht bei der Leinwand weiter unten.
 treeScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 -- WICHTIG: ScrollingFrame clippt seinen Inhalt NICHT automatisch (anders als man
 -- erwarten würde) -- ohne das hier explizit zu setzen, konnten Verbindungslinien über
@@ -286,21 +285,21 @@ end
 -- Alles, was gezeichnet wird, haengt hier drin und nicht direkt im Rollbereich. Sie loest
 -- zwei Dinge, an denen ich mich nacheinander verrechnet habe.
 --
--- Erstens die GROESSE der Zeichenflaeche. Ob ein UIScale im Rollbereich dessen CanvasSize
--- mitskaliert oder nicht, habe ich zweimal geraten und beide Male anders -- einmal war der
--- Inhalt zu klein fuer seinen Rahmen, einmal die Flaeche zu gross fuer das Fenster. Jetzt
--- rechnet Roblox sie aus (AutomaticCanvasSize) und ich MESSE das Ergebnis an
--- AbsoluteCanvasSize. Die Frage stellt sich damit nicht mehr.
+-- Ob ein UIScale IM Rollbereich dessen CanvasSize mitskaliert oder nicht, habe ich zweimal
+-- geraten und beide Male anders -- einmal war der Inhalt zu klein fuer seinen Rahmen,
+-- einmal die Flaeche zu gross fuer das Fenster. Die Leinwand macht die Frage gegenstandslos:
+-- der Massstab sitzt an IHR, der Rollbereich sieht nur noch ein Kind mit einer fertigen
+-- Groesse, und die wird gemessen (leinwand.AbsoluteSize) statt gerechnet.
 --
--- Zweitens das Uhrwerk. Es ist mit Absicht groesser als die Flaeche -- ein Mechanismus,
--- der ueber den Rand hinauslaeuft. Eine automatisch gerechnete Flaeche wuerde genau
--- deshalb bis zum Uhrwerk wachsen und einen Rollbereich voller Leere erzeugen. Die
--- Leinwand hat eine feste Groesse und schneidet ab, was darueber hinaussteht.
+-- Sie schneidet dabei NICHTS ab. Das Uhrwerk ist mit Absicht groesser als sie -- ein
+-- Mechanismus, der ueber den Rand hinauslaeuft -- und vor allem liegt sein Mittelpunkt auf
+-- der Wurzel: die Wurzel IST die Mitte der Uhr. Wuerde die Leinwand an ihrer Unterkante
+-- abschneiden, waere von der Uhr nur die obere Haelfte da, und die Wurzel saehe aus, als
+-- saesse sie unten am Rand statt im Zentrum. Abgeschnitten wird erst am Fenster.
 local leinwand = Instance.new("Frame")
 leinwand.Name = "Leinwand"
 leinwand.Size = UDim2.new(0, TREE_CANVAS_WIDTH, 0, TREE_CANVAS_HEIGHT)
 leinwand.BackgroundTransparency = 1
-leinwand.ClipsDescendants = true
 leinwand.Parent = treeScroll
 
 -- Skaliert ALLE Knoten, Linien und das Uhrwerk gemeinsam. Sie stehen auf festen
@@ -583,17 +582,33 @@ function passeFensterAn()
 			return
 		end
 
-		-- DIE Messung. AbsoluteCanvasSize ist die Flaeche, die der Rollbereich wirklich
-		-- hat -- gerechnet von Roblox, mit allem Massstab, der dazwischensteht. Alles,
-		-- was ich hier selbst gerechnet haette, waere wieder eine Annahme darueber, wie
-		-- UIScale und CanvasSize zusammenwirken, und genau die war zweimal falsch.
-		local flaeche = treeScroll.AbsoluteCanvasSize
+		-- DIE Messung. Die Leinwand traegt den Massstab; ihre AbsoluteSize ist damit die
+		-- fertige Groesse in Pixeln, von Roblox gerechnet. Der Rollbereich bekommt genau
+		-- diese Zahl als Flaeche. Alles, was ich hier selbst gerechnet haette, waere wieder
+		-- eine Annahme darueber, wie UIScale und CanvasSize zusammenwirken -- und genau die
+		-- war zweimal falsch.
+		local flaeche = leinwand.AbsoluteSize
 		if flaeche.X <= 0 or flaeche.Y <= 0 then
 			return
 		end
-
 		local fensterBreite = math.min(platz.platzBreite, math.ceil(flaeche.X))
 		local fensterHoehe = math.min(platz.platzHoehe, math.ceil(flaeche.Y))
+
+		-- ===== Auslauf, damit die Wurzel in die Mitte kann =====
+		--
+		-- Die Wurzel ist der MITTELPUNKT DER UHR, und der Ausschnitt soll sie zeigen -- man
+		-- faengt dort an und schiebt sich von da in jede Richtung zu der Stelle, an der man
+		-- forschen will. Sie liegt auf der Zeichenflaeche aber weit unten, und Roblox
+		-- begrenzt den Rollweg auf die Flaeche: ohne Weg unter ihr laesst sie sich gar
+		-- nicht bis in die Mitte schieben, sie bliebe an der Unterkante haengen.
+		--
+		-- Also ein halbes Fenster Auslauf -- aber NUR, wenn ohnehin gerollt wird. Passt
+		-- alles ins Bild, gaebe der Auslauf einen Rollbereich, wo es nichts zu rollen gibt.
+		local auslaufY = (math.ceil(flaeche.Y) > fensterHoehe) and math.floor(fensterHoehe / 2) or 0
+		treeScroll.CanvasSize = UDim2.new(
+			0, math.ceil(flaeche.X),
+			0, math.ceil(flaeche.Y) + auslaufY
+		)
 
 		-- Fenster und Detailspalte werden als EIN Block zentriert. Der uebrige Platz liegt
 		-- damit aussen als Rand und nicht innen als Loch.
