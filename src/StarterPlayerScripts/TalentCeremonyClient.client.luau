@@ -45,12 +45,22 @@ local playerGui = player:WaitForChild("PlayerGui")
 
 -- ===== Masse und Zeiten =====
 local UMRUNDUNG_SEKUNDEN = 4.2 -- so lange dreht die Kamera
-local ABSTAND = 14 -- Studs von der Figur, vor der Skalierung
-local HOEHE = 5 -- Kamerahoehe ueber der Figurmitte, vor der Skalierung
--- Endwinkel: vorne SEITLICH, nicht frontal. Frontal sieht aus wie ein Passbild; ein
--- Viertel zur Seite gibt der Figur Tiefe und zeigt die Schulter.
-local END_WINKEL = 35
-local START_WINKEL = END_WINKEL + 300 -- knapp eine volle Runde von hinten herum
+
+-- Die Kamera FAEHRT HERAN, waehrend sie umrundet. Weit und hoch beginnen, nah und auf
+-- Augenhoehe enden -- die Drehung allein ist eine Umschau, erst das Herankommen macht
+-- daraus ein Zugehen auf die Figur.
+local ABSTAND_START = 34 -- Studs, vor der Skalierung
+local ABSTAND_ENDE = 11
+local HOEHE_START = 11 -- ueber der Figurmitte, vor der Skalierung
+local HOEHE_ENDE = 1.5 -- fast auf Augenhoehe: so sieht man das Gesicht und nicht den Scheitel
+
+-- Die Winkel zaehlen ab der BLICKRICHTUNG DER FIGUR, nicht ab einer Weltachse: 0 Grad ist
+-- direkt vor ihr. Anders gaebe es kein "vorne" -- die Figur steht ja, wie sie gerade steht.
+--
+-- Am Ende 28 Grad: vor der Figur, ein Stueck zur Seite. Genau frontal saehe aus wie ein
+-- Passbild; ein Viertel zur Seite gibt Tiefe und laesst das Gesicht trotzdem sehen.
+local END_WINKEL = 28
+local START_WINKEL = END_WINKEL + 340 -- fast eine volle Runde, von hinten herum
 
 -- Der Klang, der sich auflaedt: derselbe, der beim Fokus-Angriff die Ladephase traegt.
 -- Ein eigener waere eine zweite Nummer fuer dieselbe Aussage -- "gleich passiert etwas".
@@ -201,6 +211,8 @@ local laeuft = false
 local session = nil
 local farbfilter = nil
 local glut = nil
+local scheinwerfer = nil
+local gegenlicht = nil
 local eingaben = {}
 
 local function figurTeile()
@@ -217,6 +229,14 @@ local function raeumeAuf()
 	if glut then
 		glut:Destroy()
 		glut = nil
+	end
+	if scheinwerfer then
+		scheinwerfer:Destroy()
+		scheinwerfer = nil
+	end
+	if gegenlicht then
+		gegenlicht:Destroy()
+		gegenlicht = nil
 	end
 	for _, verbindung in ipairs(eingaben) do
 		verbindung:Disconnect()
@@ -284,6 +304,8 @@ local function umrunde(sessionId, dauer)
 		-- wirkt wie ein Messgeraet, nicht wie eine Inszenierung.
 		local weich = fortschritt * fortschritt * (3 - 2 * fortschritt)
 		local winkel = START_WINKEL + (END_WINKEL - START_WINKEL) * weich
+		local abstand = ABSTAND_START + (ABSTAND_ENDE - ABSTAND_START) * weich
+		local hoehe = HOEHE_START + (HOEHE_ENDE - HOEHE_START) * weich
 
 		local skala = 1
 		local ok, s = pcall(function()
@@ -293,10 +315,25 @@ local function umrunde(sessionId, dauer)
 			skala = s
 		end
 
-		local mitte = root.Position + Vector3.new(0, 2 * skala, 0)
-		local richtung = CFrame.Angles(0, math.rad(winkel), 0) * Vector3.new(0, 0, 1)
-		local auge = mitte + richtung * (ABSTAND * skala) + Vector3.new(0, HOEHE * skala, 0)
-		camera.CFrame = CFrame.lookAt(auge, mitte)
+		-- Gezielt wird auf den KOPF, nicht auf die Mitte der Figur. Am Ende steht die
+		-- Kamera nah und tief -- auf die Mitte gerichtet saehe man von dort den Brustkorb
+		-- und das Kinn.
+		local kopf = character:FindFirstChild("Head")
+		local ziel = kopf and kopf.Position or (root.Position + Vector3.new(0, 2 * skala, 0))
+
+		-- Die Blickrichtung der Figur ist die Null. Flach gelegt, damit eine Figur an einem
+		-- Hang die Kamera nicht mit in die Schraege zieht.
+		local vorne = root.CFrame.LookVector
+		vorne = Vector3.new(vorne.X, 0, vorne.Z)
+		if vorne.Magnitude < 0.001 then
+			vorne = Vector3.new(0, 0, 1)
+		else
+			vorne = vorne.Unit
+		end
+
+		local richtung = CFrame.Angles(0, math.rad(winkel), 0) * vorne
+		local auge = ziel + richtung * (abstand * skala) + Vector3.new(0, hoehe * skala, 0)
+		camera.CFrame = CFrame.lookAt(auge, ziel)
 
 		if fortschritt >= 1 then
 			verbindung:Disconnect()
@@ -362,6 +399,33 @@ local function starte(factionName, talentId, energyType, effectKey)
 	glut.OutlineTransparency = 0.4
 	glut.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 	glut.Parent = character
+
+	-- ===== Die Figur bleibt HELL =====
+	--
+	-- Der Farbfilter nimmt dem ganzen BILD die Helligkeit, also auch der Figur -- ein
+	-- Umriss allein macht sie davon nicht wieder sichtbar. Sie braucht eigenes Licht.
+	--
+	-- Zwei Lampen, weil eine flach aussieht: eine grosse weisse von vorne, die das Gesicht
+	-- zeigt, und eine kleinere in der Energiefarbe, die von unten kommt und die Silhouette
+	-- vom dunklen Grund abhebt. Gegenlicht ist der aelteste Trick, um etwas freizustellen.
+	local kopfTeil = character:FindFirstChild("Head") or root
+	scheinwerfer = Instance.new("PointLight")
+	scheinwerfer.Name = "TalentCeremonyKeyLight"
+	scheinwerfer.Color = Color3.fromRGB(255, 252, 245)
+	scheinwerfer.Brightness = 0
+	scheinwerfer.Range = 40
+	scheinwerfer.Shadows = false
+	scheinwerfer.Parent = kopfTeil
+	TweenService:Create(scheinwerfer, TweenInfo.new(1.2), { Brightness = 8 }):Play()
+
+	gegenlicht = Instance.new("PointLight")
+	gegenlicht.Name = "TalentCeremonyRimLight"
+	gegenlicht.Color = farbe
+	gegenlicht.Brightness = 0
+	gegenlicht.Range = 26
+	gegenlicht.Shadows = false
+	gegenlicht.Parent = root
+	TweenService:Create(gegenlicht, TweenInfo.new(1.2), { Brightness = 5 }):Play()
 
 	schirm.Enabled = true
 	TweenService:Create(schleier, TweenInfo.new(0.8), { BackgroundTransparency = 0.45 }):Play()
