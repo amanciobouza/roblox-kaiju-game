@@ -8,6 +8,8 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local SoundService = game:GetService("SoundService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
 local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
@@ -1387,17 +1389,37 @@ local PFAD_GRUND = Color3.fromRGB(16, 19, 25)
 -- Die Adern, die gerade pulsieren. Wird bei jedem Neuaufbau des Baums geleert.
 local pulsAdern = {}
 
+-- Die Adersegmente, geordnet nach ZIEL. Beim Freischalten laeuft das Licht sie der Reihe
+-- nach ab -- vom Elternknoten zum neuen Knoten. Ohne diese Zuordnung waeren es nur ein
+-- paar hundert Frames ohne Zusammenhang.
+local adernNachZiel = {}
+
+-- Der Ring des Knotens, an dem gerade geforscht wird. Er atmet, solange die Uhr laeuft --
+-- das ist die einzige Stelle im Baum, an der wirklich etwas VORGEHT, und bisher sah man
+-- davon nur eine andere Farbe.
+local forschungsRing = nil
+
 -- EINE Schleife fuer alle pulsierenden Adern, nicht eine je Ader: bei dreizehn Knoten
 -- waeren das bis zu einem Dutzend Tweens, die alle dasselbe tun. Steht der Baum zu, kostet
 -- die Schleife einen Vergleich.
 RunService.Heartbeat:Connect(function()
-	if #pulsAdern == 0 or not panel.Visible then
+	if not panel.Visible then
 		return
 	end
 	local welle = (math.sin(os.clock() * 2.2) + 1) / 2
-	local transparenz = 0.30 + welle * 0.45
-	for _, ader in ipairs(pulsAdern) do
-		ader.BackgroundTransparency = transparenz
+
+	if #pulsAdern > 0 then
+		local transparenz = 0.30 + welle * 0.45
+		for _, ader in ipairs(pulsAdern) do
+			ader.BackgroundTransparency = transparenz
+		end
+	end
+
+	-- Dieselbe Welle fuer den forschenden Knoten: sein Ring und die Adern, die zu ihm
+	-- fuehren, atmen damit im Gleichtakt. Zwei Takte nebeneinander saehen aus wie ein
+	-- Fehler.
+	if forschungsRing and forschungsRing.Parent then
+		forschungsRing.Transparency = 0.5 - welle * 0.45
 	end
 end)
 
@@ -1406,6 +1428,11 @@ end)
 -- gegenläufige Kontrollpunkte). Wird aus vielen kurzen geraden Segmenten
 -- zusammengesetzt, da Roblox-UI keine nativen Kurven kennt.
 local function drawConnector(fromPos, toPos, zielTalent, zustand)
+	local sammlung = adernNachZiel[zielTalent.id]
+	if not sammlung then
+		sammlung = {}
+		adernNachZiel[zielTalent.id] = sammlung
+	end
 	local delta = toPos - fromPos
 	local distance = delta.Magnitude
 	if distance < 1 then
@@ -1456,8 +1483,11 @@ local function drawConnector(fromPos, toPos, zielTalent, zustand)
 	local aderTransparenz = (zustand == "erfuellt") and 0 or 0.5
 	for i = 1, #punkte - 1 do
 		local ader = drawLineSegment(punkte[i], punkte[i + 1], aderDicke, aderFarbe, aderTransparenz, 59)
-		if ader and zustand == "offen" then
-			table.insert(pulsAdern, ader)
+		if ader then
+			table.insert(sammlung, ader)
+			if zustand == "offen" then
+				table.insert(pulsAdern, ader)
+			end
 		end
 	end
 end
@@ -1775,6 +1805,9 @@ local function buildNode(talent, position, isActiveFaction)
 	-- Rund: ein Knoten in einem Baum ist ein Punkt, keine Kachel. HudChrome.Pill setzt
 	-- dafuer einen echten Halbkreis-Radius.
 	local nodeCorner, nodeStroke = HudChrome.Pill(button, { fill = false })
+	if state == "researching" then
+		forschungsRing = nodeStroke
+	end
 	if talent.isTradeoff then
 		nodeStroke.Color = Color3.fromRGB(230, 140, 40)
 	elseif ENERGY_COLORS[talent.energyType] then
@@ -1903,6 +1936,7 @@ local function buildNode(talent, position, isActiveFaction)
 
 	nodeRefs[talent.id] = {
 		button = button,
+		stroke = nodeStroke,
 		levelLabel = levelLabel,
 		infoLabel = infoLabel,
 		position = position,
@@ -1934,9 +1968,11 @@ local function renderTree(factionName)
 	end
 	currentFaction = factionName
 	nodeRefs = {}
-	-- Die alten Adern sind mit den Segmenten zerstoert worden; die Liste zeigt sonst auf
+	-- Die alten Adern sind mit den Segmenten zerstoert worden; die Listen zeigen sonst auf
 	-- Instanzen, die es nicht mehr gibt, und die Puls-Schleife liefe ins Leere.
 	pulsAdern = {}
+	adernNachZiel = {}
+	forschungsRing = nil
 	-- WICHTIG: erst ALLE zu löschenden Kinder sammeln, DANN erst löschen -- wer während
 	-- einer ipairs()-Schleife Kinder zerstört, überspringt dabei manche Elemente (Lua-
 	-- Klassiker), wodurch alte Verbindungslinien von früheren Aufrufen liegen bleiben und
@@ -2206,6 +2242,115 @@ StartResearchEvent.OnClientEvent:Connect(function(factionName, talentId, complet
 	end
 end)
 
+-- ===== Der Moment, in dem eine Forschung fertig wird =====
+--
+-- Bis hierher war das Ergebnis einer Forschung: eine Zahl aendert sich, und der Knoten hat
+-- eine andere Farbe. Nach Minuten Wartezeit ist das keine Belohnung, sondern eine
+-- Buchung.
+--
+-- Drei Dinge passieren jetzt, und alle drei erzaehlen dasselbe -- die Energie ist
+-- angekommen:
+--   das LICHT laeuft die Ader entlang, vom Elternknoten zum neuen Knoten
+--   der RING des Knotens blitzt auf und legt sich wieder
+--   eine WELLE geht von ihm aus und verklingt
+--
+-- Der Ton fehlt noch: dafuer braucht es eine Asset-Nummer von Amancio (ein kurzer
+-- Bass/Impact). Bleibt die Nummer leer, laeuft alles andere trotzdem -- ein fehlender Ton
+-- soll den Moment nicht verhindern.
+local FORSCHUNG_FERTIG_SOUND = ""
+
+local forschungFertigSound = nil
+if FORSCHUNG_FERTIG_SOUND ~= "" then
+	forschungFertigSound = Instance.new("Sound")
+	forschungFertigSound.Name = "TalentUnlockSound"
+	forschungFertigSound.SoundId = FORSCHUNG_FERTIG_SOUND
+	forschungFertigSound.Volume = 0.8
+	forschungFertigSound.Parent = SoundService
+end
+
+-- Das Licht laeuft die Ader entlang. Segment fuer Segment hell, jedes einzelne faellt
+-- danach von selbst zurueck -- deshalb ueberlagert sich nichts, und es sieht aus wie eine
+-- Welle und nicht wie ein Schalter.
+local function lichtDurchDieAder(talentId)
+	local segmente = adernNachZiel[talentId]
+	if not segmente or #segmente == 0 then
+		return
+	end
+	task.spawn(function()
+		for _, ader in ipairs(segmente) do
+			if not ader.Parent then
+				break
+			end
+			local ruhe = ader.BackgroundColor3
+			local ruheTransparenz = ader.BackgroundTransparency
+			ader.BackgroundColor3 = Color3.new(1, 1, 1)
+			ader.BackgroundTransparency = 0
+			TweenService:Create(ader, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
+				BackgroundColor3 = ruhe,
+				BackgroundTransparency = ruheTransparenz,
+			}):Play()
+			task.wait(0.018)
+		end
+	end)
+end
+
+-- Die Welle: ein Ring, der aus dem Knoten herauswaechst und dabei verschwindet. Er liegt
+-- UNTER dem Knoten, damit das Symbol darin nicht ueberdeckt wird.
+local function welleAmKnoten(ref, farbe)
+	local welle = Instance.new("Frame")
+	welle.Name = "Welle"
+	welle.AnchorPoint = Vector2.new(0.5, 0.5)
+	welle.Position = UDim2.new(0, ref.position.X, 0, ref.position.Y)
+	welle.Size = ref.button.Size
+	welle.BackgroundTransparency = 1
+	welle.ZIndex = 61
+	welle.Parent = ref.button.Parent
+
+	local ecke = Instance.new("UICorner")
+	ecke.CornerRadius = UDim.new(0.5, 0)
+	ecke.Parent = welle
+
+	local rand = Instance.new("UIStroke")
+	rand.Thickness = 3
+	rand.Color = farbe
+	rand.Transparency = 0.1
+	rand.Parent = welle
+
+	local ziel = TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	local gross = ref.button.Size.X.Offset * 2.4
+	TweenService:Create(welle, ziel, { Size = UDim2.new(0, gross, 0, gross) }):Play()
+	TweenService:Create(rand, ziel, { Transparency = 1 }):Play()
+	task.delay(0.6, function()
+		welle:Destroy()
+	end)
+end
+
+local function feiereFreischaltung(talentId)
+	local ref = nodeRefs[talentId]
+	if not ref or not ref.button.Parent then
+		return
+	end
+
+	local farbe = ref.stroke and ref.stroke.Color or HudChrome.Color.Accent
+	lichtDurchDieAder(talentId)
+	welleAmKnoten(ref, farbe)
+
+	-- Der Ring blitzt auf und legt sich wieder. Dicke statt Farbe: die Farbe des Rings ist
+	-- die Energie des Talents und bedeutet etwas -- die darf ein Effekt nicht ueberschreiben.
+	if ref.stroke then
+		local ruhe = ref.stroke.Thickness
+		ref.stroke.Thickness = ruhe + 4
+		ref.stroke.Transparency = 0
+		TweenService:Create(ref.stroke, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
+			Thickness = ruhe,
+		}):Play()
+	end
+
+	if forschungFertigSound then
+		forschungFertigSound:Play()
+	end
+end
+
 ResearchCompleteEvent.OnClientEvent:Connect(function(factionName, talentId, newLevel)
 	-- Laempchen am Menuepunkt: eine fertige Forschung ist ein einmaliges Ereignis und
 	-- damit ein echter Hinweis -- anders als "genug Energie fuer einen Knoten", das mit
@@ -2238,6 +2383,15 @@ CancelResearchEvent.OnClientEvent:Connect(function(factionName, _talentId)
 	if factionName == currentFaction then
 		renderTree(currentFaction)
 		refreshSelectedTalentDetails()
+		-- Erst NACH dem Neuaufbau. renderTree zerstoert alle Knoten und Adern und baut sie
+		-- neu -- ein Effekt auf den alten Instanzen liefe ins Leere.
+		--
+		-- Und nur bei offenem Panel: wer gerade in der Stadt steht, soll keinen Ton aus
+		-- einem Bildschirm hoeren, den er nicht sieht. Fuer ihn ist das Laempchen am
+		-- Menuepunkt der Hinweis.
+		if panel.Visible then
+			feiereFreischaltung(talentId)
+		end
 	end
 end)
 
