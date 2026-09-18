@@ -13,10 +13,13 @@
 -- passiert, sichtbar an dem, was drinnen angestossen wurde -- es ist dieselbe Farbe wie am
 -- Ring des Knotens, an der Ader dorthin, an den Gebaeuden und an den Sammelstrahlen.
 --
--- Das Sichtbare laeuft fuer JEDE Figur, der Klang nur fuer den eigenen Spieler: gesehen
--- werden soll es von allen, belohnt wird der, dem es passiert ist. Gleiche Aufteilung wie
--- beim Stufenaufstieg (LevelUpFeedbackClient) -- die beiden teilen sich die Technik, und
--- sobald jene Arbeit eingecheckt ist, lohnt es sich, sie in EIN Modul zu ziehen.
+-- Dieses Skript zeigt es an JEDER Figur -- auch an fremden. Fuer den eigenen Spieler
+-- laeuft daneben die Zeremonie (TalentCeremonyClient): dunkle Welt, umrundende Kamera,
+-- Tafel. Fuer alle anderen ist das hier alles, was sie davon mitbekommen -- und das soll
+-- reichen, um zu sehen, dass da gerade jemand staerker geworden ist.
+--
+-- Gleiche Technik wie beim Stufenaufstieg (LevelUpFeedbackClient) -- sobald jene Arbeit
+-- eingecheckt ist, lohnt es sich, beide in EIN Modul zu ziehen.
 --
 -- Alle Groessen haengen an character:GetScale(): die Figur waechst mit den Skins auf das
 -- bis zu Sechsfache. Feste Studwerte waeren am Anfang eine Explosion und spaeter ein
@@ -24,7 +27,6 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
@@ -33,22 +35,12 @@ local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
 local TalentUnlockedEvent = RemoteEventUtils.GetOrCreate("TalentUnlockedEvent")
 local localPlayer = Players.LocalPlayer
 
--- ===== Das Bruellen =====
+-- Kein Bruellen hier. Es war kurz dafuer vorgesehen und ist dann bewusst weggezogen:
+-- Amancio hebt es fuer CITY BROKEN auf -- den Moment, in dem eine Stadt zusammenbricht.
+-- Ein Bruellen, das man mehrmals pro Sitzung hoert, waere danach keines mehr.
 --
--- Noch leer: die Animation "Aufrichten und Bruellen" wird von Amancio nachgereicht. Bis
--- dahin laeuft alles andere -- eine fehlende Animation soll den Moment nicht verhindern,
--- sondern nur seine Mitte.
---
--- Sie liegt auf Priority "Action" und UEBERLAGERT damit das Laufen, statt die Steuerung zu
--- nehmen. Eine Forschung wird fertig, waehrend man spielt: mitten im Sprung, mitten im
--- Kampf. Ein Moment, der einen dort festhaelt, waere kein Hoehepunkt, sondern ein Treffer.
-local BRUELL_ANIMATION = ""
-
--- Solange es kein Bruellen gibt, traegt der Belohnungston den Moment -- derselbe wie beim
--- abgeholten Geschenk (siehe HudChrome.Sound). Kommt das Bruellen dazu, entscheidet
--- Amancio, ob der Ton daneben bleibt oder darin aufgeht.
-local BRUELL_SOUND = HudChrome.Sound.Belohnung
-
+-- Auch kein Klang: fuer den eigenen Spieler laeuft gleichzeitig die Zeremonie
+-- (TalentCeremonyClient) mit ihren beiden Toenen. Hier bleibt nur das Sichtbare.
 local GLUT_SEKUNDEN = 2.6 -- Glut und Licht blenden ueber diese Zeit aus
 local FUNKEN_SEKUNDEN = 1.8 -- so lange steigen noch Funken nach
 local RING_SEKUNDEN = 0.7 -- der Ring ist der EINSCHLAG, nicht die Aura
@@ -64,12 +56,6 @@ local EMITTER_TEILE = {
 	"LeftHand",
 	"RightHand",
 }
-
-local bruellSound = Instance.new("Sound")
-bruellSound.Name = "TalentUnlockSound"
-bruellSound.SoundId = BRUELL_SOUND
-bruellSound.Volume = 0.85
-bruellSound.Parent = SoundService
 
 -- Laeuft die Feier an dieser Figur gerade? Zwei Forschungen koennen zwar nicht gleichzeitig
 -- fertig werden, aber ein Nachzuegler-Ereignis soll keine zweite Aura stapeln.
@@ -156,29 +142,6 @@ local function baueBodenring(character, scale, farbe)
 	end)
 end
 
-local function spieleBruellen(character)
-	if BRUELL_ANIMATION == "" then
-		return
-	end
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if not humanoid then
-		return
-	end
-	local animation = Instance.new("Animation")
-	animation.AnimationId = BRUELL_ANIMATION
-	-- pcall: eine Animation, die dem falschen Konto gehoert oder noch nicht freigegeben
-	-- ist, wirft beim Laden -- und risse sonst das ganze Skript mit.
-	local ok, spur = pcall(function()
-		return humanoid:LoadAnimation(animation)
-	end)
-	if not ok or not spur then
-		warn("[Kaiju Debug] TalentUnlock: Bruell-Animation liess sich nicht laden.")
-		return
-	end
-	spur.Priority = Enum.AnimationPriority.Action
-	spur:Play(0.15)
-end
-
 local function feiere(player, energyType)
 	local character = player.Character
 	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
@@ -189,8 +152,6 @@ local function feiere(player, energyType)
 
 	local farbe = HudChrome.EnergyColor[energyType] or HudChrome.Color.Accent
 	local scale = holeSkalierung(character)
-
-	spieleBruellen(character)
 
 	local emitter = {}
 	for _, teilName in ipairs(EMITTER_TEILE) do
@@ -230,13 +191,14 @@ local function feiere(player, energyType)
 
 	baueBodenring(character, scale, farbe)
 
-	if player == localPlayer then
-		if _G.DuckBackgroundMusic then
-			_G.DuckBackgroundMusic(MUSIK_DUCK_SEKUNDEN)
-		end
-		if bruellSound.SoundId ~= "" then
-			bruellSound:Play()
-		end
+	-- Kein Klang fuer den eigenen Spieler: fuer ihn laeuft gleichzeitig die Zeremonie
+	-- (TalentCeremonyClient), und die bringt ihren eigenen Ton mit -- erst den, der sich
+	-- auflaedt, dann den der Belohnung. Beides zusammen waere derselbe Klang zweimal.
+	--
+	-- Was hier bleibt, ist das Sichtbare an der Figur: fuer ihn ist es der Funkenschlag
+	-- IN der Zeremonie, fuer alle anderen das Einzige, was sie davon mitbekommen.
+	if player == localPlayer and _G.DuckBackgroundMusic then
+		_G.DuckBackgroundMusic(MUSIK_DUCK_SEKUNDEN)
 	end
 
 	-- Aufraeumen: erst die Emitter abschalten, dann warten, bis die zuletzt ausgestossenen
