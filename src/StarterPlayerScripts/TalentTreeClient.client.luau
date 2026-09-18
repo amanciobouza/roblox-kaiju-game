@@ -627,11 +627,16 @@ function blickAufWurzel()
 		-- und wie oft ein Massstab dazwischensteht -- genau der Punkt, an dem es vorher
 		-- schiefging.
 		local flaeche = treeScroll.AbsoluteCanvasSize
+		-- Die Wurzel in die MITTE des Ausschnitts, waagerecht wie senkrecht. Vorher sass
+		-- sie an der Unterkante -- da, wo sie auch auf der Zeichenflaeche steht. Von einem
+		-- unteren Rand aus kann man aber nur in eine Richtung weiter, und genau das ist
+		-- beim Suchen falsch: man faengt bei der Wurzel an und will von dort in JEDE
+		-- Richtung an die Stelle, an der man forschen moechte.
 		local anteilX = FAECHER_WURZEL.X / TREE_CANVAS_WIDTH
-		local anteilY = (FAECHER_WURZEL.Y + 90) / TREE_CANVAS_HEIGHT
+		local anteilY = FAECHER_WURZEL.Y / TREE_CANVAS_HEIGHT
 		treeScroll.CanvasPosition = Vector2.new(
 			math.max(0, flaeche.X * anteilX - fenster.X / 2),
-			math.max(0, flaeche.Y * anteilY - fenster.Y)
+			math.max(0, flaeche.Y * anteilY - fenster.Y / 2)
 		)
 
 		local meldung = string.format(
@@ -750,6 +755,35 @@ layoutColumns()
 -- die obere linke Ecke, also die Krone, und kaeme nicht an die Wurzel.
 task.defer(layoutColumns)
 
+-- ===== Die Detailtafel rollt =====
+--
+-- Auf dem Telefon ist die Spalte so niedrig, dass Beschreibung, Werte, Kosten und
+-- Forschungszeit nicht mehr uebereinander passen -- sie liefen in den Forschungsknopf
+-- hinein und ueberlagerten ihn. Der Knopf ist aber das, was man hier TUT; er darf nie
+-- verdeckt sein und nie weggescrollt werden koennen.
+--
+-- Also die Teilung: der Text rollt, der Knopf steht fest an der Unterkante. Das ist auch
+-- auf einem grossen Bildschirm richtig -- dort gibt es einfach nichts zu rollen.
+local DETAIL_KNOPF_ZONE = 56
+-- Wie hoch der Inhalt ist, rechnet Roblox aus -- dieselbe Lehre wie beim Baum. Und es
+-- rechnet dabei nur mit dem, was SICHTBAR ist: solange kein Talent gewaehlt ist, steht dort
+-- ein einziger Satz, und dann gibt es auch nichts zu rollen.
+
+local detailScroll = Instance.new("ScrollingFrame")
+detailScroll.Name = "DetailInhalt"
+detailScroll.Position = UDim2.new(0, 0, 0, 0)
+detailScroll.Size = UDim2.new(1, 0, 1, -DETAIL_KNOPF_ZONE)
+detailScroll.BackgroundTransparency = 1
+detailScroll.BorderSizePixel = 0
+detailScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+detailScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+detailScroll.ScrollingDirection = Enum.ScrollingDirection.Y
+detailScroll.ScrollBarThickness = 6
+detailScroll.ScrollBarImageColor3 = HudChrome.Color.BorderBright
+detailScroll.ScrollBarImageTransparency = 0.4
+detailScroll.ClipsDescendants = true
+detailScroll.Parent = detailPanel
+
 local detailEmpty = Instance.new("TextLabel")
 detailEmpty.Size = UDim2.new(1, -20, 0, 80)
 detailEmpty.Position = UDim2.new(0, 10, 0, 20)
@@ -757,7 +791,7 @@ detailEmpty.BackgroundTransparency = 1
 detailEmpty.TextColor3 = Color3.fromRGB(140, 140, 150)
 detailEmpty.Text = "👆 Pick a talent to see its details."
 HudChrome.MenuBody(detailEmpty)
-detailEmpty.Parent = detailPanel
+detailEmpty.Parent = detailScroll
 
 local detailIconBild = Instance.new("ImageLabel")
 
@@ -767,7 +801,7 @@ detailIcon.Position = UDim2.new(0, 10, 0, 10)
 detailIcon.TextScaled = true
 detailIcon.Text = ""
 detailIcon.Visible = false
-detailIcon.Parent = detailPanel
+detailIcon.Parent = detailScroll
 HudChrome.Panel(detailIcon, {
 	radius = HudChrome.Radius.Panel,
 	fill = HudChrome.Color.PanelSunken,
@@ -794,7 +828,7 @@ detailName.TextColor3 = Color3.new(1, 1, 1)
 detailName.TextWrapped = true
 detailName.Text = ""
 detailName.Visible = false
-detailName.Parent = detailPanel
+detailName.Parent = detailScroll
 
 local detailLevel = Instance.new("TextLabel")
 detailLevel.Size = UDim2.new(1, -106, 0, 20)
@@ -805,7 +839,7 @@ detailLevel.TextXAlignment = Enum.TextXAlignment.Left
 detailLevel.TextColor3 = Color3.fromRGB(180, 180, 190)
 detailLevel.Text = ""
 detailLevel.Visible = false
-detailLevel.Parent = detailPanel
+detailLevel.Parent = detailScroll
 
 local detailDescription = Instance.new("TextLabel")
 detailDescription.Size = UDim2.new(1, -20, 0, 90)
@@ -817,7 +851,7 @@ detailDescription.TextYAlignment = Enum.TextYAlignment.Top
 detailDescription.TextColor3 = Color3.fromRGB(210, 210, 220)
 detailDescription.Text = ""
 detailDescription.Visible = false
-detailDescription.Parent = detailPanel
+detailDescription.Parent = detailScroll
 
 -- Vorher/Nachher-Wertevergleich
 local detailStatsHeader = Instance.new("TextLabel")
@@ -829,7 +863,7 @@ detailStatsHeader.TextXAlignment = Enum.TextXAlignment.Left
 detailStatsHeader.TextColor3 = Color3.fromRGB(255, 210, 80)
 detailStatsHeader.Text = "STATS"
 detailStatsHeader.Visible = false
-detailStatsHeader.Parent = detailPanel
+detailStatsHeader.Parent = detailScroll
 
 local detailStatPrimary = Instance.new("TextLabel")
 detailStatPrimary.Size = UDim2.new(1, -20, 0, 22)
@@ -840,7 +874,7 @@ detailStatPrimary.TextXAlignment = Enum.TextXAlignment.Left
 detailStatPrimary.TextColor3 = Color3.fromRGB(120, 220, 140)
 detailStatPrimary.Text = ""
 detailStatPrimary.Visible = false
-detailStatPrimary.Parent = detailPanel
+detailStatPrimary.Parent = detailScroll
 
 local detailStatTradeoff = Instance.new("TextLabel")
 detailStatTradeoff.Size = UDim2.new(1, -20, 0, 22)
@@ -851,7 +885,7 @@ detailStatTradeoff.TextXAlignment = Enum.TextXAlignment.Left
 detailStatTradeoff.TextColor3 = Color3.fromRGB(230, 140, 40)
 detailStatTradeoff.Text = ""
 detailStatTradeoff.Visible = false
-detailStatTradeoff.Parent = detailPanel
+detailStatTradeoff.Parent = detailScroll
 
 -- Kosten + Forschungszeit
 local detailCostHeader = Instance.new("TextLabel")
@@ -863,7 +897,7 @@ detailCostHeader.TextXAlignment = Enum.TextXAlignment.Left
 detailCostHeader.TextColor3 = Color3.fromRGB(255, 210, 80)
 detailCostHeader.Text = "COST"
 detailCostHeader.Visible = false
-detailCostHeader.Parent = detailPanel
+detailCostHeader.Parent = detailScroll
 
 local detailCostEnergy = Instance.new("TextLabel")
 detailCostEnergy.Size = UDim2.new(1, -20, 0, 24)
@@ -874,7 +908,7 @@ detailCostEnergy.TextXAlignment = Enum.TextXAlignment.Left
 detailCostEnergy.TextColor3 = Color3.new(1, 1, 1)
 detailCostEnergy.Text = ""
 detailCostEnergy.Visible = false
-detailCostEnergy.Parent = detailPanel
+detailCostEnergy.Parent = detailScroll
 
 local detailCostCoins = Instance.new("TextLabel")
 detailCostCoins.Size = UDim2.new(1, -20, 0, 24)
@@ -885,7 +919,7 @@ detailCostCoins.TextXAlignment = Enum.TextXAlignment.Left
 detailCostCoins.TextColor3 = Color3.fromRGB(255, 220, 80)
 detailCostCoins.Text = ""
 detailCostCoins.Visible = false
-detailCostCoins.Parent = detailPanel
+detailCostCoins.Parent = detailScroll
 
 local detailResearchTime = Instance.new("TextLabel")
 detailResearchTime.Size = UDim2.new(1, -20, 0, 24)
@@ -896,7 +930,7 @@ detailResearchTime.TextXAlignment = Enum.TextXAlignment.Left
 detailResearchTime.TextColor3 = Color3.fromRGB(180, 180, 220)
 detailResearchTime.Text = ""
 detailResearchTime.Visible = false
-detailResearchTime.Parent = detailPanel
+detailResearchTime.Parent = detailScroll
 
 local detailPrereqLabel = Instance.new("TextLabel")
 detailPrereqLabel.Size = UDim2.new(1, -20, 0, 40)
@@ -908,7 +942,7 @@ detailPrereqLabel.TextXAlignment = Enum.TextXAlignment.Left
 detailPrereqLabel.TextColor3 = Color3.fromRGB(230, 100, 100)
 detailPrereqLabel.Text = ""
 detailPrereqLabel.Visible = false
-detailPrereqLabel.Parent = detailPanel
+detailPrereqLabel.Parent = detailScroll
 
 local detailResearchButton = Instance.new("TextButton")
 detailResearchButton.Size = UDim2.new(1, -20, 0, 40)
