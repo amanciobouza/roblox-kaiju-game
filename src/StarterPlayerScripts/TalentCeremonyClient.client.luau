@@ -136,16 +136,62 @@ schirm.DisplayOrder = 200
 schirm.Enabled = false
 schirm.Parent = playerGui
 
--- Kein Schleier mehr.
+-- ===== Die Vignette =====
 --
--- Hier lag eine schwarze Flaeche ueber dem Bild, die die Welt abdunkeln sollte. Das konnte
--- nicht funktionieren: eine GUI-Flaeche liegt ueber ALLEM, also auch ueber der Figur --
--- je dunkler die Umgebung wurde, desto dunkler wurde die Figur mit. Genau davon lebt die
--- Szene aber nicht.
+-- Hier lag einmal eine schwarze Flaeche ueber dem ganzen Bild. Das konnte nicht
+-- funktionieren: eine GUI-Flaeche liegt ueber ALLEM, also auch ueber der Figur -- je
+-- dunkler die Umgebung wurde, desto dunkler wurde die Figur mit.
 --
--- Getrennt wird jetzt ueber die SCHAERFE statt ueber die Helligkeit: die Figur ist scharf,
--- alles andere weich (siehe tiefenschaerfe weiter unten). Das ist dasselbe Mittel, mit dem
--- ein Objektiv einen Gegenstand freistellt -- und es trifft nur die Welt, nicht das Bild.
+-- Eine Vignette hat genau diesen Fehler nicht. Sie trifft nur den RAND und laesst die
+-- Mitte frei, und die Figur steht in der Mitte. Sie nimmt dem Bild die Ecken, ohne ihm
+-- die Aufmerksamkeit zu nehmen.
+--
+-- Gebaut aus vier Baendern mit Verlauf statt aus einem Bild: ein UIGradient ist linear,
+-- einen runden Verlauf gibt es in Roblox nur als Textur. Vier Baender, die sich an den
+-- Ecken ueberlagern, ergeben aber genau dort das Dunkelste -- und das ist eine Vignette.
+local VIGNETTE_TIEFE = 0.36 -- Anteil der Bildkante, ueber den das Band ausblendet
+local VIGNETTE_STAERKE = 0.15 -- Transparenz ganz aussen: 0 waere schwarz, 0.15 fast
+
+local vignetteBaender = {}
+local function baueVignetteBand(groesse, lage, drehung)
+	local band = Instance.new("Frame")
+	band.Name = "VignetteBand"
+	band.Size = groesse
+	band.Position = lage
+	band.BackgroundColor3 = Color3.new(0, 0, 0)
+	band.BackgroundTransparency = 1
+	band.BorderSizePixel = 0
+	band.ZIndex = 1
+	band.Parent = schirm
+
+	-- Der Verlauf faengt AUSSEN an (Keypoint 0 liegt in Richtung der Drehung zuerst) und
+	-- endet innen durchsichtig.
+	local verlauf = Instance.new("UIGradient")
+	verlauf.Rotation = drehung
+	verlauf.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, VIGNETTE_STAERKE),
+		NumberSequenceKeypoint.new(0.55, 0.75),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	verlauf.Parent = band
+
+	table.insert(vignetteBaender, band)
+	return band
+end
+
+baueVignetteBand(UDim2.new(1, 0, VIGNETTE_TIEFE, 0), UDim2.new(0, 0, 0, 0), 90) -- oben
+baueVignetteBand(UDim2.new(1, 0, VIGNETTE_TIEFE, 0), UDim2.new(0, 0, 1 - VIGNETTE_TIEFE, 0), 270) -- unten
+baueVignetteBand(UDim2.new(VIGNETTE_TIEFE, 0, 1, 0), UDim2.new(0, 0, 0, 0), 0) -- links
+baueVignetteBand(UDim2.new(VIGNETTE_TIEFE, 0, 1, 0), UDim2.new(1 - VIGNETTE_TIEFE, 0, 0, 0), 180) -- rechts
+
+local function zeigeVignette(sichtbar)
+	for _, band in ipairs(vignetteBaender) do
+		TweenService:Create(band, TweenInfo.new(sichtbar and 0.9 or 0.4), {
+			BackgroundTransparency = sichtbar and 0 or 1,
+		}):Play()
+	end
+end
+
 local tafel = Instance.new("Frame")
 tafel.Name = "Tafel"
 tafel.AnchorPoint = Vector2.new(1, 0.5)
@@ -259,6 +305,9 @@ local function raeumeAuf()
 	end
 	eingaben = {}
 	ladeSound:Stop()
+	for _, band in ipairs(vignetteBaender) do
+		band.BackgroundTransparency = 1
+	end
 	schirm.Enabled = false
 	tafel.Visible = false
 	weiterHinweis.Visible = false
@@ -463,7 +512,7 @@ local function starte(factionName, talentId, energyType, effectKey)
 	scheinwerfer.Range = 40
 	scheinwerfer.Shadows = false
 	scheinwerfer.Parent = kopfTeil
-	TweenService:Create(scheinwerfer, TweenInfo.new(1.2), { Brightness = 5 }):Play()
+	TweenService:Create(scheinwerfer, TweenInfo.new(1.2), { Brightness = 3 }):Play()
 
 	gegenlicht = Instance.new("PointLight")
 	gegenlicht.Name = "TalentCeremonyRimLight"
@@ -472,9 +521,10 @@ local function starte(factionName, talentId, energyType, effectKey)
 	gegenlicht.Range = 26
 	gegenlicht.Shadows = false
 	gegenlicht.Parent = root
-	TweenService:Create(gegenlicht, TweenInfo.new(1.2), { Brightness = 4 }):Play()
+	TweenService:Create(gegenlicht, TweenInfo.new(1.2), { Brightness = 3 }):Play()
 
 	schirm.Enabled = true
+	zeigeVignette(true)
 
 	if controls then
 		pcall(function()
