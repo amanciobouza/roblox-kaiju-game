@@ -20,29 +20,41 @@ local NAME_TAG_MARGIN_SHARE = 0.10 -- Anteil der Figurenhöhe
 -- Positioniert das Schild dynamisch über dem tatsächlich höchsten Punkt des Charakters
 -- (nicht fest über dem Kopf-Teil) -- wichtig, weil die Charaktergröße sich durch Training,
 -- Stufenwechsel UND das angezogene Kaiju-Modell laufend ändert.
-local function updateBillboardOffset(character, billboard, head)
+--
+-- Bezug ist die HumanoidRootPart und nicht der Kopf. Der Kopf WIPPT mit der Animation, und
+-- das Schild wippte mit -- bei einer sechsfach skalierten Figur schwingt derselbe Ausschlag
+-- eben sechsmal so weit, und aus einem Nicken wird ein Ruckeln. Die Wurzel bewegt sich
+-- nicht: sie ist der Punkt, um den die Animation die Gliedmassen bewegt.
+local function updateBillboardOffset(character, billboard, bezug)
 	local ok, cframe, size = pcall(function()
 		return character:GetBoundingBox()
 	end)
-	if ok and head.Parent then
+	if ok and bezug.Parent then
 		local topY = cframe.Position.Y + size.Y / 2
 		local margin = math.max(NAME_TAG_MARGIN_MIN, size.Y * NAME_TAG_MARGIN_SHARE)
-		local offsetY = (topY - head.Position.Y) + margin
+		local offsetY = (topY - bezug.Position.Y) + margin
 		billboard.StudsOffset = Vector3.new(0, offsetY, 0)
 	end
 end
 
 local function createNameTag(player, character)
 	local head = character:WaitForChild("Head")
+	-- Mit Zeitgrenze: fehlt die Wurzel, haengt dieses Skript sonst stumm und der Spieler
+	-- haette gar kein Schild. Dann lieber am Kopf haengen -- wackelig ist besser als weg.
+	local bezug = character:WaitForChild("HumanoidRootPart", 5) or head
 
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
 		humanoid.NameDisplayDistance = 0 -- Standard-Namensschild ausblenden
 	end
 
-	local existing = head:FindFirstChild("PlayerNameTag")
-	if existing then
-		existing:Destroy()
+	-- Auch am Kopf nachsehen: dort hing das Schild frueher, und eine Figur, die den
+	-- Wechsel ueberlebt hat, traegt sonst zwei.
+	for _, ort in ipairs({ bezug, head }) do
+		local existing = ort:FindFirstChild("PlayerNameTag")
+		if existing then
+			existing:Destroy()
+		end
 	end
 
 	local billboard = Instance.new("BillboardGui")
@@ -50,9 +62,9 @@ local function createNameTag(player, character)
 	billboard.Size = UDim2.new(0, 200, 0, 50)
 	billboard.AlwaysOnTop = true
 	billboard.MaxDistance = 2000 -- großzügig, damit es unabhängig von Entfernung/Charaktergröße für alle sichtbar bleibt
-	billboard.Parent = head
+	billboard.Parent = bezug
 
-	updateBillboardOffset(character, billboard, head)
+	updateBillboardOffset(character, billboard, bezug)
 
 	local layout = Instance.new("UIListLayout")
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -91,7 +103,7 @@ local function createNameTag(player, character)
 		strengthLabel.Text = NumberFormat.Format(character:GetAttribute("Damage") or 0)
 		-- Stärke ändert sich oft zusammen mit der Charaktergröße (Training/Skin) ->
 		-- Position gleich mit aktualisieren, damit es nicht in den Kopf hineinrutscht.
-		updateBillboardOffset(character, billboard, head)
+		updateBillboardOffset(character, billboard, bezug)
 	end)
 
 	-- ===== Und wenn die Figur ein Modell dazubekommt =====
@@ -112,7 +124,7 @@ local function createNameTag(player, character)
 		task.defer(function()
 			ausstehend = false
 			if character.Parent then
-				updateBillboardOffset(character, billboard, head)
+				updateBillboardOffset(character, billboard, bezug)
 			end
 		end)
 	end
