@@ -708,10 +708,29 @@ local function layoutColumns()
 	local oben = researchBar.Visible and CONTENT_TOP_MIT_FORSCHUNG or CONTENT_TOP_OHNE
 	local platzHoehe = math.max(height - oben - COLUMN_GAP, 120)
 
-	-- Baum skalieren statt abschneiden. Die Knoten stehen auf festen Koordinaten der
-	-- Zeichenflaeche; der Faktor passt sie an den vorhandenen Platz an.
+	-- ===== Der Massstab kommt aus der BREITE =====
+	--
+	-- Er kam bisher aus beidem, und die Hoehe gewann immer: der Platz neben der
+	-- Detailspalte ist breit und flach. Das hatte zwei Folgen, die beide stoerten. Der Baum
+	-- blieb kleiner, als er haette sein koennen -- und weil damit alles ins Bild passte,
+	-- gab es nichts zu rollen, und die Wurzel konnte gar nicht in die Mitte des
+	-- Ausschnitts wandern: sie sass da, wo sie auf der Zeichenflaeche sitzt, also weit
+	-- unten.
+	--
+	-- Jetzt gibt die Breite den Massstab, und senkrecht wird gerollt. Der Baum wird dadurch
+	-- deutlich groesser, das Fenster fuellt den Platz in beide Richtungen aus, und die
+	-- Wurzel steht beim Oeffnen in der Mitte -- von dort schiebt man sich nach oben zur
+	-- Krone.
+	--
+	-- Die zweite Zahl ist keine Anpassung an die Hoehe, sondern eine Grenze fuer den
+	-- Rollweg: hoechstens anderthalb Bildhoehen. Ohne sie koennte der Baum auf einem sehr
+	-- breiten, flachen Fenster so gross werden, dass man ihn nur noch abfaehrt.
+	local ROLL_SPIELRAUM = 1.5
 	local scale = math.clamp(
-		math.min(platzBreite / TREE_CANVAS_WIDTH, platzHoehe / TREE_CANVAS_HEIGHT),
+		math.min(
+			platzBreite / TREE_CANVAS_WIDTH,
+			(platzHoehe * ROLL_SPIELRAUM) / TREE_CANVAS_HEIGHT
+		),
 		mindestMassstab(),
 		TREE_MAX_SCALE
 	)
