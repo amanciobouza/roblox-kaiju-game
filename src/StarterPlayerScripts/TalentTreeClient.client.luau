@@ -64,6 +64,16 @@ local function zeigeTalentSymbol(bildLabel, textLabel, talent)
 	end
 end
 
+-- Fuer RichText: darin steht Farbe als Hexzeichenkette, nicht als Color3. Damit laesst
+-- sich EIN Textfeld zweifarbig setzen -- der bezahlbare Teil des Preises normal, der
+-- fehlende rot.
+local function alsHex(farbe)
+	return string.format("%02X%02X%02X",
+		math.floor(farbe.R * 255 + 0.5),
+		math.floor(farbe.G * 255 + 0.5),
+		math.floor(farbe.B * 255 + 0.5))
+end
+
 local function formatDuration(seconds)
 	seconds = math.max(math.floor(seconds), 0)
 	if seconds >= 3600 then
@@ -180,16 +190,37 @@ local function baueRessource(bildId, farbe)
 	zahl.Parent = chip
 	HudChrome.Number(zahl, 16)
 	zahl.TextColor3 = farbe
-	return zahl
+	return zahl, chip
 end
 
+-- Die Kaesten werden mitgemerkt: wenn eine Forschung an einer Ressource scheitert, faerbt
+-- sich genau ihr Rand rot. Der Hinweis steht damit DORT, wo der Spieler den Vorrat sieht,
+-- und nicht nur unten am Knopf.
+local resourceChips = {}
 for _, energyType in ipairs(TalentTreeConfig.EnergyOrder) do
-	resourceLabels[energyType] = baueRessource(
+	resourceLabels[energyType], resourceChips[energyType] = baueRessource(
 		HudChrome.EnergyIcon[energyType],
 		ENERGY_COLORS[energyType] or HudChrome.Color.TextPrimary
 	)
 end
-local coinsLabel = baueRessource(HudChrome.Icon.Coin, Color3.fromRGB(255, 205, 60))
+local coinsLabel, coinsChip = baueRessource(HudChrome.Icon.Coin, Color3.fromRGB(255, 205, 60))
+
+-- Rot heisst hier: DARAN liegt es. Kein Alarm, sondern eine Messung -- deshalb der Rand
+-- und nicht die Flaeche, wie ueberall sonst in diesem Baukasten.
+local function markiereFehlbetrag(chip, knapp)
+	local strich = chip:FindFirstChildOfClass("UIStroke")
+	if strich then
+		strich.Color = knapp and HudChrome.Color.Danger or HudChrome.Color.Border
+		strich.Thickness = knapp and 2 or HudChrome.BorderThickness
+	end
+end
+
+local function zeigeFehlbetraege(fehlend)
+	for energyType, chip in pairs(resourceChips) do
+		markiereFehlbetrag(chip, fehlend ~= nil and fehlend[energyType] ~= nil)
+	end
+	markiereFehlbetrag(coinsChip, fehlend ~= nil and fehlend.Coins ~= nil)
+end
 
 -- ===== Aktive Forschung: Fortschrittsbalken + Abbrechen-Button =====
 local researchBar = Instance.new("Frame")
@@ -1456,7 +1487,39 @@ local function getNodeState(talent, level, isActiveFaction)
 	if talentState.research then
 		return "blocked"
 	end
+
+	-- Reicht der Vorrat? Das war bisher keine Frage des Zustands: der Knopf lud ein, und
+	-- der Server lehnte ab. Wer nicht selbst nachrechnete, erfuhr nie, woran es lag.
+	local cost = TalentTreeConfig.GetNodeCost(talent, level + 1)
+	local genugEnergie = (talentState.energy[talent.energyType] or 0) >= cost.energyAmount
+	local genugCoins = (talentState.coins or 0) >= (cost.coinAmount or 0)
+	if not (genugEnergie and genugCoins) then
+		return "poor"
+	end
+
 	return "available"
+end
+
+-- Was am Preis fehlt, als Tabelle: Schluessel ist der Energietyp oder "Coins", Wert der
+-- Fehlbetrag. Leer heisst bezahlbar. EINE Stelle, die das rechnet -- der Knopf, die
+-- Kostenzeile und die Chips oben fragen alle dieselbe.
+local function fehlendeMittel(talent, level)
+	if level >= talent.maxLevel then
+		return nil
+	end
+	local cost = TalentTreeConfig.GetNodeCost(talent, level + 1)
+	local fehlend = nil
+	local energieLuecke = cost.energyAmount - (talentState.energy[talent.energyType] or 0)
+	if energieLuecke > 0 then
+		fehlend = fehlend or {}
+		fehlend[talent.energyType] = energieLuecke
+	end
+	local coinLuecke = (cost.coinAmount or 0) - (talentState.coins or 0)
+	if coinLuecke > 0 then
+		fehlend = fehlend or {}
+		fehlend.Coins = coinLuecke
+	end
+	return fehlend
 end
 
 local STATE_COLORS = {
@@ -1466,6 +1529,9 @@ local STATE_COLORS = {
 	researching = Color3.fromRGB(220, 180, 60),
 	blocked = Color3.fromRGB(45, 42, 55),
 	available = Color3.fromRGB(60, 56, 90),
+	-- Erreichbar, aber noch nicht bezahlbar: dunkler als "available", heller als
+	-- "locked" -- es ist ein Zwischenzustand, und der soll auch einer sein.
+	poor = Color3.fromRGB(46, 43, 62),
 }
 
 -- ===== Zeigt die Details eines Talents im rechten Panel: Beschreibung, Vorher/Nachher-
@@ -1554,15 +1620,35 @@ local function selectTalent(talent, state, level)
 
 	-- Die Kosten stehen im KNOPF, nicht in einem eigenen Abschnitt: bezahlt wird beim
 	-- Druecken, und wer drueckt, schaut auf den Knopf.
+	-- ===== Der Preis sagt, woran es liegt =====
+	--
+	-- Er stand als eine Zeile da, und ob er bezahlbar war, musste man selbst nachrechnen:
+	-- Zahl im Knopf gegen Zahl in der Leiste oben. Jetzt ist der Teil, der nicht gedeckt
+	-- ist, rot und traegt den FEHLBETRAG -- nicht nur "zu wenig", sondern wie viel.
+	local fehlend = fehlendeMittel(talent, level)
+	zeigeFehlbetraege(fehlend)
+
 	if vollAusgebaut then
 		knopfKosten.Text = ""
 		detailResearchTime.Text = ""
 	else
 		local cost = TalentTreeConfig.GetNodeCost(talent, level + 1)
-		local teile = { string.format("%d %s", cost.energyAmount, string.upper(talent.energyType)) }
-		if cost.coinAmount > 0 then
-			table.insert(teile, string.format("%d COINS", cost.coinAmount))
+		local rot = alsHex(HudChrome.Color.Danger)
+		local function stueck(betrag, name, luecke)
+			local text = string.format("%d %s", betrag, name)
+			if luecke then
+				return string.format('<font color="#%s">%s  (−%d)</font>', rot, text, luecke)
+			end
+			return text
 		end
+
+		local teile = {
+			stueck(cost.energyAmount, string.upper(talent.energyType), fehlend and fehlend[talent.energyType]),
+		}
+		if cost.coinAmount > 0 then
+			table.insert(teile, stueck(cost.coinAmount, "COINS", fehlend and fehlend.Coins))
+		end
+		knopfKosten.RichText = true
 		knopfKosten.Text = table.concat(teile, "   ")
 		detailResearchTime.Text = "RESEARCH TIME " .. string.upper(formatDuration(talent.researchSeconds))
 	end
@@ -1599,6 +1685,25 @@ local function selectTalent(talent, state, level)
 	elseif state == "maxed" then
 		knopfHaupt.Text = "MAXED"
 		detailResearchButton.Active = false
+	elseif state == "poor" then
+		-- Fehlt genau eine Sache, steht sie im Knopf -- das ist die Antwort auf "warum
+		-- nicht?", ohne dass man dafuer irgendwo hinschauen muss. Fehlen zwei, waere die
+		-- Zeile zu lang; dann zeigt die Kostenzeile darunter beide rot.
+		local fehltHier = fehlendeMittel(talent, level)
+		local eintraege = {}
+		if fehltHier then
+			for schluessel, betrag in pairs(fehltHier) do
+				table.insert(eintraege, { schluessel = schluessel, betrag = betrag })
+			end
+		end
+		if #eintraege == 1 then
+			local e = eintraege[1]
+			local name = (e.schluessel == "Coins") and "COINS" or string.upper(e.schluessel)
+			knopfHaupt.Text = string.format("NEED %d MORE %s", e.betrag, name)
+		else
+			knopfHaupt.Text = "NOT ENOUGH RESOURCES"
+		end
+		detailResearchButton.Active = false
 	elseif state == "blocked" then
 		knopfHaupt.Text = "OTHER RESEARCH ACTIVE"
 		detailResearchButton.Active = false
@@ -1607,7 +1712,9 @@ local function selectTalent(talent, state, level)
 		detailResearchButton.Active = false
 	end
 	detailResearchButton.BackgroundColor3 = knopfGrund
-	knopfKosten.Visible = (state == "available") and knopfKosten.Text ~= ""
+	-- Die Kostenzeile bleibt auch dann stehen, wenn das Geld fehlt -- gerade dann: sie ist
+	-- die Stelle, an der steht, WIE VIEL fehlt.
+	knopfKosten.Visible = (state == "available" or state == "poor") and knopfKosten.Text ~= ""
 	knopfKosten.TextColor3 = HudChrome.Color.TextSecondary
 	-- Ohne Kostenzeile steht die Beschriftung mittig statt oben.
 	if knopfKosten.Visible then
@@ -1617,7 +1724,7 @@ local function selectTalent(talent, state, level)
 		knopfHaupt.Size = UDim2.new(1, -2 * KNOPF_RAND, 1, 0)
 		knopfHaupt.Position = UDim2.new(0, KNOPF_RAND, 0, 0)
 	end
-	detailResearchTime.Visible = (state == "available")
+	detailResearchTime.Visible = (state == "available" or state == "poor")
 end
 
 detailResearchButton.MouseButton1Click:Connect(function()
@@ -1821,6 +1928,8 @@ local function renderTree(factionName)
 		detailTradeoffReihe.Visible = false
 		detailResearchTime.Visible = false
 		detailPrereqLabel.Visible = false
+		-- Ohne Auswahl gibt es keinen Preis -- und damit auch nichts, das rot sein duerfte.
+		zeigeFehlbetraege(nil)
 		detailResearchButton.Visible = false
 	end
 	currentFaction = factionName
