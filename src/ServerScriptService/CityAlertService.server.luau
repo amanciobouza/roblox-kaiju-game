@@ -15,6 +15,7 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local ServerScriptService = game:GetService("ServerScriptService")
 local Workspace = game:GetService("Workspace")
 
 local CityAlertConfig = require(ReplicatedStorage:WaitForChild("CityAlertConfig"))
@@ -569,14 +570,18 @@ end
 -- MaxHealth (falls kein eigenes "AlertValue"-Attribut in Studio gesetzt wurde) und fügt
 -- ihn direkt der richtigen Stadt hinzu. Von HouseHandler.lua beim Zerstören aufgerufen.
 _G.AddCityAlertForBuilding = function(house)
-	local explicitValue = house:GetAttribute("AlertValue")
+	local cityName = resolveCityName(house)
+	local config = CityAlertConfig.GetCityConfig(cityName or "")
+
+	-- AlertFromHPOnly setzt die Attribute an den Instanzen ausser Kraft: der Alarm kommt
+	-- dann fuer ALLE Gebaeude der Stadt aus den Lebenspunkten. Siehe CityAlertConfig,
+	-- Village -- es ist der Weg weg von Werten, die nur in Studio stehen.
+	local explicitValue = (not config.AlertFromHPOnly) and house:GetAttribute("AlertValue") or nil
 	if explicitValue then
 		addCityAlert(house, explicitValue)
 		return
 	end
 
-	local cityName = resolveCityName(house)
-	local config = CityAlertConfig.GetCityConfig(cityName or "")
 	local maxHealth = house:GetAttribute("MaxHealth") or 0
 	addCityAlert(house, maxHealth * config.AlertPerHP)
 end
@@ -711,8 +716,10 @@ task.spawn(function()
 				proStadt[cityName] = eintrag
 			end
 			local maxHealth = house:GetAttribute("MaxHealth") or 0
-			local eigenerWert = house:GetAttribute("AlertValue")
 			local config = CityAlertConfig.GetCityConfig(cityName)
+			-- Derselbe Schalter wie in AddCityAlertForBuilding: der Bericht muss zeigen, was
+			-- im Spiel gilt, und nicht, was ohne ihn gelten wuerde.
+			local eigenerWert = (not config.AlertFromHPOnly) and house:GetAttribute("AlertValue") or nil
 
 			eintrag.gebaeude += 1
 			eintrag.leben += maxHealth
@@ -734,6 +741,17 @@ task.spawn(function()
 				.. "AlertValue, %d ueber AlertPerHP) -- %d Alarmpunkte, %d Lebenspunkte, "
 				.. "%d Erfahrung.", cityName, e.gebaeude, e.eigen, e.gebaeude - e.eigen,
 				math.floor(e.alarm), math.floor(e.leben), e.erfahrung))
+			-- Was AlertPerHP sein muesste, um mit den Lebenspunkten allein auf DIESELBE
+			-- Punktzahl je Durchgang zu kommen. Die Zahl ist der einzige Grund, warum die
+			-- Umstellung einer Stadt auf AlertFromHPOnly nicht geraten werden muss: die
+			-- Gesamt-Lebenspunkte stehen in Studio, nicht im Repo, und ohne sie ist der
+			-- passende Wert nicht auszurechnen.
+			if e.leben > 0 then
+				print(string.format("[Kaiju Debug]   HP-Only waere AlertPerHP = %.5f "
+					.. "(%d Punkte / %d Lebenspunkte); heute gesetzt: %.5f",
+					e.alarm / e.leben, math.floor(e.alarm), math.floor(e.leben),
+					config.AlertPerHP or 0))
+			end
 			if e.alarm > 0 then
 				local function durchgaenge(schwelle)
 					return schwelle and string.format("%.2f", schwelle / e.alarm) or "-"
@@ -742,6 +760,31 @@ task.spawn(function()
 					.. "Stufe 3: %s, Stufe 4: %s, Stufe 5: %s",
 					durchgaenge(config.AlertThresholdLevel2), durchgaenge(config.AlertThresholdLevel3),
 					durchgaenge(config.AlertThresholdLevel4), durchgaenge(config.AlertThresholdLevel5)))
+			end
+		end
+	end
+
+	-- ===== Die Einzelwerte der Gebaeude, wo sie nirgends erfasst sind =====
+	-- Die Summen oben sagen, was ein Durchgang wert ist -- aber nicht, WORAUS er besteht.
+	-- Fuer das Village ist genau das die letzte offene Abweichung des Spec-Pruefers
+	-- (village.buildings-declared-centrally): seine Gebaeudewerte stehen ausschliesslich an
+	-- den Modellen in Studio.
+	--
+	-- Der Bericht gibt sie als fertiges Lua aus, zum Herauskopieren. Sobald die Werte in
+	-- einer Config stehen, gehoert die Stadt aus dieser Liste entfernt -- bis dahin ist die
+	-- Ausgabe der einzige Weg, ueberhaupt an sie heranzukommen.
+	local BERICHT_BEIM_START = { "Village" }
+	if #BERICHT_BEIM_START > 0 then
+		local werkzeuge = ServerScriptService:FindFirstChild("StudioTools")
+		local bericht = werkzeuge and werkzeuge:FindFirstChild("GebaeudeBericht")
+		if bericht then
+			local ok, fehler = pcall(function()
+				for _, stadt in ipairs(BERICHT_BEIM_START) do
+					require(bericht).Print(stadt)
+				end
+			end)
+			if not ok then
+				warn("[Kaiju Debug] Gebaeudebericht fehlgeschlagen: " .. tostring(fehler))
 			end
 		end
 	end

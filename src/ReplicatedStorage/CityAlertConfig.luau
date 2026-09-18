@@ -51,6 +51,27 @@ CityAlertConfig.Cities = {
 		-- falls das Gebäude kein eigenes "AlertValue"-Attribut in Studio gesetzt hat.
 		AlertPerHP = 0.5,
 
+		-- ===== Die Attribute an den Instanzen ausser Kraft setzen =====
+		--
+		-- Im Village traegt jedes der 23 Gebaeude ein eigenes AlertValue-Attribut aus
+		-- Studio; AlertPerHP darueber ist deshalb wirkungslos. Brasshaven macht es
+		-- umgekehrt -- eine Zahl im Repo, und der Alarm folgt den Lebenspunkten.
+		--
+		-- Die Spec will auf Dauer weder das eine noch das andere, sondern Werte je
+		-- GEBAEUDETYP im Repo (balancing.building-values-live-in-config). Bis dahin ist die
+		-- Brasshaven-Art die bessere: eine Zahl, die man lesen und pruefen kann. Werte, die
+		-- nur in Studio stehen, sind schon einmal auseinandergelaufen -- der Kommentar zum
+		-- Durchgangsbericht in CityAlertService nennt den Fall.
+		--
+		-- Dieser Schalter stellt um, OHNE dass in Studio ein Attribut angefasst werden muss:
+		-- ist er an, werden die AlertValue-Attribute ignoriert und alles laeuft ueber
+		-- AlertPerHP. Umschalten und vergleichen statt umbauen und hoffen.
+		--
+		-- NOCH AUS: erst muss AlertPerHP oben stimmen. Der Durchgangsbericht nennt beim
+		-- Serverstart den passenden Wert ("HP-Only waere ..."), weil dafuer die
+		-- Gesamt-Lebenspunkte des Dorfes noetig sind -- und die stehen in Studio, nicht hier.
+		AlertFromHPOnly = false,
+
 		-- Die Spezifikation setzt fuer die Feuerwehr eine Referenz-Aufraeumzeit von rund
 		-- einer Minute an, Verfolgung eingerechnet. Mit 300 Lebenspunkten waren das
 		-- gegen den Eintrittsschaden von 17 nur 18 Schlaege oder nicht einmal zwei
