@@ -8,6 +8,7 @@
 -- Synergie-Boni) tatsächlich in die bestehenden Systeme.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 
@@ -33,6 +34,15 @@ CancelResearchEvent.Parent = ReplicatedStorage
 local ResearchCompleteEvent = Instance.new("RemoteEvent")
 ResearchCompleteEvent.Name = "ResearchCompleteEvent"
 ResearchCompleteEvent.Parent = ReplicatedStorage
+
+-- Geht an ALLE, nicht nur an den Forscher: die Figur richtet sich auf, und das sollen die
+-- anderen sehen. Dieselbe Aufteilung wie beim Stufenaufstieg -- das Sichtbare gehoert
+-- allen, der Klang dem, dem es passiert ist.
+--
+-- Bewusst ein ZWEITES Ereignis und nicht ResearchCompleteEvent an alle: das traegt den
+-- neuen Stand des Spielers und wuerde bei jedem anderen Client dessen eigene Talentdaten
+-- ueberschreiben.
+local TalentUnlockedEvent = RemoteEventUtils.GetOrCreate("TalentUnlockedEvent")
 
 local GetTalentStateFunction = Instance.new("RemoteFunction")
 GetTalentStateFunction.Name = "GetTalentStateFunction"
@@ -226,6 +236,17 @@ task.spawn(function()
 					player.Name, research.faction, research.talentId, state[research.faction][research.talentId]))
 
 				ResearchCompleteEvent:FireClient(player, research.faction, research.talentId, state[research.faction][research.talentId])
+
+				-- Der Energietyp reist mit: die Rueckmeldung an der Figur traegt die Farbe
+				-- des erforschten Talents, und der Client soll dafuer nicht erst die
+				-- Config durchsuchen muessen.
+				local talent = TalentTreeConfig.FindTalent(research.faction, research.talentId)
+				TalentUnlockedEvent:FireAllClients(
+					player,
+					research.faction,
+					research.talentId,
+					talent and talent.energyType or nil
+				)
 
 				if research.faction == "Kaiju" and _G.RecalculateStrength then
 					_G.RecalculateStrength(player)
