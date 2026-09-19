@@ -358,25 +358,28 @@ local function getOrCreateExtinguishBillboard(house)
 		return extinguishBillboards[house]
 	end
 
-	-- ===== Die Anzeige haengt an einem EIGENEN, verankerten Punkt =====
+	-- ===== OHNE FEUER KEINE ANZEIGE =====
 	--
-	-- Vorher hing sie an house.PrimaryPart. Beim Einsturz werden die Hausteile aber
-	-- weggetweent -- CFrame UND Transparenz (HouseHandler) --, und die Anzeige wanderte mit.
-	-- Sie war dadurch genau so lange unsichtbar, wie sie gebraucht wurde, und tauchte erst
-	-- wieder auf, wenn das Haus respawnte und seine Teile zurueckkamen. Also genau dann,
-	-- wenn es nichts mehr zu loeschen gab.
+	-- Die Bedingung ist nicht nur eine Vorsichtsmassnahme, sie schliesst ein Loch. Die
+	-- Loeschschleife wartet mit RunService.Heartbeat:Wait() MITTEN im Rumpf und
+	-- aktualisiert die Anzeige erst danach. In dieser Luecke kann das Haus respawnen: der
+	-- Respawn raeumt die Anzeige weg (extinguishHouseFire -> ClearExtinguishBillboard) --
+	-- und die naechste Zeile der Schleife baute sie sofort wieder auf. Danach raeumte sie
+	-- niemand mehr weg, denn das Feuer war ja vorbei. Ein halb geloeschter Balken blieb
+	-- ueber dem wieder stehenden Haus haengen.
 	--
-	-- Der Punkt ist jetzt der Ort des FEUERS. Er steht still, er ist da, solange es brennt,
-	-- und er ist die Sache, um die es geht. Nur wenn es (noch) keine Feuerquelle gibt,
-	-- faellt er auf das Haus zurueck.
+	-- Genau dieses Muster nennt CLAUDE.md als Fallstrick: wer nach einem Yield weitermacht,
+	-- ohne zu pruefen, ob die Sache noch laeuft, arbeitet an etwas, das es nicht mehr gibt.
+	-- Die Pruefung steht hier und nicht an den Aufrufstellen, weil es nur EINE Stelle gibt,
+	-- an der eine Anzeige entsteht.
+	--
+	-- Der Ort ist der des FEUERS und nicht house.PrimaryPart: beim Einsturz werden die
+	-- Hausteile weggetweent -- CFrame UND Transparenz --, und eine Anzeige daran wanderte
+	-- mit. Der Brandherd steht still, solange es brennt.
 	local quelle = _G.ActiveFireSources and _G.ActiveFireSources[house]
 	local ort = quelle and quelle.position
 	if not ort then
-		local anchorPart = house.PrimaryPart
-		if not anchorPart then
-			return nil
-		end
-		ort = anchorPart.Position
+		return nil
 	end
 
 	local halter = Instance.new("Part")
