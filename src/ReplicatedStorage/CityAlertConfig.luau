@@ -47,9 +47,24 @@ CityAlertConfig.Cities = {
 		AlertThresholdLevel2 = 19, -- 0.40 Durchgaenge
 		-- Alert Level 2 -> 3: Barrikaden-Schild-Cluster (siehe BarricadeClusterService.lua)
 		AlertThresholdLevel3 = 43, -- 0.90 Durchgaenge
-		-- Alert-Wert pro HP eines zerstörten Gebäudes (AlertValue = MaxHealth * AlertPerHP),
-		-- falls das Gebäude kein eigenes "AlertValue"-Attribut in Studio gesetzt hat.
-		AlertPerHP = 0.5,
+		-- ===== GEMESSEN am 19.09.2026: die Attribute waren eine Formel =====
+		--
+		-- Der Gebaeudebericht hat alle 23 Instanzen ausgelesen, und JEDER AlertValue ist
+		-- exakt MaxHealth mal 0.01:
+		--
+		--   SmallChapel_L3  1000 ->   10        Barn_L2       200 -> 2
+		--   Mill_L3          500 ->    5        Farmhouse_L1  125 -> 1.25
+		--   Workshop_L2      300 ->    3        Cottage_L1    100 -> 1
+		--   Stable_L2        250 ->    2.5
+		--
+		-- Die 23 handgepflegten Zahlen in Studio trugen also KEINE eigene Aussage -- sie
+		-- waren eine von Hand nachgerechnete Formel. Genau das ist der Fall, in dem Werte
+		-- an Instanzen nur Risiko sind: sie koennen auseinanderlaufen und sagen dafuer
+		-- nichts, was die Formel nicht auch sagt.
+		--
+		-- 0.01 statt 0.5: der alte Wert war reiner Rueckfall und hat nie gegriffen. Er ist
+		-- jetzt derselbe wie in Brasshaven -- eine Skala fuer beide Staedte.
+		AlertPerHP = 0.01,
 
 		-- ===== Die Attribute an den Instanzen ausser Kraft setzen =====
 		--
@@ -67,10 +82,15 @@ CityAlertConfig.Cities = {
 		-- ist er an, werden die AlertValue-Attribute ignoriert und alles laeuft ueber
 		-- AlertPerHP. Umschalten und vergleichen statt umbauen und hoffen.
 		--
-		-- NOCH AUS: erst muss AlertPerHP oben stimmen. Der Durchgangsbericht nennt beim
-		-- Serverstart den passenden Wert ("HP-Only waere ..."), weil dafuer die
-		-- Gesamt-Lebenspunkte des Dorfes noetig sind -- und die stehen in Studio, nicht hier.
-		AlertFromHPOnly = false,
+		-- AN seit dem 19.09.2026. Der Durchgangsbericht hat den noetigen Wert genannt
+		-- ("HP-Only waere AlertPerHP = 0.01000"), und der Gebaeudebericht hat gezeigt, dass
+		-- die Umstellung am Verhalten NICHTS aendert: 48 Alarmpunkte je Durchgang vorher wie
+		-- nachher, Gebaeude fuer Gebaeude derselbe Betrag.
+		--
+		-- Das ist der Grund, warum sie ohne Bedenken laufen kann. Sie ist keine
+		-- Balance-Aenderung, sondern ein Umzug: dieselbe Zahl, nur an einem Ort, an dem man
+		-- sie lesen und pruefen kann.
+		AlertFromHPOnly = true,
 
 		-- Die Spezifikation setzt fuer die Feuerwehr eine Referenz-Aufraeumzeit von rund
 		-- einer Minute an, Verfolgung eingerechnet. Mit 300 Lebenspunkten waren das
