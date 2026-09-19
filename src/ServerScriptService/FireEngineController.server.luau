@@ -615,12 +615,11 @@ _G.DamageFireEngine = damageFireEngine
 -- zerstört wird, während der Löschvorgang unterbrochen (nicht abgeschlossen) war (siehe
 -- HouseHandler.lua, extinguishHouseFire).
 _G.ClearExtinguishBillboard = clearExtinguishBillboard
--- Zeigt die Löschanzeige sofort bei 0% an, sobald ein Gebäude zerstört wird/zu brennen
--- beginnt -- nicht erst, wenn ein Fahrzeug tatsächlich mit dem Löschen beginnt. Wird von
--- HouseHandler.lua direkt beim Entzünden des Feuers aufgerufen.
-_G.ShowExtinguishBillboard = function(house)
-	updateExtinguishBillboard(house, 0)
-end
+-- _G.ShowExtinguishBillboard ist ENTFALLEN. Es zeigte die Anzeige schon beim Entzuenden
+-- bei 0 Prozent -- ein Balken, der dasteht und sich nicht bewegt, weil oft gar kein
+-- Fahrzeug kommt. Die Anzeige entsteht jetzt in updateExtinguishBillboard, also genau
+-- dann, wenn wirklich geloescht wird. Der Setzer faellt mit weg, damit keine _G-Funktion
+-- ohne Leser stehen bleibt.
 
 -- Von den Angriffs-Scripts genutzt, um alle Feuerwehrautos in Reichweite einer Position
 -- zu finden -- exakt analog zu getHousesInRange in CombatHandler.lua.

@@ -1729,13 +1729,12 @@ local function destroyHouse(house, destroyerPlayer, originPosition, isPassiveDam
 				_G.RegisterFireEnergySource(house, fireGroundCFrame.Position, fireEnergyDuration)
 			end
 		end
-		-- Firefighter Extinguishing Feedback: Anzeige sofort bei 0% zeigen, sobald das
-		-- Gebäude zu brennen beginnt -- nicht erst, wenn tatsächlich ein Fahrzeug mit dem
-		-- Löschen beginnt. Bei "Clean"-Ruinen (kein Feuer) ergibt eine Lösch-Anzeige
-		-- keinen Sinn -- übersprungen.
-		if ruinType ~= "Clean" and _G.ShowExtinguishBillboard then
-			_G.ShowExtinguishBillboard(house)
-		end
+		-- Hier wurde die Löschanzeige einmal sofort bei 0% gezeigt, sobald ein Gebäude zu
+		-- brennen begann. Das ist wieder draussen: ein Balken, der bei null steht und sich
+		-- nicht bewegt, verspricht etwas, das niemand tut -- oft kommt gar kein Fahrzeug.
+		-- Sie entsteht jetzt in dem Moment, in dem ein Fahrzeug WIRKLICH loescht
+		-- (FireEngineController, updateExtinguishBillboard), und verschwindet beim Respawn
+		-- ueber extinguishHouseFire weiter oben.
 
 		-- Individueller Respawn-Timer (nur für NICHT-Gruppen-Häuser -- ParentGroup-
 		-- Sektionen respawnen gemeinsam über ParentGroupService.ScheduleRespawn, siehe unten).
