@@ -41,8 +41,8 @@ local STATION_NAMES = {
 --   "anchor"        -- direkt auf FrontAnchor (zeigt den ganzen Spieler + Umgebung)
 --   "stationCenter" -- auf die Mitte der GESAMTEN Station (zeigt alles auf einmal)
 local FIXED_CAMERA_CONFIG = {
-	Arm = { right = 16, up = 22, back = 49, fov = 41, verticalFraming = 0, horizontalFraming = 0, focusMode = "ahead", forwardDistance = 14 },
-	Leg = { right = 42, up = 19, back = 25, fov = 66, verticalFraming = 0.2, horizontalFraming = 0, focusMode = "anchor" },
+	Arm = { right = 10.1, up = 4.6, back = 21.5, fov = 44, verticalFraming = -0.13, horizontalFraming = -0.21, focusMode = "ahead", forwardDistance = 14 },
+	Leg = { right = 39.9, up = 3.2, back = 7.0, fov = 66, verticalFraming = 0.23, horizontalFraming = 0.10, focusMode = "anchor" },
 	Body = { right = -19, up = 35, back = 61, fov = 41, verticalFraming = 0, horizontalFraming = 0, focusMode = "stationCenter" },
 }
 
@@ -463,10 +463,22 @@ local function printCurrentDebugValues()
 	if not override then
 		return
 	end
+	-- ===== Die Zeile ist zum EINFUEGEN gedacht, nicht zum Ablesen =====
+	-- Sie hat exakt die Form einer Zeile aus FIXED_CAMERA_CONFIG weiter oben: gleiche
+	-- Reihenfolge, gleiche Schluessel, und focusMode/forwardDistance stehen mit drin,
+	-- obwohl sie kein Regler veraendert. Vorher stand das FOV hinter der schliessenden
+	-- Klammer -- wer die Zeile kopierte, musste sie von Hand umbauen, und genau dabei
+	-- gehen Werte verloren.
+	local base = FIXED_CAMERA_CONFIG[currentStatType]
+	local zusatz = string.format(", focusMode = %q", base.focusMode)
+	if base.forwardDistance then
+		zusatz = zusatz .. string.format(", forwardDistance = %d", base.forwardDistance)
+	end
 	print(string.format(
-		"[Kaiju-Debug-Kamera] %s = { right = %.1f, up = %.1f, back = %.1f, verticalFraming = %.2f, horizontalFraming = %.2f }, FOV = %.0f",
-		currentStatType, override.right, override.up, override.back, override.verticalFraming, override.horizontalFraming, override.fov
-		))
+		"[Kaiju-Debug-Kamera] %s = { right = %.1f, up = %.1f, back = %.1f, fov = %.0f, "
+			.. "verticalFraming = %.2f, horizontalFraming = %.2f%s },",
+		currentStatType, override.right, override.up, override.back, override.fov,
+		override.verticalFraming, override.horizontalFraming, zusatz))
 end
 
 local function ensureOverrideForCurrentStation()

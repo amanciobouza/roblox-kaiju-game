@@ -866,3 +866,76 @@ DebugSetLevelEvent.OnServerEvent:Connect(function(player, targetLevel)
 		_G.RecalculateStrength(player)
 	end
 end)
+
+-- ===== Die Stationen muessen eine grosse Figur bemerken =====
+-- Roblox misst die Entfernung zu einem ProximityPrompt gegen den RUMPF der Figur. Seit der
+-- Avatar auf die Hoehe des Kaiju-Modells gebracht wird, sitzt der dreissig Studs ueber dem
+-- Boden -- wer auf der Station STEHT, ist damit weiter weg als die eingestellten zwanzig,
+-- und das Prompt erscheint gar nicht erst.
+--
+-- Der TrainingScaleHandler hilft dagegen NICHT: er schrumpft die Figur erst, wenn das
+-- Training schon laeuft. Zum Ausloesen muss man vorher herankommen.
+--
+-- ===== Warum additiv und nur hier =====
+-- Ein erster Versuch am 19.09.2026 multiplizierte die Reichweite ALLER Prompts der Welt mit
+-- der Figurengroesse. Das war zu grob: bei Faktor fuenf waren alle drei Stationen
+-- gleichzeitig in Reichweite und machten sich Konkurrenz, und Portale und Lift waren ohne
+-- Not mitbetroffen.
+--
+-- Jetzt wird die Figurenhoehe ADDIERT statt multipliziert -- genau der Abstand, der
+-- zwischen Boden und Rumpf dazugekommen ist -- und nur an den drei Trainingsstationen.
+local STATIONS_MIT_PROMPT = { "LegTrainingStation", "TitanImpactGauntlet", "BodyTrainingStation" }
+local REICHWEITE_BASIS_ATTRIBUT = "BasisReichweite"
+local REICHWEITE_TAKT = 2
+
+local function groessteFigurenhoehe()
+	local hoechste = 0
+	for _, player in ipairs(Players:GetPlayers()) do
+		local character = player.Character
+		if character and character.PrimaryPart then
+			local ok, groesse = pcall(function()
+				return character:GetExtentsSize()
+			end)
+			if ok and groesse and groesse.Y > hoechste then
+				hoechste = groesse.Y
+			end
+		end
+	end
+	return hoechste
+end
+
+task.spawn(function()
+	local letzteHoehe = -1
+	while true do
+		task.wait(REICHWEITE_TAKT)
+
+		local hoehe = groessteFigurenhoehe()
+		-- Nur bei spuerbarer Aenderung schreiben: ein Prompt, das jede Sekunde neu gesetzt
+		-- wird, repliziert jedes Mal an alle Spieler.
+		if math.abs(hoehe - letzteHoehe) >= 1 then
+			letzteHoehe = hoehe
+			local angepasst = 0
+			for _, stationName in ipairs(STATIONS_MIT_PROMPT) do
+				local station = Workspace:FindFirstChild(stationName, true)
+				if station then
+					for _, teil in ipairs(station:GetDescendants()) do
+						if teil:IsA("ProximityPrompt") then
+							if teil:GetAttribute(REICHWEITE_BASIS_ATTRIBUT) == nil then
+								teil:SetAttribute(REICHWEITE_BASIS_ATTRIBUT, teil.MaxActivationDistance)
+							end
+							local basis = teil:GetAttribute(REICHWEITE_BASIS_ATTRIBUT)
+							if type(basis) == "number" and basis > 0 then
+								teil.MaxActivationDistance = basis + hoehe
+								angepasst += 1
+							end
+						end
+					end
+				end
+			end
+			if angepasst > 0 then
+				print(string.format("[Kaiju Debug] Trainingsstationen: Reichweite um %.0f Studs "
+					.. "erhoeht (Figurenhoehe) -- %d Prompts.", hoehe, angepasst))
+			end
+		end
+	end
+end)

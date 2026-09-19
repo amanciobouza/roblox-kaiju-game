@@ -11,7 +11,19 @@
 
 local Players = game:GetService("Players")
 
-local TRAINING_SCALE = 0.6 -- Level-0-Skala, siehe SkinsConfig.lua (aktualisiert von 4 auf 1 -- neue, vereinfachte 1-6-Skala)
+-- Bisher 0.6 -- das war die Skin-Skala der ersten Stufe, und solange der Avatar die
+-- Skin-Skala trug, stimmte sie. Seit er die HOEHE des Modells traegt (17.09.2026), liegen
+-- seine Skalierungen bei 5 bis 10, und 0.6 machte die Figur an der Station winzig -- samt
+-- dem angehaengten Kaiju-Modell, denn ScaleTo skaliert alles.
+--
+-- 4.07 ist dieselbe Absicht in der neuen Skala: ein gewoehnlicher Avatar ist 5.9 Studs
+-- hoch, 5.9 * 4.07 sind 24 -- die Sanctuary-Groesse der ersten Stufe (SkinsConfig). An der
+-- Station steht damit jeder so da wie ein frischer Kaiju, unabhaengig davon, wie weit er
+-- ist. Genau das war der Zweck dieses Handlers.
+--
+-- ACHTUNG: die Zahl haengt am Groessensystem und musste jetzt zum DRITTEN Mal nachgezogen
+-- werden (4 -> 0.6 -> 4.07). Wer die Skalierung des Avatars aendert, aendert auch sie.
+local TRAINING_SCALE = 4.07
 
 local originalScale = {} -- [player] = number, um nach dem Training wiederherzustellen
 
