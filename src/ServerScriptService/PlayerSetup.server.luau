@@ -31,12 +31,34 @@ local StageModels = require(ReplicatedStorage:WaitForChild("StageModels"))
 -- Notschalter fuer die Groessenangleichung unten. Auf false zurueckgedreht, verhaelt sich
 -- die Figur wieder wie vor dem 17.09.2026: der Avatar traegt die Skin-Groesse, das Modell
 -- ist sechs- bis neunmal groesser, und die Physik richtet sich nach dem kleinen Koerper.
+-- Am 18.09.2026 kurz auf false gestellt, weil die Figur winzig war. Der Test hat die Frage
+-- beantwortet: mit false war sie wieder gross, die Angleichung war also die Ursache.
+--
+-- Gefunden war damit nicht die Rechnung, sondern ein WETTLAUF: PlayerSetup und
+-- KaijuStageOneService hingen beide am Attribut "CurrentZone", und deren Reihenfolge ist
+-- nicht zugesichert. Seit dem 19.09.2026 ruft der Service die Skalierung selbst auf,
+-- zwischen Abnehmen und Neuaufbau des Modells -- siehe _G.ApplyZoneAwareScale weiter unten.
 local AVATAR_MATCHES_MODEL_HEIGHT = true
+
+-- Teile, die AUSSEHEN wie Avatar-Glieder, aber keine sind: sie haengen direkt am
+-- Charakter statt in einem Kind-Modell und rutschen deshalb durch die Modell-Pruefung.
+--
+-- "KaijuBodyCollider" ist ein unsichtbarer, massloser Quader, den das Rig des Pakets an die
+-- Figur schweisst (KaijuStageOneInstaller: collider.Parent = character). Er ist so gross
+-- wie das MODELL und schwebt zusaetzlich 14 skalierte Studs ueber dem Boden -- auf Stufe 3
+-- ergab die Messung dadurch 37 statt 5.9 Studs.
+--
+-- Die Folge war doppelt: die natuerliche Hoehe sprang zwischen Messungen (5.9 / 27.1 /
+-- 21.1), und wo der Zwischenspeicher sie einmal nicht hatte, wurde die Figur WINZIG --
+-- targetScale ist zielHoehe geteilt durch diesen Wert.
+local KEINE_AVATAR_TEILE = {
+	KaijuBodyCollider = true,
+}
 
 local function avatarHeight(character)
 	local min, max = math.huge, -math.huge
 	for _, teil in ipairs(character:GetDescendants()) do
-		if teil:IsA("BasePart") then
+		if teil:IsA("BasePart") and not KEINE_AVATAR_TEILE[teil.Name] then
 			local inModell = false
 			local node = teil.Parent
 			while node and node ~= character do
@@ -718,6 +740,24 @@ local function zielSkalierung(player, skin, character, anlass)
 			return targetScale
 		end
 		natuerlich = istHoehe / istScale
+
+		-- ===== Das Netz unter der Messung =====
+		-- Ein Avatar ist zwischen vier und zwoelf Studs hoch, egal welchen Koerperbau der
+		-- Spieler gewaehlt hat. Kommt etwas anderes heraus, ist ein Fremdteil in die
+		-- Messung geraten (siehe KEINE_AVATAR_TEILE oben) -- und dann darf NICHT gerechnet
+		-- werden: die Figur wuerde winzig, und zwar lautlos. Genau das ist am 18.09.2026
+		-- passiert, als der Kollisionsquader des Rigs mitgemessen wurde.
+		--
+		-- Stattdessen die alte Skin-Groesse und eine Warnung. Falsch gross ist besser als
+		-- unspielbar klein, und die Zeile sagt, wonach zu suchen ist.
+		if natuerlich < 4 or natuerlich > 12 then
+			warn(string.format("[Kaiju Debug] Koerpergroesse (%s): natuerliche Hoehe %.1f ist "
+				.. "unglaubwuerdig (gemessen %.1f bei Skalierung %.2f) -- ein Fremdteil haengt "
+				.. "direkt an der Figur. Groessenangleichung uebersprungen, es gilt die "
+				.. "Skin-Groesse %.2f.", anlass, natuerlich, istHoehe, istScale, targetScale))
+			return targetScale
+		end
+
 		natuerlicheHoehe[character] = natuerlich
 		herkunft = string.format("gemessen %.1f bei Skalierung %.2f", istHoehe, istScale)
 	end
@@ -2570,20 +2610,23 @@ local function applyZoneAwareScale(player, character)
 	end)
 end
 
-local function onZoneChanged(player)
-	local character = player.Character
+-- ===== Die Reihenfolge ist jetzt verbindlich =====
+-- Hier hingen bis zum 19.09.2026 eigene Listener auf "CurrentZone". Der KaijuStageOneService
+-- hat einen zweiten auf demselben Attribut -- er nimmt das Modell ab und baut es neu auf.
+-- In welcher Reihenfolge Roblox zwei Listener desselben Attributs aufruft, ist NICHT
+-- zugesichert; der Kommentar dort sagt das ausdruecklich.
+--
+-- Damit setzten zwei Systeme dieselbe Groesse, und je nach Ausgang des Wettlaufs
+-- multiplizierten sie sich: character:ScaleTo skaliert die GANZE Figur, ein angehaengtes
+-- Kaiju-Modell eingeschlossen. Lief die Skalierung nach dem Neuaufbau, wurde das frisch
+-- gebaute Modell ein zweites Mal verkleinert -- die Figur war winzig.
+--
+-- Jetzt ruft der KaijuStageOneService diese Funktion selbst auf, in seiner Abfolge:
+-- Modell abnehmen -> Avatar skalieren -> Modell neu bauen. Damit ist zugesichert, dass
+-- beim Skalieren KEIN Modell an der Figur haengt, und ScaleTo kann keines mehr erwischen.
+_G.ApplyZoneAwareScale = function(player, character)
+	character = character or player.Character
 	if character then
 		applyZoneAwareScale(player, character)
 	end
-end
-
-Players.PlayerAdded:Connect(function(player)
-	player:GetAttributeChangedSignal("CurrentZone"):Connect(function()
-		onZoneChanged(player)
-	end)
-end)
-for _, player in ipairs(Players:GetPlayers()) do
-	player:GetAttributeChangedSignal("CurrentZone"):Connect(function()
-		onZoneChanged(player)
-	end)
 end

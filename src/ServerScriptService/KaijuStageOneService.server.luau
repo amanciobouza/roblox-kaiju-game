@@ -455,6 +455,16 @@ local function watchPlayer(player)
 			return
 		end
 		uninstall(character)
+
+		-- Jetzt haengt kein Modell und kein Kollisionskoerper mehr an der Figur -- genau
+		-- hier gehoert die Skalierung hin. PlayerSetup hatte dafuer einen EIGENEN Listener
+		-- auf demselben Attribut, und deren Reihenfolge ist nicht zugesichert: lief seine
+		-- Skalierung nach dem Neuaufbau, verkleinerte character:ScaleTo das frisch gebaute
+		-- Modell ein zweites Mal, und die Figur war winzig (19.09.2026).
+		if _G.ApplyZoneAwareScale then
+			_G.ApplyZoneAwareScale(player, character)
+		end
+
 		-- Waehrend des Neuaufbaus nach dem Zonenwechsel ebenfalls verdecken, sonst blitzt
 		-- dort der Avatar auf.
 		hideAvatar(character)

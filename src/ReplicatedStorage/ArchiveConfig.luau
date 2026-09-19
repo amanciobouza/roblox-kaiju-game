@@ -95,7 +95,14 @@ ArchiveConfig.Entries = {
 		category = "Level2",
 		name = "Fire Engine",
 		hint = "Alert Level 2",
-		detect = { modelName = "FireEngine" },
+		-- Prefix, NICHT der genaue Name: der FireEngineController tauft jedes Fahrzeug
+		-- beim Spawnen auf "FireEngine_<Stadt>_<Nummer>". Hier stand bis zum 19.09.2026
+		-- modelName = "FireEngine", und das ist ein Gleichheitsvergleich -- der Eintrag
+		-- konnte deshalb NIE aufgedeckt werden, egal wie oft man die Feuerwehr besiegt hat.
+		--
+		-- Alle anderen Eintraege erkennen ueber modelPrefix oder ein Attribut; die Feuerwehr
+		-- war der einzige Ausreisser.
+		detect = { modelPrefix = "FireEngine_" },
 		model = { replicatedStorage = "FireEngine" },
 		profile = {
 			role = "Rolls out to burning buildings and puts the fires out.",
