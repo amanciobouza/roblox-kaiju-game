@@ -323,11 +323,15 @@ CityAlertConfig.Cities = {
 		-- Ausdauertest wird. Die Vorgabe der Spezifikation nennt 1 bis 3 -- Brasshaven ist
 		-- die erste Stadt, die darueber hinausgeht, und zwar wegen ihrer Groesse.
 		--
-		-- ACHTUNG bei FirefightingRate unten: die 45 sind so gesetzt, dass ZWEI Fahrzeuge
-		-- ein brennendes Gebaeude vollstaendig neutralisieren. Erreichen alle vier
-		-- denselben Brand, sind es 200 Prozent. Ob das vorkommt, haengt an
-		-- FirefightingRange (50 Studs) und daran, wie weit die Wagen auseinanderfahren --
-		-- das ist im naechsten Durchlauf zu beobachten, nicht vorherzusagen.
+		-- Zu FirefightingRate unten: die 45 sind so gesetzt, dass ZWEI Fahrzeuge ein
+		-- brennendes Gebaeude vollstaendig neutralisieren. Erreichten alle vier denselben
+		-- Brand, waeren es 200 Prozent.
+		--
+		-- IM SPIEL BESTAETIGT am 19.09.2026: sie verteilen sich. Die Zielwahl war der Grund
+		-- -- sie ging nach der staerksten Energie der ganzen Stadt und schickte damit alle
+		-- vier zu denselben Braenden; seit sie die Energie durch die Entfernung teilt
+		-- (FireEngineController, FEUER_BEZUGSWEITE), nimmt jedes Fahrzeug den staerksten
+		-- Brand in seiner Naehe. Damit bleiben die 45 richtig.
 		FireEngineCount = 4,
 		FireEngineSpeed = 16,
 		-- ===== So viel, dass Ignorieren etwas kostet =====

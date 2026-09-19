@@ -348,30 +348,56 @@ end
 -- remainingEnergy selbst unverändert stehen bleibt.
 local extinguishBillboards = {} -- [house] = BillboardGui
 
+-- Wie hoch die Anzeige ueber dem Brandherd schwebt. Fest und nicht aus der Hausgroesse
+-- gerechnet: waehrend des Einsturzes ist der Huellquader des Hauses unbrauchbar -- er
+-- umfasst dann Teile, die gerade wegfliegen.
+local ANZEIGE_HOEHE = 9
+
 local function getOrCreateExtinguishBillboard(house)
 	if extinguishBillboards[house] and extinguishBillboards[house].Parent then
 		return extinguishBillboards[house]
 	end
 
-	local anchorPart = house.PrimaryPart
-	if not anchorPart then
-		return nil
+	-- ===== Die Anzeige haengt an einem EIGENEN, verankerten Punkt =====
+	--
+	-- Vorher hing sie an house.PrimaryPart. Beim Einsturz werden die Hausteile aber
+	-- weggetweent -- CFrame UND Transparenz (HouseHandler) --, und die Anzeige wanderte mit.
+	-- Sie war dadurch genau so lange unsichtbar, wie sie gebraucht wurde, und tauchte erst
+	-- wieder auf, wenn das Haus respawnte und seine Teile zurueckkamen. Also genau dann,
+	-- wenn es nichts mehr zu loeschen gab.
+	--
+	-- Der Punkt ist jetzt der Ort des FEUERS. Er steht still, er ist da, solange es brennt,
+	-- und er ist die Sache, um die es geht. Nur wenn es (noch) keine Feuerquelle gibt,
+	-- faellt er auf das Haus zurueck.
+	local quelle = _G.ActiveFireSources and _G.ActiveFireSources[house]
+	local ort = quelle and quelle.position
+	if not ort then
+		local anchorPart = house.PrimaryPart
+		if not anchorPart then
+			return nil
+		end
+		ort = anchorPart.Position
 	end
 
-	local size
-	local ok, _, modelSize = pcall(function()
-		return house:GetBoundingBox()
-	end)
-	size = (ok and modelSize) or Vector3.new(8, 8, 8)
-	local topOffsetY = size.Y / 2 + 3
+	local halter = Instance.new("Part")
+	halter.Name = "ExtinguishBillboardAnchor"
+	halter.Size = Vector3.new(0.2, 0.2, 0.2)
+	halter.Transparency = 1
+	halter.Anchored = true
+	halter.CanCollide = false
+	halter.CanQuery = false
+	halter.CastShadow = false
+	halter.CFrame = CFrame.new(ort + Vector3.new(0, ANZEIGE_HOEHE, 0))
+	halter.Parent = Workspace
 
 	local billboard = Instance.new("BillboardGui")
 	billboard.Name = "ExtinguishProgressBar"
 	billboard.Size = UDim2.new(0, 130, 0, 34)
-	billboard.StudsOffsetWorldSpace = Vector3.new(0, topOffsetY, 0)
 	billboard.AlwaysOnTop = true
 	billboard.MaxDistance = 400
-	billboard.Parent = anchorPart
+	-- Der Halter gehoert der Anzeige: er wird mit ihr zerstoert, weil sie sein einziges
+	-- Kind ist und jedes Wegraeumen unten den Halter trifft.
+	billboard.Parent = halter
 
 	local label = Instance.new("TextLabel")
 	label.Name = "StatusLabel"
@@ -444,8 +470,11 @@ local function playExtinguishSuccessSequence(house)
 	end
 
 	task.delay(1.3, function()
-		if billboard.Parent then
-			billboard:Destroy()
+		-- Der HALTER wird zerstoert, nicht die Anzeige: sonst bliebe je geloeschtem Feuer
+		-- ein unsichtbares Teil in der Welt stehen.
+		local halter = billboard.Parent
+		if halter then
+			halter:Destroy()
 		end
 	end)
 end
@@ -456,8 +485,9 @@ local function clearExtinguishBillboard(house)
 	local billboard = extinguishBillboards[house]
 	if billboard then
 		extinguishBillboards[house] = nil
-		if billboard.Parent then
-			billboard:Destroy()
+		local halter = billboard.Parent
+		if halter then
+			halter:Destroy()
 		end
 	end
 end
