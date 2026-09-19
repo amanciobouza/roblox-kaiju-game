@@ -465,13 +465,37 @@ CityAlertConfig.Cities = {
 		GuardianProtectRadius = 30,
 	},
 
+	-- ===== City, durchgerechnet (19.09.2026) =====
+	--
+	-- Ausgelegt fuer den Spieler, der die Stadt mit Level 20 und dem Epochbreaker BETRITT.
+	-- Sein Schaden ist dann 614 je Schlag und 18 405 ueber einen vollen Fokusstrahl (Arm
+	-- und Bein auf der Obergrenze, keine Talente, allein).
+	--
+	-- Hergeleitet aus denselben Formeln wie Brasshaven, und an ihm geprueft: dieselbe
+	-- Rechnung liefert fuer Level 0 mit dem Riftborn 18 und fuer Level 10 mit dem Ironpulse
+	-- 135 -- beides die Zahlen, die in den Bloecken darueber stehen.
+	--
+	-- Ein Durchgang ist GEMESSEN (Serverbericht vom 19.09.2026): 94 Gebaeude, 290 350
+	-- Lebenspunkte, 72 587 Alarmpunkte, 547 124 Erfahrung. Die Schwellen unten liegen damit
+	-- bei 0.39 / 0.90 / 1.38 / 2.20 Durchgaengen -- dieselben Verhaeltnisse wie in
+	-- Brasshaven.
+	--
+	-- OFFEN, und nicht mit Zahlen zu loesen: die Levelstrecke. Von 20 auf 30 kostet
+	-- 5 226 044 XP, ein Durchgang gibt 547 124 -- das sind 9.6 Durchgaenge gegen 1.8 in
+	-- Brasshaven. Der Grund liegt nicht an dieser Stadt, sondern an der XP-Kurve: sie
+	-- waechst ab Level 10 mit 1.25 je Stufe, die Staedte aber nicht im selben Tempo.
 	City = {
 		ExpectedSkinStage = 3, -- Epochbreaker; die Spec verlangt die Angabe je Stadt
 		AlertThresholdLevel2 = 28000, -- 0.39 Durchgaenge
 		AlertThresholdLevel3 = 65000, -- 0.90 Durchgaenge
 		AlertPerHP = 0.25,
 
-		FireEngineHP = 8000,
+		-- ===== Auf den Massstab gebracht (19.09.2026) =====
+		-- Fuenfzig Schlaege oder 1.7 Fokusstrahlen, wie in Brasshaven -- die Referenz von
+		-- rund einer Minute mit Verfolgung. Vorher 8 000: das waren DREIZEHN Schlaege. Die
+		-- Feuerwehr fiel damit schneller als in jeder Stadt davor, obwohl sie hier auf
+		-- einen viel staerkeren Spieler trifft.
+		FireEngineHP = 31000,
 		FireEngineCount = 2,
 		FireEngineSpeed = 18,
 		FirefightingRate = 140,
@@ -486,10 +510,16 @@ CityAlertConfig.Cities = {
 		AlertDecayRate = 45,
 
 		BarricadeScale = 2.0,
-		ShieldMaxHealth = 13000,
+		-- Sechzig Schlaege, zwei Fokusstrahlen -- und damit MEHR als die Feuerwehr. Diese
+		-- Ordnung ist Absicht und war vorher umgekehrt: die Barrikade ist Alarmstufe 3, die
+		-- Feuerwehr Stufe 2. Vorher 13 000, also 21 Schlaege.
+		ShieldMaxHealth = 36500,
 		ShieldRegenDelay = 8,
 		ShieldRegenRate = 0.04,
-		GeneratorMaxHealth = 1750,
+		-- Fuenfzehn Schlaege: der Generator ist der Schwachpunkt, wer ihn findet, spart sich
+		-- die Wand. Vorher 1 750 -- nicht einmal DREI Schlaege, also kein Schwachpunkt
+		-- mehr, sondern eine Formsache.
+		GeneratorMaxHealth = 9000,
 		-- ===== Auf den Massstab gebracht (18.09.2026) =====
 		-- Die Verteidiger toeteten den erwarteten Skin (Epochbreaker, 400 Leben) in vier bis sechs Treffern.
 		-- Die Regel lautet rund 32 -- beim Guardian 16, weil er doppelt so gefaehrlich sein
@@ -512,14 +542,16 @@ CityAlertConfig.Cities = {
 		MilitaryTankCount = 2,
 		MilitaryRocketLauncherCount = 2,
 		MilitaryHelicopterCount = 2,
-		TankHP = 45000,
+		-- 75 / 55 / 45 Schlaege beim Eintritt. Der Panzer stand als Einziger des Militaers
+		-- schon richtig; Raketenwerfer und Helikopter sind nachgezogen.
+		TankHP = 45000, -- 73 Schlaege, stand bereits
 		TankDamage = 12, -- 33 Treffer
 		TankAttackRange = 70,
 		TankSpeed = 14,
-		RocketLauncherHP = 27000,
+		RocketLauncherHP = 34000, -- 55 Schlaege (vorher 27 000: 44)
 		RocketLauncherDamage = 14, -- 29 Treffer -- der haerteste des Militaers
 		RocketLauncherAttackRange = 120,
-		HelicopterHP = 22000,
+		HelicopterHP = 27500, -- 45 Schlaege (vorher 22 000: 36)
 		HelicopterDamage = 10, -- 40 Treffer -- er stoert mehr, als er wehtut
 		HelicopterAttackRange = 90,
 		HelicopterSpeed = 20,
