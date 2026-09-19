@@ -31,13 +31,22 @@ local StageModels = require(ReplicatedStorage:WaitForChild("StageModels"))
 -- Notschalter fuer die Groessenangleichung unten. Auf false zurueckgedreht, verhaelt sich
 -- die Figur wieder wie vor dem 17.09.2026: der Avatar traegt die Skin-Groesse, das Modell
 -- ist sechs- bis neunmal groesser, und die Physik richtet sich nach dem kleinen Koerper.
--- Am 18.09.2026 kurz auf false gestellt, weil die Figur winzig war. Der Test hat die Frage
--- beantwortet: mit false war sie wieder gross, die Angleichung war also die Ursache.
+-- ===== Gesetzt. Nicht mehr zurueckdrehen. =====
+-- Der versteckte Avatar ist der physische Koerper: an ihm entscheidet Roblox Kollision,
+-- Bodenkontakt und Schwimmzustand. War er kleiner als das sichtbare Modell, klemmte der
+-- Kaiju unter Daechern, unter die nur der kleine Avatar passt, und schwamm noch, waehrend
+-- er sichtbar am Strand stand.
 --
--- Gefunden war damit nicht die Rechnung, sondern ein WETTLAUF: PlayerSetup und
--- KaijuStageOneService hingen beide am Attribut "CurrentZone", und deren Reihenfolge ist
--- nicht zugesichert. Seit dem 19.09.2026 ruft der Service die Skalierung selbst auf,
--- zwischen Abnehmen und Neuaufbau des Modells -- siehe _G.ApplyZoneAwareScale weiter unten.
+-- Amancio hat das am 19.09.2026 ausdruecklich als gesetzt erklaert. Wer hier false
+-- einsetzt, holt beide Fehler zurueck -- das ist keine Option mehr, auch nicht
+-- voruebergehend zum Eingrenzen.
+--
+-- Was daran haengt: die Groesse des Avatars aendert Entfernungen, die anderswo fest
+-- eingestellt sind. Bisher aufgefallen und mitgezogen:
+--   * die Reichweite der ProximityPrompts an den drei Trainingsstationen
+--     (TrainingHandler) -- Roblox misst gegen den Rumpf, und der sitzt jetzt hoch
+--   * die Zielgroesse des TrainingScaleHandlers
+-- Faellt etwas Weiteres auf, gehoert es ebenso nachgezogen -- nicht dieser Schalter.
 local AVATAR_MATCHES_MODEL_HEIGHT = true
 
 -- Teile, die AUSSEHEN wie Avatar-Glieder, aber keine sind: sie haengen direkt am
@@ -326,9 +335,49 @@ local LevelUpEvent = RemoteEventUtils.GetOrCreate("LevelUpEvent")
 --
 -- Der erste Eintrag ist ein Zusatz: die Spezifikation beginnt bei Level 1, das Spiel bei
 -- Level 0. Die 100 sind der kurze Schritt davor, die übrigen neun sind ihre Tabelle.
-local XP_LEVEL_STEPS = { 100, 200, 275, 350, 400, 450, 500, 575, 700, 900 }
+-- ===== Die Tabelle reicht jetzt bis Level 29 (19.09.2026) =====
+--
+-- Bis hierher endete sie bei Level 10, und darueber uebernahm eine geometrische
+-- Fortschreibung mit 1.25 je Stufe. Das sind 9.3-mal so viel XP je zehn Level -- eine
+-- Zahl, die nie jemand entschieden hat, sie fiel aus der Formel.
+--
+-- Die STAEDTE wachsen aber nicht in diesem Tempo. Gemessen gibt ein vollstaendiger
+-- Durchgang in Brasshaven 319 274 XP und in City 547 124 -- das 1.7-fache, nicht das
+-- 9.3-fache. Die Folge: Brasshaven trug den Spieler in 1.8 Durchgaengen von 10 auf 20,
+-- City haette fuer 20 auf 30 NEUN KOMMA SECHS gebraucht. Und 30 auf 40 haette 48.7
+-- Millionen gekostet.
+--
+-- Die Kurve abzuflachen waere der naheliegende Ausweg und war der falsche: ein Wert, der
+-- City richtig macht, macht Brasshaven zu kurz -- dessen 1.8 sind im Spiel bestaetigt.
+--
+-- Stattdessen dasselbe, was fuer Level 0 bis 9 schon galt: EINE ZAHL JE STUFE, von Hand
+-- gesetzt und an einem echten Lauf geeicht. Jeder Zehnerblock gehoert zu einer Stadt und
+-- wird gegen deren GEMESSENEN Durchgang gesetzt:
+--
+--   Level  0-9   Village      Tabelle der Spezifikation, geeicht am City-Broken-Lauf
+--   Level 10-19  Brasshaven   Summe 560 850 XP = 1.8 Durchgaenge (vorher 561 138)
+--   Level 20-29  City         Summe 988 350 XP = 1.8 Durchgaenge (vorher 5 226 044)
+--
+-- Der Block 10-19 behaelt seine SUMME und aendert seine Form: er stieg mit 1.25 und endete
+-- bei 8 382, was jeden Anschluss unmoeglich machte -- der erste Schritt von City haette
+-- darunter liegen muessen, ein Level waere also billiger geworden als das davor. Jetzt
+-- steigt er flacher und endet bei 5 530, und City schliesst bei 5 750 an.
+local XP_LEVEL_STEPS = {
+	-- Level 0-9 -- Village
+	100, 200, 275, 350, 400, 450, 500, 575, 700, 900,
+	-- Level 10-19 -- Brasshaven
+	2350, 2580, 2840, 3120, 3430, 3780, 4160, 4570, 5030, 5530,
+	-- Level 20-29 -- City
+	5750, 5920, 6100, 6280, 6470, 6660, 6860, 7070, 7280, 7500,
+}
 local XP_STEP_SCALE = 15
-local XP_GROWTH_BEYOND_TABLE = 1.25 -- jenseits von Level 10 geometrisch weiter, im Tempo des letzten Schritts
+-- Jenseits von Level 29 geht es wieder geometrisch weiter -- VORLAEUFIG. Der Wert steht
+-- bewusst niedrig, weil er nicht geeicht werden KANN: LargeCity hat 26 Gebaeude und
+-- MegaCity 19, beide sind noch nicht bestueckt, und ihre gemessenen Durchgaenge (584 475
+-- und 26 084 929 XP) sind deshalb keine Aussage ueber das fertige Spiel. Wer diese
+-- Staedte baut, setzt hier den naechsten Zehnerblock von Hand dazu -- so wie die drei
+-- darueber.
+local XP_GROWTH_BEYOND_TABLE = 1.05
 -- ACHTUNG, historischer Wert: die echte Obergrenze ist KEINE Gerade "Level * 10", sondern
 -- die Stützpunkt-Kurve STAT_CAP_BREAKPOINTS in TrainingHandler. Diese Zahl wird zwar
 -- unten nach ReplicatedStorage veröffentlicht, aber von niemandem mehr gelesen -- das HUD

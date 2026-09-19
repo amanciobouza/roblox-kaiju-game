@@ -262,9 +262,11 @@ CityAlertConfig.Cities = {
 	-- statt in fünfzig, der Generator in sieben. Brasshaven war in Trefferzahlen LEICHTER
 	-- als das Dorf davor.
 	--
-	-- Die Stadt trägt den Spieler von Level 10 auf 20. Das kostet 561 138 XP -- das
-	-- 8,4-fache der gesamten Village-Strecke, weil die XP-Kurve ab Level 10 geometrisch mit
-	-- 1.25 wächst.
+	-- Die Stadt trägt den Spieler von Level 10 auf 20. Das kostet 560 850 XP -- das
+	-- 8,4-fache der gesamten Village-Strecke. Die Summe ist seit dem 19.09.2026 von Hand
+	-- gesetzt (PlayerSetup, XP_LEVEL_STEPS, Block 10-19) und bewusst dieselbe wie vorher:
+	-- die 1.8 Durchgänge sind im Spiel bestätigt. Nur die FORM des Blocks ist flacher --
+	-- er endete zu steil, um City daran anschliessen zu können.
 	--
 	-- GEMESSEN am 18.09.2026 (Serverbericht "Durchgang SmallTown", siehe CityAlertService):
 	-- ein voller Durchgang gibt 319 274 XP. Die Strecke sind also 1,8 Durchgänge. Das ist
@@ -480,10 +482,12 @@ CityAlertConfig.Cities = {
 	-- bei 0.39 / 0.90 / 1.38 / 2.20 Durchgaengen -- dieselben Verhaeltnisse wie in
 	-- Brasshaven.
 	--
-	-- OFFEN, und nicht mit Zahlen zu loesen: die Levelstrecke. Von 20 auf 30 kostet
-	-- 5 226 044 XP, ein Durchgang gibt 547 124 -- das sind 9.6 Durchgaenge gegen 1.8 in
-	-- Brasshaven. Der Grund liegt nicht an dieser Stadt, sondern an der XP-Kurve: sie
-	-- waechst ab Level 10 mit 1.25 je Stufe, die Staedte aber nicht im selben Tempo.
+	-- Die Levelstrecke traegt von 20 auf 30 und kostet 988 350 XP -- 1.8 Durchgaenge, genau
+	-- wie Brasshaven. Das war sie nicht immer: bis zum 19.09.2026 waren es 5 226 044 XP
+	-- oder 9.6 Durchgaenge, weil die XP-Kurve ab Level 10 geometrisch mit 1.25 je Stufe
+	-- weiterlief -- 9.3-mal so viel je zehn Level, waehrend die Staedte nur um das
+	-- 1.7-fache wachsen. Die Kurve ist deshalb jetzt eine TABELLE mit einem Block je Stadt
+	-- (PlayerSetup, XP_LEVEL_STEPS); wer diese Zahl aendert, aendert sie dort.
 	City = {
 		ExpectedSkinStage = 3, -- Epochbreaker; die Spec verlangt die Angabe je Stadt
 		AlertThresholdLevel2 = 28000, -- 0.39 Durchgaenge
