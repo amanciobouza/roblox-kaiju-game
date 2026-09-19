@@ -773,7 +773,12 @@ task.spawn(function()
 	-- Der Bericht gibt sie als fertiges Lua aus, zum Herauskopieren. Sobald die Werte in
 	-- einer Config stehen, gehoert die Stadt aus dieser Liste entfernt -- bis dahin ist die
 	-- Ausgabe der einzige Weg, ueberhaupt an sie heranzukommen.
-	local BERICHT_BEIM_START = { "Village" }
+	--
+	-- City steht seit dem 19.09.2026 mit drauf: seine 94 Gebaeude sind mit 290 350
+	-- Lebenspunkten gemessen, aber wie sie sich auf die Gebaeudetypen verteilen, weiss
+	-- ebenfalls nur Studio -- und ohne diese Aufteilung laesst sich nicht sagen, welcher
+	-- Typ zu weich ist, sondern nur, dass der Durchschnitt zu weich ist.
+	local BERICHT_BEIM_START = { "Village", "City" }
 	if #BERICHT_BEIM_START > 0 then
 		local werkzeuge = ServerScriptService:FindFirstChild("StudioTools")
 		local bericht = werkzeuge and werkzeuge:FindFirstChild("GebaeudeBericht")
