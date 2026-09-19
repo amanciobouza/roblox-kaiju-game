@@ -808,6 +808,17 @@ CityAlertConfig.Cities = {
 	-- weniger Minuten durchlaufen wird (der Prolog-Kaiju hat ausserdem sehr hohen Schaden,
 	-- siehe PrologueOrchestrator.lua PROLOGUE_DAMAGE -- Gebäude fallen entsprechend schnell).
 	PrologueCity = {
+		-- ===== Die Prologstadt bleibt GESCRIPTET =====
+		--
+		-- Der Durchgangsbericht meldet fuer sie "Schwellen in Durchgaengen: 0.00" bei
+		-- 185 550 Alarmpunkten je Durchgang. Das sieht nach einem Fehler aus und ist keiner:
+		-- hier steigt der Alarm nicht mit der Zerstoerung, sondern der Prolog schaltet ihn,
+		-- wenn die Erzaehlung so weit ist (PrologueOrchestrator, StoryBeatService).
+		--
+		-- Die Schwellen unten sind deshalb bewusst winzig gegenueber dem, was ein Durchgang
+		-- wert waere -- sie sollen NICHT das Mass sein. Wer sie "auf 0.39 Durchgaenge
+		-- nachzieht" wie bei den anderen fuenf Staedten, baut dem Prolog eine zweite,
+		-- konkurrierende Steuerung ein.
 		AlertThresholdLevel2 = 30,
 		AlertThresholdLevel3 = 100,
 		AlertPerHP = 0.5,

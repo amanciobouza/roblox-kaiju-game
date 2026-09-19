@@ -329,7 +329,19 @@ local function preloadIcons()
 	}) do
 		for name, assetId in pairs(sammlung) do
 			if assetId ~= "" then
-				table.insert(liste, assetId)
+				-- INSTANZEN statt Zeichenketten. Eine Zeichenkette sagt Roblox nur "hol
+				-- diese Nummer" -- nicht, WAS es sein soll. Der Rueckkanal meldete dadurch
+				-- fuer alle 48 Symbole "Failure", obwohl jedes einzelne im Spiel zu sehen
+				-- war. Ein ImageLabel sagt zusaetzlich "es ist ein Bild", und damit stimmt
+				-- die Rueckmeldung.
+				--
+				-- Die Halter haengen nirgends -- fuer PreloadAsync reicht das. (Fuer
+				-- IsLoaded haette es NICHT gereicht, siehe unten; das ist der Unterschied
+				-- zwischen "laedt aktiv" und "wird gezeichnet".)
+				local halter = Instance.new("ImageLabel")
+				halter.Name = name
+				halter.Image = assetId
+				table.insert(liste, halter)
 				namen[assetId] = name
 			end
 		end
@@ -338,11 +350,20 @@ local function preloadIcons()
 	-- PreloadAsync meldet je Datei zurueck, OB sie geladen wurde -- genau das wird hier
 	-- gebraucht.
 	--
-	-- Der erste Versuch pruefte stattdessen IsLoaded an einem frisch angelegten
-	-- ImageLabel. Das war falsch: ein ImageLabel, das nirgends eingehaengt ist, wird nie
-	-- gezeichnet, also laedt Roblox sein Bild gar nicht erst. IsLoaded blieb dadurch bei
-	-- ALLEN auf false -- auch bei denen, die im Spiel einwandfrei zu sehen waren. Eine
-	-- Pruefung, die immer dasselbe sagt, ist keine Pruefung.
+	-- ===== Zwei Anlaeufe, die BEIDE immer dasselbe sagten =====
+	--
+	-- Der erste pruefte IsLoaded an einem frisch angelegten ImageLabel. Ein ImageLabel, das
+	-- nirgends eingehaengt ist, wird nie gezeichnet, also laedt Roblox sein Bild gar nicht
+	-- erst: IsLoaded blieb bei ALLEN auf false.
+	--
+	-- Der zweite uebergab PreloadAsync die Nummern als Zeichenketten. Da meldete der
+	-- Rueckkanal fuer ALLE "Failure" -- ebenfalls auch fuer die, die im Spiel einwandfrei
+	-- zu sehen waren. Eine Pruefung, die immer dasselbe sagt, ist keine Pruefung, und eine,
+	-- die immer Alarm schlaegt, ist schlimmer als gar keine: sie verdeckt den Tag, an dem
+	-- wirklich ein Symbol fehlt.
+	--
+	-- Jetzt gehen Instanzen hinein (siehe oben). Damit weiss Roblox, welche ART Datei
+	-- erwartet wird, und der Rueckkanal stimmt.
 	local fehlend = {}
 	local ok = pcall(function()
 		ContentProvider:PreloadAsync(liste, function(contentId, status)
