@@ -165,7 +165,51 @@ end
 -- `blick` ist entweder eine Tabelle (BLICK_HELD oder eine eigene) oder -- wie bisher --
 -- eine Zahl, die nur den Fuellgrad meint. Die Zahl bleibt zulaessig, weil vier Aufrufer sie
 -- so benutzen und ein Umbau dort nichts verbessern wuerde.
+-- ===== Eine Vorschau ist ein Standbild =====
+-- Sie wird von aussen gedreht (Spin unten, ein PivotTo je Bild). Alles, was sich darin
+-- SELBST bewegt, kaempft dagegen -- und weil es je Bild einen Schritt hinterherlaeuft,
+-- sieht man es als Nachziehen einzelner Teile.
+--
+-- IM SPIEL AUFGEFALLEN am 21.09.2026: "wenn ich Kaiju der Stufe 4 und 5 rotieren sehe,
+-- werden u.a. beim Panzer verzoegert rotiert."
+--
+-- Zwei Ursachen kommen dafuer in Frage, und beide werden hier ausgeschaltet:
+--   * Skripte im Modell. Ein ViewportFrame haengt unter der PlayerGui, LocalScripts darin
+--     LAUFEN also. Die Modelle bringen Steuerungen mit, die Teile bewusst nachziehen
+--     lassen (Traegheit an Waffen und Schwingen -- siehe GuardianRuntimeAnimation).
+--   * Lose Teile. Was nicht verankert ist, kann von einer solchen Steuerung verschoben
+--     werden und bleibt dann hinter dem Rest zurueck.
+--
+-- Welche der beiden es war, sagt die Ausgabe. Raten war hier nicht moeglich: der Effekt
+-- zeigt sich nur im laufenden Spiel.
+local function machStarr(model)
+	local skripte, lose = {}, 0
+	for _, ding in ipairs(model:GetDescendants()) do
+		if ding:IsA("BaseScript") then
+			table.insert(skripte, ding)
+		elseif ding:IsA("BasePart") and not ding.Anchored then
+			ding.Anchored = true
+			lose += 1
+		end
+	end
+
+	-- Erst sammeln, dann loeschen: waehrend des Durchlaufs zu loeschen macht die
+	-- Nachfahren eines geloeschten Skripts in derselben Liste ungueltig.
+	for _, skript in ipairs(skripte) do
+		pcall(function()
+			skript:Destroy()
+		end)
+	end
+
+	if #skripte > 0 or lose > 0 then
+		print(string.format("[Kaiju Debug] Vorschau %s starr gemacht: %d Skripte entfernt, "
+			.. "%d lose Teile verankert.", model.Name, #skripte, lose))
+	end
+end
+
 function ModelPreviewUtils.Fit(viewport, model, container, blick)
+	machStarr(model)
+
 	-- Halbe Drehung, damit die Figur den Betrachter ANSIEHT.
 	--
 	-- In Roblox zeigt die Vorderseite eines Modells entlang der NEGATIVEN Z-Achse

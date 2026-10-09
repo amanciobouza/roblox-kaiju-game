@@ -356,7 +356,7 @@ local LevelUpEvent = RemoteEventUtils.GetOrCreate("LevelUpEvent")
 --
 --   Level  0-9   Village      Tabelle der Spezifikation, geeicht am City-Broken-Lauf
 --   Level 10-19  Brasshaven   Summe 560 850 XP = 1.8 Durchgaenge (vorher 561 138)
---   Level 20-29  City         Summe 988 350 XP = 1.8 Durchgaenge (vorher 5 226 044)
+--   Level 20-29  City         Summe 2 442 000 XP = 1.8 Durchgaenge (vorher 5 226 044)
 --
 -- Der Block 10-19 behaelt seine SUMME und aendert seine Form: er stieg mit 1.25 und endete
 -- bei 8 382, was jeden Anschluss unmoeglich machte -- der erste Schritt von City haette
@@ -368,7 +368,22 @@ local XP_LEVEL_STEPS = {
 	-- Level 10-19 -- Brasshaven
 	2350, 2580, 2840, 3120, 3430, 3780, 4160, 4570, 5030, 5530,
 	-- Level 20-29 -- City
-	5750, 5920, 6100, 6280, 6470, 6660, 6860, 7070, 7280, 7500,
+	-- ===== Nachgezogen nach der HP-Erhoehung (20.09.2026) =====
+	-- Stand auf 5 750 bis 7 500 (Summe 988 350). Das war gegen die ALTE City gerechnet, die
+	-- rund 559 000 Erfahrung je Durchgang gab -- also 1.77 Durchgaenge, genau richtig. Mit
+	-- den neuen Lebenspunkten gibt dieselbe Stadt 1 395 580, und die Strecke schrumpfte auf
+	-- 0.71 Durchgaenge: ein einziger Rundgang deckte mehr als das ganze Jahrzehnt.
+	--
+	-- IM SPIEL BESTAETIGT am 20.09.2026: "auch Leveln war zu schnell. Ich war sehr schnell 27."
+	--
+	-- Die Belohnung waechst mit HP^0.75 (HouseHandler, rewardFromHP) -- 3.4 mal so viele
+	-- Lebenspunkte sind also 2.5 mal so viel Erfahrung. Genau dieser Faktor steht hier.
+	--
+	-- Der Sprung von 5 530 auf 14 200 am Stadtwechsel ist Absicht und kein Bruch: im selben
+	-- Augenblick steigt auch der Ertrag je Gebaeude um das 2.5-Fache. Beide Seiten springen
+	-- zusammen, das Tempo bleibt gleich. Verboten waere der umgekehrte Fall -- ein Level,
+	-- das billiger ist als das davor.
+	14200, 14650, 15050, 15500, 16000, 16450, 16950, 17450, 18000, 18550,
 }
 local XP_STEP_SCALE = 15
 -- Jenseits von Level 29 geht es wieder geometrisch weiter -- VORLAEUFIG. Der Wert steht
@@ -713,7 +728,11 @@ local function zielGroesse(player, skin)
 	if type(debugHoehe) == "number" and debugHoehe > 0 then
 		return debugHoehe / SCALE_REFERENCE_STUDS
 	end
-	return SkinsConfig.GetScale(skin, player:GetAttribute("CurrentZone") == "Sanctuary")
+	-- Geliehene Groesse (Prolog): siehe SkinsConfig.GetScale. Ausserhalb nil.
+	return SkinsConfig.GetScale(
+		skin,
+		player:GetAttribute("CurrentZone") == "Sanctuary",
+		player:GetAttribute("ScaleFromSkinId"))
 end
 
 -- ===== Der Avatar auf die HOEHE des Modells =====
@@ -771,7 +790,8 @@ local function zielSkalierung(player, skin, character, anlass)
 
 	local zielHoehe = StageModels.GetWornHeight(
 		skin.Faction or "Kaiju", skin.Id,
-		player:GetAttribute("CurrentZone") == "Sanctuary")
+		player:GetAttribute("CurrentZone") == "Sanctuary",
+		player:GetAttribute("ScaleFromSkinId"))
 	if not (zielHoehe and zielHoehe > 0) then
 		return targetScale
 	end
@@ -829,8 +849,24 @@ local function applySkinToCharacter(player, character, skinId)
 	end
 
 	local humanoid = character:WaitForChild("Humanoid")
-	humanoid.MaxHealth = skin.Health
-	humanoid.Health = skin.Health
+
+	-- ===== Erzwungene Lebenspunkte =====
+	-- Heute setzt das nur der Prolog. Er zeigt eine Figur, die der Spieler noch nicht hat,
+	-- und braucht dafuer Werte, die zu keiner Stufe gehoeren -- so wie er auch Schaden und
+	-- Groesse eigens setzt.
+	--
+	-- HIER und nicht nachtraeglich im Prolog: diese Funktion laeuft bei jedem Anlass neu
+	-- (Wiedergeburt, Zonenwechsel, Stufenwechsel). Ein Wert, der danach von Hand gesetzt
+	-- wird, ueberlebt den ersten dieser Anlaesse nicht -- und der Prolog hat mit dem Fall
+	-- und der Wiedergeburt gleich mehrere davon.
+	local erzwungen = player:GetAttribute("ForcedMaxHealth")
+	local leben = skin.Health
+	if type(erzwungen) == "number" and erzwungen > 0 then
+		leben = erzwungen
+	end
+
+	humanoid.MaxHealth = leben
+	humanoid.Health = leben
 
 	-- ENTFERNT: Massless=true + CustomPhysicalProperties mit Dichte nahe Null (frühere
 	-- Versuche gegen das Wasser-Hochschleudern). Das hat den Charakter praktisch
@@ -1759,6 +1795,49 @@ local function wendeKapitelAn(player, kapitel)
 	if _G.RecalculateStrength then
 		_G.RecalculateStrength(player)
 	end
+	return true
+end
+
+-- ===== Abgeschlossene Kapitel =====
+-- "CompletedChapters" steht seit jeher im Speicherstand, wurde aber von nichts gelesen --
+-- es gab noch kein Ereignis, das ein Kapitel abschliesst. Mit dem Finale von Kapitel I
+-- (ChapterFinaleService) gibt es das jetzt.
+--
+-- Zwei Zugriffe statt einem direkten Durchgriff auf geladenerStand: der Stand ist hier
+-- lokal und soll es bleiben. Wer von aussen hineinfasst, haengt an einer Datenform, die
+-- sich mit der naechsten Migration aendern kann.
+_G.HasCompletedChapter = function(player, kapitel)
+	local stand = geladenerStand[player]
+	if not stand or not stand.CompletedChapters then
+		return false
+	end
+	return stand.CompletedChapters[kapitel] == true
+end
+
+-- Gibt true zurueck, wenn der Abschluss NEU war -- so kann der Aufrufer unterscheiden,
+-- ob er gerade das erste Mal ausgeloest hat oder ob es laengst stand. Genau daran haengt,
+-- ob das Finale laeuft oder CITY BROKEN.
+_G.MarkChapterComplete = function(player, kapitel)
+	local stand = geladenerStand[player]
+	if not stand then
+		warn(string.format("[Kaiju-Debug] Kapitelabschluss %q fuer %s ohne geladenen Stand "
+			.. "-- nicht gespeichert.", tostring(kapitel), player.Name))
+		return false
+	end
+
+	stand.CompletedChapters = stand.CompletedChapters or {}
+	if stand.CompletedChapters[kapitel] then
+		return false
+	end
+
+	stand.CompletedChapters[kapitel] = true
+	print(string.format("[Kaiju-Debug] Kapitel %q abgeschlossen fuer %s.",
+		tostring(kapitel), player.Name))
+
+	-- Sofort sichern. Ein Kapitelabschluss ist einmalig; ginge er bei einem Absturz
+	-- verloren, liefe das Finale beim naechsten Mal noch einmal -- und ein zweites
+	-- "zum ersten Mal" gibt es nicht.
+	savePlayerData(player, buildPlayerSaveData(player))
 	return true
 end
 

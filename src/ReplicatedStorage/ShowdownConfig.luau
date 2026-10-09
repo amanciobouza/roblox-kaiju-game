@@ -174,6 +174,25 @@ ShowdownConfig.Letterbox = {
 	-- sichtbar und brauchen den Platz.
 	BarHeightFraction = 0.06,
 	FadeDuration = 0.4,
+
+	-- ===== Der Filmstreifen liegt HINTER dem HUD =====
+	-- Die Balken standen auf DisplayOrder 40, das HUD steht auf 0 -- sie lagen also
+	-- darueber. Bei 6 Prozent Balkenhoehe sind das rund 49 Pixel oben und unten, und genau
+	-- dort liegen die zwei Anzeigen, die im Bosskampf gebraucht werden: die Statuszeile
+	-- beginnt bei y 8, und der Zeiger der Hitzeanzeige sitzt ganz unten am Rand.
+	--
+	-- IM SPIEL BESTAETIGT am 20.09.2026: "die schwarzen Filmbalken verdecken das HUD, das
+	-- darf nicht sein, denn es wird fuer den Kampf gebraucht."
+	--
+	-- Ein negativer Wert und nicht ein hoeheres HUD: das HUD anzuheben wurde an zwei
+	-- Stellen ausdruecklich verworfen (siehe SkinSelectionGui und EnergyTypesClient) --
+	-- es haette das ganze HUD ueber Dinge gehoben, die darueber gehoeren. Der Filmstreifen
+	-- bleibt ueber der Spielwelt, denn jedes ScreenGui liegt darueber; er rutscht nur
+	-- unter die Oberflaeche.
+	--
+	-- Der Aufgeben-Knopf (DisplayOrder 45) bleibt davon unberuehrt und sitzt weiterhin
+	-- unterhalb der oberen Balkenkante.
+	DisplayOrder = -10,
 }
 
 -- ===== HUD =====
@@ -184,6 +203,22 @@ ShowdownConfig.HiddenGuis = { "NavigationGui", "TeleportHomeGui", "DebugPanelGui
 
 -- Einzelne Kinder von GameHud, die verschwinden. Der Rest des HUD bleibt stehen.
 ShowdownConfig.HiddenHudChildren = { "CoinsLabel" }
+
+-- ===== Städte ohne Showdown =====
+-- Der Prolog ist voll: eigene Kamerafahrten, eigene Filmstreifen, Textkarten, eine
+-- geskriptete Niederlage. Der Showdown legt noch eine Inszenierung darüber, und zusammen
+-- ist es zu viel -- die Momente stehlen einander die Wirkung, statt sich zu steigern.
+--
+-- Er war hier am 21.09.2026 ausdrücklich freigegeben worden, mit der Begründung, der
+-- Guardian-Auftritt sei der erste Kampf des Spiels und gerade dort solle der Showdown
+-- wirken. Im Spiel erwies sich das als zu dicht (22.09.2026: "Den Showdown sollst Du im
+-- Prologue deaktivieren. Das wird zuviel").
+--
+-- Als Liste und nicht als Bedingung im Dienst: welche Stadt einen Showdown hat, ist eine
+-- Entscheidung über die Stadt, keine Mechanik des Showdowns.
+ShowdownConfig.ExcludedCities = {
+	PrologueCity = true,
+}
 
 -- ===== Debug =====
 

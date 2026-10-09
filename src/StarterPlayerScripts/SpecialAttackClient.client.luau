@@ -562,8 +562,72 @@ local function hasEnergyFor(cost)
 	return (player:GetAttribute("SpecialEnergy") or 0) >= cost
 end
 
+-- ===== Fokus und Flaeche starten nur mit beiden Fuessen am Boden =====
+-- Beide sind mehrsekuendige Auftritte: aufbaeumen, laden, entladen. Das Rig weigert sich
+-- deshalb, sie waehrend eines Sprungs zu spielen -- es verlangt Boden unter der Figur.
+--
+-- Das Spiel loeste sie trotzdem aus. Wer im Sprung die Flaechentaste drueckte, bekam den
+-- Schaden, aber keine Bewegung; die halbe Darstellung wirkte wie ein Abbruch. Amancio hat
+-- es am 21.09.2026 genau so beschrieben: "visuell unterbrochen".
+--
+-- Geprueft wird jetzt gegen DIESELBEN Angaben, an denen auch das Rig entscheidet -- es
+-- schreibt sie selbst ans Modell. Beide sind sich damit einig, statt sich zu
+-- widersprechen; ohne Kaiju-Modell (blosser Avatar) gilt die Sperre gar nicht.
+
+-- Was einen Auftritt gerade verhindert -- oder nil, wenn nichts im Weg steht.
+--
+-- Alle drei Angaben schreibt das Rig selbst ans Modell:
+--   JumpPhase           "Idle", wenn die Figur am Boden steht
+--   SpecialAttackLocked traegt die Art des laufenden Specials, sonst nichts
+--   ComboStep           groesser null, solange ein Schlag laeuft
+local function blockiert()
+	local model = StageModels.FindEquipped(player.Character)
+	if not model then
+		return nil -- blosser Avatar: das Rig entscheidet hier gar nichts
+	end
+	local sprung = model:GetAttribute("JumpPhase")
+	if sprung ~= nil and sprung ~= "Idle" then
+		return "die Figur ist in der Luft"
+	end
+	if model:GetAttribute("SpecialAttackLocked") ~= nil then
+		return "es laeuft bereits ein Special"
+	end
+	local combo = model:GetAttribute("ComboStep")
+	if type(combo) == "number" and combo > 0 then
+		return "ein Schlag laeuft noch"
+	end
+	return nil
+end
+
+-- ===== Der Tastendruck geht nicht verloren, er wartet =====
+-- Ein Auftritt, der mitten im Sprung startet, sieht aus wie ein Abbruch -- das Rig spielt
+-- ihn dort nicht. Ihn schlicht abzulehnen waere aber genauso falsch: der Knopf faende
+-- keine Antwort, und wer im Kampf drueckt, drueckt nicht zufaellig.
+--
+-- Deshalb wird der Wunsch gemerkt und ausgefuehrt, sobald die Figur gelandet ist oder der
+-- Schlag durch ist. Nur eine Anfrage zur Zeit; eine neue ersetzt die alte.
+local WARTEFENSTER = 3 -- Sekunden. Laenger, und der Angriff kaeme aus einer Lage, die mit
+                       -- dem Tastendruck nichts mehr zu tun hat.
+local WARTETAKT = 0.1
+
+local wartend -- { Welcher = "Fokus"|"Flaeche", Bis = os.clock() + WARTEFENSTER }
+
+local function darfSpecial(welcher)
+	local grund = blockiert()
+	if not grund then
+		wartend = nil
+		return true
+	end
+	wartend = { Welcher = welcher, Bis = os.clock() + WARTEFENSTER }
+	print(string.format("[Kaiju Debug] %s wartet -- %s.", welcher, grund))
+	return false
+end
+
 local function triggerFocus()
 	local readyAt = player:GetAttribute("FocusAttackReadyAt") or 0
+	if not darfSpecial("Fokus") then
+		return
+	end
 	if Workspace:GetServerTimeNow() >= readyAt then
 		FocusAttackEvent:FireServer()
 		if hasEnergyFor(focusEnergyCostValue.Value) then
@@ -585,10 +649,37 @@ end
 -- exakt auf dem Beginn der Aufladung statt ein paar Zehntel daneben.
 local function triggerArea()
 	local readyAt = player:GetAttribute("AreaAttackReadyAt") or 0
+	if not darfSpecial("Flaeche") then
+		return
+	end
 	if Workspace:GetServerTimeNow() >= readyAt then
 		AreaAttackEvent:FireServer()
 	end
 end
+
+-- Die Wache ueber den gemerkten Tastendruck. Sie loest ihn aus, sobald nichts mehr im Weg
+-- steht -- und vergisst ihn, wenn das Fenster verstrichen ist.
+task.spawn(function()
+	while true do
+		task.wait(WARTETAKT)
+		if wartend then
+			if os.clock() > wartend.Bis then
+				print(string.format("[Kaiju Debug] %s verworfen -- %.0fs lang war etwas im Weg.",
+					wartend.Welcher, WARTEFENSTER))
+				wartend = nil
+			elseif not blockiert() then
+				local welcher = wartend.Welcher
+				wartend = nil
+				print("[Kaiju Debug] " .. welcher .. " nachgeholt -- die Figur ist wieder frei.")
+				if welcher == "Fokus" then
+					triggerFocus()
+				else
+					triggerArea()
+				end
+			end
+		end
+	end
+end)
 
 -- Für den Prolog: simuliert einen "echten" Button-Druck (inkl. Cooldown-Prüfung) --
 -- nutzt exakt dieselben Funktionen wie ein tatsächlicher Klick auf den jeweiligen Button.

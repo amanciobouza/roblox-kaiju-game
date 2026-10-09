@@ -20,8 +20,13 @@
 
 local Workspace = game:GetService("Workspace")
 local ServerStorage = game:GetService("ServerStorage")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
+
+-- Damit die Bewegung beim Betrachter fluessig ankommt -- siehe dort, warum sie trotzdem
+-- hier beim Server bleibt.
+local SmoothMotion = require(ReplicatedStorage:WaitForChild("SmoothMotion"))
 
 -- Flughöhe skaliert dynamisch mit dem Level des Ziel-Spielers (siehe getFlightHeight
 -- weiter unten): bei Spieler-Level 0 ungefähr Sprunghöhe, bei Spieler-Level 50 ungefähr
@@ -128,6 +133,10 @@ local function spawnHelicopter(cityName)
 		return
 	end
 	model.Parent = Workspace
+	-- Der Client glättet die Bewegung (siehe SmoothMotion). Ohne das ruckelte der Helikopter
+	-- am auffälligsten von allen: er fliegt dauernd, und seine Pose wird bei JEDEM Heartbeat
+	-- neu gesetzt -- repliziert wird sie aber nur mit der Netzwerkrate.
+	SmoothMotion.Track(model)
 	print("[AlertHelicopterService] Helikopter für '" .. cityName .. "' erfolgreich in Workspace gespawnt.")
 
 	-- Helikopter-Sound -- läuft in Dauerschleife, solange der Helikopter aktiv ist,
@@ -347,7 +356,10 @@ local function updateHelicopter(cityName, heli, deltaTime)
 	local lookTarget = Vector3.new(lookWorldX, targetPosition.Y, lookWorldZ)
 
 	local ok = pcall(function()
-		heli.model:PivotTo(CFrame.lookAt(targetPosition, lookTarget))
+		-- Bewegt das Modell UND meldet dem Client das Ziel. Beides ist nötig: der Client
+		-- zeigt die geglättete Pose, der Server braucht die echte für die Flughöhe und die
+		-- Brennpunkt-Rechnung im nächsten Schritt.
+		SmoothMotion.PivotTo(heli.model, CFrame.lookAt(targetPosition, lookTarget))
 	end)
 	if not ok then
 		return

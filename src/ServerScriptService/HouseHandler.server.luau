@@ -1249,11 +1249,25 @@ local function growHouseFromGround(house)
 	-- gekippten) CFrame zurück zur ursprünglichen -- sieht wie ein "Wiederaufrichten" aus,
 	-- quasi die Einsturz-Animation rückwärts. Ersetzt die frühere Skalier-Wachstums-
 	-- Animation komplett.
+	-- ===== Nur zurueckbewegen, was sich bewegt HAT =====
+	-- Hier wurde JEDES Teil mit einem OriginalCFrame zurueckgetweent -- auch die, die beim
+	-- Einsturz nie gefallen sind und laengst an ihrem Platz stehen. Ein Tween auf eine
+	-- CFrame, die das Teil schon hat, bewegt nichts und kostet trotzdem: jedes Bild ein
+	-- Schreibvorgang, und jeder Schreibvorgang auf ein verankertes Teil wirft seinen
+	-- Geometrieblock um (siehe die Begruendung in collapseHouse).
+	--
+	-- Das war die zweite Haelfte desselben Fehlers: ich hatte am 02.10.2026 den Einsturz
+	-- gedeckelt, den Wiederaufbau aber nicht -- und bei 33 zerstoerten Gebaeuden laufen
+	-- staendig Respawns. Gemessen wurde danach KEINE Besserung, und das ist der Grund.
+	--
+	-- Der Vergleich mit dem Original ist dabei der genaue Filter: wer an seinem Platz steht,
+	-- braucht keine Rueckkehr. Transparenz und Kollision werden ohnehin fuer alle
+	-- wiederhergestellt, oben und unten.
 	local uncollapseTweens = {}
 	for _, part in ipairs(house:GetDescendants()) do
 		if part:IsA("BasePart") then
 			local originalCFrame = part:GetAttribute("OriginalCFrame")
-			if originalCFrame then
+			if originalCFrame and not originalCFrame.Position:FuzzyEq(part.CFrame.Position, 0.01) then
 				local tween = TweenService:Create(
 					part,
 					TweenInfo.new(HOUSE_UNCOLLAPSE_DURATION, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -1306,6 +1320,11 @@ ParentGroupService.Init({
 	RESPAWN_TIME = RESPAWN_TIME,
 })
 
+-- Wie viele Teile eines Hauses sichtbar einstürzen. Die Zahl zum Drehen: höher sieht
+-- reicher aus und kostet Bildzeit, niedriger ist billiger und gröber. 40 ist ein Anfang,
+-- kein gemessener Wert -- siehe die Begründung unten in collapseHouse.
+local EINSTURZ_TEILE_MAX = 40
+
 -- Lässt die einzelnen Hausteile in sich zusammenstürzen (kippen + nach unten sinken),
 -- während sie gleichzeitig verblassen -- statt einfach nur transparent zu werden. Nutzt
 -- Tweens statt echter Physik, damit nichts unkontrolliert durch die Karte fliegt/fällt.
@@ -1336,6 +1355,36 @@ local function collapseHouse(house, duration)
 			part.CanCollide = false
 			table.insert(parts, part)
 		end
+	end
+
+	-- ===== Nur die groessten Teile stuerzen sichtbar ein =====
+	-- Hier wurde JEDES Teil getweent -- bei einem Containerblock sind das 840 Stueck
+	-- gleichzeitig, jedes mit CFrame UND Transparenz, ueber ein bis zwei Sekunden.
+	--
+	-- Haeuser sind verankert, und ein verankertes Teil gehoert zu einem verschmolzenen
+	-- Geometrieblock (FastCluster). Bewegt es sich, wird der ganze Block ungueltig und muss
+	-- neu gebaut und zur Grafikkarte hochgeladen werden -- je Bild, je Teil.
+	--
+	-- GEMESSEN am 02.10.2026 im MicroProfiler: beim Zerstoeren lief die Kette
+	-- updateInvalidatedFastClusters -> FastCluster::updateGeometry -> upload quer durch das
+	-- Bild, und die Bildzeit verdoppelte sich von 35 auf 78 ms. Im Stehen war die Kette
+	-- nicht zu sehen. Das ist der Posten.
+	--
+	-- Die groessten Teile tragen die Silhouette -- genau die muessen fallen, damit es nach
+	-- Einsturz aussieht. Der Rest sind Fensterrahmen und Zierrat; die verschwinden in EINEM
+	-- Schritt statt ueber hundert Bilder, verdeckt von der Staubwolke, die ohnehin laeuft.
+	table.sort(parts, function(a, b)
+		return (a.Size.X * a.Size.Y * a.Size.Z) > (b.Size.X * b.Size.Y * b.Size.Z)
+	end)
+
+	if #parts > EINSTURZ_TEILE_MAX then
+		local verborgen = #parts - EINSTURZ_TEILE_MAX
+		for index = EINSTURZ_TEILE_MAX + 1, #parts do
+			parts[index].Transparency = 1
+			parts[index] = nil
+		end
+		print(string.format("[Kaiju-Debug] Einsturz '%s': %d groesste Teile fallen, "
+			.. "%d kleine verschwinden sofort.", house.Name, EINSTURZ_TEILE_MAX, verborgen))
 	end
 
 	for _, part in ipairs(parts) do
@@ -1608,6 +1657,13 @@ local function destroyHouse(house, destroyerPlayer, originPosition, isPassiveDam
 		_G.AddCityAlertForBuilding(house)
 	end
 
+	-- Durchgang-Messung (DurchgangMessung.server.luau): schreibt beim Spielen mit, wie
+	-- lange eine Stadt haelt und wann die Eskalation kommt. Reine Beobachtung -- sie loest
+	-- die Stadt selbst auf und gibt nichts zurueck.
+	if _G.RecordDurchgangDestruction then
+		_G.RecordDurchgangDestruction(house)
+	end
+
 	-- Eskalations-System (Stufe 3/4, siehe EscalationService.lua): Zerstörung zählt für
 	-- den weiterlaufenden Chaos-Wert, unabhängig vom Alert-Fortschritt selbst. cityName
 	-- wird über dasselbe "CityName"-Attribut an einem Vorfahren aufgelöst wie beim
@@ -1872,46 +1928,21 @@ local function damageHouse(house, amount, attackerPlayer, originPosition, isPass
 		_G.NotifyGuardianBuildingAttacked(house, attackerPlayer)
 	end
 
-	-- Stufe-3-Cluster-Aktivierung: Barrikaden sollen NICHT alle gleichzeitig bei Level 3
-	-- erscheinen, sondern erst, sobald eines ihrer Flankengebäude (per ShieldClusterId-
-	-- Attribut markiert) unter 50% HP fällt -- macht das Eskalieren spannender/gestaffelt,
-	-- statt alles auf einmal zu zeigen.
-	local shieldClusterId = house:GetAttribute("ShieldClusterId")
-	if shieldClusterId and _G.TryActivateBarricadeCluster then
-		-- WICHTIG: KEINE "newHealth > 0"-Bedingung mehr -- ein Gebäude, das durch einen
-		-- einzigen, sehr starken Treffer direkt von voller HP auf 0 fällt (newHealth==0),
-		-- hat die 50%-Schwelle logisch ebenfalls unterschritten (und sogar deutlich mehr),
-		-- löste die Cluster-Aktivierung bisher aber NIE aus, weil dieser Fall explizit
-		-- ausgeschlossen war.
-		local maxHealth = house:GetAttribute("MaxHealth") or 1
-		local healthRatio = newHealth / maxHealth
-		if healthRatio >= 0.5 then
-			-- Wieder über der Schwelle (Respawn): der nächste Durchbruch soll erneut melden.
-			house:SetAttribute("ShieldClusterGemeldet", nil)
-		elseif not house:GetAttribute("ShieldClusterGemeldet") then
-			-- NUR beim Übertreten der Schwelle melden, nicht bei jedem weiteren Treffer
-			-- darunter. Vorher schickte ein einzelnes fallendes Haus fünf bis sechs
-			-- identische Meldungen, und der Durchgang vom 17.09.2026 bestand zur Hälfte
-			-- aus diesen Zeilen -- die Balance-Zahlen waren darin nicht mehr zu finden.
-			house:SetAttribute("ShieldClusterGemeldet", true)
-
-			local cityNamePart = house
-			local cityName = nil
-			while cityNamePart do
-				cityName = cityNamePart:GetAttribute("CityName")
-				if cityName then
-					break
-				end
-				cityNamePart = cityNamePart.Parent
-			end
-			if cityName then
-				print("[HouseHandler] '" .. house.Name .. "' (ShieldClusterId='" .. shieldClusterId .. "') unter 50% HP (" .. math.floor(healthRatio * 100) .. "%) -- löse Cluster-Aktivierung aus.")
-				_G.TryActivateBarricadeCluster(cityName, shieldClusterId)
-			else
-				warn("[HouseHandler] '" .. house.Name .. "' hat ShieldClusterId='" .. shieldClusterId .. "', aber KEIN Vorfahre mit 'CityName'-Attribut gefunden -- Cluster-Aktivierung übersprungen.")
-			end
-		end
-	end
+	-- ===== Hier stand die 50-%-Regel =====
+	-- Ein Gebäude mit dem Attribut ShieldClusterId meldete beim Unterschreiten von 50 % HP
+	-- seinen Barrikaden-Cluster, und erst diese Meldung liess ihn hochfahren. Dazu gehörte
+	-- ein Merkmal ShieldClusterGemeldet am Gebäude, damit nicht jeder weitere Treffer
+	-- dieselbe Meldung ein zweites Mal schickte.
+	--
+	-- Entfernt am 05.10.2026 auf Amancios Ansage: die Barrikaden fahren jetzt alle mit dem
+	-- Erreichen der Alarmstufe 3 hoch (siehe BarricadeClusterService, Level-Wechsel, und
+	-- alert.level3.all-barricades-at-once in CityAlertSpec). Damit hat der Schadensschritt
+	-- mit Barrikaden gar nichts mehr zu tun.
+	--
+	-- Das Attribut ShieldClusterId an den Gebäuden in Studio bleibt unangetastet -- es
+	-- schadet nicht und sagt weiterhin, welches Gebäude zu welchem Viertel gehört.
+	-- ShieldClusterGemeldet wird von niemandem mehr gelesen; alte Werte daran laufen
+	-- wirkungslos mit.
 
 	local impactSound = house.PrimaryPart and house.PrimaryPart:FindFirstChild("ImpactSound")
 	if impactSound and impactSound.SoundId ~= "" and impactSound.SoundId ~= "rbxassetid://0" then

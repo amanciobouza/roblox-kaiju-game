@@ -243,10 +243,26 @@ end
 -- Fehlt das Feld, bleibt es bei der Grösse von draussen: lieber sichtbar zu gross als eine
 -- Figur, die aus einer stillen Null verschwindet.
 
-function SkinsConfig.GetScale(skin, isSanctuary)
-	local scale = skin and skin.Scale or 1
-	if isSanctuary and skin and skin.SanctuaryScale then
-		scale = skin.SanctuaryScale
+-- ===== scaleSkinId: das Modell des einen, die Groesse des anderen =====
+-- Der Prolog zeigt eine Figur, die der Spieler zu diesem Zeitpunkt noch gar nicht haben
+-- kann: er soll SEHEN, was er wird, bevor er es ist. Dafuer traegt er dort ein frueheres
+-- Modell in der Groesse eines spaeteren -- sonst muesste eine zweite Groesse in eine
+-- zweite Tabelle, und die beiden liefen auseinander.
+--
+-- Bleibt nil, aendert sich nichts. Und die Rechnung bleibt AN EINER STELLE: wer die
+-- Groesse einer Stufe aendert, aendert sie auch fuer den, der sie sich geliehen hat.
+function SkinsConfig.GetScale(skin, isSanctuary, scaleSkinId)
+	local quelle = skin
+	if scaleSkinId ~= nil then
+		local geliehen = SkinsConfig.GetSkinById(scaleSkinId)
+		if geliehen then
+			quelle = geliehen
+		end
+	end
+
+	local scale = quelle and quelle.Scale or 1
+	if isSanctuary and quelle and quelle.SanctuaryScale then
+		scale = quelle.SanctuaryScale
 	end
 	if scale ~= scale or scale <= 0 then
 		return 1 -- NaN oder Unsinn: lieber Originalgrösse als eine Figur, die verschwindet

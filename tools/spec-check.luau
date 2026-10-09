@@ -25,6 +25,7 @@ local WORKSHOP = "../packages/trenchborn-asset-workshop/src/ReplicatedStorage/Tr
 
 local specs = {
 	require("../src/ReplicatedStorage/Specs/CityAlertSpec"),
+	require("../src/ReplicatedStorage/Specs/CityBrokenSpec"),
 	require("../src/ReplicatedStorage/Specs/PlayerDataSpec"),
 	require("../src/ReplicatedStorage/Specs/ShowdownSpec"),
 	require("../src/ReplicatedStorage/Specs/BalancingSpec"),

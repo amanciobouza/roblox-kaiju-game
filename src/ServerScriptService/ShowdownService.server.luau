@@ -63,12 +63,27 @@ end
 -- Drei Situationen, in denen die Bedingung erfüllt sein kann, ein Showdown aber falsch
 -- wäre. Siehe showdown.excluded-situations in der Spec.
 local function isBlocked(player, cityName)
-	-- Im Prolog: der führt eigene Kamerafahrten UND fügt dem Guardian selbst Schaden zu.
-	-- Zwei Kamerasysteme gegeneinander laufen zu lassen ist der sicherste Weg zu genau
-	-- den Flacker- und Sprungfehlern, vor denen CLAUDE.md warnt.
-	if player:GetAttribute("IsInPrologue") == true then
-		return "Prolog"
+	-- Städte, die keinen Showdown haben -- heute der Prolog. Die Begründung steht bei der
+	-- Liste selbst (ShowdownConfig.ExcludedCities).
+	if ShowdownConfig.ExcludedCities and ShowdownConfig.ExcludedCities[cityName] then
+		return "Stadt ohne Showdown"
 	end
+
+	-- Der Prolog-Sturz bleibt zusätzlich gesperrt, auch wenn die Stadt oben ohnehin schon
+	-- ausgeschlossen ist: "The Fall" führt eine eigene Kamerafahrt, und zwei Kamerasysteme
+	-- gegeneinander laufen zu lassen ist der sicherste Weg zu den Flacker- und
+	-- Sprungfehlern, vor denen CLAUDE.md warnt. Die Sperre gilt am Spieler und damit auch
+	-- dann, wenn der Sturz einmal woanders stattfinden sollte.
+	--
+	-- Doppelt abgesichert: der Orchestrator beendet einen LAUFENDEN Showdown zusätzlich,
+	-- bevor er die Kamera nimmt (siehe triggerTheFall). Diese Prüfung hier verhindert den
+	-- umgekehrten Fall -- dass währenddessen ein neuer beginnt.
+	if player:GetAttribute("PrologueFallInProgress") == true then
+		return "Prolog-Sturz"
+	end
+
+	-- Die Intro-Kinematik braucht keine eigene Sperre: zu dem Zeitpunkt steht noch kein
+	-- Guardian, die Prüfung direkt darunter greift also ohnehin.
 
 	-- Gegen einen besiegten Guardian: er bleibt liegen, bis die Stadt bricht. Schaden auf
 	-- einen Liegenden soll nichts auslösen.
@@ -130,10 +145,25 @@ local function startShowdown(player, cityName)
 		_G.RecordStat(player, "ShowdownsStarted")
 	end
 
+	-- ===== Die beiden Namen fuer die Ankuendigung =====
+	-- Der Auftritt heisst "Showdown -- <Figur> vs. <Guardian>", und beide Namen kennt nur
+	-- der Server: die Fraktion steht als Attribut am Spieler, der Guardian traegt AssetName
+	-- (dieselbe Angabe, ueber die auch das Archiv ihn erkennt).
+	--
+	-- Vom Guardian wird nur das ERSTE Wort genommen: aus "Warden-I Shepherd" wird "Warden".
+	-- Der volle Name gehoert ins Archiv; in einer Ankuendigung, die drei Sekunden steht,
+	-- liest ihn niemand.
+	local gegner = guardianModel and guardianModel:GetAttribute("AssetName")
+	if type(gegner) == "string" then
+		gegner = string.match(gegner, "^[^%-%s]+") or gegner
+	end
+
 	ShowdownStateEvent:FireClient(player, true, {
 		cityName = cityName,
 		guardian = guardianModel,
 		minimumDuration = minimumDuration,
+		spieler = player:GetAttribute("Faction") or "Kaiju",
+		gegner = gegner or "Guardian",
 	})
 
 	print(string.format(

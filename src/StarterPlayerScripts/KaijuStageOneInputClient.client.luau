@@ -75,10 +75,30 @@ end
 -- Jetzt entscheidet die Sperre des Spiels, und gemeldet wird der Sprung genau dann, wenn er
 -- wirklich angestossen wird. Dieselbe Meldung wie beim Avatar-Sprung: PlayerJumpedEvent in
 -- SpecialAttackClient, gesetzt wird der Wert im HouseHandler.
+-- ===== Waehrend Fokus oder Flaeche wird nicht gesprungen =====
+-- Beide sind mehrsekuendige Auftritte, und ein Sprung mittendrin bricht sie sichtbar ab.
+-- Das Rig lehnt den Sprung zwar von sich aus ab, solange ein Special laeuft -- aber die
+-- Sperre des SPIELS (JumpAttackReadyAt) und die Meldung PlayerJumpedEvent liefen trotzdem
+-- los. Von aussen sah es aus, als haette man gesprungen: die Sanduhr am Knopf lief, die
+-- Figur blieb stehen.
+--
+-- Geprueft wird an den Phasen, die das Rig selbst ans Modell schreibt -- dieselbe Angabe,
+-- an der auch SpecialAttackClient entscheidet, ob ein Special starten darf.
+local function specialLaeuft(model)
+	-- "SpecialAttackLocked" traegt die Art des laufenden Specials und ist sonst leer. Das
+	-- ist die Sperre des Rigs selbst -- verlaesslicher als die einzelnen Phasen, weil sie
+	-- auch die Momente dazwischen abdeckt.
+	return model ~= nil and model:GetAttribute("SpecialAttackLocked") ~= nil
+end
+
 local function requestJump()
 	local model = kaijuModel()
 	local remote = remoteOf(model, "RequestJump")
 	if not remote then
+		return false
+	end
+	if specialLaeuft(model) then
+		print("[Kaiju Debug] Sprung abgelehnt -- Fokus oder Flaeche laeuft gerade.")
 		return false
 	end
 	if Workspace:GetServerTimeNow() < (player:GetAttribute("JumpAttackReadyAt") or 0) then

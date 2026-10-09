@@ -121,6 +121,24 @@ return {
 			end,
 		},
 		{
+			id = "alert.level3.all-barricades-at-once",
+			intent = "WEICH: Mit dem Erreichen von Stufe 3 fahren ALLE Barrikaden-Cluster der "
+				.. "Stadt hoch -- gleichzeitig, ohne weitere Bedingung.\n"
+				.. "Amancio am 05.10.2026. Vorher war die Aktivierung gestaffelt: ein Cluster "
+				.. "erschien erst, wenn eines SEINER Flankengebäude unter 50 % HP fiel. Das "
+				.. "sollte das Eskalieren spannender machen, hat aber die Stufe selbst "
+				.. "entwertet -- sie stieg, und sichtbar geschah nichts, bis man zufällig das "
+				.. "richtige Gebäude traf. Die Stufe IST jetzt das Ereignis.\n"
+				.. "Folge für Änderungen: die Bedingung nicht wieder einführen. Soll das "
+				.. "Erscheinen gestaffelt WIRKEN, dann über die Einfahr-Animation der "
+				.. "Barrikaden, nicht über eine versteckte Bedingung.\n"
+				.. "Umgesetzt im Level-Wechsel-Listener von BarricadeClusterService, der "
+				.. "_G.TryActivateBarricadeCluster für jeden Cluster der Stadt ruft. Das ist "
+				.. "seit dem 05.10.2026 der EINZIGE Aufrufer: die 50-%-Meldung im "
+				.. "Schadensschritt des HouseHandler ist ersatzlos entfernt, das Merkmal "
+				.. "ShieldClusterGemeldet wird von niemandem mehr gelesen.",
+		},
+		{
 			id = "alert.level3.redirects-spatially",
 			intent = "WEICH: Barrikaden sollen den Spieler räumlich UMLENKEN, nicht nur seinen "
 				.. "Schaden abfangen. Wenn er sich stattdessen durch die Barrikade beisst und "

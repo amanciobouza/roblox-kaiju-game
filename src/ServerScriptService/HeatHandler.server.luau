@@ -582,11 +582,14 @@ RunService.Heartbeat:Connect(function(dt)
 
 		-- WalkSpeed an die aktuelle Hitzestufe UND den Sprint-Status anpassen -- NICHT
 		-- während des Trainings (das setzt WalkSpeed bewusst auf 0, das dürfen wir nicht
-		-- überschreiben).
+		-- überschreiben) und NICHT, solange das Fangnetz des Guardians hält
+		-- (CityDefenderService, GuardianNetHeld -- aus demselben Grund: diese Schleife hier
+		-- hätte das Festhalten sonst im nächsten Durchlauf wieder aufgehoben).
 		local character = player.Character
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		local isTraining = player:GetAttribute("TrainingStat") or player:GetAttribute("BodyTrainingActive")
-		if humanoid and not isTraining then
+		local isNetHeld = player:GetAttribute("GuardianNetHeld") == true
+		if humanoid and not isTraining and not isNetHeld then
 			local baseWalkSpeed = player:GetAttribute("BaseWalkSpeed")
 			if baseWalkSpeed then
 				local sprintMultiplier = player:GetAttribute("IsSprinting") and SPRINT_SPEED_MULTIPLIER or 1

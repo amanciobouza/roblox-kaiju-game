@@ -202,6 +202,13 @@ Steht eine Stadt auf ihrer Höchststufe und sind **alle** Aufgaben erledigt, bri
 sie für **75 Sekunden** zusammen: freie Zerstörung, keine Eskalation. Danach fällt
 der Alarm auf 0 und der Kreislauf beginnt von vorn.
 
+**Wozu das gut ist, steht in `ReplicatedStorage/Specs/CityBrokenSpec.luau`** –
+Entscheidung vom 07.10.2026. Kurz: die vier Gegenmaßnahmen sind das *Ziel* des
+Spielers, nicht eine Statistik; die gebrochene Stadt gibt den Weg zur nächsten
+frei; und in jeder Stadt liegt ein Fragment, das erst im gebrochenen Zustand
+auffindbar ist. Die Fragmente sind das, was die Eltern dem Jungen mitgeben – über
+alle drei Kapitel. Wer an CITY BROKEN etwas ändert, liest dort zuerst.
+
 **Daraus folgt für Änderungen an Stufe 5**: der Druck dort kommt aus der Gefahr,
 nicht aus dem Ertrag. Belohnungen fließen bewusst weiter. Eine Belohnungssperre
 würde kurz vor der Auszahlung bestrafen und das Vermeiden von Stufe 5 zur

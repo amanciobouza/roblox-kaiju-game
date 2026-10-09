@@ -63,37 +63,41 @@ local CONTACT_GRACE = 0.12
 -- FIND LIFT PARTS
 ------------------------------------------------------------
 
-local function findLiftPart(name)
-
-	while true do
-
-		for _, obj in ipairs(workspace:GetDescendants()) do
-
-			if obj:IsA("BasePart")
-				and obj.Name == name then
-
-				return obj
+-- Streaming kann den Lift erst spaeter liefern. Einmal den Bestand pruefen,
+-- danach nur neu geladene Teile ansehen, statt viermal pro Sekunde die ganze Welt.
+local function findLiftParts()
+	local found = {}
+	local function consider(obj)
+		if (obj.Name == "LiftPlatform" or obj.Name == "LiftPlatform_Inlay")
+			and obj:IsA("BasePart") and obj:IsDescendantOf(workspace) then
+			local previous = found[obj.Name]
+			if not previous or not previous:IsDescendantOf(workspace) then
+				found[obj.Name] = obj
 			end
 		end
+	end
 
+	-- Vor der Bestandssuche verbinden, damit kein neu geladenes Teil verloren geht.
+	local addedConnection = workspace.DescendantAdded:Connect(consider)
+	for _, obj in ipairs(workspace:GetDescendants()) do
+		consider(obj)
+	end
+
+	while true do
+		local platformPart = found.LiftPlatform
+		local inlayPart = found.LiftPlatform_Inlay
+		if platformPart and platformPart:IsDescendantOf(workspace)
+			and inlayPart and inlayPart:IsDescendantOf(workspace) then
+			addedConnection:Disconnect()
+			return platformPart, inlayPart
+		end
+		-- Nur zwei Referenzen pruefen; auch bei fehlendem Lift keine weitere Weltsuche.
 		task.wait(0.25)
 	end
 end
 
-local platform =
-	findLiftPart("LiftPlatform")
-
-local inlay =
-	findLiftPart("LiftPlatform_Inlay")
-
-if not platform or not inlay then
-
-	warn(
-		"[Lift V21 CLIENT] LiftPlatform or LiftPlatform_Inlay not found."
-	)
-
-	return
-end
+local platform, inlay = findLiftParts()
+print("[Kaiju Debug] Lift-Suche bereit: einmaliger Weltdurchlauf, beide Teile geladen.")
 
 ------------------------------------------------------------
 -- CHARACTER REFERENCES

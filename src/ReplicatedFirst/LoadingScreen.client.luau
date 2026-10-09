@@ -472,6 +472,57 @@ local function bilderListe()
 	return liste
 end
 
+-- ===== Die 3D-Modelle =====
+-- Amancio am 04.10.2026: beim Start sind die Modelle noch nicht alle da.
+--
+-- Vorladen heisst bei ihnen etwas anderes als bei den Bildern. Die Figuren und die Guardians
+-- liegen NICHT als Asset auf Robloxʼ Servern, sondern werden aus Code gebaut (StageModels
+-- ruft die GoldenMaster-Bauer des Workshops). ContentProvider hilft dort nicht -- es gibt
+-- keine Datei zu holen. Was Zeit kostet, ist das BAUEN der Geometrie.
+--
+-- Gebaut wurde bisher erst, wenn das erste Mal jemand danach fragte: die Skin-Auswahl beim
+-- Aufbau des HUD, das Archiv beim Öffnen einer Karte. Beides passiert NACH dem
+-- Ladebildschirm -- und genau das sieht man als Modelle, die nachträglich erscheinen.
+--
+-- StageModels merkt sich jede gebaute Vorlage in seinem Modul (prototypes). Module werden je
+-- Client EINMAL ausgewertet, also füllt dieses Tor denselben Zwischenspeicher, aus dem die
+-- Skin-Auswahl später bedient wird. Wer hier baut, baut für alle danach.
+--
+-- Das verlängert den Ladebildschirm um die Bauzeit -- genau der Tausch, um den es geht:
+-- lieber einmal länger warten als im Spiel beim Aufbau zusehen.
+local function baueFigurenModelle()
+	local stageModelsModul = ReplicatedStorage:FindFirstChild("StageModels")
+	local skinsConfigModul = ReplicatedStorage:FindFirstChild("SkinsConfig")
+	if not stageModelsModul or not skinsConfigModul then
+		warn("[LoadingScreen] StageModels/SkinsConfig nicht gefunden -- Modelle werden erst "
+			.. "im Spiel gebaut.")
+		return 0
+	end
+
+	local ok, gebaut = pcall(function()
+		local StageModels = require(stageModelsModul)
+		local SkinsConfig = require(skinsConfigModul)
+		local anzahl = 0
+		for _, skin in ipairs(SkinsConfig.Skins or {}) do
+			-- Vorlagen werden je MODELL gebaut, nicht je Stufe (siehe StageModels.BuildPreview)
+			-- -- mehrfaches Aufrufen für dasselbe Modell kostet deshalb nichts.
+			if StageModels.BuildPreview(skin.Faction or "Kaiju", skin.Id) then
+				anzahl += 1
+			end
+			-- Nach jedem Modell nachgeben: sonst hängt der Zeiger des Ladebildschirms
+			-- während des Bauens, und das ist genau die Stelle, an der er etwas anzeigen soll.
+			task.wait()
+		end
+		return anzahl
+	end)
+
+	if not ok then
+		warn("[LoadingScreen] Modelle vorab bauen fehlgeschlagen: " .. tostring(gebaut))
+		return 0
+	end
+	return gebaut
+end
+
 -- ===== Die Tore =====
 -- Was fertig sein MUSS, bevor der Bildschirm verschwindet. Bilder zuerst und mit dem
 -- grössten Anteil: sie sind der Grund, warum es diesen Bildschirm gibt.
@@ -492,6 +543,10 @@ local TORE = {
 		if not game:IsLoaded() then
 			game.Loaded:Wait()
 		end
+	end },
+	{ text = "Forging the hulls", tun = function()
+		local anzahl = baueFigurenModelle()
+		print(string.format("[Kaiju Debug] Ladebildschirm: %d Figurenmodelle vorab gebaut.", anzahl))
 	end },
 	{ text = "Waking the Trenchborn", tun = function()
 		if not player.Character then

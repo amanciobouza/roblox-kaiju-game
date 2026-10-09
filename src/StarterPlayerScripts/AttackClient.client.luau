@@ -216,7 +216,14 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		if kaijuRemote then
 			-- Erst die Sperre melden, dann das Rig anstossen: so beginnt die Sanduhr im
 			-- selben Moment wie die Bewegung.
-			PlayerPunchedEvent:FireServer()
+			--
+			-- Der Zeitstempel ist eine MESSUNG, keine Mechanik: GetServerTimeNow() lesen
+			-- Client und Server aus derselben Uhr, der Server kann daraus also ausrechnen,
+			-- wie viel Zeit zwischen dem Klick und dem Einschlag vergeht. Anlass ist
+			-- "die Animationen sind stark verzoegert, obwohl die Punkte bereits gezaehlt
+			-- sind" (25.09.2026) -- ohne diese Zahl liesse sich nicht sagen, ob die Zeit im
+			-- Netz, im Rig oder in der Zielsuche vergeht.
+			PlayerPunchedEvent:FireServer(Workspace:GetServerTimeNow())
 			kaijuRemote:FireServer()
 			return
 		end

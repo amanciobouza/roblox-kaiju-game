@@ -172,6 +172,22 @@ local function getAreaAttackRadius(player)
 	radius = radius * (1 + talentRadiusBonus)
 	local effectiveMax = AREA_ATTACK_RADIUS_MAX * (1 + talentRadiusBonus * 0.5)
 
+	-- ===== Ein Faktor fuer EINEN Spieler =====
+	-- Heute setzt ihn nur der Prolog (Faktor 2). Er haengt am SPIELER und nicht an einer
+	-- Konstanten, damit er niemanden sonst auf dem Server trifft -- ausdrueckliche
+	-- Bedingung: "es soll nur fuer den Spieler im Prologue gelten, nicht fuer andere in
+	-- der Welt" (23.09.2026).
+	--
+	-- Der Deckel waechst MIT. Ohne das waere die Verdopplung folgenlos, sobald der Radius
+	-- ihn erreicht -- und genau dort, bei einem hoch trainierten Bein, faellt sie am
+	-- meisten auf. Ein Faktor, der bei starken Figuren stillschweigend nicht mehr wirkt,
+	-- waere schlimmer als gar keiner.
+	local spielerFaktor = player:GetAttribute("AreaRadiusFactor")
+	if type(spielerFaktor) == "number" and spielerFaktor > 0 then
+		radius = radius * spielerFaktor
+		effectiveMax = effectiveMax * spielerFaktor
+	end
+
 	return math.min(radius, effectiveMax)
 end
 
@@ -260,9 +276,39 @@ local function horizontalConeAngle(lookVector, toTarget)
 	return math.deg(math.acos(math.clamp(flatLook.Unit:Dot(flatTarget.Unit), -1, 1)))
 end
 
+-- ===== Erzwungenes Fokusziel (Regie) =====
+-- Der Prolog ist eine INSZENIERUNG: dort soll der Strahl dorthin gehen, wo die Regie ihn
+-- hinhaben will. Bisher wurde die Figur nur zum Leuchtturm gedreht und gehofft -- die
+-- Kegelsuche unten nimmt aber das NÄCHSTE Haus im Kegel und begrenzt zusätzlich auf
+-- FOCUS_ATTACK_RANGE. Sobald es mehr als ein Ziel gibt, ist das nicht mehr steuerbar.
+--
+-- Gilt genau EINEN Fokusangriff lang und wird beim Verbrauch gelöscht: ein liegen
+-- gebliebenes Ziel würde sonst auch den nächsten, vom Spieler ausgelösten Strahl umlenken.
+-- Schwache Schlüssel, damit ein Spieler beim Verlassen nicht am Eintrag hängen bleibt.
+local erzwungenesFokusziel = setmetatable({}, { __mode = "k" })
+
+_G.SetForcedFocusTarget = function(focusPlayer, instance)
+	erzwungenesFokusziel[focusPlayer] = instance
+end
+
 -- Sucht das NÄCHSTE Ziel (Haus oder Spieler in der Arena) innerhalb eines Kegels um die
 -- Blickrichtung -- statt eines exakten Strahls, der Pixel-genaues Zielen erfordern würde.
 local function findFocusTarget(player, rootPart)
+	-- Regie-Ziel geht VOR der Kegelsuche: es soll auch dann treffen, wenn ein näheres Haus
+	-- im Kegel steht oder das Ziel weiter weg ist, als der Fokus normalerweise reicht.
+	local erzwungen = erzwungenesFokusziel[player]
+	if erzwungen then
+		erzwungenesFokusziel[player] = nil
+		local erzwungenesTeil = erzwungen:IsA("Model") and erzwungen.PrimaryPart
+			or (erzwungen:IsA("BasePart") and erzwungen or nil)
+		if erzwungen.Parent and erzwungenesTeil and not erzwungen:GetAttribute("Destroyed") then
+			return { type = "house", instance = erzwungen, trackPart = erzwungenesTeil }
+		end
+		warn("[SpecialAttackHandler] Erzwungenes Fokusziel '" .. erzwungen.Name
+			.. "' ist unbrauchbar (kein PrimaryPart, zerstört oder nicht mehr in der Welt) "
+			.. "-- der Strahl fällt auf die normale Zielsuche zurück.")
+	end
+
 	-- Bein-Training: Ziel ist immer das "LaserTarget"-Teil in der LegTrainingStation --
 	-- rein visuelle Demo, kein echter Schaden (siehe Schadens-Anwendung weiter unten,
 	-- die "trainingTarget" bewusst nicht behandelt).
@@ -474,10 +520,23 @@ end)
 -- Flächenangriff ALS AUCH vom "Combo Chain"-Talent (kostenloser Bonus-Flächenangriff
 -- nach 3 Fokus-Treffern in Folge) genutzt.
 local function performAreaDamage(player, chargePosition, radius, damage)
+	-- ===== Nachweis, dass überhaupt etwas im Radius lag =====
+	-- "Der Flächenangriff macht keinen Schaden" hat zwei ganz verschiedene Ursachen: er
+	-- kommt gar nicht erst an, oder er kommt an und trifft nichts. Ohne diese beiden Zahlen
+	-- ist das von aussen nicht zu unterscheiden -- der Abstand zum NÄCHSTEN verfehlten Haus
+	-- sagt zusätzlich, wie weit der Radius daneben lag.
+	local getroffen = 0
+	local naechsterFehlschlag = math.huge
+
 	if _G.HOUSE_TAG and _G.DamageHouse then
 		for _, house in ipairs(CollectionService:GetTagged(_G.HOUSE_TAG)) do
 			local housePart = house:IsA("Model") and house.PrimaryPart or (house:IsA("BasePart") and house or nil)
-			if housePart and (housePart.Position - chargePosition).Magnitude <= radius then
+			local abstand = housePart and (housePart.Position - chargePosition).Magnitude
+			if abstand and abstand > radius and abstand < naechsterFehlschlag then
+				naechsterFehlschlag = abstand
+			end
+			if housePart and abstand <= radius then
+				getroffen += 1
 				-- WICHTIG: pcall -- ein Fehler bei EINEM Haus darf nicht die gesamte
 				-- Schleife für alle NACHFOLGENDEN Häuser abbrechen (CollectionService
 				-- liefert die Reihenfolge nicht nach Entfernung sortiert -- ohne pcall
@@ -492,6 +551,12 @@ local function performAreaDamage(player, chargePosition, radius, damage)
 			end
 		end
 	end
+
+	print(string.format(
+		"[Kaiju Debug] Flaeche: %d Gebaeude getroffen (Radius %.0f, Schaden %.0f je Ziel). "
+			.. "Naechstes verfehltes Gebaeude: %s.",
+		getroffen, radius, damage,
+		naechsterFehlschlag == math.huge and "keines" or string.format("%.0f Studs", naechsterFehlschlag)))
 
 	if _G.FIRE_ENGINE_TAG and _G.DamageFireEngine then
 		for _, engine in ipairs(CollectionService:GetTagged(_G.FIRE_ENGINE_TAG)) do
@@ -845,27 +910,46 @@ FocusAttackEvent.OnServerEvent:Connect(function(player)
 end)
 
 -- ===== Flächenschaden =====
+--
+-- ===== Warum hier so viel gemeldet wird =====
+-- "Der Flächenangriff macht keinen Schaden" war am 22.09.2026 dreimal gemeldet, und jedes
+-- Mal liess sich von aussen nicht unterscheiden, WO er aussteigt: die vier Prüfungen unten
+-- verliessen die Funktion alle still. Ein stiller Ausstieg sieht im Spiel genauso aus wie
+-- ein Treffer, der nichts trifft -- und genau daran ist zweimal die falsche Stelle
+-- repariert worden. Jede Abweisung nennt deshalb jetzt ihren Grund.
 AreaAttackEvent.OnServerEvent:Connect(function(player)
+	local function abgewiesen(grund)
+		warn(string.format("[Kaiju Debug] Flaeche abgewiesen (%s) -- %s.", player.Name, grund))
+	end
+
 	local character = player.Character
 	if not character then
+		abgewiesen("kein Charakter")
 		return
 	end
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	local rootPart = character:FindFirstChild("HumanoidRootPart")
 	if not humanoid or not rootPart or humanoid.Health <= 0 then
+		abgewiesen(string.format("Humanoid=%s RootPart=%s Leben=%s",
+			tostring(humanoid ~= nil), tostring(rootPart ~= nil),
+			humanoid and string.format("%.0f", humanoid.Health) or "?"))
 		return
 	end
 
 	local now = Workspace:GetServerTimeNow()
-	if now < (player:GetAttribute("AreaAttackReadyAt") or 0) then
-		return -- kurzer Anti-Spam-Schutz
+	local readyAt = player:GetAttribute("AreaAttackReadyAt") or 0
+	if now < readyAt then
+		abgewiesen(string.format("Anti-Spam-Sperre, noch %.2fs", readyAt - now))
+		return
 	end
 
 	-- Special Energy: das ist jetzt die eigentliche Freischaltung (ersetzt den früheren
 	-- langen Cooldown).
 	local areaCost = _G.GetSpecialEnergyCost and _G.GetSpecialEnergyCost("Area") or 40
 	if not (_G.TrySpendSpecialEnergy and _G.TrySpendSpecialEnergy(player, areaCost)) then
-		return -- nicht genug Energy
+		abgewiesen(string.format("zu wenig Special Energy (%s vorhanden, %d noetig)",
+			tostring(player:GetAttribute("SpecialEnergy")), areaCost))
+		return
 	end
 	if _G.OnAreaAttackUsedForAchievements then
 		_G.OnAreaAttackUsedForAchievements(player)
@@ -880,7 +964,45 @@ AreaAttackEvent.OnServerEvent:Connect(function(player)
 	end
 
 	local radius = getAreaAttackRadius(player)
+
+	-- ===== Der Einschlag kann nicht kleiner sein als die Figur, die ihn auslöst =====
+	-- getAreaAttackRadius rechnet den Radius allein aus dem BEIN-Wert, in absoluten Studs.
+	-- Das ging auf, solange die Figur ungefähr Spielergrösse hatte. Im Prolog steht der
+	-- Bein-Wert auf Starter-Niveau -- Radius rund 14 Studs -- während die Figur rund 90
+	-- Studs hoch ist. Die Druckwelle reichte damit nicht einmal über die eigenen Füsse
+	-- hinaus: kein einziges Gebäude lag je im Radius, und der Flächenangriff richtete im
+	-- Prolog nichts aus.
+	--
+	-- Die Untergrenze ist deshalb die Hüfthöhe der Figur über dem Boden (bei 90 Studs Figur
+	-- rund 45). Das ist bewusst KEINE Grössen-Skalierung des Radius -- die wurde oben aus
+	-- gutem Grund entfernt, weil sie das Verhältnis Fokus/Fläche verzerrt. Es ist nur ein
+	-- Boden, der greift, wenn die Formel ein Ergebnis liefert, das kleiner als die Figur
+	-- selbst ist. Bei Spielergrösse liegt er bei rund 3 Studs und damit weit unter dem
+	-- Basiswert von 14 -- dort ändert sich nichts.
+	local hueftHoehe = rootPart.Size.Y * 0.5 + humanoid.HipHeight
+	if radius < hueftHoehe then
+		print(string.format(
+			"[Kaiju Debug] Flaeche: Radius %.0f war kleiner als die Figur -- auf %.0f angehoben.",
+			radius, hueftHoehe))
+		radius = hueftHoehe
+	end
+
+	-- ===== Der Einschlag gehört auf den Boden, nicht auf Hüfthöhe =====
+	-- Hier stand rootPart.Position. Bei einer Figur in Spielergrösse macht das kaum einen
+	-- Unterschied -- seit die Figur aber die Höhe ihres MODELLS hat, schwebt der
+	-- HumanoidRootPart auf Hüfthöhe: beim Prolog-Kaiju rund 45 Studs über dem Boden.
+	-- Die Schadenskugel (Radius rund 33 beim Eintritt) lag damit vollständig in der Luft
+	-- und erreichte nicht einmal das Haus, neben dem die Figur stand. Der Flächenangriff
+	-- sah richtig aus und richtete nichts aus.
+	--
+	-- Dass der Boden der Bezugspunkt ist, stand weiter unten bei PlayAreaDischarge schon --
+	-- aber nur für die OPTIK. Zwei Bezugspunkte für denselben Angriff waren der Fehler;
+	-- jetzt rechnen Bild und Schaden mit demselben Punkt.
 	local chargePosition = rootPart.Position
+		- Vector3.new(0, rootPart.Size.Y * 0.5 + humanoid.HipHeight, 0)
+	print(string.format(
+		"[Kaiju Debug] Flaeche: Ursprung %.0f Studs unter dem Rumpf (Boden y=%.0f), Radius %.0f.",
+		rootPart.Size.Y * 0.5 + humanoid.HipHeight, chargePosition.Y, radius))
 
 	-- ===== Aufladezeit an die Figur anpassen =====
 	-- Traegt der Spieler ein Kaiju-Modell, spielt dessen Rig die Bewegung: aufbaeumen,
@@ -909,6 +1031,12 @@ AreaAttackEvent.OnServerEvent:Connect(function(player)
 
 	task.delay(chargeTime, function()
 		if not character.Parent then
+			-- Der Schaden fällt erst nach der Aufladezeit (beim Kaiju 2.8s). Wird die Figur
+			-- in dieser Zeit ausgetauscht -- Skin-Wechsel, Respawn, Prolog-Übergang --,
+			-- endete der Angriff hier still, nachdem die Entladung bereits zu sehen war.
+			warn(string.format(
+				"[Kaiju Debug] Flaeche abgebrochen (%s) -- die Figur war nach %.1fs Aufladezeit "
+					.. "nicht mehr in der Welt.", player.Name, chargeTime))
 			return
 		end
 
@@ -931,9 +1059,9 @@ AreaAttackEvent.OnServerEvent:Connect(function(player)
 			and KaijuCombatAdapter and KaijuCombatAdapter.PlayAreaDischarge then
 			-- Der Einschlag gehoert auf den Boden, nicht auf Rumpfhoehe: der Rumpf schwebt um
 			-- seine halbe Hoehe plus die Huefthoehe darueber, und beides waechst mit der Stufe.
-			local groundOrigin = rootPart.Position
-				- Vector3.new(0, rootPart.Size.Y * 0.5 + humanoid.HipHeight, 0)
-			KaijuCombatAdapter.PlayAreaDischarge(kaijuModel, groundOrigin)
+			-- Genau dieser Punkt ist seit der Korrektur oben auch der Mittelpunkt des
+			-- Schadens -- deshalb hier chargePosition statt einer zweiten Rechnung.
+			KaijuCombatAdapter.PlayAreaDischarge(kaijuModel, chargePosition)
 
 			-- Der Grund steht seit 1.3.2 am Modell. Ohne ihn liesse sich nicht unterscheiden,
 			-- ob das Rig den Boden ablehnt oder ob die Anfrage gar nicht erst ankam.

@@ -448,6 +448,8 @@ local function beginShowdown(info)
 		letterbox = LetterboxUtils.Create(playerGui, "ShowdownLetterboxGui", {
 			heightFraction = ShowdownConfig.Letterbox.BarHeightFraction,
 			fadeDuration = ShowdownConfig.Letterbox.FadeDuration,
+			-- Hinter das HUD, nicht davor -- die Begruendung steht bei dem Wert selbst.
+			displayOrder = ShowdownConfig.Letterbox.DisplayOrder,
 		})
 	end
 	letterbox.SetVisible(true)

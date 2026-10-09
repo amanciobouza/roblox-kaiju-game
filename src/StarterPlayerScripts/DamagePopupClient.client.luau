@@ -13,6 +13,8 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local ShowDamageEvent = RemoteEventUtils.GetOrCreate("ShowDamageEvent")
 local NumberFormat = require(ReplicatedStorage:WaitForChild("NumberFormat"))
+-- Fuer GetFigurePoint: wo die SICHTBARE Figur ist, nicht der versteckte Avatar (siehe dort).
+local StageModels = require(ReplicatedStorage:WaitForChild("StageModels"))
 local camera = workspace.CurrentCamera
 
 -- Kurzes Kamerawackeln beim Finisher (dritter Combo-Schlag) -- macht den Treffer auch im
@@ -61,20 +63,26 @@ local function showDamagePopup(amount, isFinisher)
 	if not character then
 		return
 	end
-	local head = character:FindFirstChild("Head")
-	if not head then
+	-- ===== Die Zahl haengt am SKIN, nicht am Avatar (02.10.2026) =====
+	-- Sie hing am "Head" des versteckten Avatars. Der ist auf die Hoehe des Kaiju skaliert,
+	-- und die Standard-Laufanimation von Roblox bewegt ihn -- bei einem Faktor von bis zu
+	-- achtzehn wurde aus dem kleinen Nicken ein Ausschlag von mehreren Studs. Die Zahlen
+	-- zitterten entsprechend.
+	--
+	-- Jetzt traegt sie die HumanoidRootPart, die keine Animation anfasst, und ihre Hoehe
+	-- kommt aus dem sichtbaren Modell (StageModels.GetFigurePoint). Das ist derselbe Weg,
+	-- den dort schon die Absorb-Baender und der Kamerafokus gehen.
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if not root then
 		return
 	end
 
-	-- Höhe des Charakters selbst ermitteln (wie beim Namens-Tag), damit die Basis-Höhe
-	-- der Schadenszahlen bei großen/kleinen Skins automatisch mitwächst/-schrumpft.
+	-- Ueber dem Scheitel: 1.0 ist die Figurenhoehe, der Zuschlag haelt Abstand zum
+	-- Namens-Schild. Gemessen wird in Weltachsen, deshalb unten StudsOffsetWorldSpace.
+	local scheitel = StageModels.GetFigurePoint(character, 1.0)
 	local baseClearance = POPUP_BASE_CLEARANCE
-	local ok, cframe, size = pcall(function()
-		return character:GetBoundingBox()
-	end)
-	if ok then
-		local topY = cframe.Position.Y + size.Y / 2
-		baseClearance = (topY - head.Position.Y) + POPUP_BASE_CLEARANCE
+	if scheitel then
+		baseClearance = (scheitel.Y - root.Position.Y) + POPUP_BASE_CLEARANCE
 	end
 
 	local slot = activePopupSlots
@@ -85,15 +93,23 @@ local function showDamagePopup(amount, isFinisher)
 	local fanIndex = slot % 5
 	local horizontalOffset = (fanIndex - 2) * 1.4 + (math.random(-15, 15) / 100)
 	local verticalOffset = baseClearance + (fanIndex % 3) * 0.7
-	local startOffset = Vector3.new(horizontalOffset, verticalOffset, 0)
 
 	local billboard = Instance.new("BillboardGui")
 	billboard.Name = "DamagePopup"
 	-- Finisher-Treffer (dritter Combo-Schlag): deutlich größere Anzeige, wie im Training
 	billboard.Size = isFinisher and UDim2.new(0, 150, 0, 60) or UDim2.new(0, 100, 0, 40)
-	billboard.StudsOffset = startOffset
+	-- ===== Hoehe in Weltachsen, Auffaecherung im Kameraraum =====
+	-- Zwei verschiedene Versatz-Eigenschaften, und das mit Absicht. Die HOEHE muss in
+	-- Weltachsen stehen (StudsOffsetWorldSpace): sie ist aus einer gemessenen Weltposition
+	-- berechnet, und im Kameraraum wuerde sie beim Drehen der Kamera verkippen.
+	--
+	-- Das Auffaechern mehrerer gleichzeitiger Zahlen bleibt dagegen im Kameraraum
+	-- (StudsOffset) -- dort ist "nebeneinander" immer das, was der Zuschauer als
+	-- nebeneinander sieht, aus welcher Richtung er auch schaut.
+	billboard.StudsOffsetWorldSpace = Vector3.new(0, verticalOffset, 0)
+	billboard.StudsOffset = Vector3.new(horizontalOffset, 0, 0)
 	billboard.AlwaysOnTop = true
-	billboard.Parent = head
+	billboard.Parent = root
 
 	local label = Instance.new("TextLabel")
 	label.Size = UDim2.new(1, 0, 1, 0)
@@ -113,7 +129,11 @@ local function showDamagePopup(amount, isFinisher)
 
 	local tweenInfo = TweenInfo.new(FLOAT_DURATION, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
-	TweenService:Create(billboard, tweenInfo, { StudsOffset = startOffset + Vector3.new(0, FLOAT_DISTANCE, 0) }):Play()
+	-- Nach oben wandert sie in Weltachsen -- dieselbe Eigenschaft, in der auch ihre
+	-- Starthoehe steht. Die Auffaecherung im Kameraraum bleibt dabei unberuehrt.
+	TweenService:Create(billboard, tweenInfo, {
+		StudsOffsetWorldSpace = Vector3.new(0, verticalOffset + FLOAT_DISTANCE, 0),
+	}):Play()
 	TweenService:Create(label, tweenInfo, { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
 
 	task.delay(FLOAT_DURATION, function()

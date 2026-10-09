@@ -26,6 +26,11 @@
 --   fadeIn / fadeOut  -- Schwarzblende ein-/ausblenden, { duration }
 --   wait              -- reine Pause, { duration }
 --   text              -- Textzeile mittig einblenden, { text, duration, fadeIn, fadeOut }
+--                         Ein "\n" im Text macht daraus eine zweizeilige Karte, deren
+--                         zweite Zeile zeitversetzt dazukommt (lineDelay). Dazu passend
+--                         "lineSoundId" (+ optional "lineSoundVolume"): derselbe Ton
+--                         erklingt zu JEDER der beiden Zeilen, jeweils im Moment ihres
+--                         Erscheinens.
 --   chapterCard       -- grosse Kapitel-Karte, { number, title, subtitle, duration, fadeIn, fadeOut }
 --   presenterCard     -- leiser Vorspann, { name, sub, duration, fadeIn, fadeOut }. Klein und
 --                         grau statt gross und weiss -- er kündigt einen Urheber an, keine
@@ -33,6 +38,14 @@
 --   sound             -- Sound abspielen, { soundId, volume, looped, wait } -- "wait=true"
 --                         lässt die Sequenz auf das Sound-Ende warten, sonst läuft er im
 --                         Hintergrund weiter (z.B. für ein durchgehendes Ticken)
+--
+-- JEDER Schritt kennt zusätzlich "parallel = true": er wird gestartet, und die Sequenz
+-- läuft sofort weiter, statt auf ihn zu warten. Gedacht für etwas, das ÜBER einer ohnehin
+-- laufenden Strecke liegen soll -- der Vorspann über dem Uhrticken im Prolog. Ohne das
+-- müsste man dieselbe Zeit zweimal ausgeben.
+--
+-- Vorsicht bei zwei parallelen Schritten, die dieselbe Beschriftung benutzen: sie
+-- überschreiben sich gegenseitig, und die Sequenz merkt davon nichts.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))

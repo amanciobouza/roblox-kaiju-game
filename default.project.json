@@ -55,7 +55,10 @@
     },
     "ServerStorage": {
       "$className": "ServerStorage",
-      "$ignoreUnknownInstances": true
+      "$ignoreUnknownInstances": true,
+      "MegaCityFinalAssembly": {
+        "$path": "assets/mega-city/package.project.json"
+      }
     },
     "StarterGui": {
       "$className": "StarterGui",
@@ -88,6 +91,8 @@
         "SignalBehavior": "Deferred",
         "StreamOutBehavior": "Opportunistic",
         "StreamingEnabled": true,
+        "StreamingMinRadius": 64,
+        "StreamingTargetRadius": 256,
         "StreamingIntegrityMode": "PauseOutsideLoadedArea",
         "WorldPivotData": {
           "OptionalCFrame": {

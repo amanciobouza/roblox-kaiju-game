@@ -34,6 +34,9 @@ local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 
 local CityAlertConfig = require(ReplicatedStorage:WaitForChild("CityAlertConfig"))
+-- Glaettung der Darstellung beim Betrachter. Die Bewegung selbst bleibt serverseitig --
+-- an der Position des Guardians haengt seine Reichweite (siehe dort).
+local SmoothMotion = require(ReplicatedStorage:WaitForChild("SmoothMotion"))
 local ShowdownConfig = require(ReplicatedStorage:WaitForChild("ShowdownConfig"))
 
 local GUARDIAN_PROTECT_TAG = "GuardianProtect"
@@ -293,17 +296,56 @@ local GUARDIAN_LADDER = {
 	{ asset = "SovereignApex", label = "Sovereign-V Apex" },
 }
 
+-- ===== Wie eine Generation kaempft =====
+-- Amancio am 22.09.2026: Nr. 1 ist Nahkaempfer. Nr. 2 und 5 stehen dazwischen -- sie
+-- suchen den Koerperkontakt, halten aber auch gern Abstand. Nr. 3 und 4 sind Fernkaempfer.
+--
+-- Das deckt sich mit ihrer Ausruestung: der Warden traegt einen Schockstock, der Marshal
+-- Schild UND Pulskanone, der Sovereign eine Lanze, die sticht UND strahlt -- waehrend der
+-- Aegis (Ionenkanonen, Raketensalve) und der Bastion (Schienenkanone) auf Entfernung
+-- gebaut sind.
+--
+-- Die ZAHLEN bleiben in CityAlertConfig; hier steht nur, wie eine Generation sie nutzt.
+-- Alle drei Abstaende sind Vielfache von GuardianRepulsorRadius -- so bleibt der Stil
+-- ueber alle Staedte gleich, waehrend die Staerke der Stadt gehoert.
+--
+--   Fernreichweite  ab dieser Entfernung feuert der Flaechenangriff
+--   Wunschabstand   wo er stehen BLEIBEN will; 0 heisst "heran bis auf Schlagreichweite"
+--   Abstandsposten  wohin ein Mischtyp nach einem Nahkampftreffer zurueckweicht
+--   HaeltAbstand    wie lange er dort bleibt, in Sekunden; 0 heisst "er weicht nie"
+local GUARDIAN_KAMPFSTIL = {
+	WardenShepherd = { Art = "Nahkaempfer", Fernreichweite = 1.3, Wunschabstand = 0, Abstandsposten = 0, HaeltAbstand = 0 },
+	MarshalRoadblock = { Art = "Mischtyp", Fernreichweite = 2.4, Wunschabstand = 0, Abstandsposten = 1.6, HaeltAbstand = 5 },
+	AegisInterceptor = { Art = "Fernkaempfer", Fernreichweite = 3.2, Wunschabstand = 2.6, Abstandsposten = 2.6, HaeltAbstand = 0 },
+	BastionColossus = { Art = "Fernkaempfer", Fernreichweite = 3.2, Wunschabstand = 2.6, Abstandsposten = 2.6, HaeltAbstand = 0 },
+	SovereignApex = { Art = "Mischtyp", Fernreichweite = 2.4, Wunschabstand = 0, Abstandsposten = 1.6, HaeltAbstand = 5 },
+}
+
+-- Guardians ohne Generation -- die aus ServerStorage geklonten Modelle -- verhalten sich
+-- wie bisher: heran bis auf Schlagreichweite, Flaechenangriff kurz davor.
+local KAMPFSTIL_RUECKFALL =
+	{ Art = "Nahkaempfer", Fernreichweite = 1.3, Wunschabstand = 0, Abstandsposten = 0, HaeltAbstand = 0 }
+
+local function kampfstil(guardian)
+	return GUARDIAN_KAMPFSTIL[guardian.assetName] or KAMPFSTIL_RUECKFALL
+end
+
 -- In Kapitel I steht der erste Guardian in City -- Position 3 der Staffel oben.
 local FIRST_GUARDIAN_CITY_IN_CHAPTER_1 = 3
 
--- Ausserhalb der Groessenstaffel: die PrologueCity bekommt IMMER den Warden-I.
+-- Ausserhalb der Groessenstaffel: die PrologueCity bekommt IMMER denselben Guardian.
 --
 -- Der Prolog ist eine geskriptete Sequenz und der erste Guardian, den ein Spieler
 -- ueberhaupt sieht -- er soll die Einfuehrung sein und nicht davon abhaengen, welches
 -- Kapitel jemand gerade spielt. Ein Ronin, der den Prolog nochmal ansieht, trifft
 -- denselben Gegner wie beim ersten Mal.
+--
+-- Seit dem 21.09.2026 ist das der MARSHAL-II ROADBLOCK statt des Warden-I: er bringt
+-- RiotShield und PulseCannon mit (MarshalRoadblockGameplayConfig), also Schild und Kanone.
+-- Der Prolog zeigt damit gleich beides -- etwas, das der Spieler brechen muss, und etwas,
+-- das zurueckschiesst.
 local FIXED_GUARDIAN_CITIES = {
-	PrologueCity = 1, -- Index in GUARDIAN_LADDER
+	PrologueCity = 2, -- Index in GUARDIAN_LADDER -- Marshal-II Roadblock
 }
 
 local cityLadderIndex = {}
@@ -741,6 +783,25 @@ local function findProtectedBuildings(cityName)
 	return result, true
 end
 
+-- ===== Schild-Block: wer sich hinter seinen Schild stellt =====
+-- Der Marshal-II traegt einen "RiotShield" am linken Unterarm (MarshalRoadblockGoldenMaster),
+-- die gemeinsame Animationsbibliothek hat dafuer "ShieldBlock", und das Client-Verzeichnis in
+-- GuardianRuntimeAnimation kennt den Namen. Benutzt hat das bisher niemand: getroffen wurde
+-- immer nur "DamageReact" gespielt, der Schild haette genauso gut fehlen koennen.
+--
+-- Bewusst NUR der Marshal:
+--   * Warden-I hat keinen Schild, sondern einen Schockstock.
+--   * Aegis-III hat einen -- aber sein Schildfeld laeuft ueber setAegisShieldDeployed als
+--     Reaktion auf AbilityRequested. Zwei Wege fuer dieselbe Sache waeren ein Fehler.
+--   * Bastion und Sovereign haengen an eigenen Runtime-Controllern mit eigenen
+--     Animationsnamen -- "ShieldBlock" kennen die gar nicht.
+local SHIELD_BLOCK_ASSETS = { MarshalRoadblock = true }
+
+-- So lange bleibt die Block-Haltung stehen, bevor Stehen/Laufen sie wieder abloest. Laenger
+-- als die Drosselung der Trefferreaktion (0.6s): bei anhaltenden Schlaegen soll er
+-- durchgehend hinter dem Schild bleiben und nicht dazwischen in Idle zurueckfallen.
+local SHIELD_BLOCK_HOLD = 1.2
+
 -- ===== Schaden-API =====
 local function damageGuardian(cityName, amount, attackerPlayer)
 	local guardian = activeGuardians[cityName]
@@ -774,12 +835,43 @@ local function damageGuardian(cityName, amount, attackerPlayer)
 	-- hinauskommen.
 	if guardian.animation and os.clock() - (guardian.lastDamageReactAt or 0) >= 0.6 then
 		guardian.lastDamageReactAt = os.clock()
-		guardian.animation.PlayAnimation("DamageReact")
+		-- Solange sein Schild traegt, geht er hinter den Schild, statt zu zucken. Der
+		-- Schildvorrat wird erst WEITER UNTEN abgezogen -- hier gilt also der Stand VOR
+		-- diesem Treffer, und genau der ist gemeint: auch der Schlag, der den Schild
+		-- leert, wird noch geblockt. Danach zuckt er wieder, und das ist der sichtbare
+		-- Unterschied zwischen "Schild haelt" und "es geht an die HP".
+		if SHIELD_BLOCK_ASSETS[guardian.assetName] and guardian.shield > 0 then
+			-- Die Haltung sperren, sonst schiebt der naechste Bild-Durchlauf sofort
+			-- wieder Idle oder Walk darueber (siehe playGuardianLoop).
+			guardian.animationBusyUntil = os.clock() + SHIELD_BLOCK_HOLD
+			guardian.animation.PlayAnimation("ShieldBlock")
+			if not guardian.shieldBlockGemeldet then
+				guardian.shieldBlockGemeldet = true
+				print(string.format(
+					"[Kaiju Debug] Guardian %s blockt mit dem Schild (Schild %.0f von %.0f).",
+					cityName, guardian.shield, guardian.maxShield or 0))
+			end
+		else
+			guardian.animation.PlayAnimation("DamageReact")
+		end
 		guardian.loopAnimation = nil
 	end
 
+	-- Zeitstempel fuer die Regeneration am Ende der Datei: sie setzt erst
+	-- GUARDIAN_REGEN_DELAY Sekunden nach dem letzten Treffer ein, damit er sich nicht
+	-- mitten im Kampf zwischen zwei Schlaegen erholt.
+	guardian.lastDamageAt = os.clock()
+
 	if guardian.shield > 0 then
 		guardian.shield = math.max(guardian.shield - amount, 0)
+		if guardian.shield <= 0 and guardian.shieldBlockGemeldet then
+			-- Zuruecksetzen, damit die Meldung wiederkommt, wenn der Schild nachgeladen
+			-- hat (GuardianShieldRegenDelay) und er sich erneut dahinterstellt.
+			guardian.shieldBlockGemeldet = false
+			print(string.format(
+				"[Kaiju Debug] Guardian %s: Schild durchbrochen -- ab jetzt geht es an die HP.",
+				cityName))
+		end
 	else
 		guardian.hp = math.max(guardian.hp - amount, 0)
 	end
@@ -865,6 +957,16 @@ local function damageGuardian(cityName, amount, attackerPlayer)
 		if guardian.animation then
 			-- Mit Rig uebernimmt die Defeat-Animation das Zusammenbrechen. Ein zusaetzliches
 			-- PivotTo wuerde dagegen arbeiten und die Pose verbiegen.
+			--
+			-- Die Dauerschleife MUSS dabei geleert werden. Sonst bleibt "Walk" als laufend
+			-- eingetragen -- und eine Schleife, die noch als aktiv gilt, wird von
+			-- playGuardianLoop nie neu gesetzt und damit auch nie beendet.
+			--
+			-- Von Hand und nicht ueber playGuardianAction: das steht erst 700 Zeilen
+			-- weiter unten, und ein Name vor seiner Deklaration loest in Lua still auf nil
+			-- auf (vom Quelltext-Pruefer hier auch prompt gemeldet).
+			guardian.loopAnimation = nil
+			guardian.animationBusyUntil = math.huge
 			guardian.animation.PlayAnimation("Defeat")
 		else
 			-- Ohne Rig (ServerStorage-Platzhalter) bleibt das Umkippen von Hand.
@@ -1258,6 +1360,13 @@ local WALK_LEG_SWING_DEGREES = 20
 local WALK_BODY_BOB_STUDS = 0.45
 local WALK_BLEND_PER_SECOND = 4 -- wie schnell die Animation ein- und ausblendet
 
+-- ===== Bewegung ueber die Wurzel statt ueber das ganze Modell =====
+-- Gilt nur fuer Guardians MIT Rig (siehe stepTowards). Ein Schalter und keine feste
+-- Entscheidung, weil ich die Annahme dahinter nicht pruefen kann, ohne es zu sehen: dass
+-- alle Teile des Rigs als EIN Koerper an der Wurzel haengen. Stimmt das nicht, bleibt beim
+-- Laufen etwas stehen -- dann hier auf false, und es ist wieder wie vorher.
+local BEWEGUNG_UEBER_WURZEL = true
+
 local WALK_LEG_PART_SUFFIXES = {
 	"UpperLeg", "ThighPlate",
 	"KneeBearing", "KneeGuard", "KneeJointCover", "KneeJointHub",
@@ -1457,6 +1566,108 @@ local GUARDIAN_ATTACK_ANIMATIONS = {
 -- deshalb hier und nicht in CityAlertConfig -- dort stehen die Kampfwerte.
 local WARNING_PULSE_TELEGRAPH = 0.6
 
+-- ===== Das Fangnetz haelt fest =====
+-- Die Optik des Netzes kommt aus dem Werkstatt-Modul, die Wirkung steht hier.
+--
+-- Festgehalten wird ueber WalkSpeed -- derselbe Weg, den auch die Trainingsstationen gehen.
+-- Und wie dort braucht es ein Attribut dazu: der HeatHandler schreibt WalkSpeed in seiner
+-- Schleife fortlaufend neu (BaseWalkSpeed mal Hitze mal Sprint) und wuerde das Festhalten
+-- sonst im naechsten Durchlauf wieder aufheben. Er setzt beim Training bereits aus; das
+-- Attribut hier steht in derselben Prueffung.
+--
+-- ===== Warum nichts gemerkt wird =====
+-- Naheliegend waere, das Tempo vor dem Fangen zu merken und danach zurueckzuschreiben. Genau
+-- das hat im Bestand schon einmal Schaden angerichtet (siehe PlayerSetup, _G.RecalculateJumpPower):
+-- wer sich einen Wert merkt, waehrend ein anderes System ihn gerade auf 0 gesetzt hat, merkt
+-- sich die 0 und macht sie dauerhaft. Deshalb wird beim Loesen neu berechnet, nicht
+-- zurueckgeschrieben.
+local NET_HELD_ATTRIBUTE = "GuardianNetHeld"
+
+-- ===== Wie stark das Netz bremst =====
+-- Amancio am 27.09.2026: auf 20 % des normalen Tempos. Hier stand 0 -- die Figur blieb also
+-- schlicht stehen. Ein Fangnetz soll zaeh machen, nicht einfrieren; erst wenn man sich noch
+-- bewegen KANN, liest sich die Behinderung ueberhaupt als Netz.
+--
+-- Der Wert gehoert der Faehigkeit, nicht der Stadt: 20 % sind in jeder Stadt 20 %, waehrend
+-- die Staerke einer Stadt ueber Schaden und Lebenspunkte ausgedrueckt wird. Deshalb steht er
+-- hier und nicht in CityAlertConfig -- dieselbe Ueberlegung wie bei GUARDIAN_KAMPFSTIL.
+--
+-- Die DAUER kommt weiter aus dem Workshop-Config und wird von OnClosed mitgeliefert, damit
+-- die Optik des Netzes und die Bremswirkung genau gleich lang laufen.
+local NETZ_TEMPO_ANTEIL = 0.2
+
+-- ===== Warum das Tempo je Bild neu gesetzt wird =====
+-- Das Rig des Kaiju (KaijuStageOneRig, Paketstand 1.3.4) schreibt humanoid.WalkSpeed in
+-- JEDEM Durchlauf seiner Schleife auf einen festen Wert -- 10 beim Gehen, 16 beim Laufen --
+-- und kennt weder das Fangnetz noch den HeatHandler. Ein einmal gesetzter Wert waere nach
+-- einem Bild wieder weg.
+--
+-- Genau daran war vom Netz nichts zu spueren, obwohl es auf 0 gesetzt hat: der Server setzte
+-- 0, das Rig im selben Durchlauf wieder 10. Es fiel nur niemandem auf, weil beides
+-- serverseitig laeuft und keine Fehlermeldung entsteht.
+--
+-- Solange das Rig keinen Haken fuer eine Tempo-Aenderung anbietet, haelt diese Schleife den
+-- Wert dagegen. Sie laeuft ausschliesslich, solange ein Netz haelt.
+local function holdTargetInNet(player, duration)
+	local character = player and player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		return
+	end
+
+	-- Grundlage ist das Grundtempo der Figur, nicht der gerade gemessene Wert: der koennte
+	-- vom Rig (10), von der Hitze oder von einem Training stammen. Siehe den Hinweis oben --
+	-- wer sich einen Augenblickswert merkt, merkt sich irgendwann eine 0.
+	local grundTempo = player:GetAttribute("BaseWalkSpeed") or humanoid.WalkSpeed
+	local netzTempo = grundTempo * NETZ_TEMPO_ANTEIL
+
+	player:SetAttribute(NET_HELD_ATTRIBUTE, true)
+	humanoid.WalkSpeed = netzTempo
+
+	local bremse
+	bremse = RunService.Heartbeat:Connect(function()
+		-- Das Attribut ist die einzige Wahrheit darueber, ob noch gebremst wird -- so endet
+		-- die Schleife auch dann, wenn das Loesen unten aus einem anderen Grund kommt.
+		if player:GetAttribute(NET_HELD_ATTRIBUTE) ~= true or not player.Parent then
+			bremse:Disconnect()
+			return
+		end
+		local jetzigerCharakter = player.Character
+		local jetzigerHumanoid = jetzigerCharakter and jetzigerCharakter:FindFirstChildOfClass("Humanoid")
+		if not jetzigerHumanoid or jetzigerHumanoid.Health <= 0 then
+			-- Gestorben oder neu gespawnt: das Netz haelt niemanden mehr.
+			player:SetAttribute(NET_HELD_ATTRIBUTE, nil)
+			bremse:Disconnect()
+			return
+		end
+		if jetzigerHumanoid.WalkSpeed ~= netzTempo then
+			jetzigerHumanoid.WalkSpeed = netzTempo
+		end
+	end)
+
+	print(string.format(
+		"[Kaiju-Debug] Fangnetz bremst %s auf %.1f von %.1f (%.0f %%) fuer %.1f s.",
+		player.Name, netzTempo, grundTempo, NETZ_TEMPO_ANTEIL * 100, duration or 0))
+
+	task.delay(duration or 4, function()
+		if not player.Parent then
+			return
+		end
+		player:SetAttribute(NET_HELD_ATTRIBUTE, nil)
+
+		-- Der HeatHandler setzt das genaue Tempo im naechsten Durchlauf selbst. Bis dahin --
+		-- und fuer den Fall, dass er gar nicht laeuft -- das Grundtempo: lieber einen Moment
+		-- lang ohne Hitze-Aufschlag laufen als fuer immer stehenbleiben.
+		local currentCharacter = player.Character
+		local currentHumanoid = currentCharacter and currentCharacter:FindFirstChildOfClass("Humanoid")
+		local baseWalkSpeed = player:GetAttribute("BaseWalkSpeed")
+		if currentHumanoid and baseWalkSpeed then
+			currentHumanoid.WalkSpeed = baseWalkSpeed
+		end
+		print(string.format("[Kaiju-Debug] Fangnetz loest sich -- %s kann wieder laufen.", player.Name))
+	end)
+end
+
 -- kind ist "Fist" (Nahangriff) oder "Pulse" (Flaechenangriff) -- die beiden Rollen, die
 -- die Zustandsmaschine kennt. Welche Faehigkeit das je Generation ist, steht hier.
 local function playGuardianVFX(guardian, kind, config, target)
@@ -1493,7 +1704,19 @@ local function playGuardianVFX(guardian, kind, config, target)
 			if kind == "Fist" then
 				vfx.Pulse(guardian.model, target.Character, values.PulseCannon)
 			else
-				vfx.ContainmentNet(guardian.model, target.Character, values.ContainmentNet)
+				-- Das Netz haelt den Gefangenen fest. Die Wirkung steht HIER und nicht im
+				-- Werkstatt-Modul: dort liegt die Optik, hier liegen die Kampfwerte -- so ist
+				-- es auch bei den anderen Generationen aufgeteilt.
+				--
+				-- Der Zeitpunkt kommt dagegen von dort. Zwischen Abschuss und Zuschnappen
+				-- liegen Telegrafierdauer und Flugzeit, und beide Zahlen stehen im Modul.
+				-- Wer hier selbst mitzaehlte, haette sie ein zweites Mal -- und beim naechsten
+				-- Feinschliff der Optik faenge das Netz lautlos daneben.
+				local ability = table.clone(values.ContainmentNet)
+				ability.OnClosed = function(duration)
+					holdTargetInNet(target, duration)
+				end
+				vfx.ContainmentNet(guardian.model, target.Character, ability)
 			end
 		end)
 		return
@@ -1573,11 +1796,34 @@ local function playGuardianLoop(guardian, name)
 	end
 	guardian.loopAnimation = name
 	api.PlayAnimation(name)
+
+	-- ===== Die Spur, die fehlte =====
+	-- Beim Guardian, der nicht laeuft, war von aussen nicht zu unterscheiden, ob der
+	-- Server die Laufanimation gar nicht ANFORDERT oder ob sie angefordert wird und beim
+	-- Client nichts passiert. Das sind zwei voellig verschiedene Fehler, und ich habe
+	-- zweimal den falschen vermutet.
+	--
+	-- Nur beim WECHSEL, nicht je Bild -- die Sperre oben sorgt dafuer. Eine Zeile je
+	-- Zustandswechsel ist lesbar; sechzig je Sekunde waeren es nicht.
+	print(string.format("[Kaiju-Debug] Guardian-Animation angefordert: %q (Modell sagt jetzt %q).",
+		tostring(name), tostring(guardian.model:GetAttribute("GuardianAnimationState"))))
 end
 
 -- Einen Schritt in Richtung Ziel gehen. Gibt true zurueck, wenn er angekommen ist.
 -- Enthaelt die gesamte Fortbewegung: Bodenhaftung, Laufanimation, Blickrichtung.
-local function stepTowards(guardian, config, destination)
+-- ===== blickZiel: laufen und schauen sind zwei verschiedene Richtungen =====
+-- Ohne diesen Zusatz schaut der Guardian immer dorthin, wo er hingeht. Beim Loesen aus dem
+-- Handgemenge liegt sein Ziel aber HINTER ihm -- er drehte dem Spieler also den Ruecken zu
+-- und ging weg. Das sah nach Flucht aus, nicht nach dem Abstandnehmen eines Gegners, der
+-- seine Reichweite sucht.
+--
+-- IM SPIEL BESTAETIGT am 27.09.2026: "Wenn sich der Guardian zurueckzieht oder Abstand zum
+-- Spieler sucht, dann soll er rueckwaerts laufen und sich nicht einfach umdrehen."
+--
+-- Mit blickZiel bleibt der Blick dort, die Beine gehen woanders hin -- und weil das Rig
+-- eine eigene Animation dafuer mitbringt (BuildWalkBackward), sieht man auch Schritte
+-- rueckwaerts statt einer vorwaerts laufenden Figur, die sich seitlich schiebt.
+local function stepTowards(guardian, config, destination, blickZiel)
 	local rootPart = guardian.model.PrimaryPart
 	local currentPosition = rootPart.Position
 	local flat = (destination - currentPosition) * Vector3.new(1, 0, 1)
@@ -1589,26 +1835,94 @@ local function stepTowards(guardian, config, destination)
 
 	local direction = flat.Unit
 	local deltaTime = RunService.Heartbeat:Wait()
+
+	-- ===== Nach dem Yield neu pruefen =====
+	-- Heartbeat:Wait() gibt einen Bildschritt lang nach, und genau in dieser Luecke kann
+	-- damageGuardian den Guardian besiegen. Alles darunter lief bisher trotzdem weiter: es
+	-- verschob das Modell und schickte "Walk" an die Clients -- also an einen Gegner, der
+	-- gerade zusammengebrochen war.
+	--
+	-- IM SPIEL BESTAETIGT am 20.09.2026: "Als der Guardian starb, ist sein Licht
+	-- ausgegangen, was korrekt ist. Ich habe ihn dann aber noch immer laufen sehen, auch
+	-- wenn es an Ort und Stelle war."
+	--
+	-- Derselbe Fall wie beim Trainings-Gauntlet (siehe CLAUDE.md, Yield-Rennen).
+	if guardian.defeated or not guardian.model or not guardian.model.Parent then
+		return true
+	end
+
 	local step = direction * config.GuardianMoveSpeed * deltaTime
 	if step.Magnitude > horizontalDistance then
 		step = flat
 	end
 	local newPosition = groundedPosition(guardian, currentPosition + step)
 
+	-- Blickrichtung: standardmaessig die Laufrichtung, mit blickZiel aber der Punkt, den er
+	-- im Auge behalten soll. Faellt das Ziel mit seiner eigenen Lage zusammen, gilt wieder
+	-- die Laufrichtung -- ein Blick auf den eigenen Standort waere keine Richtung.
+	local blick = direction
+	if blickZiel then
+		local flachZumBlick = (blickZiel - newPosition) * Vector3.new(1, 0, 1)
+		if flachZumBlick.Magnitude > 0.1 then
+			blick = flachZumBlick.Unit
+		end
+	end
+
+	-- Rueckwaerts heisst: er geht der Richtung entgegen, in die er schaut. Der Schwellwert
+	-- von -0.2 statt 0 laesst seitliches Umkreisen noch als Vorwaertsgehen gelten -- sonst
+	-- schaltete die Animation bei jedem Seitenschritt hin und her.
+	local rueckwaerts = blick:Dot(direction) < -0.2
+
 	if guardian.animation then
 		-- Mit Rig laeuft die Animation ueber Motor6D. Die prozedurale Pose UND das Wiegen
 		-- muessen dann unterbleiben: beide verstellen dieselben Teile bzw. die Hoehe und
 		-- wuerden gegen die Animation arbeiten.
-		playGuardianLoop(guardian, "Walk")
+		playGuardianLoop(guardian, rueckwaerts and "WalkBackward" or "Walk")
 	else
-		guardian.walkPhase = (guardian.walkPhase or 0) + deltaTime * WALK_CYCLE_SPEED * math.pi * 2
+		-- Auch die prozedurale Pose laeuft rueckwaerts: der Phasenwinkel geht zurueck, die
+		-- Beine schwingen also in der anderen Reihenfolge. Ohne das saehe ein
+		-- zurueckweichender Guardian aus, als ginge er vorwaerts und wuerde geschoben.
+		local phasenRichtung = rueckwaerts and -1 or 1
+		guardian.walkPhase = (guardian.walkPhase or 0)
+			+ phasenRichtung * deltaTime * WALK_CYCLE_SPEED * math.pi * 2
 		guardian.walkBlend = math.min((guardian.walkBlend or 0) + deltaTime * WALK_BLEND_PER_SECOND, 1)
 		-- Koerper wiegt im Schritttakt, zweimal pro Zyklus -- einmal je aufsetzendem Fuss.
 		local bob = math.abs(math.sin(guardian.walkPhase)) * WALK_BODY_BOB_STUDS * guardian.walkBlend
 		newPosition = newPosition + Vector3.new(0, bob, 0)
 	end
 
-	guardian.model:PivotTo(CFrame.lookAt(newPosition, newPosition + direction))
+	-- ===== Warum die Beine beim Laufen stillstanden =====
+	-- Model:PivotTo() setzt die CFrame JEDES Teils -- es verschiebt den Guardian als
+	-- starren Block. Bei einem Modell mit Rig laeuft die Animation aber ueber Motor6D, und
+	-- die Pose, die der Client daraus gerade gebaut hat, wird von diesen Server-CFrames
+	-- Bild fuer Bild ueberschrieben. Das Ergebnis ist ein Guardian, der ueber den Boden
+	-- gleitet, ohne einen Schritt zu machen.
+	--
+	-- Es passt zum Befund, dass seine anderen Animationen sichtbar sind: Angriff, Treffer
+	-- und Niederlage spielt er im STAND -- da laeuft kein PivotTo dagegen.
+	--
+	-- IM SPIEL BESTAETIGT am 26.09.2026: "Der Guardian bewegt seine Beine nicht beim
+	-- Laufen."
+	--
+	-- Mit Rig wird deshalb nur noch die WURZEL gesetzt. Weil model.PrimaryPart auf sie
+	-- zeigt, ist das dieselbe Zielposition wie bei PivotTo; die uebrigen Teile haengen als
+	-- ein Koerper daran (GuardianFleetRig schweisst sie an Steuerteile) und folgen mit --
+	-- nur eben, ohne dass ihre Animationspose ueberschrieben wird.
+	--
+	-- Ohne Rig bleibt es beim alten Weg: dort gibt es keine Motor6D-Animation, die man
+	-- zerstoeren koennte, und die prozedurale Beinpose braucht das starre Setzen.
+	local ziel = CFrame.lookAt(newPosition, newPosition + blick)
+	if guardian.animation and BEWEGUNG_UEBER_WURZEL then
+		rootPart.CFrame = ziel
+	else
+		guardian.model:PivotTo(ziel)
+	end
+	-- Dem Client sein Ziel nennen, damit er die Schritte dazwischen glaetten kann. Beide
+	-- Zweige oben setzen die Pose fortlaufend, und beide werden nur mit der Netzwerkrate
+	-- repliziert -- siehe SmoothMotion. Die Bewegung selbst bleibt hier: an der Position des
+	-- Guardians haengt seine Reichweite.
+	SmoothMotion.SetTarget(guardian.model, ziel)
+
 	if not guardian.animation then
 		applyWalkPose(guardian)
 	end
@@ -1622,7 +1936,9 @@ local function faceAndStand(guardian, lookAtPosition, alert)
 	local standPosition = groundedPosition(guardian, rootPart.Position)
 	local toLook = (lookAtPosition - standPosition) * Vector3.new(1, 0, 1)
 	if toLook.Magnitude > 0.1 then
-		guardian.model:PivotTo(CFrame.lookAt(standPosition, standPosition + toLook))
+		-- Auch das Stehen laeuft je Tick durch und dreht ihn dem Ziel nach -- ohne Glaettung
+		-- ruckelt schon dieses Nachdrehen.
+		SmoothMotion.PivotTo(guardian.model, CFrame.lookAt(standPosition, standPosition + toLook))
 	end
 	if guardian.animation then
 		playGuardianLoop(guardian, alert and "AlertIdle" or "Idle")
@@ -1633,6 +1949,51 @@ end
 
 -- Angreifen, wenn in Reichweite. Beide Angriffe haben eine eigene Cooldown-Sperre, der
 -- Aufruf je Bild ist deshalb unbedenklich.
+-- ===== Wie breit die Bedrohung ist =====
+-- Der Guardian braucht diesen Wert an zwei Stellen: um zu wissen, wo er stehen bleiben soll,
+-- und um zu wissen, ob sein Arm reicht. Beide rechneten ihn bisher als NULL, und deshalb
+-- lief er in die Spielerfigur hinein (gemeldet am 26.09.2026).
+--
+-- ===== Warum es die Bounding Box nicht sein darf =====
+-- Genau daran ist der erste Versuch gescheitert, und der Kommentar weiter unten haelt es
+-- fest: character:GetBoundingBox() misst die volle Ausdehnung samt ausgestreckter
+-- Gliedmassen, beim skalierten Kaiju rund 142 Studs Breite. Mit einem Halbmesser von 71 war
+-- jede Luecke auf 0 geklemmt und der Nahangriff haette aus 89 Studs ausgeloest. Die Antwort
+-- darauf war, den Wert ganz zu streichen -- damit war die eine Uebertreibung durch die
+-- andere ersetzt.
+--
+-- ===== Was es stattdessen ist =====
+-- Der KaijuBodyCollider. Diesen Klotz schweisst KaijuStageOneService der Figur selbst an,
+-- und er IST ihr Kollisionskoerper -- 8x14x6 Studs mal Bau-Groesse. Wenn der Guardian
+-- "nicht in den Spieler laufen" soll, ist genau dieser Koerper gemeint, nicht die Spannweite
+-- ihrer Arme. Er ist ein Vielfaches kleiner als die Bounding Box und liegt damit im
+-- brauchbaren Bereich.
+--
+-- Die Obergrenze ist das Sicherheitsnetz gegen einen erneuten Klemmfall: was auch immer
+-- kuenftig gemessen wird, es kann die Luecke nicht mehr beliebig auffressen.
+local THREAT_RADIUS_MAX = 40
+local THREAT_RADIUS_FALLBACK = 6
+
+local function threatRadius(character)
+	if not character then
+		return 0
+	end
+
+	local collider = character:FindFirstChild("KaijuBodyCollider")
+	if collider and collider:IsA("BasePart") then
+		return math.min(math.max(collider.Size.X, collider.Size.Z) * 0.5, THREAT_RADIUS_MAX)
+	end
+
+	-- Ohne Kaiju-Modell (blanker Avatar, Debug-Vergleich): die Wurzel ist schmal und
+	-- skaliert mit -- ein brauchbares Mass fuer einen Koerper ohne angebautes Rig.
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if root then
+		return math.min(math.max(root.Size.X, root.Size.Z) * 0.5, THREAT_RADIUS_MAX)
+	end
+
+	return THREAT_RADIUS_FALLBACK
+end
+
 local function attackIfInRange(guardian, cityName, config, target, targetPosition)
 	-- WAAGERECHT messen. Seit FleetRig laeuft, sitzt PrimaryPart auf Huefthoehe des
 	-- Skeletts statt auf der Sohle -- bei einer rund 42 Studs hohen Figur liegt ein
@@ -1640,14 +2001,24 @@ local function attackIfInRange(guardian, cityName, config, target, targetPositio
 	-- entfernt. Gegen GuardianImpactFistRange (14) gemessen konnte der Nahangriff
 	-- dadurch NIE ausloesen, egal wie dicht man stand.
 	local flat = (targetPosition - guardian.model.PrimaryPart.Position) * Vector3.new(1, 0, 1)
-	-- NUR sein eigener Halbmesser. Den des Spielers abzuziehen war ein Fehlgriff:
-	-- character:GetBoundingBox() liefert die volle Ausdehnung samt ausgestreckter
-	-- Gliedmassen -- beim skalierten Kaiju rund 142 Studs Breite, also Halbmesser 71.
-	-- Damit wurde die Luecke bei JEDEM Abstand auf 0 geklemmt, der Impuls war nicht mehr
-	-- erreichbar und der Nahangriff haette schon aus 89 Studs ausgeloest. Der Messwert
-	-- taugt nicht als Kollisionsradius.
-	local distance = math.max(flat.Magnitude - (guardian.bodyRadius or 0), 0)
+	-- Beide Halbmesser, denn gemessen wird von Mittelpunkt zu Mittelpunkt: seiner und der
+	-- der Bedrohung. Sonst ist "Luecke" nicht die Luecke zwischen zwei Koerpern.
+	--
+	-- Der Halbmesser der Bedrohung kam hier einmal aus character:GetBoundingBox() und war
+	-- mit 71 Studs so gross, dass jede Luecke auf 0 fiel und der Nahangriff aus 89 Studs
+	-- ausgeloest haette. Er wurde daraufhin gestrichen -- womit er null war und der Guardian
+	-- in den Spieler hineinlief. threatRadius misst jetzt den Kollisionskoerper statt der
+	-- Spannweite (siehe dort); beide Uebertreibungen sind damit vom Tisch.
+	--
+	-- WICHTIG: derselbe Wert muss in den Stehabstand eingehen (strikeDistance weiter unten).
+	-- Stehen und Zuschlagen gegen verschiedene Massstaebe gerechnet heisst: er bleibt auf
+	-- Armlaenge stehen und schlaegt trotzdem nie.
+	local distance = math.max(
+		flat.Magnitude - (guardian.bodyRadius or 0) - threatRadius(target and target.Character),
+		0
+	)
 
+	local stil = kampfstil(guardian)
 	local animations = GUARDIAN_ATTACK_ANIMATIONS[guardian.assetName]
 	-- Die Animation wird nur gespielt, wenn der Angriff auch WIRKLICH ausgeloest hat --
 	-- beide Angriffsfunktionen haben eine eigene Cooldown-Sperre und tun sonst nichts.
@@ -1659,20 +2030,49 @@ local function attackIfInRange(guardian, cityName, config, target, targetPositio
 			local name = animations and animations.Fist
 			playGuardianAction(guardian, name)
 			playGuardianVFX(guardian, "Fist", config, target)
+
+			-- ===== Der Mischtyp loest sich nach dem Treffer wieder =====
+			-- Nr. 2 und 5 sollen den Koerperkontakt SUCHEN und trotzdem gern Abstand
+			-- halten. Beides zugleich geht nicht als fester Abstand -- es ist ein
+			-- Wechsel: heran, zuschlagen, zurueck auf Schussdistanz, wieder heran.
+			-- Ausgeloest wird er hier, weil der Nahkampftreffer der Moment ist, ab dem
+			-- das Zurueckweichen etwas bedeutet.
+			if stil.HaeltAbstand > 0 then
+				guardian.haeltAbstandBis = os.clock() + stil.HaeltAbstand
+			end
+
 			-- Ausgabe nur bei einem TATSAECHLICHEN Treffer -- die Cooldowns (3s bzw. 6s)
 			-- halten das von selbst lesbar. Ohne sie war nicht zu unterscheiden, ob der
 			-- Guardian nicht angreift oder ob nur die Wirkung ausbleibt.
 			print(string.format(
-				"[Kaiju-Debug] Guardian %s greift an: %s (Nahkampf, %.0f Studs, Schaden %s)",
-				cityName, name or "ohne Animation", distance, tostring(config.GuardianImpactFistDamage)
+				"[Kaiju-Debug] Guardian %s greift an: %s (Nahkampf, %s, %.0f Studs, Schaden %s)",
+				cityName, name or "ohne Animation", stil.Art, distance,
+				tostring(config.GuardianImpactFistDamage)
 			))
 		end
-	elseif distance <= config.GuardianRepulsorRadius * 1.3 then
+	elseif distance <= config.GuardianRepulsorRadius * stil.Fernreichweite then
 		local origin = beginRepulsorPulse(guardian, cityName, config)
 		if origin then
 			local name = animations and animations.Pulse
 			playGuardianAction(guardian, name)
 			playGuardianVFX(guardian, "Pulse", config, target)
+
+			-- ===== Wo der Schuss EINSCHLAEGT =====
+			-- Beim Nahkaempfer ist der Impuls eine Druckwelle um den eigenen Koerper --
+			-- da ist die Brust der richtige Mittelpunkt.
+			--
+			-- Fuer einen Fernkaempfer waere genau das sinnlos: eine Welle um sich selbst,
+			-- geschlagen aus 60 Studs Entfernung, trifft niemanden. Sein Schuss muss dort
+			-- landen, wo das Ziel steht. Der Radius bleibt derselbe (GuardianRepulsorRadius)
+			-- -- es ist derselbe Einschlag, nur an einem anderen Ort.
+			--
+			-- Ausweichen bleibt moeglich und ist weiter der Sinn der Ansatzphase: der Ort
+			-- wird JETZT festgelegt, getroffen wird erst nach dem Telegraph. Wer sich
+			-- bewegt, steht dann nicht mehr dort.
+			local einschlag = origin
+			if stil.Art ~= "Nahkaempfer" then
+				einschlag = targetPosition
+			end
 
 			-- Die Ansatzphase: hier hat der Showdown seinen Aufhaenger. Der Shot laeuft
 			-- genau so lange, wie es dauert, bis der Schaden eintritt -- die Kamera faehrt
@@ -1683,16 +2083,19 @@ local function attackIfInRange(guardian, cityName, config, target, targetPositio
 			end
 
 			print(string.format(
-				"[Kaiju-Debug] Guardian %s setzt an: %s (Flaeche, %.0f Studs, Ansatz %.2fs, Schaden %s)",
-				cityName, name or "ohne Animation", distance, telegraph, tostring(config.GuardianRepulsorDamage)
+				"[Kaiju-Debug] Guardian %s setzt an: %s (%s, %.0f Studs, Einschlag %s, "
+					.. "Ansatz %.2fs, Schaden %s)",
+				cityName, name or "ohne Animation", stil.Art, distance,
+				stil.Art == "Nahkaempfer" and "bei sich" or "beim Ziel",
+				telegraph, tostring(config.GuardianRepulsorDamage)
 			))
 
 			if telegraph > 0 then
 				task.delay(telegraph, function()
-					applyRepulsorPulse(guardian, cityName, config, origin)
+					applyRepulsorPulse(guardian, cityName, config, einschlag)
 				end)
 			else
-				applyRepulsorPulse(guardian, cityName, config, origin)
+				applyRepulsorPulse(guardian, cityName, config, einschlag)
 			end
 		end
 	end
@@ -1859,11 +2262,41 @@ local function updateGuardian(cityName, guardian, config)
 			-- Auf Armlaenge herangehen, gemessen ab der Koerperoberflaeche -- sonst
 			-- liefe er in den Spieler hinein und stemmte sich dauerhaft gegen dessen
 			-- Kollision.
-			-- Zielabstand fuer die Annaeherung: sein Halbmesser plus die halbe Armlaenge.
-			-- Vorher stand hier 0.8 -- gemessen kam er damit auf eine Luecke von 14 bis 15
+			-- ===== Wie nah er ueberhaupt heran WILL =====
+			-- Das haengt an der Generation (siehe GUARDIAN_KAMPFSTIL): der Nahkaempfer geht
+			-- bis auf Schlagreichweite, der Fernkaempfer bleibt auf Schussdistanz stehen,
+			-- und der Mischtyp wechselt -- nach einem Nahkampftreffer weicht er fuer ein
+			-- paar Sekunden zurueck und kommt danach wieder.
+			--
+			-- Der Nahkampf-Fall ist unveraendert: sein Halbmesser plus die halbe Armlaenge.
+			-- Vorher stand dort 0.8 -- gemessen kam er damit auf eine Luecke von 14 bis 15
 			-- Studs zum Stehen, also GENAU an der Schwelle von 14, und der Baton loeste mal
 			-- aus und mal nicht. Die Haelfte laesst spuerbaren Spielraum.
-			local strikeDistance = (guardian.bodyRadius or 0) + config.GuardianImpactFistRange * 0.5
+			local stil = kampfstil(guardian)
+			local abstandsFaktor = stil.Wunschabstand
+			if stil.HaeltAbstand > 0 and os.clock() < (guardian.haeltAbstandBis or 0) then
+				abstandsFaktor = stil.Abstandsposten
+			end
+
+			-- Der Halbmesser der BEDROHUNG geht mit ein, nicht nur sein eigener. Ohne ihn
+			-- war der Zielpunkt ein Mittelpunktabstand von rund 28 Studs -- also ein Punkt
+			-- INNERHALB der Spielerfigur, deren Kollisionskoerper bei hohen Stufen ueber 20
+			-- Studs Halbmesser hat. Er lief bis in sie hinein und stemmte sich gegen ihre
+			-- Kollision (gemeldet am 26.09.2026).
+			--
+			-- Derselbe Wert steht in der Reichweitenpruefung von attackIfInRange. Die beiden
+			-- gehoeren zusammen: waechst der Stehabstand, ohne dass die Pruefung mitwaechst,
+			-- bleibt er brav auf Armlaenge stehen und schlaegt nie zu.
+			local threatHalfWidth = threatRadius(threat and threat.Character)
+
+			local strikeDistance
+			if abstandsFaktor <= 0 then
+				strikeDistance = (guardian.bodyRadius or 0) + threatHalfWidth
+					+ config.GuardianImpactFistRange * 0.5
+			else
+				strikeDistance = (guardian.bodyRadius or 0) + threatHalfWidth
+					+ config.GuardianRepulsorRadius * abstandsFaktor
+			end
 
 			local destination
 			if defendPart then
@@ -1872,14 +2305,27 @@ local function updateGuardian(cityName, guardian, config)
 				local direction = threatDistanceFromAnchor > 0.1 and threatFromAnchor.Unit or rootPart.CFrame.LookVector
 				destination = anchorPosition + direction * math.max(reach - stopShort, 0)
 			else
-				-- Kein Gebaeude zu decken: direkt auf den Spieler zu, bis Schlagreichweite.
+				-- Kein Gebaeude zu decken: auf den Spieler zu, bis auf seinen Wunschabstand.
 				local toThreat = (threatRoot.Position - rootPart.Position) * Vector3.new(1, 0, 1)
 				local distance = toThreat.Magnitude
 				local direction = distance > 0.1 and toThreat.Unit or rootPart.CFrame.LookVector
-				destination = rootPart.Position + direction * math.max(distance - strikeDistance, 0)
+				local vorruecken = distance - strikeDistance
+				if abstandsFaktor <= 0 then
+					-- Nahkaempfer: nur vor, nie zurueck. Steht der Spieler dicht vor ihm,
+					-- bleibt er stehen und schlaegt -- zurueckweichen saehe aus, als wiche
+					-- er aus, und das ist das Gegenteil seiner Rolle.
+					vorruecken = math.max(vorruecken, 0)
+				end
+				-- Bei negativem Wert geht er rueckwaerts: genau so loest sich ein
+				-- Fernkaempfer oder ein Mischtyp aus dem Handgemenge.
+				destination = rootPart.Position + direction * vorruecken
 			end
 
-			local arrived = stepTowards(guardian, config, destination)
+			-- Im Kampf bleibt der Blick auf der Bedrohung, egal wohin die Beine gehen. Das
+			-- deckt beide Richtungen ab: beim Vorruecken aendert es nichts (Blick- und
+			-- Laufrichtung sind dieselbe), beim Abstandnehmen weicht er rueckwaerts aus,
+			-- statt sich wegzudrehen.
+			local arrived = stepTowards(guardian, config, destination, threatRoot.Position)
 			if arrived then
 				faceAndStand(guardian, threatRoot.Position, true)
 				setAegisShieldDeployed(guardian, defendBuilding ~= nil)
@@ -2112,6 +2558,59 @@ _G.SpawnGuardianForCity = function(cityName)
 		end
 	end
 	model:PivotTo(CFrame.new(spawnPosition))
+	-- Ab jetzt glaettet der Client seine Bewegung (siehe SmoothMotion). Der Spawn selbst
+	-- bekommt KEIN Ziel mitgeteilt: das erste Ziel setzt der erste Bewegungsschritt, und bis
+	-- dahin steht das Modell dort, wo der Server es hingestellt hat.
+	SmoothMotion.Track(model)
+
+	-- ===== Auf die Zielhoehe bringen =====
+	-- Die Guardian-Modelle bringen ihre eigene Groesse mit, und die hatte mit der
+	-- Spielfigur nichts zu tun: der City-Guardian war KLEINER als der Spieler, gegen den
+	-- er antritt. Ein Boss, zu dem man hinunterschaut, ist keiner.
+	--
+	-- IM SPIEL BESTAETIGT am 20.09.2026: "Der Guardian war zu klein. Um ihn ernst zu
+	-- nehmen, muss er etwas groesser sein als die Spielfigur."
+	--
+	-- Gemessen statt gerechnet: die Hoehe kommt aus der Bounding Box des fertig
+	-- zusammengebauten Modells, nicht aus einer Zahl im Modell. Muss VOR soleOffset und
+	-- bodyRadius weiter unten geschehen -- die beiden leiten sich aus derselben Box ab und
+	-- waeren sonst auf die alte Groesse geeicht.
+	-- ===== Jeder Ausgang meldet sich =====
+	-- Bis zum 20.09.2026 sprach hier nur der Erfolg. Fehlte GuardianHeightStuds oder liess
+	-- sich das Modell nicht vermessen, geschah lautlos nichts -- und der Guardian stand in
+	-- seiner Eigengroesse da, ohne dass irgendwo stuende, warum. Genau so ist er ueber
+	-- Wochen kleiner geblieben als die Figur, gegen die er antritt.
+	local zielHoehe = config.GuardianHeightStuds
+	if not (zielHoehe and zielHoehe > 0) then
+		warn(string.format("[Kaiju-Debug] Guardian '%s': kein GuardianHeightStuds in der "
+			.. "Config -- er behaelt die Eigengroesse seines Modells.", cityName))
+	else
+		local okBox, _, boxGroesse = pcall(function()
+			return model:GetBoundingBox()
+		end)
+		if not (okBox and boxGroesse and boxGroesse.Y > 0.01) then
+			warn(string.format("[Kaiju-Debug] Guardian '%s': Hoehe nicht messbar -- "
+				.. "keine Skalierung auf %.0f Studs.", cityName, zielHoehe))
+		else
+			local faktor = zielHoehe / boxGroesse.Y
+			if math.abs(faktor - 1) <= 0.01 then
+				print(string.format("[Kaiju-Debug] Guardian '%s': steht bereits auf %.1f "
+					.. "Studs -- nichts zu tun.", cityName, boxGroesse.Y))
+			else
+				local okScale = pcall(function()
+					model:ScaleTo(model:GetScale() * faktor)
+				end)
+				if okScale then
+					print(string.format("[Kaiju-Debug] Guardian '%s': %.1f auf %.1f Studs "
+						.. "skaliert (Faktor %.2f).", cityName, boxGroesse.Y, zielHoehe, faktor))
+				else
+					warn(string.format("[Kaiju-Debug] Guardian '%s': ScaleTo fehlgeschlagen -- "
+						.. "er bleibt bei %.1f Studs.", cityName, boxGroesse.Y))
+				end
+			end
+		end
+	end
+
 	model.Parent = Workspace
 	CollectionService:AddTag(model, "Guardian")
 	local touchParts = connectGuardianTouch(cityName, model)
@@ -2129,6 +2628,9 @@ _G.SpawnGuardianForCity = function(cityName)
 		lastFistAt = 0,
 		lastRepulsorAt = 0,
 		shieldDeployed = false,
+		-- Nur fuer die Ausgabe: verhindert, dass bei jedem einzelnen Treffer eine Zeile
+		-- "blockt mit dem Schild" kommt. Wird zurueckgesetzt, wenn der Schild bricht.
+		shieldBlockGemeldet = false,
 		-- Animations-Schnittstelle und Generation. Beide fehlen bei Guardians, die aus
 		-- ServerStorage geklont werden -- dort greift der prozedurale Rueckfall.
 		animation = guardianAnimation[model],
@@ -2166,7 +2668,12 @@ _G.SpawnGuardianForCity = function(cityName)
 	-- die Posen werden relativ zum Modell-Pivot gespeichert, das Modell muss dafür fertig
 	-- platziert sein.
 	local walkRig = captureWalkRig(guardian)
-	print("[Kaiju-Debug] Guardian '" .. cityName .. "' Laufanimation -- Beine erfasst:", #walkRig)
+	-- Welcher der beiden Wege gilt, entscheidet alles Weitere: MIT Rig laeuft die
+	-- Animation ueber Motor6D beim Client, OHNE Rig ueber die prozedurale Beinpose hier.
+	-- Steht hier "Rig: nein" und zugleich "Beine erfasst: 0", kann sich nichts bewegen --
+	-- dann fehlen dem Modell die Teile 'LeftHipBearing' / 'RightHipBearing'.
+	print(string.format("[Kaiju-Debug] Guardian '%s' Laufanimation -- Rig: %s, Beine erfasst: %d.",
+		cityName, guardian.animation and "ja" or "nein", #walkRig))
 
 	guardian.healthBar = createHealthBar(guardian)
 	activeGuardians[cityName] = guardian
@@ -2253,6 +2760,22 @@ task.spawn(function()
 		if newLevel == 5 and oldLevel == 4 then
 			_G.SpawnGuardianForCity(cityName)
 		elseif newLevel < 5 and oldLevel >= 5 then
+			-- ===== Eine von Hand gesteuerte Stadt raeumt hier NICHTS ab =====
+			-- Im Prolog setzt der PrologueOrchestrator die Alarmstufen selbst, nach seinem
+			-- Drehbuch. Faellt sie dabei unter 5 -- und sei es nur fuer einen Moment --
+			-- verschwand der Guardian mitten in der Szene. Genau das ist Amancio am
+			-- 21.09.2026 passiert.
+			--
+			-- Wer eine Stadt von Hand steuert, besitzt auch ihre Folgen: der Orchestrator
+			-- raeumt seinen Guardian selbst ab, am Ende des Prologs, ueber
+			-- _G.DespawnGuardianForCity. Diese Zeile hier ist die AUTOMATIK, und die hat
+			-- sich herauszuhalten.
+			if _G.IsCityManuallyDriven and _G.IsCityManuallyDriven(cityName) then
+				print(string.format("[Kaiju-Debug] Guardian '%s' bleibt stehen -- die Stadt "
+					.. "wird von Hand gesteuert (Stufe %d -> %d).", cityName, oldLevel, newLevel))
+				return
+			end
+
 			-- WICHTIG: reagiert auf JEDEN Abfall unter Level 5, nicht nur den exakten
 			-- 5->4-Schritt -- ein Sprung-Reset (z.B. CITY BROKEN: 5->0 in einem Schritt)
 			-- hätte den alten, exakten Trigger sonst nie ausgelöst und activeGuardians
@@ -2261,6 +2784,41 @@ task.spawn(function()
 			despawnGuardianForCity(cityName)
 		end
 	end)
+end)
+
+-- ===== Der Guardian regeneriert langsam, solange nicht gekaempft wird =====
+--
+-- Bis hierher tat er das GAR NICHT: es gab im ganzen Dienst keine Stelle, die seine
+-- Lebenspunkte je wieder erhoeht haette. Der Spieler respawnte voll geheilt, der Guardian
+-- behielt jeden Treffer -- jeder Tod war fuer den einen ein kostenloser Neuanfang und fuer
+-- den anderen keiner. Sterben war damit die guenstigste Art, den Kampf zu gewinnen.
+--
+-- IM SPIEL BESTAETIGT am 20.09.2026: "ich bin 2 mal durch Guardian gestorben. Aber er hat
+-- sich weniger schnell erholt als ich, so dass ich jedes Mal mehr Vorteil hatte."
+--
+-- LANGSAM und nicht sprunghaft, ausdruecklich so gewuenscht. Ein Guardian, der beim Tod
+-- des Spielers sofort wieder voll dasteht, macht jeden Fehlversuch wertlos -- die bis
+-- dahin geleistete Arbeit waere weg. So bleibt ein Vorsprung bestehen, er schmilzt nur.
+--
+-- Dasselbe Muster wie beim Barrikadenschild (ShieldRegenDelay / ShieldRegenRate): erst
+-- eine Pause nach dem letzten Treffer, dann ein stetiger Anteil je Sekunde. Die Pause
+-- verhindert, dass er sich MITTEN im Kampf zwischen zwei Schlaegen erholt.
+local GUARDIAN_REGEN_DELAY = 6 -- Sekunden ohne Treffer, bevor es losgeht
+local GUARDIAN_REGEN_RATE = 0.02 -- Anteil der vollen Lebenspunkte je Sekunde -- 50s auf voll
+
+RunService.Heartbeat:Connect(function(deltaTime)
+	local jetzt = os.clock()
+	for _, guardian in pairs(activeGuardians) do
+		if not guardian.defeated
+			and guardian.hp and guardian.maxHP
+			and guardian.hp > 0 and guardian.hp < guardian.maxHP
+			and jetzt - (guardian.lastDamageAt or 0) >= GUARDIAN_REGEN_DELAY then
+			guardian.hp = math.min(
+				guardian.hp + guardian.maxHP * GUARDIAN_REGEN_RATE * deltaTime,
+				guardian.maxHP)
+			updateHealthBar(guardian)
+		end
+	end
 end)
 
 print("[Kaiju] CityDefenderService bereit -- Level 5 (Guardian, vorerst nur City).")

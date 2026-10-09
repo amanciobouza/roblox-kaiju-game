@@ -47,12 +47,45 @@ local OTHER_HUD_GUI_NAMES = {
 	"EnergyAbsorbGui", -- Absorptions-Eingabe-Hinweis
 }
 
+-- ScreenGuis, die NUR in der Abschlusssequenz verschwinden, nicht schon bei "The Fall".
+--
+-- Das Debug-Panel ist Amancios Hauptwerkzeug; waehrend des Prologs soll der Knopf
+-- erreichbar bleiben, damit ein Durchlauf jederzeit zu steuern ist. In der Schlusssequenz
+-- steht er dagegen mitten im Bild, waehrend nur noch Text laufen soll.
+local FINALE_ONLY_GUI_NAMES = {
+	"DebugPanelGui", -- Debug-Knopf und Panel
+}
+
 -- Namen der Kind-Elemente von "GameHud", die zusammen mit Health im selben Cluster
 -- liegen (siehe SkinSelectionGui.lua -- "PlayerStatusCluster" enthält Level + Health +
 -- XP-Bar zusammen) -- nur diese beiden werden versteckt, "HealthFrame" bleibt sichtbar.
 local STATUS_CLUSTER_HIDE_NAMES = { "LevelLabel", "BarBackground" }
 
-local function setVisible(visible)
+-- ===== Warum das Verstecken nicht von allein haelt =====
+-- Dieses Skript setzt die Sichtbarkeit EINMAL, beim Umschalten. Andere HUD-Skripte setzen
+-- sie dagegen fortlaufend nach, wenn sich etwas an der Lage aendert -- SkinSelectionGui
+-- etwa haengt an "CurrentZone" und macht den Tacho bei jedem Zonenwechsel wieder sichtbar.
+--
+-- Genau das geschah in der Abschlusssequenz: kaum war alles verborgen, spawnte der Spieler
+-- im Sanctuary, die Zone sprang um, und der Tacho stand wieder im schwarzen Bild
+-- (beobachtet am 22.09.2026). "IsInPrologue" taugt dort nicht als Gegenmittel -- der Prolog
+-- setzt es auf false, bevor die Textkarten ueberhaupt anfangen.
+--
+-- Deshalb dieses Merkmal am GameHud: solange es steht, darf kein HUD-Skript etwas
+-- einblenden. Es haengt am GameHud und nicht am Spieler, weil es rein oertlich ist -- der
+-- Server hat damit nichts zu tun und soll auch nichts davon mitbekommen.
+local HUD_HIDDEN_ATTRIBUTE = "HudHiddenByPrologue"
+
+-- ===== Zwei Stufen des Ausblendens =====
+-- "The Fall" versteckt das HUD, laesst aber die Lebensanzeige stehen -- der Spieler soll
+-- sein Leben schwinden SEHEN, das ist der Inhalt der Szene.
+--
+-- Die Abschlusssequenz im Sanctuary will dagegen gar nichts: dort laufen nur Text und
+-- Kapitel-Karte, und das HUD gehoert erst danach wieder her. Dafuer "allesVerstecken".
+--
+-- IM SPIEL BESTAETIGT am 21.09.2026: "Bei der Abschlusssequenz, wo der Spieler im Prolog
+-- wieder im Sanctuary ist, darf noch keine HUD gezeigt werden. Nur der Text."
+local function setVisible(visible, allesVerstecken)
 	letterbox.SetVisible(visible)
 
 	local hudShouldBeVisible = not visible
@@ -64,10 +97,16 @@ local function setVisible(visible)
 	if gameHud then
 		for _, child in ipairs(gameHud:GetChildren()) do
 			if child.Name == "PlayerStatusCluster" then
-				for _, subName in ipairs(STATUS_CLUSTER_HIDE_NAMES) do
-					local subChild = child:FindFirstChild(subName)
-					if subChild then
-						subChild.Visible = hudShouldBeVisible
+				if allesVerstecken or hudShouldBeVisible then
+					-- Der ganze Block auf einmal. Beim Wiedereinblenden ebenfalls, sonst
+					-- bliebe er nach einem "allesVerstecken" fuer immer weg.
+					child.Visible = hudShouldBeVisible
+				else
+					for _, subName in ipairs(STATUS_CLUSTER_HIDE_NAMES) do
+						local subChild = child:FindFirstChild(subName)
+						if subChild then
+							subChild.Visible = hudShouldBeVisible
+						end
 					end
 				end
 			elseif child:IsA("GuiObject") then
@@ -83,8 +122,23 @@ local function setVisible(visible)
 			gui.Enabled = hudShouldBeVisible
 		end
 	end
+
+	-- Die nur in der Abschlusssequenz: bei "The Fall" bleiben sie stehen.
+	for _, guiName in ipairs(FINALE_ONLY_GUI_NAMES) do
+		local gui = playerGui:FindFirstChild(guiName)
+		if gui then
+			gui.Enabled = hudShouldBeVisible or not allesVerstecken
+		end
+	end
+
+	-- ZULETZT, nicht zuerst: andere Skripte haengen an diesem Merkmal und stellen ihre
+	-- eigene Sichtbarkeit her, sobald es faellt. Stuende es am Anfang, liefe das gegen die
+	-- Schleifen darueber -- und beim Einblenden gewaenne die falsche Seite.
+	if gameHud then
+		gameHud:SetAttribute(HUD_HIDDEN_ATTRIBUTE, not hudShouldBeVisible or nil)
+	end
 end
 
-SetPrologueLetterboxEvent.OnClientEvent:Connect(function(visible)
-	setVisible(visible)
+SetPrologueLetterboxEvent.OnClientEvent:Connect(function(visible, allesVerstecken)
+	setVisible(visible, allesVerstecken)
 end)

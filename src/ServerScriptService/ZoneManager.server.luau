@@ -1,8 +1,23 @@
 -- Script (kein LocalScript!): ZoneManager
 -- Ort in Studio: ServerScriptService
--- Erwartet 3 Parts/Unions im Workspace: "SanctuaryZone", "CollectZone", "AttackZone".
--- Setzt am Spieler das Attribut "CurrentZone" ("Sanctuary" / "PvE" / "PvP" / "None"),
--- das andere Skripte (z.B. CombatHandler) auslesen können.
+-- Erwartet GENAU EINEN Part/Union im Workspace: "SanctuaryZone".
+-- Setzt am Spieler das Attribut "CurrentZone" ("Sanctuary" oder "PvE"), das andere
+-- Skripte auslesen können.
+--
+-- ===== Eine Zone statt drei (02.10.2026) =====
+-- Hier standen drei Zonenkörper: SanctuaryZone, CollectZone, AttackZone. Zwei davon
+-- mussten in Studio gepflegt werden, ohne je eine eigene Aussage zu treffen -- im ganzen
+-- Projekt wurde NIE auf "PvE" geprüft, sondern immer nur auf "Sanctuary" oder dessen
+-- Gegenteil. Ein Zonenkörper, der nur beantwortet, wo er NICHT ist, ist Arbeit ohne
+-- Ergebnis.
+--
+-- Jetzt gilt die einfache Regel: innerhalb des Sanctuary ist Sanctuary, alles andere ist
+-- Sammelgebiet. Dafür braucht es keinen zweiten Körper -- und keine Lücke mehr zwischen
+-- den Zonen, in der ein Spieler in keiner von ihnen stand ("None" gibt es nicht mehr).
+--
+-- ACHTUNG: "PvP" wird damit NIE mehr gesetzt. Die Spieler-gegen-Spieler-Zweige in
+-- CombatHandler und SpecialAttackHandler sind seither unerreichbar. Sie stehen noch da;
+-- ob sie bleiben, ist eine Entscheidung über das Spiel und keine über dieses Skript.
 --
 -- WICHTIG: Nutzt bewusst KEINE .Touched/.TouchEnded-Events mehr (frühere Version) --
 -- bei komplexer Union-Geometrie (z.B. eine Donut-Form: äussere Scheibe minus innere
@@ -16,17 +31,13 @@
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 
--- Part-Name im Workspace -> Zonen-Wert (wird als "CurrentZone"-Attribut gesetzt)
-local ZONE_PARTS = {
-	SanctuaryZone = "Sanctuary", -- friedliche Startzone, kein PvP/PvE möglich
-	CollectZone = "PvE", -- Häuser zerstören
-	AttackZone = "PvP", -- Spieler-gegen-Spieler
-}
+-- Der einzige Zonenkörper. Alles ausserhalb davon ist Sammelgebiet.
+local SANCTUARY_PART_NAME = "SanctuaryZone"
+local ZONE_INNEN = "Sanctuary" -- friedliche Startzone: keine Angriffe ausser beim Training
+local ZONE_AUSSEN = "PvE" -- Sammelgebiet: Häuser zerstören
 
--- Priorität bei Überlappung mehrerer Zonen gleichzeitig (z.B. an einer Kante) -- Sanctuary
--- gewinnt immer (sicherste Zone), danach PvE, danach PvP. Ersetzt das vorherige
--- "irgendeine beliebige Zone" (next() auf einer Tabelle liefert keine feste Reihenfolge).
-local ZONE_PRIORITY = { "Sanctuary", "PvE", "PvP" }
+-- Eine Prioritätenliste braucht es nicht mehr: es gibt nur noch drinnen und draussen, und
+-- zwischen beiden kann man nicht gleichzeitig stehen.
 
 local POLL_INTERVAL = 0.3 -- Sekunden zwischen zwei Prüfungen
 
@@ -122,7 +133,10 @@ end
 local function determineCurrentZone(character)
 	local rootPart = character:FindFirstChild("HumanoidRootPart")
 	if not rootPart then
-		return "None"
+		-- Noch kein Rumpf -- also nicht messbar. Draussen ist auch hier die sichere
+		-- Annahme, und sie aendert nichts: alle Pruefungen im Projekt fragen "ist es
+		-- Sanctuary?", und das war beim frueheren "None" ebenso wenig der Fall.
+		return ZONE_AUSSEN
 	end
 
 	-- Fusshöhe statt Rumpfhöhe: die Füsse stehen unabhängig von der Skalierung auf dem
@@ -132,36 +146,46 @@ local function determineCurrentZone(character)
 	local probe = getProbe(character)
 	probe.CFrame = CFrame.new(rootPart.Position.X, footY + PROBE_SIZE.Y / 2, rootPart.Position.Z)
 
+	-- ===== Die Abfrage laeuft seit dem 02.10.2026 ANDERSHERUM =====
+	-- Hier stand dreimal GetPartsInPart(zonePart, ...) -- einmal je Zone, und jedes Mal
+	-- lautete die Frage: "welche Teile liegen in diesem riesigen Zonenvolumen?", gefiltert
+	-- auf den einen Pruefkoerper. Der Filter verkleinert das ERGEBNIS, nicht die Suche: die
+	-- Physik muss das ganze Volumen durchgehen, und die Zonen sind Unions ueber ganze
+	-- Landstriche.
+	--
+	-- GEMESSEN: der ZoneManager stand mit 18.01 % Skriptzeit auf Platz eins der
+	-- Server-Liste -- das Naechste lag bei 0.83 %. Er allein machte rund 85 % aller
+	-- Lua-Zeit, bei 3 Durchlaeufen je Sekunde. Das erklaert die 24 ms Mittel und die
+	-- Spitzen bis 152 ms im Leerlauf.
+	--
+	-- Jetzt die umgekehrte Frage: "beruehrt dieser kleine Quader das Sanctuary?" Ein Aufruf
+	-- statt dreier, und das durchsuchte Volumen ist 2x4x2 Studs statt eines Landstrichs.
+	-- Die Antwort ist dieselbe -- Ueberlappung ist symmetrisch.
+	local sanctuary = getZonePart(SANCTUARY_PART_NAME)
+	if not sanctuary then
+		-- Ohne den Koerper gibt es kein Drinnen. Draussen ist die sichere Annahme: der
+		-- Spieler kann dann spielen, statt in einer Friedenszone festzustecken, die es
+		-- gar nicht gibt. Gewarnt wird beim Start (siehe unten).
+		return ZONE_AUSSEN
+	end
+
 	local overlapParams = OverlapParams.new()
 	overlapParams.FilterType = Enum.RaycastFilterType.Include
-	overlapParams.FilterDescendantsInstances = { probe }
+	overlapParams.FilterDescendantsInstances = { sanctuary }
+	overlapParams.MaxParts = 1
 
-	-- Zwischen diesem Einschalten und dem Ausschalten unten darf NICHT nachgegeben werden
-	-- (kein task.wait, kein Yield) -- sonst könnte in der Zwischenzeit ein fremder Raycast
-	-- den Prüfkörper treffen.
-	probe.CanQuery = true
+	-- Der Pruefkoerper bleibt dabei fuer Abfragen UNSICHTBAR (CanQuery = false). Er ist
+	-- jetzt der Fragende und nicht mehr der Gesuchte -- das kurzzeitige Sichtbarschalten
+	-- von frueher entfaellt ersatzlos, und damit auch die Gefahr, dass er in dieser
+	-- Spanne einen fremden Raycast stoert.
+	local ok, overlapping = pcall(function()
+		return Workspace:GetPartsInPart(probe, overlapParams)
+	end)
 
-	local foundZones = {}
-	for partName, zoneName in pairs(ZONE_PARTS) do
-		local zonePart = getZonePart(partName)
-		if zonePart then
-			local ok, overlapping = pcall(function()
-				return Workspace:GetPartsInPart(zonePart, overlapParams)
-			end)
-			if ok and #overlapping > 0 then
-				foundZones[zoneName] = true
-			end
-		end
+	if ok and #overlapping > 0 then
+		return ZONE_INNEN
 	end
-
-	probe.CanQuery = false
-
-	for _, zoneName in ipairs(ZONE_PRIORITY) do
-		if foundZones[zoneName] then
-			return zoneName
-		end
-	end
-	return "None"
+	return ZONE_AUSSEN
 end
 
 -- immediate = true umgeht die Bestätigungen (beim Spawnen gibt es keine Vorgeschichte,
@@ -225,8 +249,20 @@ Players.PlayerRemoving:Connect(function(player)
 	end
 end)
 
-for _, partName in pairs({ "SanctuaryZone", "CollectZone", "AttackZone" }) do
-	if not getZonePart(partName) then
-		warn("Zone-Part '" .. partName .. "' nicht im Workspace gefunden. Siehe LOCATIONS_ANLEITUNG.md")
+do
+	local partName = SANCTUARY_PART_NAME
+	local zonePart = getZonePart(partName)
+	if not zonePart then
+		warn("Zone-Part '" .. partName .. "' nicht im Workspace gefunden -- OHNE ihn ist "
+			.. "die ganze Welt Sammelgebiet, auch das Sanctuary. Siehe LOCATIONS_ANLEITUNG.md")
+	elseif zonePart:IsA("BasePart") and not zonePart.CanQuery then
+		-- ===== Seit der umgekehrten Abfrage zaehlt das =====
+		-- Frueher war das Zonen-Teil der Fragende, da spielte sein CanQuery keine Rolle.
+		-- Jetzt ist es das Gesuchte: steht CanQuery auf false, findet der Pruefkoerper es
+		-- NIE -- und die ganze Welt waere Sammelgebiet, ohne dass irgendetwas abstuerzt.
+		-- Genau die Sorte Fehler, die man im Spiel erst nach einer Stunde bemerkt.
+		warn(string.format("[ZoneManager] Zone-Part %q hat CanQuery = false und kann damit "
+			.. "nicht gefunden werden -- diese Zone bliebe wirkungslos. In Studio auf true "
+			.. "setzen.", partName))
 	end
 end

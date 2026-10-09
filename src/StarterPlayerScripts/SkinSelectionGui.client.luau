@@ -2253,9 +2253,32 @@ player:GetAttributeChangedSignal("BodyTrainingActive"):Connect(oeffneTrainierte)
 -- (friedliche Zone, guter Ort um den eigenen Fortschritt zu checken, kein Kampf-HUD
 -- nötig). Reduziert dadurch die HUD-Dichte in beiden Situationen. =====
 local function updateZoneBasedHudVisibility()
+	-- ===== Solange der Prolog das Bild fuer sich hat, wird hier nichts eingeblendet =====
+	-- Der PrologueLetterboxClient versteckt das HUD und setzt dieses Merkmal. Ohne die
+	-- Abfrage hier lief die Abschlusssequenz gegen genau diese Funktion: der Spieler spawnte
+	-- im Sanctuary, "CurrentZone" sprang um, und der Tacho stand wieder im schwarzen Bild
+	-- (beobachtet am 22.09.2026).
+	--
+	-- Ein blosses "return" genuegt, weil diese Funktion beim Fallen des Merkmals erneut
+	-- laeuft (siehe die Verbindung unten) -- die Sichtbarkeit wird dann nachgeholt und nicht
+	-- bloss dem Aufraeumen des Letterbox-Skripts ueberlassen. Das ist auch inhaltlich
+	-- richtig: ob die Statsreihe gehoert, entscheidet die Zone, und die weiss nur diese
+	-- Funktion.
+	if screenGui:GetAttribute("HudHiddenByPrologue") then
+		print("[Kaiju Debug] Kraftreihe: Entscheidung ausgesetzt -- HudHiddenByPrologue steht.")
+		return
+	end
+
 	local isSanctuary = player:GetAttribute("CurrentZone") == "Sanctuary"
 	local isTraining = player:GetAttribute("TrainingStat") ~= nil or player:GetAttribute("BodyTrainingActive") == true
 	statsRowFrame.Visible = isSanctuary
+	-- Die Kraftreihe ist der einzige Weg, ein Training zu beenden (Knopf "X" darin) -- und
+	-- sie hing am 04.10.2026 im Sanctuary unsichtbar. Diese Zeile nennt den Grund: welche
+	-- Zone gemeldet ist, und was daraus folgte.
+	print(string.format(
+		"[Kaiju Debug] Kraftreihe: Zone '%s' -> sichtbar=%s (Training %s).",
+		tostring(player:GetAttribute("CurrentZone")), tostring(statsRowFrame.Visible),
+		isTraining and "laeuft" or "nein"))
 	-- Der Tacho steht ueberall. Hitze entsteht auch beim Training, und der Berserker wirkt
 	-- dort genauso -- ein Instrument, das je nach Ort verschwindet, waere ein Instrument,
 	-- dem man nicht traut.
@@ -2266,6 +2289,7 @@ player:GetAttributeChangedSignal("TrainingStat"):Connect(updateZoneBasedHudVisib
 player:GetAttributeChangedSignal("BodyTrainingActive"):Connect(updateZoneBasedHudVisibility)
 
 player:GetAttributeChangedSignal("CurrentZone"):Connect(updateZoneBasedHudVisibility)
+screenGui:GetAttributeChangedSignal("HudHiddenByPrologue"):Connect(updateZoneBasedHudVisibility)
 updateZoneBasedHudVisibility()
 
 -- ===== Skin-Shop-Menü: öffnet sich über den "Skin kaufen"-Button (Comic-Panel) =====
@@ -3953,9 +3977,16 @@ task.delay(3, function()
 	end
 
 	print("[Kaiju Debug]   GameHud aktiv: " .. tostring(screenGui.Enabled))
+	print("[Kaiju Debug]   HudHiddenByPrologue: "
+		.. tostring(screenGui:GetAttribute("HudHiddenByPrologue")))
 	melde("PlayerStatusCluster", statusCluster)
 	melde("LevelField", levelField)
 	melde("HealthField", healthField)
 	melde("HeatFrame", heatFrame)
 	melde("Needle", tacho.needlePivot)
+	-- Die Kraftreihe fehlte in dieser Auskunft, und genau sie war am 04.10.2026 im Sanctuary
+	-- nicht zu sehen. Ohne sie liess sich nicht unterscheiden, ob sie unsichtbar ist, an der
+	-- falschen Stelle steht oder gar nicht gebaut wurde.
+	melde("StatsRowFrame", statsRowFrame)
+	melde("LeaveTrainingButton", leaveTrainingButton)
 end)

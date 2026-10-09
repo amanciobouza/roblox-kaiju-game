@@ -165,7 +165,9 @@ end
 -- Primal-Beast-Geometrie bei Grösse 1 und wird danach nur umgeformt, der Rift Stalker
 -- wiederum aus dem Storm Hunter. Alle Modelle haben dieselbe Grundgrösse, es gibt keinen
 -- Umrechnungsfaktor zwischen ihnen.
-function StageModels.GetWorn(factionKey, skinId, isSanctuary)
+-- scaleSkinId leiht die Grösse einer anderen Stufe -- siehe SkinsConfig.GetScale. Sie geht
+-- in die Signatur ein, damit ein Wechsel als "muss neu gebaut werden" erkannt wird.
+function StageModels.GetWorn(factionKey, skinId, isSanctuary, scaleSkinId)
 	local recipe, skin = recipeFor(factionKey, skinId)
 	if not recipe then
 		return nil
@@ -173,7 +175,7 @@ function StageModels.GetWorn(factionKey, skinId, isSanctuary)
 
 	-- Dieselbe Rechnung wie für den Avatar (PlayerSetup) -- und zwar wörtlich dieselbe
 	-- Funktion, nicht eine zweite Fassung davon. Im Sanctuary sind beide kleiner.
-	local scale = SkinsConfig.GetScale(skin, isSanctuary)
+	local scale = SkinsConfig.GetScale(skin, isSanctuary, scaleSkinId)
 
 	return {
 		installer = recipe.installer,
@@ -257,32 +259,58 @@ function StageModels.GetBodyOffset(character)
 	return root.CFrame:PointToObjectSpace(point)
 end
 
-function StageModels.GetBodyPoint(character)
+-- ===== Derselbe Punkt, aber auf beliebiger Hoehe =====
+-- GetBodyPoint beantwortet "wo ist die Brust". Gebraucht werden aber auch andere Hoehen: der
+-- Kopf, auf den eine Kamera zielt, oder der Scheitel, ueber dem eine Schadenszahl steht. Die
+-- Rechnung ist jedes Mal dieselbe, nur der Anteil ist ein anderer.
+--
+-- heightShare ist der Anteil der Figurenhoehe ueber den Fuessen: 0.65 ist die Brust, 1.0 der
+-- Scheitel, Werte darueber liegen in der Luft darueber.
+--
+-- ===== Warum waagrecht die Wurzel und senkrecht das Modell =====
+-- Weil nur diese Mischung RUHIG ist. Der Avatar ist auf die Hoehe des Modells skaliert, und
+-- die Standard-Laufanimation von Roblox bewegt seinen Kopf -- bei einem Faktor von bis zu
+-- achtzehn wird aus einem kleinen Nicken ein Ausschlag von mehreren Studs. Alles, was an
+-- diesem Kopf hing, zitterte mit; gemeldet am 02.10.2026 fuer die Schadenszahlen und die
+-- Kamerafahrt der Talentfeier.
+--
+-- Die HumanoidRootPart bewegt die Animation NICHT, nur die Physik -- sie gibt deshalb den
+-- waagrechten Standpunkt. Die Hoehe kommt aus dem Huellquader des sichtbaren Modells; die
+-- aendert sich beim Laufen kaum, weil die Fuesse am Boden bleiben.
+function StageModels.GetFigurePoint(character, heightShare)
 	if not character then
 		return nil
 	end
 
 	local root = character:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return nil
+	end
+
+	-- Erst das getragene Modell, dann der Avatar selbst (blanker Avatar, Debug-Vergleich).
+	-- In beiden Faellen gilt dieselbe Rechnung -- und in beiden bewusst NICHT der Kopf.
 	local model = StageModels.FindEquipped(character)
-	if model and root then
-		local ok, cframe, size = pcall(function()
-			return model:GetBoundingBox()
-		end)
-		if ok and size and size.Y > 0 then
-			local bottomY = cframe.Position.Y - size.Y / 2
-			return Vector3.new(
-				root.Position.X,
-				bottomY + size.Y * BODY_POINT_HEIGHT_SHARE,
-				root.Position.Z
-			)
+	for _, quelle in ipairs({ model, character }) do
+		if quelle then
+			local ok, cframe, size = pcall(function()
+				return quelle:GetBoundingBox()
+			end)
+			if ok and size and size.Y > 0 then
+				local bottomY = cframe.Position.Y - size.Y / 2
+				return Vector3.new(
+					root.Position.X,
+					bottomY + size.Y * heightShare,
+					root.Position.Z
+				)
+			end
 		end
 	end
 
-	local head = character:FindFirstChild("Head")
-	if head and head:IsA("BasePart") then
-		return head.Position
-	end
-	return root and root.Position or nil
+	return root.Position
+end
+
+function StageModels.GetBodyPoint(character)
+	return StageModels.GetFigurePoint(character, BODY_POINT_HEIGHT_SHARE)
 end
 
 local function buildPrototype(recipe, scale)
@@ -374,7 +402,9 @@ end
 -- wiederholen wäre die nächste Liste, die auseinanderläuft.
 local prototypeHeights = {} -- ["Kaiju:2"] = Höhe bei Grösse 1
 
-function StageModels.GetWornHeight(factionKey, skinId, isSanctuary)
+-- scaleSkinId wie bei GetWorn: die Hoehe muss derselben Leihe folgen, sonst passt der
+-- Avatar darunter nicht mehr zum Modell darueber.
+function StageModels.GetWornHeight(factionKey, skinId, isSanctuary, scaleSkinId)
 	local recipe, skin = recipeFor(factionKey, skinId)
 	if not recipe or not skin then
 		return nil
@@ -402,7 +432,7 @@ function StageModels.GetWornHeight(factionKey, skinId, isSanctuary)
 	if not basis then
 		return nil
 	end
-	return basis * SkinsConfig.GetScale(skin, isSanctuary)
+	return basis * SkinsConfig.GetScale(skin, isSanctuary, scaleSkinId)
 end
 
 return StageModels

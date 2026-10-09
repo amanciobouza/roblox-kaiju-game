@@ -271,6 +271,30 @@ return {
 			end,
 		},
 
+		{
+			id = "balancing.guardian-generations-fight-differently",
+			intent = "WEICH: Jede Guardian-Generation hat ihre eigene Kampfentfernung, und "
+				.. "die folgt ihrer Ausrüstung.\n"
+				.. "Amancio am 22.09.2026: Nr. 1 (Warden-I Shepherd) ist Nahkämpfer. Nr. 2 "
+				.. "(Marshal-II Roadblock) und Nr. 5 (Sovereign-V Apex) stehen dazwischen -- "
+				.. "sie suchen den Körperkontakt, halten aber auch gern Abstand. Nr. 3 "
+				.. "(Aegis-III Interceptor) und Nr. 4 (Bastion-IV Colossus) sind "
+				.. "Fernkämpfer.\n"
+				.. "Das deckt sich mit dem, was sie tragen: Schockstock gegen Schild und "
+				.. "Pulskanone gegen Ionenkanonen und Schienenkanone. Ein Guardian, der "
+				.. "unabhängig davon immer bis auf Armlänge heranläuft, macht die "
+				.. "Generationen ununterscheidbar -- und genau das war der Zustand davor.\n"
+				.. "Umgesetzt in CityDefenderService.GUARDIAN_KAMPFSTIL: Wunschabstand, "
+				.. "Auslöseabstand des Flächenangriffs und der Rückzug des Mischtyps stehen "
+				.. "dort als VIELFACHE von GuardianRepulsorRadius. Die absoluten Zahlen "
+				.. "bleiben in CityAlertConfig -- der Stil gehört der Generation, die Stärke "
+				.. "der Stadt.\n"
+				.. "Zwingend dazu gehört, WO der Flächenangriff einschlägt: beim Nahkämpfer "
+				.. "als Druckwelle um den eigenen Körper, bei allen anderen am Ort des "
+				.. "Ziels. Eine Welle um sich selbst, geschlagen aus 60 Studs Entfernung, "
+				.. "träfe niemanden -- ein Fernkämpfer wäre damit harmlos statt gefährlich.",
+		},
+
 		--------------------------------------------------------------------------
 		-- Nur in Studio prüfbar
 		--------------------------------------------------------------------------

@@ -1,0 +1,5073 @@
+<?xml version='1.0' encoding='utf-8'?>
+<roblox version="4">
+  <Item class="Model" referent="M">
+    <Properties>
+      <string name="Name">RiftDetails</string>
+    </Properties>
+    <Item class="Part" referent="P0">
+      <Properties>
+        <string name="Name">FracturedFjordIce</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4288207078</Color3uint8>
+        <Vector3 name="size">
+          <X>85.10436956591826</X>
+          <Y>20.66733648840694</Y>
+          <Z>75.42491858461682</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>36.72385100025431</X>
+          <Y>-7.762478392641538</Y>
+          <Z>1798.3360708591167</Z>
+          <R00>0.822087737993711</R00>
+          <R01>0.07729762044501336</R01>
+          <R02>0.5640893802527417</R02>
+          <R10>0.0</R10>
+          <R11>0.9907414661280677</R11>
+          <R12>-0.13576209815116658</R12>
+          <R20>-0.5693608267525818</R20>
+          <R21>0.11160835617437272</R21>
+          <R22>0.814476410825796</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P1">
+      <Properties>
+        <string name="Name">FracturedFjordIce</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4288207078</Color3uint8>
+        <Vector3 name="size">
+          <X>47.7043399715875</X>
+          <Y>22.851773126007462</Y>
+          <Z>91.37090869125288</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>380.2830332803379</X>
+          <Y>0.1665838174197649</Y>
+          <Z>1827.1943530173328</Z>
+          <R00>0.9367110698059101</R00>
+          <R01>0.049192037883576664</R01>
+          <R02>-0.346630228214344</R02>
+          <R10>0.0</R10>
+          <R11>0.9900796595055278</R11>
+          <R12>0.14050718071834672</R12>
+          <R20>0.3501033728815926</R20>
+          <R21>-0.1316146315660949</R21>
+          <R22>0.9274185770484942</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P2">
+      <Properties>
+        <string name="Name">FracturedFjordIce</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4288207078</Color3uint8>
+        <Vector3 name="size">
+          <X>72.16437469369691</X>
+          <Y>24.309041831974717</Y>
+          <Z>51.99299088942104</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>74.38697861950867</X>
+          <Y>3.5630686274099634</Y>
+          <Z>1934.3359987601607</Z>
+          <R00>0.9197809361724787</R00>
+          <R01>0.06349882374448707</R01>
+          <R02>0.3872608020917496</R02>
+          <R10>0.0</R10>
+          <R11>0.9868221944743056</R11>
+          <R12>-0.1618083943833438</R12>
+          <R20>-0.39243219726938655</R20>
+          <R21>0.1488282764664776</R21>
+          <R22>0.9076602418693567</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P3">
+      <Properties>
+        <string name="Name">FracturedFjordIce</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4288207078</Color3uint8>
+        <Vector3 name="size">
+          <X>93.48291807205865</X>
+          <Y>18.752774419457435</Y>
+          <Z>97.97635913194438</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>331.01387164266447</X>
+          <Y>-5.051421208254496</Y>
+          <Z>1930.0979245154595</Z>
+          <R00>0.934112070000254</R00>
+          <R01>-0.03778924004749417</R01>
+          <R02>0.3549741033039924</R02>
+          <R10>0.0</R10>
+          <R11>0.9943812379846584</R11>
+          <R12>0.1058581765575913</R12>
+          <R20>-0.3569798883408428</R20>
+          <R21>-0.09888340043066397</R21>
+          <R22>0.9288635165832644</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P4">
+      <Properties>
+        <string name="Name">FracturedFjordIce</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4288207078</Color3uint8>
+        <Vector3 name="size">
+          <X>60.23370600118525</X>
+          <Y>27.69228985017779</Y>
+          <Z>88.79666805067578</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>47.95812199055923</X>
+          <Y>4.107475591299371</Y>
+          <Z>2016.7163191383822</Z>
+          <R00>0.933165869648927</R00>
+          <R01>0.004458661490696772</R01>
+          <R02>-0.35941839137705967</R02>
+          <R10>0.0</R10>
+          <R11>0.9999230642320555</R11>
+          <R12>0.012404258009918684</R12>
+          <R20>0.3594460456346152</R20>
+          <R21>-0.011575230213175436</R21>
+          <R22>0.9330940758161259</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P5">
+      <Properties>
+        <string name="Name">FracturedFjordIce</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4288207078</Color3uint8>
+        <Vector3 name="size">
+          <X>76.62337320870638</X>
+          <Y>23.610698843986572</Y>
+          <Z>81.74807061967724</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>343.15535336666136</X>
+          <Y>5.963714448027702</Y>
+          <Z>2026.2278953186049</Z>
+          <R00>0.989159282315581</R00>
+          <R01>-0.014609612722673472</R01>
+          <R02>0.14611801198010485</R02>
+          <R10>0.0</R10>
+          <R11>0.9950386656592627</R11>
+          <R12>0.09948896342325646</R12>
+          <R20>-0.14684656689526168</R20>
+          <R21>-0.09841043165806945</R21>
+          <R22>0.9842517323997697</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P6">
+      <Properties>
+        <string name="Name">FracturedFjordIce</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4288207078</Color3uint8>
+        <Vector3 name="size">
+          <X>81.94659678900209</X>
+          <Y>17.332310641688828</Y>
+          <Z>59.56956634035676</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>73.99774448869063</X>
+          <Y>-1.6330013809157933</Y>
+          <Z>2086.3529468935785</Z>
+          <R00>0.9921902766547018</R00>
+          <R01>0.0015614772814439772</R01>
+          <R02>0.12472376157158613</R02>
+          <R10>0.0</R10>
+          <R11>0.9999216404570189</R11>
+          <R12>-0.01251850413364639</R12>
+          <R20>-0.12473353563443286</R20>
+          <R21>0.012420738079665641</R21>
+          <R22>0.9921125290780729</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P7">
+      <Properties>
+        <string name="Name">FracturedFjordIce</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4288207078</Color3uint8>
+        <Vector3 name="size">
+          <X>81.75489134245775</X>
+          <Y>19.912908748319584</Y>
+          <Z>88.90826145964986</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>337.33434491646864</X>
+          <Y>-0.07580625359631998</Y>
+          <Z>2100.1123717195674</Z>
+          <R00>0.8975350283163622</R00>
+          <R01>0.019523622039550954</R01>
+          <R02>-0.44051072759650667</R02>
+          <R10>0.0</R10>
+          <R11>0.9990192945901685</R11>
+          <R12>0.04427695830296037</R12>
+          <R20>0.44094316294183195</R20>
+          <R21>-0.03974012102420993</R21>
+          <R22>0.8966548108585791</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P8">
+      <Properties>
+        <string name="Name">FracturedFjordIce</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4288207078</Color3uint8>
+        <Vector3 name="size">
+          <X>86.16578376548114</X>
+          <Y>21.753129430110995</Y>
+          <Z>59.13147000068168</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>85.72347980362439</X>
+          <Y>-1.1758807230673476</Y>
+          <Z>2215.792829787192</Z>
+          <R00>0.9110472650351492</R00>
+          <R01>-0.015548234308986601</R01>
+          <R02>-0.4120086568044989</R02>
+          <R10>0.0</R10>
+          <R11>0.9992886949217515</R11>
+          <R12>-0.03771079688341919</R12>
+          <R20>0.41230192926055353</R20>
+          <R21>0.03435631836293508</R21>
+          <R22>0.9103992324890053</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P9">
+      <Properties>
+        <string name="Name">FracturedFjordIce</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4288207078</Color3uint8>
+        <Vector3 name="size">
+          <X>47.327877417440675</X>
+          <Y>29.322916343305813</Y>
+          <Z>80.75293908048073</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>399.14691088658896</X>
+          <Y>-5.3397282955002225</Y>
+          <Z>2222.5712709832433</Z>
+          <R00>0.9816370113857222</R00>
+          <R01>0.010028852043693252</R01>
+          <R02>0.19049461935811535</R02>
+          <R10>0.0</R10>
+          <R11>0.9986170534678823</R11>
+          <R12>-0.05257357247823836</R12>
+          <R20>-0.1907584280646796</R20>
+          <R21>0.05160816456540856</R21>
+          <R22>0.980279459885028</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P10">
+      <Properties>
+        <string name="Name">FracturedFjordIce</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4288207078</Color3uint8>
+        <Vector3 name="size">
+          <X>74.61183361072611</X>
+          <Y>23.599677987403272</Y>
+          <Z>64.84119528963642</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>41.59024591748233</X>
+          <Y>-1.4046041777170997</Y>
+          <Z>2312.7134012972715</Z>
+          <R00>0.968670795968679</R00>
+          <R01>0.012971252742689206</R01>
+          <R02>-0.24800934587166476</R02>
+          <R10>0.0</R10>
+          <R11>0.9986350778617874</R11>
+          <R12>0.052230080068689504</R12>
+          <R20>0.24834832199434279</R20>
+          <R21>-0.050593753233645296</R21>
+          <R22>0.9673486357546214</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P11">
+      <Properties>
+        <string name="Name">FracturedFjordIce</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4288207078</Color3uint8>
+        <Vector3 name="size">
+          <X>93.71685967105526</X>
+          <Y>24.76508497241088</Y>
+          <Z>74.48573472507948</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>397.13401899486354</X>
+          <Y>-0.3134603746367146</Y>
+          <Z>2297.945552871307</Z>
+          <R00>0.8100048182572445</R00>
+          <R01>-0.035815189979668094</R01>
+          <R02>-0.5853285116639789</R02>
+          <R10>0.0</R10>
+          <R11>0.9981332431453441</R11>
+          <R12>-0.06107396276775748</R12>
+          <R20>0.586423221231943</R20>
+          <R21>0.04947020411194711</R21>
+          <R22>0.8084927362104585</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P12">
+      <Properties>
+        <string name="Name">FracturedFjordIce</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4288207078</Color3uint8>
+        <Vector3 name="size">
+          <X>71.90292248065418</X>
+          <Y>17.254733600536227</Y>
+          <Z>82.90914706420068</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>32.57830181578304</X>
+          <Y>5.478565385729572</Y>
+          <Z>2388.6219830965747</Z>
+          <R00>0.9925876233392338</R00>
+          <R01>0.0198849432462479</R01>
+          <R02>-0.11989328182122953</R02>
+          <R10>0.0</R10>
+          <R11>0.9865234068776373</R11>
+          <R12>0.16362019338253997</R12>
+          <R20>0.12153110710337196</R20>
+          <R21>-0.1624073788798812</R21>
+          <R22>0.9792109238011979</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P13">
+      <Properties>
+        <string name="Name">FracturedFjordIce</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4288207078</Color3uint8>
+        <Vector3 name="size">
+          <X>66.2128529632657</X>
+          <Y>27.334259896824115</Y>
+          <Z>46.04774930273045</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>370.1599176190505</X>
+          <Y>3.9038069134016613</Y>
+          <Z>2405.6572637634667</Z>
+          <R00>0.8704582226955273</R00>
+          <R01>0.007434145971181186</R01>
+          <R02>0.49218615991860526</R02>
+          <R10>0.0</R10>
+          <R11>0.9998859490057181</R11>
+          <R12>-0.01510261503629198</R12>
+          <R20>-0.49224230064242114</R20>
+          <R21>0.013146195442545463</R21>
+          <R22>0.8703589460697481</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P14">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>83.76464800992643</X>
+          <Y>66.37929441959969</Y>
+          <Z>122.46016748881799</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>2.4070402668475803</X>
+          <Y>-323.1971810310901</Y>
+          <Z>2498.750623864577</Z>
+          <R00>0.9019095141706102</R00>
+          <R01>-0.08365961118228335</R01>
+          <R02>0.42374555774115574</R02>
+          <R10>0.0</R10>
+          <R11>0.9810627586917058</R11>
+          <R12>0.19369012238165328</R12>
+          <R20>-0.43192502618919176</R20>
+          <R21>-0.17469096417688293</R21>
+          <R22>0.8848298360625149</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P15">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>75.82576663725158</X>
+          <Y>82.25120118483545</Y>
+          <Z>138.32784671350126</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>374.54331272159124</X>
+          <Y>-227.91942086953122</Y>
+          <Z>2482.514260539358</Z>
+          <R00>0.9540234638695125</R00>
+          <R01>-0.05700113828172636</R01>
+          <R02>0.29426195918093884</R02>
+          <R10>0.0</R10>
+          <R11>0.9817504538849618</R11>
+          <R12>0.19017372662034956</R12>
+          <R20>-0.29973193087560257</R20>
+          <R21>-0.1814301974073196</R21>
+          <R22>0.9366129686707975</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P16">
+      <Properties>
+        <string name="Name">HangingIceShard</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0.12</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4285447124</Color3uint8>
+        <Vector3 name="size">
+          <X>26.63237214843575</X>
+          <Y>153.72547862223635</Y>
+          <Z>34.88270530272978</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>374.54331272159124</X>
+          <Y>-192.91942086953122</Y>
+          <Z>2482.514260539358</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P17">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>77.73936130162778</X>
+          <Y>63.778514791954095</Y>
+          <Z>116.07657481395057</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-16.409164450363402</X>
+          <Y>-195.62631600454768</Y>
+          <Z>2715.937252496847</Z>
+          <R00>0.9665586472316303</R00>
+          <R01>-0.04479600963848834</R01>
+          <R02>-0.2525028692554388</R02>
+          <R10>0.0</R10>
+          <R11>0.9846252020529995</R11>
+          <R12>-0.1746803122337773</R12>
+          <R20>0.256445669610077</R20>
+          <R21>0.1688387662906786</R21>
+          <R22>0.9516980033265179</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P18">
+      <Properties>
+        <string name="Name">HangingIceShard</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0.12</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4285447124</Color3uint8>
+        <Vector3 name="size">
+          <X>20.87578021139409</X>
+          <Y>108.97473117054915</Y>
+          <Z>46.145830264006364</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-16.409164450363402</X>
+          <Y>-160.62631600454768</Y>
+          <Z>2715.937252496847</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P19">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>67.95482890990813</X>
+          <Y>58.368750318391676</Y>
+          <Z>113.0775368679579</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>348.77810675710896</X>
+          <Y>-216.90825190256987</Y>
+          <Z>2647.640227100355</Z>
+          <R00>0.9896810334708014</R00>
+          <R01>0.0014290230743945391</R01>
+          <R02>-0.14328087758392394</R02>
+          <R10>0.0</R10>
+          <R11>0.9999502675765685</R11>
+          <R12>0.009973082449728362</R12>
+          <R20>0.14328800364359381</R20>
+          <R21>-0.009870170545736677</R21>
+          <R22>0.9896318142345827</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P20">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>86.15472761887133</X>
+          <Y>90.94732312484828</Y>
+          <Z>146.32828836188017</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-49.77772272995358</X>
+          <Y>-142.9795480646696</Y>
+          <Z>2886.116132000342</Z>
+          <R00>0.9853672483007285</R00>
+          <R01>-0.03596525247629717</R01>
+          <R02>-0.16660698241840458</R02>
+          <R10>0.0</R10>
+          <R11>0.9774842542324289</R11>
+          <R12>-0.21100837122652813</R12>
+          <R20>0.17044467130494392</R20>
+          <R21>0.20792073812390263</R21>
+          <R22>0.9631809698502982</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P21">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>72.92849360485067</X>
+          <Y>68.70707712755112</Y>
+          <Z>135.24479767508393</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>300.175173237587</X>
+          <Y>-219.61478549861152</Y>
+          <Z>2868.197044040495</Z>
+          <R00>0.9990367737021785</R00>
+          <R01>0.008434635866230784</R01>
+          <R02>0.04306253253753496</R02>
+          <R10>0.0</R10>
+          <R11>0.9813524480242833</R11>
+          <R12>-0.19221699393327935</R12>
+          <R20>-0.04388080207496399</R20>
+          <R21>0.19203184546983462</R21>
+          <R22>0.9804071835389148</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P22">
+      <Properties>
+        <string name="Name">HangingIceShard</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0.12</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4285447124</Color3uint8>
+        <Vector3 name="size">
+          <X>19.773965008329633</X>
+          <Y>127.15974400647755</Y>
+          <Z>25.90915405399822</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>300.175173237587</X>
+          <Y>-184.61478549861152</Y>
+          <Z>2868.197044040495</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P23">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>76.29543923424376</X>
+          <Y>46.17034170772724</Y>
+          <Z>142.95022508911637</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-96.2366418105306</X>
+          <Y>-169.70363799888182</Y>
+          <Z>3203.5438417402975</Z>
+          <R00>0.9998378202241074</R00>
+          <R01>-0.0003386583442843104</R01>
+          <R02>-0.018006070088484774</R02>
+          <R10>0.0</R10>
+          <R11>0.9998231762930045</R11>
+          <R12>-0.01880468418686259</R12>
+          <R20>0.01800925455163482</R20>
+          <R21>0.018801634447395434</R21>
+          <R22>0.9996610251943411</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P24">
+      <Properties>
+        <string name="Name">HangingIceShard</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0.12</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4285447124</Color3uint8>
+        <Vector3 name="size">
+          <X>26.519265597603063</X>
+          <Y>142.1222054504644</Y>
+          <Z>31.721445382866044</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-96.2366418105306</X>
+          <Y>-134.70363799888182</Y>
+          <Z>3203.5438417402975</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P25">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>71.68656921048648</X>
+          <Y>56.06135030332642</Y>
+          <Z>115.25640903437352</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>244.76726381743836</X>
+          <Y>-194.0040678249091</Y>
+          <Z>3134.427966038876</Z>
+          <R00>0.9594353039453177</R00>
+          <R01>-0.008164299062202581</R01>
+          <R02>0.28181064877711537</R02>
+          <R10>0.0</R10>
+          <R11>0.9995806083898338</R11>
+          <R12>0.028958717703132145</R12>
+          <R20>-0.28192888738714905</R20>
+          <R21>-0.02778401612137124</R21>
+          <R22>0.9590329248283458</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P26">
+      <Properties>
+        <string name="Name">HangingIceShard</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0.12</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4285447124</Color3uint8>
+        <Vector3 name="size">
+          <X>16.21403433521257</X>
+          <Y>117.75664598649362</Y>
+          <Z>39.81107317286471</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>244.76726381743836</X>
+          <Y>-159.0040678249091</Y>
+          <Z>3134.427966038876</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P27">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>92.70125713177873</X>
+          <Y>76.48126089120834</Y>
+          <Z>142.62764297125216</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-156.53142572799365</X>
+          <Y>-231.7718212219114</Y>
+          <Z>3349.8973517528634</Z>
+          <R00>0.9905710691965277</R00>
+          <R01>0.021838462293472447</R01>
+          <R02>0.1352480625942736</R02>
+          <R10>0.0</R10>
+          <R11>0.9872132699804634</R11>
+          <R12>-0.15940501740685786</R12>
+          <R20>-0.13699984259424522</R20>
+          <R21>0.1579019985280023</R21>
+          <R22>0.977904904369548</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P28">
+      <Properties>
+        <string name="Name">HangingIceShard</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0.12</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4285447124</Color3uint8>
+        <Vector3 name="size">
+          <X>25.091034634879065</X>
+          <Y>178.48240451671865</Y>
+          <Z>33.13271324372519</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-156.53142572799365</X>
+          <Y>-196.7718212219114</Y>
+          <Z>3349.8973517528634</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P29">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>73.41650925590287</X>
+          <Y>60.56137049862903</Y>
+          <Z>144.61308671092465</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>197.7057434985298</X>
+          <Y>-132.93694590875967</Y>
+          <Z>3438.365351611867</Z>
+          <R00>0.9996030803632656</R00>
+          <R01>0.00412817155398774</R01>
+          <R02>0.027868260223622907</R02>
+          <R10>0.0</R10>
+          <R11>0.9892058271377</R11>
+          <R12>-0.14653269791012066</R12>
+          <R20>-0.028172357520639204</R20>
+          <R21>0.14647453620489648</R21>
+          <R22>0.988813191920137</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P30">
+      <Properties>
+        <string name="Name">HangingIceShard</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0.12</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4285447124</Color3uint8>
+        <Vector3 name="size">
+          <X>23.712401422401626</X>
+          <Y>108.35080360829573</Y>
+          <Z>36.83012288758699</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>197.7057434985298</X>
+          <Y>-97.93694590875967</Y>
+          <Z>3438.365351611867</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P31">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>84.54022080128328</X>
+          <Y>94.46851213378488</Y>
+          <Z>83.3922056536707</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-211.11057375851186</X>
+          <Y>-322.47231460570487</Y>
+          <Z>3650.5459858705935</Z>
+          <R00>0.9368482051553045</R00>
+          <R01>0.0466204699698636</R01>
+          <R02>0.34661502027043406</R02>
+          <R10>0.0</R10>
+          <R11>0.9910754919817742</R11>
+          <R12>-0.13330179741130305</R12>
+          <R20>-0.3497362441859356</R20>
+          <R21>0.12488354964875528</R21>
+          <R22>0.9284872958365357</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P32">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>67.8983803295097</X>
+          <Y>60.39896868662074</Y>
+          <Z>140.58002974690964</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>122.68413197624373</X>
+          <Y>-114.8545092786074</Y>
+          <Z>3666.863610181642</Z>
+          <R00>0.9808416994517695</R00>
+          <R01>0.010241562932327955</R01>
+          <R02>-0.19453706846066074</R02>
+          <R10>0.0</R10>
+          <R11>0.9986170829570745</R11>
+          <R12>0.05257301233811297</R12>
+          <R20>0.19480646964760856</R20>
+          <R21>-0.05156580276701357</R21>
+          <R22>0.9794852767491856</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P33">
+      <Properties>
+        <string name="Name">HangingIceShard</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0.12</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4285447124</Color3uint8>
+        <Vector3 name="size">
+          <X>20.25839447108413</X>
+          <Y>150.1821235301747</Y>
+          <Z>38.69937762325954</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>122.68413197624373</X>
+          <Y>-79.8545092786074</Y>
+          <Z>3666.863610181642</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P34">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>97.72814422874634</X>
+          <Y>66.91884619365172</Y>
+          <Z>78.54809109678436</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-303.39385455678126</X>
+          <Y>-95.84528950929632</Y>
+          <Z>3838.338521397462</Z>
+          <R00>0.984017675092991</R00>
+          <R01>-0.008429034404555951</R01>
+          <R02>-0.17787120757332137</R02>
+          <R10>0.0</R10>
+          <R11>0.9988790567059567</R11>
+          <R12>-0.04733529417061059</R12>
+          <R20>0.1780708148591025</R20>
+          <R21>0.04657876611960704</R21>
+          <R22>0.9829146470788754</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P35">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>50.10076365931341</X>
+          <Y>68.21687325360926</Y>
+          <Z>141.0178538873161</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>98.8118836204153</X>
+          <Y>-182.70291034268686</Y>
+          <Z>3836.1568651146044</Z>
+          <R00>0.9804758083833006</R00>
+          <R01>-0.022435858576597457</R01>
+          <R02>-0.19535562808643148</R02>
+          <R10>0.0</R10>
+          <R11>0.9934696998128707</R11>
+          <R12>-0.11409625565164054</R12>
+          <R20>0.19663974464770143</R20>
+          <R21>0.11186861849355</R21>
+          <R22>0.9740730070283394</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P36">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>94.58019707332429</X>
+          <Y>84.53593669433047</Y>
+          <Z>86.1786858544077</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-354.10231411807774</X>
+          <Y>-298.28471455884255</Y>
+          <Z>4040.4783034822444</Z>
+          <R00>0.9232934656723475</R00>
+          <R01>-0.05155937044190132</R01>
+          <R02>-0.38061897951413354</R02>
+          <R10>0.0</R10>
+          <R11>0.9909494062729507</R11>
+          <R12>-0.1342358901608899</R12>
+          <R20>0.3840952697531507</R20>
+          <R21>0.12393912024426061</R21>
+          <R22>0.9149371116237077</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P37">
+      <Properties>
+        <string name="Name">HangingIceShard</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0.12</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4285447124</Color3uint8>
+        <Vector3 name="size">
+          <X>20.769253219036628</X>
+          <Y>174.33370947740764</Y>
+          <Z>46.02989157918289</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-354.10231411807774</X>
+          <Y>-263.28471455884255</Y>
+          <Z>4040.4783034822444</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P38">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>79.30545061041352</X>
+          <Y>55.67175853169538</Y>
+          <Z>114.22867171235444</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>29.876065832210234</X>
+          <Y>-184.11959862099158</Y>
+          <Z>4120.139580742551</Z>
+          <R00>0.9999086646299862</R00>
+          <R01>-0.0010856600840210948</R01>
+          <R02>-0.013471590108809441</R02>
+          <R10>0.0</R10>
+          <R11>0.9967684499937364</R11>
+          <R12>-0.08032843268161252</R12>
+          <R20>0.013515265364683338</R20>
+          <R21>0.08032109585449092</R21>
+          <R22>0.9966774097785381</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P39">
+      <Properties>
+        <string name="Name">HangingIceShard</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0.12</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4285447124</Color3uint8>
+        <Vector3 name="size">
+          <X>16.37375257875565</X>
+          <Y>173.5309986517259</Y>
+          <Z>48.069862300941125</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>29.876065832210234</X>
+          <Y>-149.11959862099158</Y>
+          <Z>4120.139580742551</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P40">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>97.17720574731982</X>
+          <Y>57.76934338909202</Y>
+          <Z>92.70873027780493</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-429.39449928105154</X>
+          <Y>-100.73018655443326</Y>
+          <Z>4306.367691671928</Z>
+          <R00>0.8854868671209303</R00>
+          <R01>0.05335397162060077</R01>
+          <R02>0.46159111978965556</R02>
+          <R10>0.0</R10>
+          <R11>0.9933860136851607</R11>
+          <R12>-0.11482259278863963</R12>
+          <R20>-0.4646644037973643</R20>
+          <R21>0.10167389796311482</R21>
+          <R22>0.8796302690998224</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P41">
+      <Properties>
+        <string name="Name">HangingIceShard</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0.12</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4285447124</Color3uint8>
+        <Vector3 name="size">
+          <X>23.607497170843043</X>
+          <Y>143.4657168827505</Y>
+          <Z>32.90243937579739</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-429.39449928105154</X>
+          <Y>-65.73018655443326</Y>
+          <Z>4306.367691671928</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P42">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>70.55414617953736</X>
+          <Y>53.38182504715516</Y>
+          <Z>100.9416792312878</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-23.456994212828246</X>
+          <Y>-185.1996530955163</Y>
+          <Z>4281.272731424422</Z>
+          <R00>0.9320971772805984</R00>
+          <R01>-0.013688086050061889</R01>
+          <R02>0.36194956610807943</R02>
+          <R10>0.0</R10>
+          <R11>0.9992856783647095</R11>
+          <R12>0.03779064719189695</R12>
+          <R20>-0.3622082993327746</R20>
+          <R21>-0.03522455557517412</R21>
+          <R22>0.9314313601006736</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P43">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>62.5356241579796</X>
+          <Y>47.53759316352517</Y>
+          <Z>132.77985604266297</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-423.229572016033</X>
+          <Y>-292.52141103081647</Y>
+          <Z>4530.123050911141</Z>
+          <R00>0.9709663910938108</R00>
+          <R01>0.007080471809004635</R01>
+          <R02>-0.23911113375420803</R02>
+          <R10>0.0</R10>
+          <R11>0.9995618636260838</R11>
+          <R12>0.029598661867563787</R12>
+          <R20>0.23921594296003948</R20>
+          <R21>-0.028739305894754402</R21>
+          <R22>0.9705409754000224</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P44">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>78.82892297304042</X>
+          <Y>80.06759677059858</Y>
+          <Z>85.37287240143053</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-52.72517921896923</X>
+          <Y>-99.76193622176359</Y>
+          <Z>4606.144134287719</Z>
+          <R00>0.9756258157620344</R00>
+          <R01>0.04560518684929668</R01>
+          <R02>-0.21464956219639872</R02>
+          <R10>0.0</R10>
+          <R11>0.9781661190704176</R11>
+          <R12>0.20782454980756637</R12>
+          <R20>0.2194408066396606</R20>
+          <R21>-0.2027589959413845</R21>
+          <R22>0.9543241178688595</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P45">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>57.96740370342718</X>
+          <Y>72.72557693645018</Y>
+          <Z>131.65480501785447</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-495.3483903995245</X>
+          <Y>-128.7713368011582</Y>
+          <Z>4799.642535827097</Z>
+          <R00>0.9873646200159313</R00>
+          <R01>0.03074826325394117</R01>
+          <R02>0.1554530522301251</R02>
+          <R10>0.0</R10>
+          <R11>0.9809939365829402</R11>
+          <R12>-0.19403838895307898</R12>
+          <R20>-0.15846484512596373</R20>
+          <R21>0.19158664017716032</R21>
+          <R22>0.9685987054321473</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P46">
+      <Properties>
+        <string name="Name">HangingIceShard</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0.12</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4285447124</Color3uint8>
+        <Vector3 name="size">
+          <X>20.997642618288367</X>
+          <Y>100.09859180111243</Y>
+          <Z>33.26663204528436</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-495.3483903995245</X>
+          <Y>-93.77133680115821</Y>
+          <Z>4799.642535827097</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P47">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>95.24889506806484</X>
+          <Y>61.22435707357785</Y>
+          <Z>130.17674772761157</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-83.91485866502408</X>
+          <Y>-109.90878254346995</Y>
+          <Z>4785.957500028538</Z>
+          <R00>0.9657500372630634</R00>
+          <R01>0.05599178638261535</R01>
+          <R02>-0.2533609784163203</R02>
+          <R10>0.0</R10>
+          <R11>0.9764399269528179</R11>
+          <R12>0.2157894090366244</R12>
+          <R20>0.2594742097519358</R20>
+          <R21>-0.20839862981809446</R21>
+          <R22>0.9429968958398268</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P48">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>69.8424858956615</X>
+          <Y>53.05411575103025</Y>
+          <Z>110.80115370969789</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-458.38686771936875</X>
+          <Y>-272.38348282508724</Y>
+          <Z>5080.2671180876105</Z>
+          <R00>0.8938476897833154</R00>
+          <R01>0.0961577927804681</R01>
+          <R02>0.4379383362490871</R02>
+          <R10>0.0</R10>
+          <R11>0.9767326708909176</R11>
+          <R12>-0.21446046165737512</R12>
+          <R20>-0.448370725481749</R20>
+          <R21>0.19169498820230804</R21>
+          <R22>0.873050241411734</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P49">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>89.96343342356323</X>
+          <Y>68.52385694129117</Y>
+          <Z>94.78722880484577</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-39.986309160900554</X>
+          <Y>-261.01766405785736</Y>
+          <Z>5055.765175743769</Z>
+          <R00>0.9613563835532951</R00>
+          <R01>-0.039602332596778936</R01>
+          <R02>-0.27244368051805457</R02>
+          <R10>0.0</R10>
+          <R11>0.9895998039035899</R11>
+          <R12>-0.1438479339927287</R12>
+          <R20>0.27530692654077865</R20>
+          <R21>0.13828912960486275</R21>
+          <R22>0.9513580886458052</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P50">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>60.75140039563094</X>
+          <Y>62.76331502288221</Y>
+          <Z>108.57351472561967</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-449.7476737020584</X>
+          <Y>-167.83567459481083</Y>
+          <Z>5320.1870093043235</Z>
+          <R00>0.9266384916718862</R00>
+          <R01>0.04203373440336543</R01>
+          <R02>0.3735964011124292</R02>
+          <R10>0.0</R10>
+          <R11>0.9937300929461381</R11>
+          <R12>-0.11180564553393381</R12>
+          <R20>-0.37595359521096716</R20>
+          <R21>0.10360341473796598</R21>
+          <R22>0.9208285544565726</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P51">
+      <Properties>
+        <string name="Name">HangingIceShard</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0.12</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4285447124</Color3uint8>
+        <Vector3 name="size">
+          <X>19.122538121153802</X>
+          <Y>152.62609046934975</Y>
+          <Z>32.858290351975086</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-449.7476737020584</X>
+          <Y>-132.83567459481083</Y>
+          <Z>5320.1870093043235</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P52">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>68.09560146722342</X>
+          <Y>81.52186200897492</Y>
+          <Z>112.81366738626684</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-58.00469703416605</X>
+          <Y>-108.77260146640114</Y>
+          <Z>5306.3393565352035</Z>
+          <R00>0.980764225371608</R00>
+          <R01>0.04551079157991643</R01>
+          <R02>-0.18981649580844953</R02>
+          <R10>0.0</R10>
+          <R11>0.972439787580577</R11>
+          <R12>0.23315415400597553</R12>
+          <R20>0.19519614297221585</R20>
+          <R21>-0.2286692532458432</R21>
+          <R22>0.9537341549869957</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P53">
+      <Properties>
+        <string name="Name">HangingIceShard</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0.12</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4285447124</Color3uint8>
+        <Vector3 name="size">
+          <X>18.26639985495899</X>
+          <Y>144.37074962105493</Y>
+          <Z>51.66122524950248</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-58.00469703416605</X>
+          <Y>-73.77260146640114</Y>
+          <Z>5306.3393565352035</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P54">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>98.56380662738817</X>
+          <Y>94.33113323510207</Y>
+          <Z>94.82258377692101</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-440.78090350114826</X>
+          <Y>-311.7835370328888</Y>
+          <Z>5466.03684322342</Z>
+          <R00>0.998839543984105</R00>
+          <R01>-0.0007338232595549908</R01>
+          <R02>-0.0481562755728555</R02>
+          <R10>0.0</R10>
+          <R11>0.9998839162199176</R11>
+          <R12>-0.015236603450925909</R12>
+          <R20>0.04816186638436122</R20>
+          <R21>0.015218922042789476</R21>
+          <R22>0.9987235949141435</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P55">
+      <Properties>
+        <string name="Name">HangingIceShard</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0.12</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4285447124</Color3uint8>
+        <Vector3 name="size">
+          <X>26.510971386419953</X>
+          <Y>160.66212930620642</Y>
+          <Z>40.98961111958727</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-440.78090350114826</X>
+          <Y>-276.7835370328888</Y>
+          <Z>5466.03684322342</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P56">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>67.3547643745005</X>
+          <Y>49.947652784405335</Y>
+          <Z>79.34962843085205</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-24.360543340815283</X>
+          <Y>-325.6837945217738</Y>
+          <Z>5454.865048856876</Z>
+          <R00>0.9403366942723023</R00>
+          <R01>0.01690872411861118</R01>
+          <R02>0.33982494972223487</R02>
+          <R10>0.0</R10>
+          <R11>0.998764406370884</R11>
+          <R12>-0.04969567955683499</R12>
+          <R20>-0.34024535471485684</R20>
+          <R21>0.04673067103408984</R21>
+          <R22>0.9391748202436354</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P57">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>90.95432018250892</X>
+          <Y>48.07591123924061</Y>
+          <Z>117.50291440476795</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-433.4732234062799</X>
+          <Y>-202.42963939375613</Y>
+          <Z>5689.722514127843</Z>
+          <R00>0.9289446871927335</R00>
+          <R01>-0.0736380301332743</R01>
+          <R02>-0.3628211799970964</R02>
+          <R10>0.0</R10>
+          <R11>0.9800189341385502</R11>
+          <R12>-0.19890421999027583</R12>
+          <R20>0.3702185410489248</R20>
+          <R21>0.18477101842018143</R21>
+          <R22>0.9103833822162917</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P58">
+      <Properties>
+        <string name="Name">HangingIceShard</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0.12</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4285447124</Color3uint8>
+        <Vector3 name="size">
+          <X>21.992396590904857</X>
+          <Y>175.3759777236132</Y>
+          <Z>36.43587553332334</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-433.4732234062799</X>
+          <Y>-167.42963939375613</Y>
+          <Z>5689.722514127843</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P59">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>52.72270192362243</X>
+          <Y>83.28452047778069</Y>
+          <Z>91.1886848524563</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>20.17654709785383</X>
+          <Y>-135.33344942261198</Y>
+          <Z>5700.255638021483</Z>
+          <R00>0.9890154912324062</R00>
+          <R01>-0.016430079611591285</R01>
+          <R02>-0.1468959175276126</R02>
+          <R10>0.0</R10>
+          <R11>0.9938030459622592</R11>
+          <R12>-0.11115532302204753</R12>
+          <R20>0.1478119010848666</R20>
+          <R21>0.10993433640174713</R21>
+          <R22>0.9828866076906253</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P60">
+      <Properties>
+        <string name="Name">HangingIceShard</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0.12</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4285447124</Color3uint8>
+        <Vector3 name="size">
+          <X>24.10691492974169</X>
+          <Y>133.28405150788203</Y>
+          <Z>52.52234314502634</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>20.17654709785383</X>
+          <Y>-100.33344942261198</Y>
+          <Z>5700.255638021483</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P61">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>58.77150487598216</X>
+          <Y>62.63293567549698</Y>
+          <Z>112.53519121089451</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-356.0549521524181</X>
+          <Y>-264.4191781503618</Y>
+          <Z>5922.4264712010545</Z>
+          <R00>0.908119284287726</R00>
+          <R01>0.02799718382653311</R01>
+          <R02>0.4177744884534377</R02>
+          <R10>0.0</R10>
+          <R11>0.9977620259122214</R11>
+          <R12>-0.06686508541488395</R12>
+          <R20>-0.4187115540616812</R20>
+          <R21>0.060721473510802086</R21>
+          <R22>0.906086936860878</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P62">
+      <Properties>
+        <string name="Name">HangingIceShard</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0.12</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4285447124</Color3uint8>
+        <Vector3 name="size">
+          <X>19.243823412331494</X>
+          <Y>156.1297841598203</Y>
+          <Z>31.229579160250843</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-356.0549521524181</X>
+          <Y>-229.4191781503618</Y>
+          <Z>5922.4264712010545</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P63">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>63.7606267365627</X>
+          <Y>49.543780715541175</Y>
+          <Z>139.67032171855416</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>28.07681839603831</X>
+          <Y>-195.63318608154353</Y>
+          <Z>5992.286792458666</Z>
+          <R00>0.9976211157743058</R00>
+          <R01>0.0051850205949992186</R01>
+          <R02>-0.06874027147646916</R02>
+          <R10>0.0</R10>
+          <R11>0.9971673031632968</R11>
+          <R12>0.07521548711560452</R12>
+          <R20>0.06893554497666096</R20>
+          <R21>-0.07503655817977731</R21>
+          <R22>0.9947951575954236</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P64">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>59.12063711393367</X>
+          <Y>70.49108721619714</Y>
+          <Z>139.08360633822437</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-316.7309417651706</X>
+          <Y>-277.3671912403275</Y>
+          <Z>6208.36734283767</Z>
+          <R00>0.8876786406842018</R00>
+          <R01>0.06284763530214364</R01>
+          <R02>0.45615436598806836</R02>
+          <R10>0.0</R10>
+          <R11>0.9906417560718377</R11>
+          <R12>-0.13648776914766286</R12>
+          <R20>-0.46046349570085127</R20>
+          <R21>0.1211572773870165</R21>
+          <R22>0.8793715274348595</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P65">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>73.31752071857117</X>
+          <Y>70.16995517414786</Y>
+          <Z>107.84217797177831</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>52.007365871163934</X>
+          <Y>-321.7823987906057</Y>
+          <Z>6186.775682413483</Z>
+          <R00>0.99549762836691</R00>
+          <R01>-0.014888729367147231</R01>
+          <R02>0.09360981601140671</R02>
+          <R10>0.0</R10>
+          <R11>0.9875864301272658</R11>
+          <R12>0.15707655149156785</R12>
+          <R20>-0.09478645428465804</R20>
+          <R21>-0.15636933448190862</R21>
+          <R22>0.9831399489990362</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P66">
+      <Properties>
+        <string name="Name">HangingIceShard</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0.12</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4285447124</Color3uint8>
+        <Vector3 name="size">
+          <X>20.891448404258995</X>
+          <Y>150.86188768292897</Y>
+          <Z>43.96162143665262</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>52.007365871163934</X>
+          <Y>-286.7823987906057</Y>
+          <Z>6186.775682413483</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P67">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>82.98822962665672</X>
+          <Y>73.99429895308977</Y>
+          <Z>124.57839837147569</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-269.81699381040653</X>
+          <Y>-108.8223100094234</Y>
+          <Z>6449.040963318106</Z>
+          <R00>0.9997285514441958</R00>
+          <R01>-0.0033095959717505245</R01>
+          <R02>-0.023062306948650767</R02>
+          <R10>0.0</R10>
+          <R11>0.9898592748456233</R11>
+          <R12>-0.14205145547334894</R12>
+          <R20>0.02329857135727452</R20>
+          <R21>0.1420128958109108</R21>
+          <R22>0.9895905789750171</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P68">
+      <Properties>
+        <string name="Name">RiftRockLedge</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4280364599</Color3uint8>
+        <Vector3 name="size">
+          <X>85.83742526870411</X>
+          <Y>66.75924806365714</Y>
+          <Z>134.24918570228994</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>142.68263319874728</X>
+          <Y>-134.45193793950358</Y>
+          <Z>6468.064938664936</Z>
+          <R00>0.9446105451982759</R00>
+          <R01>0.04482525010185685</R01>
+          <R02>0.3251178476391628</R02>
+          <R10>0.0</R10>
+          <R11>0.9906287950980696</R11>
+          <R12>-0.1365818081683903</R12>
+          <R20>-0.3281934153821735</R20>
+          <R21>0.1290166162781095</R21>
+          <R22>0.9357584062266987</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P69">
+      <Properties>
+        <string name="Name">HangingIceShard</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0.12</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4285447124</Color3uint8>
+        <Vector3 name="size">
+          <X>22.944116809161663</X>
+          <Y>148.28887471417374</Y>
+          <Z>35.823691097529526</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>142.68263319874728</X>
+          <Y>-99.45193793950358</Y>
+          <Z>6468.064938664936</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">true</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P70">
+      <Properties>
+        <string name="Name">DeepThermalGlow</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">288</token>
+        <Color3uint8 name="Color3uint8">4294933282</Color3uint8>
+        <Vector3 name="size">
+          <X>5</X>
+          <Y>5</Y>
+          <Z>32.99425336006919</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>135.9421563944362</X>
+          <Y>-675.6195423685185</Y>
+          <Z>2886.0</Z>
+          <R00>0.976765052734408</R00>
+          <R01>-0.025427234087346543</R01>
+          <R02>0.21279917181092703</R02>
+          <R10>0.0</R10>
+          <R11>0.9929366944578683</R11>
+          <R12>0.11864535725885691</R12>
+          <R20>-0.2143129295137117</R20>
+          <R21>-0.11588863863964005</R21>
+          <R22>0.9698658627240685</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="PointLight" referent="Light70">
+        <Properties>
+          <float name="Brightness">0.8</float>
+          <float name="Range">42</float>
+          <Color3 name="Color">
+            <R>1</R>
+            <G>0.28</G>
+            <B>0.06</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P71">
+      <Properties>
+        <string name="Name">DeepThermalGlow</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">288</token>
+        <Color3uint8 name="Color3uint8">4294933282</Color3uint8>
+        <Vector3 name="size">
+          <X>5</X>
+          <Y>5</Y>
+          <Z>36.31126682961291</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>134.67038345692907</X>
+          <Y>-667.3300712844384</Y>
+          <Z>2918.0</Z>
+          <R00>0.949758301176508</R00>
+          <R01>-0.1166991534757218</R01>
+          <R02>-0.29041431942031287</R02>
+          <R10>0.0</R10>
+          <R11>0.9278878315073544</R11>
+          <R12>-0.37285945360226475</R12>
+          <R20>0.31298429568640274</R20>
+          <R21>0.354126361230888</R21>
+          <R22>0.8812691705347788</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="PointLight" referent="Light71">
+        <Properties>
+          <float name="Brightness">0.8</float>
+          <float name="Range">42</float>
+          <Color3 name="Color">
+            <R>1</R>
+            <G>0.28</G>
+            <B>0.06</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P72">
+      <Properties>
+        <string name="Name">DeepThermalGlow</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">288</token>
+        <Color3uint8 name="Color3uint8">4294933282</Color3uint8>
+        <Vector3 name="size">
+          <X>5</X>
+          <Y>5</Y>
+          <Z>33.41501734588599</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>126.9444688287532</X>
+          <Y>-669.0299714179646</Y>
+          <Z>2950.0</Z>
+          <R00>0.997016869450198</R00>
+          <R01>0.021473791542162602</R01>
+          <R02>0.07413661921433072</R02>
+          <R10>0.0</R10>
+          <R11>0.960518603584256</R11>
+          <R12>-0.2782157654924518</R12>
+          <R20>-0.07718394931413476</R20>
+          <R21>0.2773858115429747</R21>
+          <R22>0.9576532511942506</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="PointLight" referent="Light72">
+        <Properties>
+          <float name="Brightness">0.8</float>
+          <float name="Range">42</float>
+          <Color3 name="Color">
+            <R>1</R>
+            <G>0.28</G>
+            <B>0.06</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P73">
+      <Properties>
+        <string name="Name">DeepThermalGlow</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">288</token>
+        <Color3uint8 name="Color3uint8">4294933282</Color3uint8>
+        <Vector3 name="size">
+          <X>5</X>
+          <Y>5</Y>
+          <Z>39.52268160328201</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>63.838470212104184</X>
+          <Y>-674.2966757227656</Y>
+          <Z>2982.0</Z>
+          <R00>0.8351743171041087</R00>
+          <R01>-0.1349003622251299</R01>
+          <R02>0.5331845387117058</R02>
+          <R10>0.0</R10>
+          <R11>0.9694522970305772</R11>
+          <R12>0.24527992943194074</R12>
+          <R20>-0.549985327122175</R20>
+          <R21>-0.20485149756266507</R21>
+          <R22>0.8096616601375217</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="PointLight" referent="Light73">
+        <Properties>
+          <float name="Brightness">0.8</float>
+          <float name="Range">42</float>
+          <Color3 name="Color">
+            <R>1</R>
+            <G>0.28</G>
+            <B>0.06</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P74">
+      <Properties>
+        <string name="Name">DeepThermalGlow</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">288</token>
+        <Color3uint8 name="Color3uint8">4294933282</Color3uint8>
+        <Vector3 name="size">
+          <X>5</X>
+          <Y>5</Y>
+          <Z>36.558350938712</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>107.56047873711174</X>
+          <Y>-665.0017988829588</Y>
+          <Z>3014.0</Z>
+          <R00>0.999013934624571</R00>
+          <R01>0.021399241284405415</R01>
+          <R02>-0.03890026861584823</R02>
+          <R10>0.0</R10>
+          <R11>0.8761769722825178</R11>
+          <R12>0.48198953644435033</R12>
+          <R20>0.04439772996374193</R20>
+          <R21>-0.4815142632511435</R21>
+          <R22>0.8753130045074019</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="PointLight" referent="Light74">
+        <Properties>
+          <float name="Brightness">0.8</float>
+          <float name="Range">42</float>
+          <Color3 name="Color">
+            <R>1</R>
+            <G>0.28</G>
+            <B>0.06</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P75">
+      <Properties>
+        <string name="Name">DeepThermalGlow</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">288</token>
+        <Color3uint8 name="Color3uint8">4294933282</Color3uint8>
+        <Vector3 name="size">
+          <X>5</X>
+          <Y>5</Y>
+          <Z>41.79855087196646</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-70.38303751342221</X>
+          <Y>-675.4382482419991</Y>
+          <Z>3866.0</Z>
+          <R00>0.8052058940388221</R00>
+          <R01>0.1837424754367706</R01>
+          <R02>-0.5638104033498399</R02>
+          <R10>0.0</R10>
+          <R11>0.9507838753059841</R11>
+          <R12>0.3098548409467495</R12>
+          <R20>0.5929953357364132</R20>
+          <R21>-0.24949694422678445</R21>
+          <R22>0.7655767803534507</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="PointLight" referent="Light75">
+        <Properties>
+          <float name="Brightness">0.8</float>
+          <float name="Range">42</float>
+          <Color3 name="Color">
+            <R>1</R>
+            <G>0.28</G>
+            <B>0.06</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P76">
+      <Properties>
+        <string name="Name">DeepThermalGlow</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">288</token>
+        <Color3uint8 name="Color3uint8">4294933282</Color3uint8>
+        <Vector3 name="size">
+          <X>5</X>
+          <Y>5</Y>
+          <Z>36.75610928125024</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-100.14411098101505</X>
+          <Y>-671.2621713921613</Y>
+          <Z>3898.0</Z>
+          <R00>0.8706272790707925</R00>
+          <R01>-0.0036304301478862462</R01>
+          <R02>-0.4919298333245603</R02>
+          <R10>0.0</R10>
+          <R11>0.9999727690926801</R11>
+          <R12>-0.007379774598025194</R12>
+          <R20>0.49194322938504637</R20>
+          <R21>0.006425033078434427</R21>
+          <R22>0.8706035711000459</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="PointLight" referent="Light76">
+        <Properties>
+          <float name="Brightness">0.8</float>
+          <float name="Range">42</float>
+          <Color3 name="Color">
+            <R>1</R>
+            <G>0.28</G>
+            <B>0.06</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P77">
+      <Properties>
+        <string name="Name">DeepThermalGlow</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">288</token>
+        <Color3uint8 name="Color3uint8">4294933282</Color3uint8>
+        <Vector3 name="size">
+          <X>5</X>
+          <Y>5</Y>
+          <Z>58.39672726461345</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-80.09956748962249</X>
+          <Y>-660.1186721720944</Y>
+          <Z>3930.0</Z>
+          <R00>0.5545259180533568</R00>
+          <R01>0.12752601760808221</R01>
+          <R02>-0.8223369875179548</R02>
+          <R10>0.0</R10>
+          <R11>0.9881881012299092</R11>
+          <R12>0.15324580446989955</R12>
+          <R20>0.8321664534256844</R20>
+          <R21>-0.08497877041149626</R21>
+          <R22>0.547975914043919</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="PointLight" referent="Light77">
+        <Properties>
+          <float name="Brightness">0.8</float>
+          <float name="Range">42</float>
+          <Color3 name="Color">
+            <R>1</R>
+            <G>0.28</G>
+            <B>0.06</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P78">
+      <Properties>
+        <string name="Name">DeepThermalGlow</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">288</token>
+        <Color3uint8 name="Color3uint8">4294933282</Color3uint8>
+        <Vector3 name="size">
+          <X>5</X>
+          <Y>5</Y>
+          <Z>37.26515960162358</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-110.70191848194375</X>
+          <Y>-669.9065350916419</Y>
+          <Z>3962.0</Z>
+          <R00>0.871269957236328</R00>
+          <R01>0.0830336307736541</R01>
+          <R02>-0.48372934351551555</R02>
+          <R10>0.0</R10>
+          <R11>0.9855853822062796</R11>
+          <R12>0.16917876456961736</R12>
+          <R20>0.4908040969851486</R20>
+          <R21>-0.14740037497186534</R21>
+          <R22>0.8587109338076151</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="PointLight" referent="Light78">
+        <Properties>
+          <float name="Brightness">0.8</float>
+          <float name="Range">42</float>
+          <Color3 name="Color">
+            <R>1</R>
+            <G>0.28</G>
+            <B>0.06</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P79">
+      <Properties>
+        <string name="Name">DeepThermalGlow</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">288</token>
+        <Color3uint8 name="Color3uint8">4294933282</Color3uint8>
+        <Vector3 name="size">
+          <X>5</X>
+          <Y>5</Y>
+          <Z>44.57731198530054</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-111.0973642377426</X>
+          <Y>-665.0265464732536</Y>
+          <Z>3994.0</Z>
+          <R00>0.721820553159679</R00>
+          <R01>0.07245496099788842</R01>
+          <R02>0.6882771009288697</R02>
+          <R10>0.0</R10>
+          <R11>0.9945047398833882</R11>
+          <R12>-0.1046915581576392</R12>
+          <R20>-0.692080261990078</R20>
+          <R21>0.07556851842049582</R21>
+          <R22>0.71785396146255</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="PointLight" referent="Light79">
+        <Properties>
+          <float name="Brightness">0.8</float>
+          <float name="Range">42</float>
+          <Color3 name="Color">
+            <R>1</R>
+            <G>0.28</G>
+            <B>0.06</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P80">
+      <Properties>
+        <string name="Name">DeepThermalGlow</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">288</token>
+        <Color3uint8 name="Color3uint8">4294933282</Color3uint8>
+        <Vector3 name="size">
+          <X>5</X>
+          <Y>5</Y>
+          <Z>32.611294209198334</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-244.0167147286327</X>
+          <Y>-666.3438182172584</Y>
+          <Z>4996.0</Z>
+          <R00>0.9886449576327477</R00>
+          <R01>-0.01833883191570803</R01>
+          <R02>-0.14914702474843308</R02>
+          <R10>0.0</R10>
+          <R11>0.9925253048998037</R11>
+          <R12>-0.12203900660670465</R12>
+          <R20>0.15027024904265748</R20>
+          <R21>0.12065324851622813</R21>
+          <R22>0.9812551380120966</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="PointLight" referent="Light80">
+        <Properties>
+          <float name="Brightness">0.8</float>
+          <float name="Range">42</float>
+          <Color3 name="Color">
+            <R>1</R>
+            <G>0.28</G>
+            <B>0.06</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P81">
+      <Properties>
+        <string name="Name">DeepThermalGlow</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">288</token>
+        <Color3uint8 name="Color3uint8">4294933282</Color3uint8>
+        <Vector3 name="size">
+          <X>5</X>
+          <Y>5</Y>
+          <Z>38.32464918813699</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-212.07304117988474</X>
+          <Y>-664.8295228828283</Y>
+          <Z>5028.0</Z>
+          <R00>0.8535679716444644</R00>
+          <R01>0.10815634532625616</R01>
+          <R02>0.5096311634392291</R02>
+          <R10>0.0</R10>
+          <R11>0.9782135616304669</R11>
+          <R12>-0.20760112678460227</R12>
+          <R20>-0.5209814946644022</R20>
+          <R21>0.17720167270063825</R21>
+          <R22>0.8349717656360252</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="PointLight" referent="Light81">
+        <Properties>
+          <float name="Brightness">0.8</float>
+          <float name="Range">42</float>
+          <Color3 name="Color">
+            <R>1</R>
+            <G>0.28</G>
+            <B>0.06</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P82">
+      <Properties>
+        <string name="Name">DeepThermalGlow</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">288</token>
+        <Color3uint8 name="Color3uint8">4294933282</Color3uint8>
+        <Vector3 name="size">
+          <X>5</X>
+          <Y>5</Y>
+          <Z>33.613857556312404</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-273.30318457293157</X>
+          <Y>-671.259573552881</Y>
+          <Z>5060.0</Z>
+          <R00>0.9781023552242495</R00>
+          <R01>0.04777102664858515</R01>
+          <R02>0.2025677953617416</R02>
+          <R10>0.0</R10>
+          <R11>0.9733013332894007</R11>
+          <R12>-0.2295310754932218</R12>
+          <R20>-0.20812444043114267</R20>
+          <R21>0.22450488553707526</R21>
+          <R22>0.9519883264332649</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="PointLight" referent="Light82">
+        <Properties>
+          <float name="Brightness">0.8</float>
+          <float name="Range">42</float>
+          <Color3 name="Color">
+            <R>1</R>
+            <G>0.28</G>
+            <B>0.06</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P83">
+      <Properties>
+        <string name="Name">DeepThermalGlow</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">288</token>
+        <Color3uint8 name="Color3uint8">4294933282</Color3uint8>
+        <Vector3 name="size">
+          <X>5</X>
+          <Y>5</Y>
+          <Z>35.32922034254789</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-262.3426335203004</X>
+          <Y>-665.5597885776878</Y>
+          <Z>5092.0</Z>
+          <R00>0.9711915485904369</R00>
+          <R01>0.0859846614900357</R01>
+          <R02>0.22224674111210962</R02>
+          <R10>0.0</R10>
+          <R11>0.9326335414517735</R11>
+          <R12>-0.3608249954744307</R12>
+          <R20>-0.23830018033251488</R20>
+          <R21>0.35043018612494975</R21>
+          <R22>0.9057658133899313</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="PointLight" referent="Light83">
+        <Properties>
+          <float name="Brightness">0.8</float>
+          <float name="Range">42</float>
+          <Color3 name="Color">
+            <R>1</R>
+            <G>0.28</G>
+            <B>0.06</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P84">
+      <Properties>
+        <string name="Name">DeepThermalGlow</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">288</token>
+        <Color3uint8 name="Color3uint8">4294933282</Color3uint8>
+        <Vector3 name="size">
+          <X>5</X>
+          <Y>5</Y>
+          <Z>34.21344065596297</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-239.9171607287477</X>
+          <Y>-659.0811196406921</Y>
+          <Z>5124.0</Z>
+          <R00>0.9450520597606826</R00>
+          <R01>-0.046832132734099516</R01>
+          <R02>0.32354807322199713</R02>
+          <R10>0.0</R10>
+          <R11>0.9896861538881991</R11>
+          <R12>0.14325263279250286</R12>
+          <R20>-0.32691987449846355</R20>
+          <R21>-0.13538119568669554</R21>
+          <R22>0.9353049382486706</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="PointLight" referent="Light84">
+        <Properties>
+          <float name="Brightness">0.8</float>
+          <float name="Range">42</float>
+          <Color3 name="Color">
+            <R>1</R>
+            <G>0.28</G>
+            <B>0.06</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P85">
+      <Properties>
+        <string name="Name">DeepThermalGlow</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">288</token>
+        <Color3uint8 name="Color3uint8">4294933282</Color3uint8>
+        <Vector3 name="size">
+          <X>5</X>
+          <Y>5</Y>
+          <Z>46.35296645568969</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-213.2577579092043</X>
+          <Y>-662.5041965977115</Y>
+          <Z>5956.0</Z>
+          <R00>0.6906808382069878</R00>
+          <R01>-0.022212186319387543</R01>
+          <R02>0.722818510078848</R02>
+          <R10>0.0</R10>
+          <R11>0.9995281688236205</R11>
+          <R12>0.030715463989659943</R12>
+          <R20>-0.7231597193799533</R20>
+          <R21>-0.02121458241429488</R21>
+          <R22>0.6903549534545937</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="PointLight" referent="Light85">
+        <Properties>
+          <float name="Brightness">0.8</float>
+          <float name="Range">42</float>
+          <Color3 name="Color">
+            <R>1</R>
+            <G>0.28</G>
+            <B>0.06</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P86">
+      <Properties>
+        <string name="Name">DeepThermalGlow</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">288</token>
+        <Color3uint8 name="Color3uint8">4294933282</Color3uint8>
+        <Vector3 name="size">
+          <X>5</X>
+          <Y>5</Y>
+          <Z>35.36582600075276</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-163.47251697374247</X>
+          <Y>-668.3121245141447</Y>
+          <Z>5988.0</Z>
+          <R00>0.9355746570526721</R00>
+          <R01>-0.08978591672966289</R01>
+          <R02>0.34152386481443614</R02>
+          <R10>0.0</R10>
+          <R11>0.9671363872512679</R11>
+          <R12>0.25425815317225475</R12>
+          <R20>-0.3531289581452861</R20>
+          <R21>-0.237877484456978</R21>
+          <R22>0.904828293825765</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="PointLight" referent="Light86">
+        <Properties>
+          <float name="Brightness">0.8</float>
+          <float name="Range">42</float>
+          <Color3 name="Color">
+            <R>1</R>
+            <G>0.28</G>
+            <B>0.06</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P87">
+      <Properties>
+        <string name="Name">DeepThermalGlow</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">288</token>
+        <Color3uint8 name="Color3uint8">4294933282</Color3uint8>
+        <Vector3 name="size">
+          <X>5</X>
+          <Y>5</Y>
+          <Z>40.02268757921215</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-162.12494361146952</X>
+          <Y>-669.4241465091235</Y>
+          <Z>6020.0</Z>
+          <R00>0.8747401765748831</R00>
+          <R01>0.19656352056820037</R01>
+          <R02>-0.4429361193982458</R02>
+          <R10>0.0</R10>
+          <R11>0.9140388506718431</R11>
+          <R12>0.40562665033562084</R12>
+          <R20>0.4845922239220749</R20>
+          <R21>-0.35481792773805937</R21>
+          <R22>0.7995465056329912</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="PointLight" referent="Light87">
+        <Properties>
+          <float name="Brightness">0.8</float>
+          <float name="Range">42</float>
+          <Color3 name="Color">
+            <R>1</R>
+            <G>0.28</G>
+            <B>0.06</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P88">
+      <Properties>
+        <string name="Name">DeepThermalGlow</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">288</token>
+        <Color3uint8 name="Color3uint8">4294933282</Color3uint8>
+        <Vector3 name="size">
+          <X>5</X>
+          <Y>5</Y>
+          <Z>32.437577000954334</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-159.04482237878733</X>
+          <Y>-670.633225368362</Y>
+          <Z>6052.0</Z>
+          <R00>0.9974828790474483</R00>
+          <R01>-0.010488536363584253</R01>
+          <R02>0.070127716433401</R02>
+          <R10>0.0</R10>
+          <R11>0.9889996139323605</R11>
+          <R12>0.14791809774886291</R12>
+          <R20>-0.07090772882566279</R20>
+          <R21>-0.14754577000575766</R21>
+          <R22>0.9865101822820657</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="PointLight" referent="Light88">
+        <Properties>
+          <float name="Brightness">0.8</float>
+          <float name="Range">42</float>
+          <Color3 name="Color">
+            <R>1</R>
+            <G>0.28</G>
+            <B>0.06</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P89">
+      <Properties>
+        <string name="Name">DeepThermalGlow</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">288</token>
+        <Color3uint8 name="Color3uint8">4294933282</Color3uint8>
+        <Vector3 name="size">
+          <X>5</X>
+          <Y>5</Y>
+          <Z>77.51336658473298</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-214.11962109764175</X>
+          <Y>-662.5414454004429</Y>
+          <Z>6084.0</Z>
+          <R00>0.4129676804942273</R00>
+          <R01>0.023342050583903335</R01>
+          <R02>0.9104465077871166</R02>
+          <R10>0.0</R10>
+          <R11>0.9996715077614865</R11>
+          <R12>-0.025629603388968848</R12>
+          <R20>-0.9107456806744777</R20>
+          <R21>0.010584197863529451</R21>
+          <R22>0.41283202381642803</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="PointLight" referent="Light89">
+        <Properties>
+          <float name="Brightness">0.8</float>
+          <float name="Range">42</float>
+          <Color3 name="Color">
+            <R>1</R>
+            <G>0.28</G>
+            <B>0.06</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P90">
+      <Properties>
+        <string name="Name">RiftMistEmitter</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">1</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4284782245</Color3uint8>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>144.81173328063653</X>
+          <Y>-115</Y>
+          <Z>2050</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="Smoke" referent="Smoke90">
+        <Properties>
+          <string name="Name">RiftMistEmitter</string>
+          <bool name="Enabled">true</bool>
+          <float name="Size">95</float>
+          <float name="Opacity">0.16</float>
+          <float name="RiseVelocity">2</float>
+          <Color3 name="Color">
+            <R>0.36</R>
+            <G>0.48</G>
+            <B>0.53</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P91">
+      <Properties>
+        <string name="Name">RiftMistEmitter</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">1</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4284782245</Color3uint8>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>205.65054066933905</X>
+          <Y>-115</Y>
+          <Z>2270</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="Smoke" referent="Smoke91">
+        <Properties>
+          <string name="Name">RiftMistEmitter</string>
+          <bool name="Enabled">true</bool>
+          <float name="Size">95</float>
+          <float name="Opacity">0.16</float>
+          <float name="RiseVelocity">2</float>
+          <Color3 name="Color">
+            <R>0.36</R>
+            <G>0.48</G>
+            <B>0.53</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P92">
+      <Properties>
+        <string name="Name">RiftMistEmitter</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">1</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4284782245</Color3uint8>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>246.99091501007976</X>
+          <Y>-115</Y>
+          <Z>2490</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="Smoke" referent="Smoke92">
+        <Properties>
+          <string name="Name">RiftMistEmitter</string>
+          <bool name="Enabled">true</bool>
+          <float name="Size">95</float>
+          <float name="Opacity">0.16</float>
+          <float name="RiseVelocity">2</float>
+          <Color3 name="Color">
+            <R>0.36</R>
+            <G>0.48</G>
+            <B>0.53</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P93">
+      <Properties>
+        <string name="Name">RiftMistEmitter</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">1</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4284782245</Color3uint8>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>198.80824331060748</X>
+          <Y>-115</Y>
+          <Z>2710</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="Smoke" referent="Smoke93">
+        <Properties>
+          <string name="Name">RiftMistEmitter</string>
+          <bool name="Enabled">true</bool>
+          <float name="Size">95</float>
+          <float name="Opacity">0.16</float>
+          <float name="RiseVelocity">2</float>
+          <Color3 name="Color">
+            <R>0.36</R>
+            <G>0.48</G>
+            <B>0.53</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P94">
+      <Properties>
+        <string name="Name">RiftMistEmitter</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">1</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4284782245</Color3uint8>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>93.09465441339259</X>
+          <Y>-115</Y>
+          <Z>2930</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="Smoke" referent="Smoke94">
+        <Properties>
+          <string name="Name">RiftMistEmitter</string>
+          <bool name="Enabled">true</bool>
+          <float name="Size">95</float>
+          <float name="Opacity">0.16</float>
+          <float name="RiseVelocity">2</float>
+          <Color3 name="Color">
+            <R>0.36</R>
+            <G>0.48</G>
+            <B>0.53</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P95">
+      <Properties>
+        <string name="Name">RiftMistEmitter</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">1</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4284782245</Color3uint8>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>20.05765350572393</X>
+          <Y>-115</Y>
+          <Z>3150</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="Smoke" referent="Smoke95">
+        <Properties>
+          <string name="Name">RiftMistEmitter</string>
+          <bool name="Enabled">true</bool>
+          <float name="Size">95</float>
+          <float name="Opacity">0.16</float>
+          <float name="RiseVelocity">2</float>
+          <Color3 name="Color">
+            <R>0.36</R>
+            <G>0.48</G>
+            <B>0.53</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P96">
+      <Properties>
+        <string name="Name">RiftMistEmitter</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">1</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4284782245</Color3uint8>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>15.029171696289229</X>
+          <Y>-115</Y>
+          <Z>3370</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="Smoke" referent="Smoke96">
+        <Properties>
+          <string name="Name">RiftMistEmitter</string>
+          <bool name="Enabled">true</bool>
+          <float name="Size">95</float>
+          <float name="Opacity">0.16</float>
+          <float name="RiseVelocity">2</float>
+          <Color3 name="Color">
+            <R>0.36</R>
+            <G>0.48</G>
+            <B>0.53</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P97">
+      <Properties>
+        <string name="Name">RiftMistEmitter</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">1</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4284782245</Color3uint8>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>17.25227343393325</X>
+          <Y>-115</Y>
+          <Z>3590</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="Smoke" referent="Smoke97">
+        <Properties>
+          <string name="Name">RiftMistEmitter</string>
+          <bool name="Enabled">true</bool>
+          <float name="Size">95</float>
+          <float name="Opacity">0.16</float>
+          <float name="RiseVelocity">2</float>
+          <Color3 name="Color">
+            <R>0.36</R>
+            <G>0.48</G>
+            <B>0.53</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P98">
+      <Properties>
+        <string name="Name">RiftMistEmitter</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">1</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4284782245</Color3uint8>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-49.56413531446114</X>
+          <Y>-115</Y>
+          <Z>3810</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="Smoke" referent="Smoke98">
+        <Properties>
+          <string name="Name">RiftMistEmitter</string>
+          <bool name="Enabled">true</bool>
+          <float name="Size">95</float>
+          <float name="Opacity">0.16</float>
+          <float name="RiseVelocity">2</float>
+          <Color3 name="Color">
+            <R>0.36</R>
+            <G>0.48</G>
+            <B>0.53</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P99">
+      <Properties>
+        <string name="Name">RiftMistEmitter</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">1</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4284782245</Color3uint8>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-173.91689867031445</X>
+          <Y>-115</Y>
+          <Z>4030</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="Smoke" referent="Smoke99">
+        <Properties>
+          <string name="Name">RiftMistEmitter</string>
+          <bool name="Enabled">true</bool>
+          <float name="Size">95</float>
+          <float name="Opacity">0.16</float>
+          <float name="RiseVelocity">2</float>
+          <Color3 name="Color">
+            <R>0.36</R>
+            <G>0.48</G>
+            <B>0.53</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P100">
+      <Properties>
+        <string name="Name">RiftMistEmitter</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">1</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4284782245</Color3uint8>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-262.48463925867134</X>
+          <Y>-115</Y>
+          <Z>4250</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="Smoke" referent="Smoke100">
+        <Properties>
+          <string name="Name">RiftMistEmitter</string>
+          <bool name="Enabled">true</bool>
+          <float name="Size">95</float>
+          <float name="Opacity">0.16</float>
+          <float name="RiseVelocity">2</float>
+          <Color3 name="Color">
+            <R>0.36</R>
+            <G>0.48</G>
+            <B>0.53</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P101">
+      <Properties>
+        <string name="Name">RiftMistEmitter</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">1</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4284782245</Color3uint8>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-255.94573531341706</X>
+          <Y>-115</Y>
+          <Z>4470</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="Smoke" referent="Smoke101">
+        <Properties>
+          <string name="Name">RiftMistEmitter</string>
+          <bool name="Enabled">true</bool>
+          <float name="Size">95</float>
+          <float name="Opacity">0.16</float>
+          <float name="RiseVelocity">2</float>
+          <Color3 name="Color">
+            <R>0.36</R>
+            <G>0.48</G>
+            <B>0.53</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P102">
+      <Properties>
+        <string name="Name">RiftMistEmitter</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">1</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4284782245</Color3uint8>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-208.18257460289016</X>
+          <Y>-115</Y>
+          <Z>4690</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="Smoke" referent="Smoke102">
+        <Properties>
+          <string name="Name">RiftMistEmitter</string>
+          <bool name="Enabled">true</bool>
+          <float name="Size">95</float>
+          <float name="Opacity">0.16</float>
+          <float name="RiseVelocity">2</float>
+          <Color3 name="Color">
+            <R>0.36</R>
+            <G>0.48</G>
+            <B>0.53</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P103">
+      <Properties>
+        <string name="Name">RiftMistEmitter</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">1</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4284782245</Color3uint8>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-217.15142738119224</X>
+          <Y>-115</Y>
+          <Z>4910</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="Smoke" referent="Smoke103">
+        <Properties>
+          <string name="Name">RiftMistEmitter</string>
+          <bool name="Enabled">true</bool>
+          <float name="Size">95</float>
+          <float name="Opacity">0.16</float>
+          <float name="RiseVelocity">2</float>
+          <Color3 name="Color">
+            <R>0.36</R>
+            <G>0.48</G>
+            <B>0.53</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P104">
+      <Properties>
+        <string name="Name">RiftMistEmitter</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">1</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4284782245</Color3uint8>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-291.07650001724136</X>
+          <Y>-115</Y>
+          <Z>5130</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="Smoke" referent="Smoke104">
+        <Properties>
+          <string name="Name">RiftMistEmitter</string>
+          <bool name="Enabled">true</bool>
+          <float name="Size">95</float>
+          <float name="Opacity">0.16</float>
+          <float name="RiseVelocity">2</float>
+          <Color3 name="Color">
+            <R>0.36</R>
+            <G>0.48</G>
+            <B>0.53</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P105">
+      <Properties>
+        <string name="Name">RiftMistEmitter</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">1</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4284782245</Color3uint8>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-332.38550263234225</X>
+          <Y>-115</Y>
+          <Z>5350</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="Smoke" referent="Smoke105">
+        <Properties>
+          <string name="Name">RiftMistEmitter</string>
+          <bool name="Enabled">true</bool>
+          <float name="Size">95</float>
+          <float name="Opacity">0.16</float>
+          <float name="RiseVelocity">2</float>
+          <Color3 name="Color">
+            <R>0.36</R>
+            <G>0.48</G>
+            <B>0.53</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P106">
+      <Properties>
+        <string name="Name">RiftMistEmitter</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">1</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4284782245</Color3uint8>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-268.6220929610604</X>
+          <Y>-115</Y>
+          <Z>5570</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="Smoke" referent="Smoke106">
+        <Properties>
+          <string name="Name">RiftMistEmitter</string>
+          <bool name="Enabled">true</bool>
+          <float name="Size">95</float>
+          <float name="Opacity">0.16</float>
+          <float name="RiseVelocity">2</float>
+          <Color3 name="Color">
+            <R>0.36</R>
+            <G>0.48</G>
+            <B>0.53</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P107">
+      <Properties>
+        <string name="Name">RiftMistEmitter</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">1</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4284782245</Color3uint8>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-153.4271954845735</X>
+          <Y>-115</Y>
+          <Z>5790</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="Smoke" referent="Smoke107">
+        <Properties>
+          <string name="Name">RiftMistEmitter</string>
+          <bool name="Enabled">true</bool>
+          <float name="Size">95</float>
+          <float name="Opacity">0.16</float>
+          <float name="RiseVelocity">2</float>
+          <Color3 name="Color">
+            <R>0.36</R>
+            <G>0.48</G>
+            <B>0.53</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P108">
+      <Properties>
+        <string name="Name">RiftMistEmitter</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">1</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4284782245</Color3uint8>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-96.92011957690785</X>
+          <Y>-115</Y>
+          <Z>6010</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="Smoke" referent="Smoke108">
+        <Properties>
+          <string name="Name">RiftMistEmitter</string>
+          <bool name="Enabled">true</bool>
+          <float name="Size">95</float>
+          <float name="Opacity">0.16</float>
+          <float name="RiseVelocity">2</float>
+          <Color3 name="Color">
+            <R>0.36</R>
+            <G>0.48</G>
+            <B>0.53</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P109">
+      <Properties>
+        <string name="Name">RiftMistEmitter</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">1</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4284782245</Color3uint8>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-121.12528516320499</X>
+          <Y>-115</Y>
+          <Z>6230</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="Smoke" referent="Smoke109">
+        <Properties>
+          <string name="Name">RiftMistEmitter</string>
+          <bool name="Enabled">true</bool>
+          <float name="Size">95</float>
+          <float name="Opacity">0.16</float>
+          <float name="RiseVelocity">2</float>
+          <Color3 name="Color">
+            <R>0.36</R>
+            <G>0.48</G>
+            <B>0.53</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P110">
+      <Properties>
+        <string name="Name">RiftMistEmitter</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">1</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4284782245</Color3uint8>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-125.32269501186043</X>
+          <Y>-115</Y>
+          <Z>6450</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="Smoke" referent="Smoke110">
+        <Properties>
+          <string name="Name">RiftMistEmitter</string>
+          <bool name="Enabled">true</bool>
+          <float name="Size">95</float>
+          <float name="Opacity">0.16</float>
+          <float name="RiseVelocity">2</float>
+          <Color3 name="Color">
+            <R>0.36</R>
+            <G>0.48</G>
+            <B>0.53</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P111">
+      <Properties>
+        <string name="Name">ThermalSteamEmitter</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">1</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4288066745</Color3uint8>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>198.24998633760572</X>
+          <Y>-250</Y>
+          <Z>2860</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="Smoke" referent="Smoke111">
+        <Properties>
+          <string name="Name">ThermalSteamEmitter</string>
+          <bool name="Enabled">true</bool>
+          <float name="Size">55</float>
+          <float name="Opacity">0.28</float>
+          <float name="RiseVelocity">12</float>
+          <Color3 name="Color">
+            <R>0.65</R>
+            <G>0.73</G>
+            <B>0.74</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P112">
+      <Properties>
+        <string name="Name">ThermalSteamEmitter</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">1</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4288066745</Color3uint8>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-165.57290767358242</X>
+          <Y>-250</Y>
+          <Z>3830</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="Smoke" referent="Smoke112">
+        <Properties>
+          <string name="Name">ThermalSteamEmitter</string>
+          <bool name="Enabled">true</bool>
+          <float name="Size">55</float>
+          <float name="Opacity">0.28</float>
+          <float name="RiseVelocity">12</float>
+          <Color3 name="Color">
+            <R>0.65</R>
+            <G>0.73</G>
+            <B>0.74</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P113">
+      <Properties>
+        <string name="Name">ThermalSteamEmitter</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">1</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4288066745</Color3uint8>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-201.5378248995453</X>
+          <Y>-250</Y>
+          <Z>4970</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="Smoke" referent="Smoke113">
+        <Properties>
+          <string name="Name">ThermalSteamEmitter</string>
+          <bool name="Enabled">true</bool>
+          <float name="Size">55</float>
+          <float name="Opacity">0.28</float>
+          <float name="RiseVelocity">12</float>
+          <Color3 name="Color">
+            <R>0.65</R>
+            <G>0.73</G>
+            <B>0.74</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P114">
+      <Properties>
+        <string name="Name">ThermalSteamEmitter</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">1</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4288066745</Color3uint8>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-248.84690423582464</X>
+          <Y>-250</Y>
+          <Z>5920</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+      <Item class="Smoke" referent="Smoke114">
+        <Properties>
+          <string name="Name">ThermalSteamEmitter</string>
+          <bool name="Enabled">true</bool>
+          <float name="Size">55</float>
+          <float name="Opacity">0.28</float>
+          <float name="RiseVelocity">12</float>
+          <Color3 name="Color">
+            <R>0.65</R>
+            <G>0.73</G>
+            <B>0.74</B>
+          </Color3>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="P115">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>204.87129900998605</X>
+          <Y>-910</Y>
+          <Z>2100</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P116">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>203.48604115143306</X>
+          <Y>-910</Y>
+          <Z>2250</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P117">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>196.2554808470652</X>
+          <Y>-910</Y>
+          <Z>2400</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P118">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>183.10416185606095</X>
+          <Y>-910</Y>
+          <Z>2550</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P119">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>164.17020519019172</X>
+          <Y>-910</Y>
+          <Z>2700</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P120">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>139.80231368220484</X>
+          <Y>-910</Y>
+          <Z>2850</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P121">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>110.54890276959789</X>
+          <Y>-910</Y>
+          <Z>3000</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P122">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>77.13975225854654</X>
+          <Y>-910</Y>
+          <Z>3150</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P123">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>40.46085479053579</X>
+          <Y>-910</Y>
+          <Z>3300</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P124">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>1.5233923783009307</X>
+          <Y>-910</Y>
+          <Z>3450</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P125">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-38.572006900914516</X>
+          <Y>-910</Y>
+          <Z>3600</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P126">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-78.67440246478454</X>
+          <Y>-910</Y>
+          <Z>3750</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P127">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-117.62360783812055</X>
+          <Y>-910</Y>
+          <Z>3900</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P128">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-154.29166019802688</X>
+          <Y>-910</Y>
+          <Z>4050</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P129">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-187.62314724469456</X>
+          <Y>-910</Y>
+          <Z>4200</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P130">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-216.6728883198775</X>
+          <Y>-910</Y>
+          <Z>4350</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P131">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-240.6395656451949</X>
+          <Y>-910</Y>
+          <Z>4500</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P132">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-258.89405320688155</X>
+          <Y>-910</Y>
+          <Z>4650</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P133">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-271.0013894754675</X>
+          <Y>-910</Y>
+          <Z>4800</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P134">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-276.7355783545504</X>
+          <Y>-910</Y>
+          <Z>4950</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P135">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-276.0866715528013</X>
+          <Y>-910</Y>
+          <Z>5100</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P136">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-269.25987486844116</X>
+          <Y>-910</Y>
+          <Z>5250</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P137">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-256.66671979645065</X>
+          <Y>-910</Y>
+          <Z>5400</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P138">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-238.90863918502473</X>
+          <Y>-910</Y>
+          <Z>5550</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P139">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-216.75357020918233</X>
+          <Y>-910</Y>
+          <Z>5700</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P140">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-191.10646900637033</X>
+          <Y>-910</Y>
+          <Z>5850</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P141">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-162.97484912396828</X>
+          <Y>-910</Y>
+          <Z>6000</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P142">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-133.43064190527184</X>
+          <Y>-910</Y>
+          <Z>6150</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P143">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-103.56981410472528</X>
+          <Y>-910</Y>
+          <Z>6300</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="P144">
+      <Properties>
+        <string name="Name">RiftDarkness</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <float name="Transparency">0</float>
+        <token name="Material">272</token>
+        <Color3uint8 name="Color3uint8">4278520080</Color3uint8>
+        <Vector3 name="size">
+          <X>440</X>
+          <Y>8</Y>
+          <Z>150</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-62.059384354743635</X>
+          <Y>-910</Y>
+          <Z>6450</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1.0</R11>
+          <R12>-0.0</R12>
+          <R20>0</R20>
+          <R21>0.0</R21>
+          <R22>1.0</R22>
+        </CoordinateFrame>
+        <bool name="CanQuery">false</bool>
+      </Properties>
+    </Item>
+  </Item>
+</roblox>

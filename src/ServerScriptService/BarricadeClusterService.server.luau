@@ -205,16 +205,13 @@ end
 -- Rückfall unter Level 3 zurückgesetzt (siehe Level-Wechsel-Listener weiter unten).
 local destroyedThisCycle = {}
 
--- [cityName][clusterId] = true für Cluster, deren Flankengebäude schon unter 50% HP
--- gefallen ist, SOLANGE die Stadt noch nicht auf Stufe 3 steht.
+-- Hier stand pendingClusters: Cluster, deren Flankengebäude schon unter 50 % HP gefallen
+-- war, solange die Stadt noch nicht auf Stufe 3 stand. Sie wurden aufgehoben und beim
+-- Erreichen von Stufe 3 nachgeholt.
 --
--- Warum das nötig ist: der einzige Aufrufer von _G.TryActivateBarricadeCluster ist der
--- Schadensschritt im HouseHandler. Wer ein Viertel bei Alarmstufe 1 flachlegt, meldet
--- also genau dann, wenn die Meldung noch nicht zählt -- und ein zerstörtes Gebäude meldet
--- kein zweites Mal. Diese Cluster erschienen damit nie, obwohl ihre Bedingung erfüllt war.
--- Bisher fiel das nur deshalb nicht auf, weil der HouseHandler bei JEDEM Treffer unter 50%
--- erneut meldete und so gelegentlich zufällig in die Stufe-3-Phase traf.
-local pendingClusters = {}
+-- Seit dem 05.10.2026 fährt Stufe 3 ohnehin ALLE Cluster hoch (siehe den Level-Wechsel-
+-- Listener weiter unten). Damit kann keine Meldung mehr verlorengehen, und es gibt nichts
+-- aufzuheben -- die Tabelle ist mitsamt ihrem Nachholen entfallen.
 
 -- Fürs Eskalations-Gate in CityAlertService.lua: Level 2->3 (Defense) soll erst
 -- weitersteigen, sobald KEINE aktiven Barrikaden-Cluster dieser Stadt mehr existieren.
@@ -290,11 +287,43 @@ local function createForceFieldVisual(targetModel, baseTransparency)
 	local center, size = targetModel:GetBoundingBox()
 	local groundY = center.Position.Y - size.Y / 2
 
-	-- Radius so wählen, dass die Halbkugel das Gebäude komplett umschliesst -- sowohl in
-	-- der Höhe (>= Gebäudehöhe) als auch horizontal (>= halbe Diagonale der Grundfläche).
-	-- Plus 30% Puffer, damit sie sichtbar grösser als das Gebäude ist (bewusst gewünscht).
+	-- ===== Wie gross die Kuppel wird =====
+	-- Hier stand `max(size.Y, halbeDiagonale) * 1.3`, also: immer komplett umschliessen.
+	--
+	-- Das Problem steckt in der Geometrie einer Kugel, die auf dem Boden sitzt: ein Radius R
+	-- deckt R an Höhe, ist dabei aber 2R BREIT. Ein schmaler Turm von 100 Studs bekam damit
+	-- eine Blase von 260 Studs Durchmesser -- "viel zu gross, wenn das Gebäude gross ist".
+	--
+	-- Amancio am 05.10.2026: kleine Gebäude ganz abdecken, sehr hohe schmale Türme bewusst
+	-- NICHT -- dort darf die Spitze herausschauen.
+	--
+	-- Deshalb treibt jetzt die GRUNDFLÄCHE die Grösse, und die Höhe darf sie nur bis zu
+	-- einem Deckel anheben:
+	--   * Bei einem ungefähr würfeligen Gebäude liegt die nötige Höhe knapp unter dem Deckel
+	--     -- es wird weiterhin ganz umschlossen.
+	--   * Bei einem Turm schlägt der Deckel zu. Die Kuppel sitzt als Haube um den Fuss, die
+	--     Spitze bleibt frei.
+	--
+	-- Der Deckel ist mit Bedacht 1.6 und nicht knapper: ein Würfel braucht rund das
+	-- 1.41-Fache seiner halben Grundflächen-Diagonale an Höhe (Kantenlänge gegen
+	-- Diagonale), und unter diesem Wert fielen gerade die kleinen Gebäude aus der Deckung.
+	local DOME_PUFFER = 1.15 -- war 1.3; sichtbar grösser als das Gebäude, aber nicht mehr satt
+	local DOME_HOEHEN_DECKEL = 1.6 -- so weit darf die Höhe über die Grundfläche hinaustreiben
 	local horizontalHalfDiagonal = math.sqrt((size.X / 2) ^ 2 + (size.Z / 2) ^ 2)
-	local domeRadius = math.max(size.Y, horizontalHalfDiagonal) * 1.3
+	local vollstaendig = math.max(size.Y, horizontalHalfDiagonal)
+	local deckel = horizontalHalfDiagonal * DOME_HOEHEN_DECKEL
+	local domeRadius = math.min(vollstaendig, deckel) * DOME_PUFFER
+
+	-- Der Schaden ist davon NICHT betroffen, und das ist der Grund, warum die Kuppel
+	-- schrumpfen darf: _G.IsFlankBuildingProtected entscheidet allein nach ShieldClusterId
+	-- und FlankProtectionActive des Clusters -- nie nach der Geometrie. Ein Gebäude, dessen
+	-- Spitze herausschaut, nimmt deshalb genauso wenig Schaden wie ein ganz umschlossenes,
+	-- und auch wer die kleinere Kuppel überspringt, richtet drinnen nichts aus.
+	print(string.format(
+		"[Kaiju Debug] Flankenschild '%s': Gebaeude %.0f x %.0f x %.0f (Grundflaeche-Halbmesser "
+			.. "%.0f) -> Kuppelradius %.0f%s.",
+		targetModel.Name, size.X, size.Y, size.Z, horizontalHalfDiagonal, domeRadius,
+		vollstaendig > deckel and " (gedeckelt, Spitze schaut heraus)" or " (ganz abgedeckt)"))
 
 	local domeCenter = Vector3.new(center.Position.X, groundY, center.Position.Z)
 
@@ -905,8 +934,39 @@ local function spawnCluster(cityName, tierName, clusterId, barricadeSpawnPart, c
 	return cluster
 end
 
--- ===== Einzelnen Cluster gezielt aktivieren (statt alle auf einmal bei Level 3) =====
--- Wird von HouseHandler.lua aufgerufen, sobald ein Flankengebäude unter 50% HP fällt.
+-- ===== Alle Cluster einer Stadt aufzaehlen =====
+-- Ein Cluster ist ein Ordner unter Workspace.BarricadeSpawns.<Stadt>, der einen Part
+-- 'BarricadeSpawn' enthaelt. Ordner ohne diesen Part zaehlen nicht -- dieselbe Regel, nach
+-- der auch die Bestandsmeldung beim Start urteilt.
+local function alleClusterIds(cityName)
+	local ids = {}
+	local wurzel = Workspace:FindFirstChild(BARRICADE_SPAWNS_ROOT)
+	local tierFolder = wurzel and wurzel:FindFirstChild(cityName)
+	if not tierFolder then
+		return ids
+	end
+	for _, ordner in ipairs(tierFolder:GetChildren()) do
+		if ordner:FindFirstChild("BarricadeSpawn") then
+			table.insert(ids, ordner.Name)
+		end
+	end
+	return ids
+end
+
+-- ===== Einzelnen Cluster aktivieren =====
+-- Gerufen vom Level-Wechsel, und zwar fuer ALLE Cluster einer Stadt, sobald sie Stufe 3
+-- erreicht. Das ist seit dem 05.10.2026 der einzige Aufrufer.
+--
+-- Vorher kam der Aufruf aus dem Schadensschritt des HouseHandler, sobald ein Flankengebaeude
+-- unter 50 % HP fiel. Diese Regel ist ersatzlos entfernt -- mitsamt der Vormerkung, die es
+-- nur gab, weil eine Meldung aus Stufe 1 oder 2 sonst verlorenging.
+--
+-- Die Funktion bleibt als _G, obwohl sie jetzt nur noch von hier gerufen wird: aus der
+-- Command Bar laesst sich damit ein EINZELNER Cluster hochfahren, was beim Einrichten
+-- neuer Marker in Studio das kuerzeste Mittel ist.
+--
+-- Die Pruefung auf Stufe 3 unten bleibt als Netz stehen. Der eigene Aufrufer erfuellt sie
+-- immer; sie schuetzt gegen einen Aufruf von Hand zum falschen Zeitpunkt.
 _G.TryActivateBarricadeCluster = function(cityName, clusterId)
 	local cityAlertValues = ReplicatedStorage:FindFirstChild("CityAlertValues")
 	local levelValue = cityAlertValues and cityAlertValues:FindFirstChild(cityName .. "Level")
@@ -915,14 +975,9 @@ _G.TryActivateBarricadeCluster = function(cityName, clusterId)
 		return
 	end
 	if levelValue.Value < 3 then
-		-- Jedes Flankengebäude eines Viertels meldet einzeln, und ein Viertel hat mehrere.
-		-- Gemeldet wird deshalb nur die ERSTE Vormerkung je Cluster -- alles Weitere ist
-		-- dieselbe Auskunft ein zweites Mal.
-		pendingClusters[cityName] = pendingClusters[cityName] or {}
-		if not pendingClusters[cityName][clusterId] then
-			pendingClusters[cityName][clusterId] = true
-			print("[BarricadeClusterService] '" .. cityName .. "' ist erst auf Stufe " .. levelValue.Value .. " -- Cluster '" .. clusterId .. "' vorgemerkt für Stufe 3.")
-		end
+		warn("[BarricadeClusterService] '" .. tostring(cityName) .. "' steht auf Stufe "
+			.. levelValue.Value .. " -- Barrikaden gibt es erst ab 3. Cluster '"
+			.. tostring(clusterId) .. "' wird nicht hochgefahren.")
 		return
 	end
 
@@ -1190,14 +1245,26 @@ if _G.CityAlertLevelChanged then
 			despawnAllClustersForCity(cityName)
 			destroyedThisCycle[cityName] = nil
 		end
-		-- Stufe 3 erreicht: die während der Stufen 1 und 2 vorgemerkten Cluster jetzt
-		-- nachholen. Das ist der Moment, in dem ihre Bedingung zählt.
+		-- ===== Stufe 3 erreicht: ALLE Barrikaden fahren hoch =====
+		-- Amancio am 05.10.2026: "Sobald Alarmstufe 3 losgeht, sollen die Barrikaden
+		-- hochfahren. Bisher wurde noch geprüft, ob ein Gebäude angegriffen wird. Jetzt
+		-- sollen alle Barrikaden sofort mit der Alarmstufe 3 hochfahren."
+		--
+		-- Vorher war die Aktivierung gestaffelt: ein Cluster erschien erst, wenn eines
+		-- SEINER Flankengebäude unter 50 % HP fiel (gemeldet vom HouseHandler), und
+		-- Meldungen aus den Stufen 1 und 2 wurden dafür vorgemerkt. Die Staffelung ist
+		-- damit vom Tisch -- die Stufe selbst ist das Ereignis.
 		if newLevel >= 3 and oldLevel < 3 then
-			local vorgemerkt = pendingClusters[cityName]
-			pendingClusters[cityName] = nil
-			if vorgemerkt then
-				for clusterId in pairs(vorgemerkt) do
-					print("[BarricadeClusterService] Stufe 3 erreicht -- hole vorgemerkten Cluster '" .. clusterId .. "' nach.")
+			local ids = alleClusterIds(cityName)
+			if #ids == 0 then
+				warn("[BarricadeClusterService] Stufe 3 in '" .. cityName
+					.. "', aber kein einziger Cluster mit 'BarricadeSpawn' gefunden -- es "
+					.. "fahren keine Barrikaden hoch.")
+			else
+				print(string.format(
+					"[BarricadeClusterService] Stufe 3 in '%s' -- fahre alle %d Cluster hoch: %s",
+					cityName, #ids, table.concat(ids, ", ")))
+				for _, clusterId in ipairs(ids) do
 					_G.TryActivateBarricadeCluster(cityName, clusterId)
 				end
 			end
@@ -1207,9 +1274,62 @@ if _G.CityAlertLevelChanged then
 		-- wieder von vorne (nicht abgehakt) zeigen.
 		if newLevel == 0 then
 			everActivatedForCity[cityName] = nil
-			pendingClusters[cityName] = nil
 		end
 	end)
 end
 
-print("[Kaiju] BarricadeClusterService bereit -- Stufe 3 (gestaffelte Aktivierung, 2 Generatoren pro Cluster).")
+-- ===== Bestandsmeldung beim Start =====
+-- Die Barrikaden haengen an Markern in Studio (Workspace.BarricadeSpawns.<Stadt>, je
+-- Cluster ein Ordner mit einem 'BarricadeSpawn'-Part). Fehlen sie, sagte bisher NIEMAND
+-- etwas: gewarnt wurde erst, wenn ein bestimmter Cluster aktiviert werden sollte -- und
+-- wo es gar keine gibt, versucht das auch nie jemand. Eine Stadt ohne Barrikaden war von
+-- einer Stadt, deren Barrikaden man nur nicht gefunden hat, nicht zu unterscheiden.
+--
+-- IM SPIEL AUFGEFALLEN am 20.09.2026: "ich konnte die Barrikaden nicht finden."
+local function meldeBestand()
+	local wurzel = Workspace:FindFirstChild(BARRICADE_SPAWNS_ROOT)
+	if not wurzel then
+		warn(string.format("[BarricadeClusterService] Workspace.%s gibt es nicht -- KEINE Stadt "
+			.. "hat Barrikaden. Stufe 3 bleibt damit ueberall folgenlos.", BARRICADE_SPAWNS_ROOT))
+		return
+	end
+
+	for _, stadt in ipairs({ "Village", "SmallTown", "City", "LargeCity", "MegaCity", "PrologueCity" }) do
+		local config = CityAlertConfig.GetCityConfig(stadt)
+		local brauchtSie = (config.MaxAlertLevel or 0) >= 3
+		local tierFolder = wurzel:FindFirstChild(stadt)
+
+		local cluster, ohneMarker = {}, 0
+		if tierFolder then
+			for _, ordner in ipairs(tierFolder:GetChildren()) do
+				if ordner:FindFirstChild("BarricadeSpawn") then
+					table.insert(cluster, ordner.Name)
+				else
+					ohneMarker += 1
+				end
+			end
+		end
+
+		if #cluster > 0 then
+			print(string.format("[Kaiju-Debug] Barrikaden %s: %d Cluster -- %s",
+				stadt, #cluster, table.concat(cluster, ", ")))
+		elseif brauchtSie then
+			warn(string.format("[BarricadeClusterService] %s kennt Stufe %d, hat aber KEINE "
+				.. "Barrikaden-Cluster unter Workspace.%s.%s. Stufe 3 bleibt dort folgenlos.",
+				stadt, config.MaxAlertLevel or 0, BARRICADE_SPAWNS_ROOT, stadt))
+		end
+
+		if ohneMarker > 0 then
+			warn(string.format("[BarricadeClusterService] %s: %d Ordner unter Workspace.%s.%s "
+				.. "haben keinen 'BarricadeSpawn'-Part und zaehlen deshalb nicht.",
+				stadt, ohneMarker, BARRICADE_SPAWNS_ROOT, stadt))
+		end
+	end
+end
+
+local okBestand, bestandFehler = pcall(meldeBestand)
+if not okBestand then
+	warn("[BarricadeClusterService] Bestandsmeldung fehlgeschlagen: " .. tostring(bestandFehler))
+end
+
+print("[Kaiju] BarricadeClusterService bereit -- Stufe 3 (alle Cluster auf einmal, 2 Generatoren pro Cluster).")

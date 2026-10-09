@@ -22,6 +22,40 @@ local CinematicCompleteEvent = RemoteEventUtils.GetOrCreate("CinematicCompleteEv
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
 
+-- ===== Wohin die Kamera im Prolog blickt: auf die Brust =====
+-- Anteil der Figurenhöhe, GEMESSEN AB DER SOHLE. Die Brust einer aufrecht stehenden Figur
+-- liegt bei knapp zwei Dritteln; Schultern lägen bei gut 0.8, der Bauch bei 0.5.
+--
+-- ===== Warum ab der Sohle und nicht ab dem Rumpf =====
+-- Hier stand "rootPart.Position + Höhe * 0.8". Das zählt ab dem HumanoidRootPart, und der
+-- sitzt auf halber Figurenhöhe -- der Blickpunkt lag damit bei 1.3 Figurenhöhen über dem
+-- Boden, also DEUTLICH ÜBER dem Kopf. Die Kamera schaute an der Figur vorbei ins Leere.
+--
+-- Aufgefallen ist es erst jetzt, weil die Zahl aus der Zeit stammt, als der Avatar die
+-- Skin-Skala trug und der Rumpf entsprechend tiefer sass. Seit der Höhenangleichung
+-- (PlayerSetup, zielSkalierung) stimmt der Bezug nicht mehr -- die Zahl blieb richtig
+-- aussehend und wurde falsch.
+--
+-- Die Sohle kommt aus der Bounding Box und nicht aus einem Teil der Figur: sie gilt für
+-- jedes Modell, auch für eines, dessen Rumpf woanders sitzt.
+local BRUST_ANTEIL = 0.62
+
+-- Gibt den Brustpunkt und die Figurenhöhe zurück, oder nil, wenn sich die Figur nicht
+-- vermessen lässt (dann greift beim Aufrufer der alte Weg).
+local function brustPunkt(character)
+	local ok, mitte, groesse = pcall(function()
+		local cf, size = character:GetBoundingBox()
+		return cf, size
+	end)
+	if not (ok and mitte and groesse and groesse.Y > 0) then
+		return nil, nil
+	end
+
+	local sohle = mitte.Position.Y - groesse.Y * 0.5
+	local pivot = character:GetPivot().Position
+	return Vector3.new(pivot.X, sohle + groesse.Y * BRUST_ANTEIL, pivot.Z), groesse.Y, sohle
+end
+
 -- Globaler Kamera-Session-Zähler: verhindert, dass MEHRERE Kamera-Kontroll-Schleifen
 -- (aus verschiedenen Events -- Fall-Kinematik, Intro-Kinematik, Trench-Orbit, etc.)
 -- gleichzeitig aktiv sind und sich jeden Frame gegenseitig überschreiben. Das erzeugt
@@ -44,10 +78,28 @@ local function isCameraSessionCurrent(sessionId)
 	return CameraSessionUtils.IsCurrent(sessionId)
 end
 
--- Mindesthöhe über der Wasseroberfläche -- muss zwischen SnapCameraToSeaEvent (Landung
--- am Meer-Spawnpunkt) UND dem Start des Spline-Pfads (flyOverWaterToKaiju) IDENTISCH
--- sein, sonst entsteht beim Übergang zwischen beiden ein sichtbarer Höhen-Sprung.
+-- Mindesthöhe über der Wasseroberfläche für den FLUG. Die rohen Wegpunkt-Höhen liegen
+-- teils bei 0 bis 0.5 Studs; ohne diese Anhebung flog die Kamera auf dem Wasser und es
+-- flackerte (Z-Fighting mit der Wasseroberfläche).
 local MIN_HEIGHT_ABOVE_WATER = 18
+
+-- ===== Die ERSTE Einstellung liegt tiefer als der Flug =====
+-- Amancio am 27.09.2026: der Kamerastart soll näher an der Wasserebene sitzen.
+--
+-- Bewusst eine eigene Zahl und nicht MIN_HEIGHT_ABOVE_WATER heruntergedreht: die Wegpunkte
+-- tragen eine gesetzte Dramaturgie (der Pfad steigt an und sinkt zum Schluss dramatisch
+-- ab). Würde man sie alle absenken, flöge die ganze Fahrt tief und käme dem Flackern nahe,
+-- das die Anhebung oben gerade verhindert. Gesenkt wird nur der Punkt, an dem das Bild
+-- aufgeht -- danach steigt die Kamera auf die Pfadhöhe.
+--
+-- Diese Zahl muss zwischen SnapCameraToSeaEvent (der harte Sprung zum Meer-Spawnpunkt,
+-- während der Bildschirm noch schwarz ist) und dem Start des Spline-Pfads IDENTISCH sein,
+-- sonst entsteht beim Übergang ein sichtbarer Höhen-Sprung. Deshalb steht sie hier einmal
+-- und wird an beiden Stellen gelesen.
+--
+-- Nicht 0: direkt auf der Wasseroberfläche flackert das Bild. 5 Studs liegen knapp darüber
+-- und lesen sich als "dicht über dem Wasser".
+local KAMERASTART_HOEHE_UEBER_WASSER = 5
 
 -- Tweent die Kamera-CFrame sanft von der aktuellen Position zur Ziel-CFrame über
 -- "duration" Sekunden. Läuft über RenderStepped, damit es butterweich (jeden gerenderten
@@ -227,7 +279,30 @@ local function flyOverWaterToKaiju(seaStartPosition, waypoints, duration, zoomDu
 	end)
 	local characterHeight = (ok and boundsSize.Y) or 20
 
-	local kaijuCenter = rootPart.Position + Vector3.new(0, characterHeight * 0.8, 0)
+	local brust, brustHoehe, sohle = brustPunkt(character)
+	local kaijuCenter = brust or (rootPart.Position + Vector3.new(0, characterHeight * 0.8, 0))
+	if brust then
+		-- Die Zahl, an der sich BRUST_ANTEIL beurteilen laesst: wie weit ueber dem Boden
+		-- die Kamera hinschaut, und wie hoch die Figur dort ueberhaupt ist. Daneben der
+		-- alte Wert -- steht dort etwas hoeher als die Figur, war der Blick ueber dem Kopf.
+		print(string.format("[Kaiju Debug] Prolog-Kamera: Blick auf %.1f von %.1f Studs "
+			.. "Figurenhoehe (frueher waeren es %.1f gewesen).",
+			kaijuCenter.Y - sohle, brustHoehe,
+			rootPart.Position.Y + characterHeight * 0.8 - sohle))
+	end
+	-- ===== Der Blick liegt beim Kaiju, von der ersten Sekunde an =====
+	-- Zwischen dem 22.09. und dem 05.10.2026 stand hier ein wandernder Blick: die Kamera sah
+	-- erst schraeg nach unten auf das Wasser und hob ihn erst im Laufe der Fahrt zum Kaiju.
+	-- Dazu gehoerte eine Blende, die mit demselben Fortschritt von dunkel auf hell lief.
+	--
+	-- Beides am 05.10.2026 zurueckgenommen: "Im Prologue soll die Kamera, wenn sie ueber das
+	-- Meer gleitet, wieder gerade ausschauen und der Screen soll auch nicht mehr langsam von
+	-- Dunkel auf normal gehen."
+	--
+	-- Damit faellt auch alles weg, was nur fuer den Blick nach unten gebraucht wurde: die
+	-- gemessene Wasserhoehe, der Punkt voraus auf dem Wasser und die beiden Marken, zwischen
+	-- denen sich der Blick hob. Die Schwarzblende des Prologs laeuft wie vorher ueber
+	-- StoryBeatService (fadeOut, nicht blockierend) -- ein Zeitgeber, nicht zwei.
 	local startHeight = seaStartPosition.Y
 	local endHeight = kaijuCenter.Y + characterHeight * 0.12
 
@@ -242,16 +317,21 @@ local function flyOverWaterToKaiju(seaStartPosition, waypoints, duration, zoomDu
 	-- Kletter-und-Sinkflug zum Kaiju -- der eigentliche "Reveal") deutlich langsamer in
 	-- der verbleibenden Zeit. Jeder Abschnitt wird intern zusätzlich sanft ein-/
 	-- ausgeblendet (kein hartes Tempo-Umschalten am Übergang).
-	local DISTANCE_SPLIT = 0.70
-	local TIME_SPLIT = 0.55
+	-- ===== Langsam los, dann schneller =====
+	-- Hier stand die umgekehrte Aufteilung: die ersten 70 % der Strecke in 55 % der Zeit
+	-- (also zuegig), der Rest langsamer -- der Anflug bremste zum Kaiju hin ab.
+	--
+	-- Gewuenscht ist das Gegenteil (22.09.2026): "soll sie langsam vorwaerts gehen ... und
+	-- schneller werden". Der Anflug beginnt als ruhige Fahrt ueber dem Wasser und zieht
+	-- zum Kaiju hin an.
+	--
+	-- Ein Exponent statt zweier Abschnitte: er beschleunigt DURCHGEHEND, waehrend zwei
+	-- Abschnitte an ihrer Naht immer einen Tempowechsel haben. TEMPO_EXPONENT ist die Zahl
+	-- zum Drehen -- 1.0 waere gleichmaessig, hoeher heisst traeger Start und staerkerer Zug
+	-- am Ende.
+	local TEMPO_EXPONENT = 2.0
 	local function timeToDistanceFraction(rawAlpha)
-		if rawAlpha <= TIME_SPLIT then
-			local localAlpha = rawAlpha / TIME_SPLIT
-			return easeInOut(localAlpha) * DISTANCE_SPLIT
-		else
-			local localAlpha = (rawAlpha - TIME_SPLIT) / (1 - TIME_SPLIT)
-			return DISTANCE_SPLIT + easeInOut(localAlpha) * (1 - DISTANCE_SPLIT)
-		end
+		return rawAlpha ^ TEMPO_EXPONENT
 	end
 
 	-- WICHTIG: keine separate "Align"-Phase mehr -- die sorgte für einen sichtbaren
@@ -283,7 +363,10 @@ local function flyOverWaterToKaiju(seaStartPosition, waypoints, duration, zoomDu
 		-- identisch, was zwei nahezu deckungsgleiche Punkte am Kurvenanfang erzeugt. Das
 		-- verzerrt die von Catmull-Rom berechnete Anfangstangente und liess die Kamera
 		-- kurz zurückschwingen, bevor sie vorwärts fährt.
-		local elevatedSeaStart = seaStartPosition + Vector3.new(0, MIN_HEIGHT_ABOVE_WATER, 0)
+		-- Der Startpunkt liegt tiefer als der Rest des Pfads (siehe
+		-- KAMERASTART_HOEHE_UEBER_WASSER) -- dieselbe Hoehe, auf der ihn SnapCameraToSeaEvent
+		-- abgesetzt hat, sonst springt das Bild beim Uebergang.
+		local elevatedSeaStart = seaStartPosition + Vector3.new(0, KAMERASTART_HOEHE_UEBER_WASSER, 0)
 		local elevatedFirstWaypoint = waypoints[1] + Vector3.new(0, MIN_HEIGHT_ABOVE_WATER, 0)
 		local pathPoints = {}
 		if (elevatedSeaStart - elevatedFirstWaypoint).Magnitude > 5 then
@@ -355,6 +438,10 @@ local function flyOverWaterToKaiju(seaStartPosition, waypoints, duration, zoomDu
 			currentBankAngle = currentBankAngle + (targetBankAngle - currentBankAngle) * smoothFactor
 			local upVector = Vector3.new(math.sin(currentBankAngle), math.cos(currentBankAngle), 0)
 
+			-- ===== Der Blick liegt die ganze Fahrt beim Kaiju =====
+			-- Zwischen dem 22.09. und dem 05.10.2026 wanderte er hier erst ueber das Wasser
+			-- und hob sich dann; Amancio hat das zurueckgenommen. Die Kamera schaut jetzt
+			-- wieder gerade nach vorn auf den Kaiju, so wie vor dem 22.09.
 			camera.CFrame = CFrame.lookAt(camPos, kaijuCenter, upVector)
 
 			if alpha >= 1 then
@@ -535,11 +622,14 @@ SnapCameraToSeaEvent.OnClientEvent:Connect(function(seaCFrame)
 	startNewCameraSession() -- bricht jede noch laufende Kamera-Sequenz ab
 	camera.CameraType = Enum.CameraType.Scriptable
 
-	-- WICHTIG: dieselbe Höhen-Anhebung wie beim Start des Spline-Pfads (siehe
-	-- MIN_HEIGHT_ABOVE_WATER weiter oben) -- sonst landet die Kamera hier auf
-	-- Wasserhöhe, während der Spline-Pfad direkt danach 18 Studs höher startet, was
-	-- einen sichtbaren Sprung beim Übergang zwischen beiden verursacht.
-	local elevatedPosition = seaCFrame.Position + Vector3.new(0, MIN_HEIGHT_ABOVE_WATER, 0)
+	-- WICHTIG: dieselbe Höhe wie der Start des Spline-Pfads (siehe
+	-- KAMERASTART_HOEHE_UEBER_WASSER weiter oben) -- sonst landet die Kamera hier auf einer
+	-- anderen Höhe als die Fahrt direkt danach, und das ist beim Übergang zu sehen.
+	local elevatedPosition = seaCFrame.Position + Vector3.new(0, KAMERASTART_HOEHE_UEBER_WASSER, 0)
+	print(string.format(
+		"[Kaiju Debug] Prolog-Kamerastart: %.0f Studs ueber dem Spawnpunkt (y=%.1f), "
+			.. "Flughoehe danach %.0f.",
+		KAMERASTART_HOEHE_UEBER_WASSER, elevatedPosition.Y, MIN_HEIGHT_ABOVE_WATER))
 
 	-- Zielt direkt beim Sprung auf den Kaiju, statt die rohe Studio-Rotation von
 	-- PrologueCameraSpawn zu übernehmen (die nicht zwingend exakt auf den Kaiju zeigt).
@@ -608,7 +698,10 @@ TrenchOrbitCameraEvent.OnClientEvent:Connect(function(data)
 					return size
 				end)
 				local characterHeight = (ok and boundsSize.Y) or 20
-				local kaijuFocusCenter = focusPos + Vector3.new(0, characterHeight * 0.8, 0)
+				-- Hier ist der Bezug schon richtig -- focusPos ist ein Spawn-Part am BODEN,
+				-- nicht der Rumpf. Nur der Anteil zog auf Schulterhoehe; jetzt auf die
+				-- Brust, damit beide Prolog-Kameras denselben Punkt anvisieren.
+				local kaijuFocusCenter = focusPos + Vector3.new(0, characterHeight * BRUST_ANTEIL, 0)
 				local lookDirection = rootPart.CFrame.LookVector
 				local behindRadius = math.max(characterHeight * 0.85, 13)
 				local behindHeight = kaijuFocusCenter.Y + characterHeight * 0.35

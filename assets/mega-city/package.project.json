@@ -1,0 +1,277 @@
+{
+  "name": "MegaCityFinalAssembly",
+  "tree": {
+    "$className": "Folder",
+    "Buildings": {
+      "$className": "Folder",
+      "MC-01-01": {
+        "$path": "models/MC-01-01.rbxmx"
+      },
+      "MC-02-01": {
+        "$path": "models/MC-02-01.rbxmx"
+      },
+      "MC-03-01": {
+        "$path": "models/MC-03-01.rbxmx"
+      },
+      "MC-03-02": {
+        "$path": "models/MC-03-02.rbxmx"
+      },
+      "MC-07-01": {
+        "$path": "models/MC-07-01.rbxmx"
+      },
+      "MC-04-01": {
+        "$path": "models/MC-04-01.rbxmx"
+      },
+      "MC-02-02": {
+        "$path": "models/MC-02-02.rbxmx"
+      },
+      "MC-05-01": {
+        "$path": "models/MC-05-01.rbxmx"
+      },
+      "MC-02-03": {
+        "$path": "models/MC-02-03.rbxmx"
+      },
+      "MC-03-03": {
+        "$path": "models/MC-03-03.rbxmx"
+      },
+      "MC-07-02": {
+        "$path": "models/MC-07-02.rbxmx"
+      },
+      "MC-02-04": {
+        "$path": "models/MC-02-04.rbxmx"
+      },
+      "MC-08-01": {
+        "$path": "models/MC-08-01.rbxmx"
+      },
+      "MC-04-02": {
+        "$path": "models/MC-04-02.rbxmx"
+      },
+      "MC-08-02": {
+        "$path": "models/MC-08-02.rbxmx"
+      },
+      "MC-04-03": {
+        "$path": "models/MC-04-03.rbxmx"
+      },
+      "MC-07-03": {
+        "$path": "models/MC-07-03.rbxmx"
+      },
+      "MC-07-04": {
+        "$path": "models/MC-07-04.rbxmx"
+      },
+      "MC-04-04": {
+        "$path": "models/MC-04-04.rbxmx"
+      },
+      "MC-07-05": {
+        "$path": "models/MC-07-05.rbxmx"
+      },
+      "MC-08-03": {
+        "$path": "models/MC-08-03.rbxmx"
+      },
+      "MC-08-04": {
+        "$path": "models/MC-08-04.rbxmx"
+      },
+      "MC-05-02": {
+        "$path": "models/MC-05-02.rbxmx"
+      },
+      "MC-08-05": {
+        "$path": "models/MC-08-05.rbxmx"
+      },
+      "MC-05-03": {
+        "$path": "models/MC-05-03.rbxmx"
+      },
+      "MC-09-01": {
+        "$path": "models/MC-09-01.rbxmx"
+      },
+      "MC-08-06": {
+        "$path": "models/MC-08-06.rbxmx"
+      },
+      "MC-06-01": {
+        "$path": "models/MC-06-01.rbxmx"
+      },
+      "MC-05-04": {
+        "$path": "models/MC-05-04.rbxmx"
+      },
+      "MC-06-02": {
+        "$path": "models/MC-06-02.rbxmx"
+      },
+      "MC-15-01": {
+        "$path": "models/MC-15-01.rbxmx"
+      },
+      "MC-09-02": {
+        "$path": "models/MC-09-02.rbxmx"
+      },
+      "MC-08-07": {
+        "$path": "models/MC-08-07.rbxmx"
+      },
+      "MC-05-05": {
+        "$path": "models/MC-05-05.rbxmx"
+      },
+      "MC-08-08": {
+        "$path": "models/MC-08-08.rbxmx"
+      },
+      "MC-05-06": {
+        "$path": "models/MC-05-06.rbxmx"
+      },
+      "MC-10-01": {
+        "$path": "models/MC-10-01.rbxmx"
+      },
+      "MC-15-02": {
+        "$path": "models/MC-15-02.rbxmx"
+      },
+      "MC-10-02": {
+        "$path": "models/MC-10-02.rbxmx"
+      },
+      "MC-09-03": {
+        "$path": "models/MC-09-03.rbxmx"
+      },
+      "MC-08-09": {
+        "$path": "models/MC-08-09.rbxmx"
+      },
+      "MC-09-04": {
+        "$path": "models/MC-09-04.rbxmx"
+      },
+      "MC-08-10": {
+        "$path": "models/MC-08-10.rbxmx"
+      },
+      "MC-18-01": {
+        "$path": "models/MC-18-01.rbxmx"
+      },
+      "MC-19-01": {
+        "$path": "models/MC-19-01.rbxmx"
+      },
+      "MC-15-03": {
+        "$path": "models/MC-15-03.rbxmx"
+      },
+      "MC-09-05": {
+        "$path": "models/MC-09-05.rbxmx"
+      },
+      "MC-08-11": {
+        "$path": "models/MC-08-11.rbxmx"
+      },
+      "MC-09-06": {
+        "$path": "models/MC-09-06.rbxmx"
+      },
+      "MC-08-12": {
+        "$path": "models/MC-08-12.rbxmx"
+      },
+      "MC-19-02": {
+        "$path": "models/MC-19-02.rbxmx"
+      },
+      "MC-11-01": {
+        "$path": "models/MC-11-01.rbxmx"
+      },
+      "MC-02-05": {
+        "$path": "models/MC-02-05.rbxmx"
+      },
+      "MC-11-02": {
+        "$path": "models/MC-11-02.rbxmx"
+      },
+      "MC-13-01": {
+        "$path": "models/MC-13-01.rbxmx"
+      },
+      "MC-12-01": {
+        "$path": "models/MC-12-01.rbxmx"
+      },
+      "MC-13-02": {
+        "$path": "models/MC-13-02.rbxmx"
+      },
+      "MC-12-02": {
+        "$path": "models/MC-12-02.rbxmx"
+      },
+      "MC-13-03": {
+        "$path": "models/MC-13-03.rbxmx"
+      },
+      "MC-12-03": {
+        "$path": "models/MC-12-03.rbxmx"
+      },
+      "MC-10-03": {
+        "$path": "models/MC-10-03.rbxmx"
+      },
+      "MC-15-04": {
+        "$path": "models/MC-15-04.rbxmx"
+      },
+      "MC-10-04": {
+        "$path": "models/MC-10-04.rbxmx"
+      },
+      "MC-13-04": {
+        "$path": "models/MC-13-04.rbxmx"
+      },
+      "MC-12-04": {
+        "$path": "models/MC-12-04.rbxmx"
+      },
+      "MC-13-05": {
+        "$path": "models/MC-13-05.rbxmx"
+      },
+      "MC-16-01": {
+        "$path": "models/MC-16-01.rbxmx"
+      },
+      "MC-17-01": {
+        "$path": "models/MC-17-01.rbxmx"
+      },
+      "MC-14-01": {
+        "$path": "models/MC-14-01.rbxmx"
+      },
+      "MC-18-02": {
+        "$path": "models/MC-18-02.rbxmx"
+      },
+      "MC-13-06": {
+        "$path": "models/MC-13-06.rbxmx"
+      },
+      "MC-16-02": {
+        "$path": "models/MC-16-02.rbxmx"
+      },
+      "MC-19-03": {
+        "$path": "models/MC-19-03.rbxmx"
+      },
+      "MC-08-13": {
+        "$path": "models/MC-08-13.rbxmx"
+      },
+      "MC-09-07": {
+        "$path": "models/MC-09-07.rbxmx"
+      },
+      "MC-08-14": {
+        "$path": "models/MC-08-14.rbxmx"
+      },
+      "MC-20-01": {
+        "$path": "models/MC-20-01.rbxmx"
+      },
+      "MC-19-04": {
+        "$path": "models/MC-19-04.rbxmx"
+      },
+      "MC-20-02": {
+        "$path": "models/MC-20-02.rbxmx"
+      },
+      "MC-20-03": {
+        "$path": "models/MC-20-03.rbxmx"
+      },
+      "MC-16-03": {
+        "$path": "models/MC-16-03.rbxmx"
+      },
+      "MC-15-05": {
+        "$path": "models/MC-15-05.rbxmx"
+      },
+      "MC-18-03": {
+        "$path": "models/MC-18-03.rbxmx"
+      },
+      "MC-19-05": {
+        "$path": "models/MC-19-05.rbxmx"
+      },
+      "MC-21-01": {
+        "$path": "models/MC-21-01.rbxmx"
+      }
+    },
+    "RoadNetwork": {
+      "$path": "models/RoadNetwork.rbxmx"
+    },
+    "RiftDetails": {
+      "$path": "models/RiftDetails.rbxmx"
+    },
+    "TerrainGuides": {
+      "$path": "models/TerrainGuides.rbxmx"
+    },
+    "TerrainProxy": {
+      "$path": "models/TerrainProxy.rbxmx"
+    },
+    "$ignoreUnknownInstances": true
+  }
+}

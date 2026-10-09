@@ -36,6 +36,9 @@ local Workspace = game:GetService("Workspace")
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
 local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
 local CameraSessionUtils = require(ReplicatedStorage:WaitForChild("CameraSessionUtils"))
+-- Fuer GetFigurePoint: die Kamera zielt auf die SICHTBARE Figur, nicht auf den versteckten
+-- Avatar -- dessen Kopf wackelt mit der Laufanimation (siehe dort).
+local StageModels = require(ReplicatedStorage:WaitForChild("StageModels"))
 local TalentTreeConfig = require(ReplicatedStorage:WaitForChild("TalentTreeConfig"))
 
 local TalentCeremonyEvent = RemoteEventUtils.GetOrCreate("TalentCeremonyEvent")
@@ -369,11 +372,22 @@ local function umrunde(sessionId, dauer)
 			skala = s
 		end
 
-		-- Gezielt wird auf den KOPF, nicht auf die Mitte der Figur. Am Ende steht die
+		-- Gezielt wird auf KOPFHOEHE, nicht auf die Mitte der Figur. Am Ende steht die
 		-- Kamera nah und tief -- auf die Mitte gerichtet saehe man von dort den Brustkorb
 		-- und das Kinn.
-		local kopf = character:FindFirstChild("Head")
-		local ziel = kopf and kopf.Position or (root.Position + Vector3.new(0, 2 * skala, 0))
+		--
+		-- ===== Der Kopf des SKINS, nicht der des Avatars (02.10.2026) =====
+		-- Hier stand character:FindFirstChild("Head") -- der Kopf des versteckten Avatars.
+		-- Der ist auf die Hoehe des Kaiju skaliert, und die Standard-Laufanimation von Roblox
+		-- bewegt ihn: bei einem Faktor von bis zu achtzehn wird aus einem kleinen Nicken ein
+		-- Ausschlag von mehreren Studs. Die Kamera zielte jede Zehntelsekunde auf eine andere
+		-- Stelle, und die Umrundung ruckelte entsprechend.
+		--
+		-- GetFigurePoint nimmt die Waagrechte von der Wurzel (die keine Animation anfasst)
+		-- und die Hoehe aus dem Huellquader des sichtbaren Modells. 0.9 ist Kopfhoehe --
+		-- knapp unter dem Scheitel, damit der Kopf im Bild steht und nicht die Luft darueber.
+		local ziel = StageModels.GetFigurePoint(character, 0.9)
+			or (root.Position + Vector3.new(0, 2 * skala, 0))
 
 		-- Die Blickrichtung der Figur ist die Null. Flach gelegt, damit eine Figur an einem
 		-- Hang die Kamera nicht mit in die Schraege zieht.

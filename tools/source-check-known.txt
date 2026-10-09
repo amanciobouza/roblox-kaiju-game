@@ -18,7 +18,6 @@ source.g-write-without-read|_G.EscalationTriggered: gesetzt in src/ServerScriptS
 source.g-write-without-read|_G.FindBuildingsInRadius: gesetzt in src/ServerScriptService/EscalationService.server.luau:141, aber nirgends aufgerufen
 source.g-write-without-read|_G.FindNearestReactiveSpawnPoint: gesetzt in src/ServerScriptService/EscalationService.server.luau:104, aber nirgends aufgerufen
 source.g-write-without-read|_G.GetBarricadeClusterState: gesetzt in src/ServerScriptService/BarricadeClusterService.server.luau:1089, aber nirgends aufgerufen
-source.g-write-without-read|_G.GetCityAlertProgress: gesetzt in src/ServerScriptService/CityAlertService.server.luau:568, aber nirgends aufgerufen
 source.g-write-without-read|_G.GetGeneratorSide: gesetzt in src/ServerScriptService/BarricadeClusterService.server.luau:1112, aber nirgends aufgerufen
 source.g-write-without-read|_G.GetLastDamagePosition: gesetzt in src/ServerScriptService/EscalationService.server.luau:85, aber nirgends aufgerufen
 source.g-write-without-read|_G.GetSpecialEnergyMax: gesetzt in src/ServerScriptService/SpecialEnergyHandler.server.luau:206, aber nirgends aufgerufen

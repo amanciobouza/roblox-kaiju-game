@@ -12,6 +12,7 @@ TeleportHomeEvent.Parent = ReplicatedStorage
 
 local TELEPORT_COOLDOWN = 2 -- Sekunden, gegen Spam-Klicks
 local lastTeleportTime = {}
+local loading = {}
 
 local function findSpawnLocation()
 	-- Bevorzugt ein echtes SpawnLocation-Objekt (dort, wo Spieler tatsächlich respawnen).
@@ -31,7 +32,7 @@ end
 
 TeleportHomeEvent.OnServerEvent:Connect(function(player)
 	local now = os.clock()
-	if lastTeleportTime[player] and now - lastTeleportTime[player] < TELEPORT_COOLDOWN then
+	if loading[player] or (lastTeleportTime[player] and now - lastTeleportTime[player] < TELEPORT_COOLDOWN) then
 		return
 	end
 	lastTeleportTime[player] = now
@@ -49,6 +50,22 @@ TeleportHomeEvent.OnServerEvent:Connect(function(player)
 		return
 	end
 
+	-- Vor dem Sprung nur den Zielbereich laden, nicht die gesamte Stadt.
+	loading[player] = true
+	if Workspace.StreamingEnabled then
+		local ok, err = pcall(function()
+			player:RequestStreamAroundAsync(targetPosition, 5)
+		end)
+		if not ok then
+			warn("[TeleportHome] Ziel-Vorladen fehlgeschlagen: " .. tostring(err))
+		end
+	end
+	loading[player] = nil
+	-- Die Anfrage wartet: waehrenddessen kann der Spieler respawnen oder gehen.
+	if not player.Parent or player.Character ~= character or not rootPart.Parent
+		or (humanoid and humanoid.Health <= 0) then
+		return
+	end
 	rootPart.CFrame = CFrame.new(targetPosition)
 	rootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
 	rootPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
@@ -78,4 +95,5 @@ end)
 
 Players.PlayerRemoving:Connect(function(player)
 	lastTeleportTime[player] = nil
+	loading[player] = nil
 end)

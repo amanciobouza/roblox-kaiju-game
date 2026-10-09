@@ -273,9 +273,55 @@ local function runSoundStep(step)
 	sound.Parent = screenGui
 	sound:Play()
 	table.insert(activeSounds, sound)
+
 	if step.wait then
-		sound.Ended:Wait()
+		-- ===== Warum hier nicht mehr einfach Ended:Wait() steht =====
+		-- "Ended" ist kein verlaessliches Signal: bei einem Ton, der noch nicht geladen
+		-- ist, startet Play() nichts, und dann kommt Ended entweder sofort oder nie.
+		-- Sofort heisst, die Sequenz rauscht durch die Toene hindurch und man hoert nur
+		-- den letzten -- nie heisst, sie haengt zwei Minuten, bis der Server aufgibt.
+		--
+		-- Deshalb zwei Dinge: eine Obergrenze, und eine Ausgabe, die sagt, was wirklich
+		-- passiert ist. Anlass war "im Prolog hoere ich bei der Abschlusssequenz nur
+		-- einmal das Tick" (21.09.2026) -- drei Ton-Schritte, ein hoerbarer Ton, und
+		-- keine Moeglichkeit, von aussen zu sehen, welcher der beiden Faelle vorlag.
+		local beginn = os.clock()
+		local fertig = false
+		local verbindung = sound.Ended:Connect(function()
+			fertig = true
+		end)
+
+		local grenze = step.maxWait or 5
+		while not fertig and os.clock() - beginn < grenze do
+			task.wait(0.05)
+		end
+		verbindung:Disconnect()
+
+		local gewartet = os.clock() - beginn
+		print(string.format("[Kaiju Debug] StoryBeat-Ton %s: geladen=%s, Laenge %.2fs, "
+			.. "gewartet %.2fs%s", tostring(step.soundId), tostring(sound.IsLoaded),
+			sound.TimeLength, gewartet,
+			fertig and "" or " -- ABGEBROCHEN, 'Ended' kam nie"))
 	end
+end
+
+-- ===== Ein Ton je Zeile =====
+-- "lineSoundId" an einem zweizeiligen Text laesst zu JEDER der beiden Zeilen denselben
+-- Ton erklingen -- einmal, wenn die erste steht, einmal, wenn die zweite dazukommt.
+--
+-- IM SPIEL AUFGEFALLEN am 21.09.2026: "im Prolog hoere ich bei der Abschlusssequenz nur
+-- einmal das Tick. Es soll beim 'Power can be broken' und ein zweites Mal bei 'Purpose
+-- cannot' erklingen."
+--
+-- HIER und nicht als eigene Schritte im Orchestrator: die Zeitpunkte, zu denen die Zeilen
+-- erscheinen, stehen in dieser Funktion (fadeIn plus lineDelay). Ein Ton, der von aussen
+-- danebengelegt wird, muesste sie abschreiben -- und liefe beim naechsten Mal, wenn hier
+-- jemand an lineDelay dreht, lautlos daneben.
+local function playLineSound(step)
+	if not step.lineSoundId then
+		return
+	end
+	runSoundStep({ soundId = step.lineSoundId, volume = step.lineSoundVolume or 0.7 })
 end
 
 local function runTextStep(step)
@@ -304,6 +350,7 @@ local function runTextStep(step)
 			{ TextTransparency = 0, TextStrokeTransparency = 0.3 }
 		)
 		fadeInLine1:Play()
+		playLineSound(step) -- mit dem Erscheinen, nicht nach dem Einblenden
 		fadeInLine1.Completed:Wait()
 
 		task.wait(lineDelay)
@@ -314,6 +361,7 @@ local function runTextStep(step)
 			{ TextTransparency = 0, TextStrokeTransparency = 0.3 }
 		)
 		fadeInLine2:Play()
+		playLineSound(step) -- der zweite Ton, zur zweiten Zeile
 		fadeInLine2.Completed:Wait()
 
 		-- Restliche Haltezeit, abzüglich der bereits durch den Zeilen-Beat verstrichenen
@@ -586,11 +634,34 @@ local function playSequence(sequence)
 		local handler = STEP_HANDLERS[step.type]
 		if handler then
 			print("[Kaiju-Debug] StoryBeatClient: #" .. sequenceId .. " starte Schritt '" .. tostring(step.type) .. "' -- tick=" .. tostring(os.clock()))
-			local ok, err = pcall(handler, step)
-			if not ok then
-				warn("[StoryBeatClient] Fehler bei Schritt-Typ '" .. tostring(step.type) .. "': " .. tostring(err))
+
+			-- ===== parallel: laeuft mit, statt die Sequenz aufzuhalten =====
+			-- Schritte laufen sonst streng nacheinander, und das ist bei einer Cutscene
+			-- fast immer richtig. Nicht aber bei etwas, das ueber einer ohnehin schwarzen
+			-- Strecke liegen soll -- ein Vorspann zum Uhrticken etwa. Ohne diese Moeglichkeit
+			-- muesste man die Zeit ZWEIMAL ausgeben: einmal fuer die Karte und einmal fuer
+			-- das, worueber sie liegen soll.
+			--
+			-- Der Sequenzvergleich steht auch im Nebenlauf: er gibt zwischendurch nach, und
+			-- eine neuere Sequenz darf ihm die Oberflaeche nicht unter den Haenden wegziehen.
+			if step.parallel then
+				task.spawn(function()
+					if currentSequenceId ~= sequenceId then
+						return
+					end
+					local ok, err = pcall(handler, step)
+					if not ok then
+						warn("[StoryBeatClient] Fehler bei parallelem Schritt-Typ '"
+							.. tostring(step.type) .. "': " .. tostring(err))
+					end
+				end)
 			else
-				print("[Kaiju-Debug] StoryBeatClient: #" .. sequenceId .. " Schritt '" .. tostring(step.type) .. "' fertig -- tick=" .. tostring(os.clock()))
+				local ok, err = pcall(handler, step)
+				if not ok then
+					warn("[StoryBeatClient] Fehler bei Schritt-Typ '" .. tostring(step.type) .. "': " .. tostring(err))
+				else
+					print("[Kaiju-Debug] StoryBeatClient: #" .. sequenceId .. " Schritt '" .. tostring(step.type) .. "' fertig -- tick=" .. tostring(os.clock()))
+				end
 			end
 		else
 			warn("[StoryBeatClient] Unbekannter Schritt-Typ: " .. tostring(step.type))

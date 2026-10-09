@@ -13,7 +13,6 @@
 -- konsistent wirkt.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
 
 -- Farben und Symbole kommen aus HudChrome. Sie standen hier als eigene Tabelle, mit eigenen
 -- Emoji und -- bei Heat -- einer anderen Farbe als im HUD. Dieselbe Energie sah dadurch
@@ -71,34 +70,18 @@ function EnergyTypeSkin.Apply(house)
 		return
 	end
 
-	-- Jedes Teil nur LEICHT in Richtung der Energie-Farbe einfärben (Original-Look bleibt
-	-- klar dominant, nur ein dezenter Farbstich) -- kein Neon-Material mehr (das leuchtet
-	-- inhärent stark nach, unabhängig von der Farbe selbst). Die Färbung pulsiert weiterhin
-	-- leicht, aber zwischen zwei deutlich näher beieinanderliegenden Werten statt bis zur
-	-- vollen Sättigung -- macht Gebäude mit untypischer Energie erkennbar, ohne zu blinken.
+	-- Einmaliger, dezenter Farbstich. Kein endloser Server-Tween pro Bauteil:
+	-- Bei grossen Staedten liefen sonst Tausende Farb-Tweens gleichzeitig und
+	-- replizierten ihre Color-Aenderungen laufend an die Clients. Das belastet
+	-- TweenService und Paketverarbeitung selbst beim Blick weg von der Stadt.
+	-- 0.09 entspricht der Mitte der bisherigen Puls-Farben (0.06 bis 0.12).
 	for _, part in ipairs(house:GetDescendants()) do
 		if part:IsA("BasePart") and not part:GetAttribute("IsTechnicalPart") then
 			if part:GetAttribute("OriginalColor") == nil then
 				part:SetAttribute("OriginalColor", part.Color) -- einmalig sichern, falls später mal zurückgesetzt werden soll
 			end
 			local originalColor = part:GetAttribute("OriginalColor")
-			local dimColor = originalColor:Lerp(visual.color, 0.06)
-			local brightColor = originalColor:Lerp(visual.color, 0.12)
-			part.Color = dimColor
-
-			-- Jedes Teil pulsiert leicht zeitversetzt (kleine zufällige Verzögerung),
-			-- damit es nicht wie ein starres, künstliches Ganzes wirkt.
-			task.delay(math.random() * 0.6, function()
-				if not part.Parent then
-					return
-				end
-				local pulseTween = TweenService:Create(
-					part,
-					TweenInfo.new(1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-					{ Color = brightColor }
-				)
-				pulseTween:Play()
-			end)
+			part.Color = originalColor:Lerp(visual.color, 0.09)
 		end
 	end
 
@@ -113,6 +96,7 @@ function EnergyTypeSkin.Apply(house)
 			local light = existingGlowAnchor:FindFirstChild("EnergyTypeGlow")
 			if light then
 				light.Color = visual.color
+				light.Brightness = 1.2
 			end
 		else
 			local ok, cframe, size = pcall(function()
@@ -130,6 +114,8 @@ function EnergyTypeSkin.Apply(house)
 			glowAnchor.Anchored = true
 			glowAnchor.CanCollide = false
 			glowAnchor.CanQuery = false
+			glowAnchor.CanTouch = false
+			glowAnchor.CastShadow = false
 			glowAnchor.Transparency = 1
 			glowAnchor.Size = Vector3.new(1, 1, 1)
 			glowAnchor.CFrame = CFrame.new(groundPosition)
@@ -138,16 +124,10 @@ function EnergyTypeSkin.Apply(house)
 			local light = Instance.new("PointLight")
 			light.Name = "EnergyTypeGlow"
 			light.Color = visual.color
-			light.Brightness = 0.8
+			light.Brightness = 1.2
 			light.Range = 24
 			light.Parent = glowAnchor
 
-			local lightPulseTween = TweenService:Create(
-				light,
-				TweenInfo.new(1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-				{ Brightness = 1.6 }
-			)
-			lightPulseTween:Play()
 		end
 	end
 
@@ -184,14 +164,10 @@ function EnergyTypeSkin.Apply(house)
 			iconLabel.Image = visual.image
 			iconLabel.Parent = billboard
 
-			-- Schwebe-Effekt: pendelt sanft nach oben/unten, wie ein Symbol das in der Luft
-			-- schwebt statt starr zu stehen.
-			local floatTween = TweenService:Create(
-				billboard,
-				TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-				{ StudsOffsetWorldSpace = Vector3.new(0, topOffsetY + 1.5, 0) }
-			)
-			floatTween:Play()
+			-- Der Client animiert nur nahe Symbole; der Server uebertraegt die
+			-- Ruheposition einmal. Sie verhindert ein Aufsummieren lokaler Offsets.
+			billboard:SetAttribute("EnergyTypeBaseOffset", billboard.StudsOffsetWorldSpace)
+
 		end
 	end
 end

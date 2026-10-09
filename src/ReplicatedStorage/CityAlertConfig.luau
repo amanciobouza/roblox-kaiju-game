@@ -226,6 +226,22 @@ CityAlertConfig.Cities = {
 		-- kopierte Satz "bei 2200 Schaden je Schlag".
 		GuardianXPReward = 18000,
 		GuardianCoinsReward = 270,
+		-- ===== Er muss GROESSER sein als die Figur, die gegen ihn antritt =====
+		-- Der Dienst misst das Modell beim Spawnen und skaliert es auf diesen Wert. Eine Zahl
+		-- in Studs ist dabei verlaesslicher als ein Faktor: die Guardian-Modelle bringen sehr
+		-- verschiedene Eigengroessen mit.
+		--
+		-- Hergeleitet aus der Figur, nicht geraten. Diese Stadt ist fuer Stufe 1 ausgelegt
+		-- (ExpectedSkinStage oben), und die misst 30 Studs (SkinsConfig). Mal 1.15 ergibt
+		-- 34 -- er ueberragt sie spuerbar, ohne zu thronen.
+		--
+		-- Zuerst stand hier 1.25. Im Spiel war das "etwas zu gross" (20.09.2026).
+		--
+		-- Hier stand einmal ein fester Wert von 32, aus der Zeit, als der Avatar die
+		-- Skin-Skala trug und keine dreissig Studs hoch war. Seit der Hoehenangleichung war
+		-- der City-Guardian damit HALB so gross wie sein Gegner. Ein Boss, zu dem man
+		-- hinunterschaut, ist keiner.
+		GuardianHeightStuds = 34,
 		GuardianHP = 4000,
 		GuardianShieldHP = 1600, -- 40% der HP, wie bei LargeCity und MegaCity
 		GuardianShieldRegenDelay = 10,
@@ -295,11 +311,21 @@ CityAlertConfig.Cities = {
 		ExpectedSkinStage = 2, -- Ironpulse; die Spec verlangt die Angabe je Stadt
 
 		-- ===== Die Alarmschwellen in Durchgängen =====
-		-- GEMESSEN am 18.09.2026: ein Durchgang sind 59 angreifbare Teile, 155 200
-		-- Lebenspunkte und 1 552 Alarmpunkte (AlertPerHP 0.01, kein Gebäude trägt ein
-		-- eigenes AlertValue). Die Schwellen unten liegen damit bei 0.39, 0.90, 1.42 und
-		-- 2.26 Durchgängen. City Broken fällt so mit dem Ende der Level-Strecke zusammen,
-		-- statt weit dahinter.
+		-- GEMESSEN am 18.09.2026, NACHGEMESSEN am 19.09.2026: ein Durchgang sind 59
+		-- angreifbare Teile, 156 000 Lebenspunkte und 1 560 Alarmpunkte (AlertPerHP 0.01,
+		-- kein Gebäude trägt ein eigenes AlertValue). Die drei Schwellen unten liegen damit
+		-- bei 0.38, 0.90 und 1.41 Durchgängen; der vierte Wert des Massstabs (2.24) gehört
+		-- zu Stufe 5, die es hier nicht gibt -- siehe MaxAlertLevel weiter unten. City Broken
+		-- fällt so mit dem Ende der Level-Strecke zusammen, statt weit dahinter.
+		--
+		-- Die erste Messung ergab 155 200 bei 59 Teilen, und das war zu wenig: dem Motel
+		-- fehlten die Tags (12 000) und einem Brückendeck 800 Lebenspunkte. Beides ist
+		-- korrigiert; die Verhältnisse haben sich dadurch um höchstens einen Prozentpunkt
+		-- verschoben, die Schwellen bleiben unberührt. Festgehalten, weil die Zahl 155 200
+		-- sonst als Beleg weiterlebt, obwohl sie eine kaputte Stadt beschreibt.
+		--
+		-- Die Soll-Werte je Gebäudetyp stehen jetzt in ReplicatedStorage.BuildingConfig,
+		-- und der Gebäudebericht gleicht sie bei jedem Serverstart gegen Studio ab.
 		--
 		-- Diese vier Verhältnisse sind der Massstab, an dem inzwischen ALLE Städte gemessen
 		-- werden (siehe die Schwellen-Kommentare dort).
@@ -451,6 +477,22 @@ CityAlertConfig.Cities = {
 		GuardianCoinsReward = 1200,
 		-- 220 Schläge plus 90 auf den Schild, zusammen rund 10 Fokusstrahlen. Der Guardian
 		-- ist der längste Kampf der Stadt und soll es sein -- aber ein Kampf, kein Belagern.
+		-- ===== Er muss GROESSER sein als die Figur, die gegen ihn antritt =====
+		-- Der Dienst misst das Modell beim Spawnen und skaliert es auf diesen Wert. Eine Zahl
+		-- in Studs ist dabei verlaesslicher als ein Faktor: die Guardian-Modelle bringen sehr
+		-- verschiedene Eigengroessen mit.
+		--
+		-- Hergeleitet aus der Figur, nicht geraten. Diese Stadt ist fuer Stufe 2 ausgelegt
+		-- (ExpectedSkinStage oben), und die misst 45 Studs (SkinsConfig). Mal 1.15 ergibt
+		-- 52 -- er ueberragt sie spuerbar, ohne zu thronen.
+		--
+		-- Zuerst stand hier 1.25. Im Spiel war das "etwas zu gross" (20.09.2026).
+		--
+		-- Hier stand einmal ein fester Wert von 32, aus der Zeit, als der Avatar die
+		-- Skin-Skala trug und keine dreissig Studs hoch war. Seit der Hoehenangleichung war
+		-- der City-Guardian damit HALB so gross wie sein Gegner. Ein Boss, zu dem man
+		-- hinunterschaut, ist keiner.
+		GuardianHeightStuds = 52,
 		GuardianHP = 30000,
 		GuardianShieldHP = 12000, -- 40% der HP, wie bei LargeCity und MegaCity
 		GuardianShieldRegenDelay = 10,
@@ -490,8 +532,23 @@ CityAlertConfig.Cities = {
 	-- (PlayerSetup, XP_LEVEL_STEPS); wer diese Zahl aendert, aendert sie dort.
 	City = {
 		ExpectedSkinStage = 3, -- Epochbreaker; die Spec verlangt die Angabe je Stadt
-		AlertThresholdLevel2 = 28000, -- 0.39 Durchgaenge
-		AlertThresholdLevel3 = 65000, -- 0.90 Durchgaenge
+
+		-- ===== Nachgezogen nach der HP-Erhoehung (20.09.2026) =====
+		-- Die Schwellen standen auf 28 000 / 65 000 / 100 000 / 160 000 und waren gegen die
+		-- ALTE Stadt gerechnet (290 350 Lebenspunkte). Mit 983 650 ergibt AlertPerHP 0.25
+		-- jetzt 245 912 Alarmpunkte je Durchgang -- die alten Schwellen lagen damit bei
+		-- 0.11 / 0.26 / 0.41 / 0.65 Durchgaengen statt bei Brasshavens 0.38 / 0.90 / 1.41 /
+		-- 2.24. Der Guardian kam nach zwei Dritteln eines einzigen Durchgangs.
+		--
+		-- IM SPIEL BESTAETIGT am 20.09.2026: "Das ging zu schnell bis zum Guardian. Die
+		-- Alarmstufen kamen sehr schnell."
+		--
+		-- Alle vier brauchten denselben Faktor 3.4 -- also genau den, um den die
+		-- Lebenspunkte gestiegen sind. Das ist kein Zufall: der Alarm kommt hier aus den
+		-- Lebenspunkten (AlertPerHP, kein Gebaeude traegt ein eigenes AlertValue). Wer die
+		-- HP einer Stadt aendert, MUSS diese vier Zahlen mitziehen.
+		AlertThresholdLevel2 = 94500, -- 0.38 Durchgaenge
+		AlertThresholdLevel3 = 220500, -- 0.90 Durchgaenge
 		AlertPerHP = 0.25,
 
 		-- ===== Auf den Massstab gebracht (19.09.2026) =====
@@ -541,7 +598,7 @@ CityAlertConfig.Cities = {
 		FlankAutoDetectRadius = 40,
 
 		-- ===== Stufe 4: Militär (Panzer, Raketenwerfer, Militär-Helikopter) =====
-		AlertThresholdLevel4 = 100000, -- 1.38 Durchgaenge
+		AlertThresholdLevel4 = 347000, -- 1.41 Durchgaenge (war 100 000 = 0.41)
 		MaxAlertLevel = 5, -- Konzept-Vorgabe: nicht jede Stadt kennt alle Alert-Stufen
 		MilitaryTankCount = 2,
 		MilitaryRocketLauncherCount = 2,
@@ -562,7 +619,28 @@ CityAlertConfig.Cities = {
 
 		-- ===== Stufe 5: Guardian (erste Stadt mit Guardian -- Village/SmallTown haben
 		-- laut Konzept keinen) =====
-		AlertThresholdLevel5 = 160000, -- 2.20 Durchgaenge
+		AlertThresholdLevel5 = 551500, -- 2.24 Durchgaenge (war 160 000 = 0.65)
+
+		-- ===== Wie gross der Guardian dasteht =====
+		-- 32 Studs: die GEMESSENE Hoehe der Spielfigur mit dem Level-30-Skin (Kaiju-Skin 3,
+		-- RequiredLevel 30) aus dem Lauf vom 20.09.2026. Mit dem Level-29-Skin ist sie 30
+		-- Studs hoch -- der Guardian ueberragt sie also, und wer Level 30 erreicht, sieht
+		-- ===== Er muss GROESSER sein als die Figur, die gegen ihn antritt =====
+		-- Der Dienst misst das Modell beim Spawnen und skaliert es auf diesen Wert. Eine Zahl
+		-- in Studs ist dabei verlaesslicher als ein Faktor: die Guardian-Modelle bringen sehr
+		-- verschiedene Eigengroessen mit.
+		--
+		-- Hergeleitet aus der Figur, nicht geraten. Diese Stadt ist fuer Stufe 3 ausgelegt
+		-- (ExpectedSkinStage oben), und die misst 60 Studs (SkinsConfig). Mal 1.15 ergibt
+		-- 69 -- er ueberragt sie spuerbar, ohne zu thronen.
+		--
+		-- Zuerst stand hier 1.25. Im Spiel war das "etwas zu gross" (20.09.2026).
+		--
+		-- Hier stand einmal ein fester Wert von 32, aus der Zeit, als der Avatar die
+		-- Skin-Skala trug und keine dreissig Studs hoch war. Seit der Hoehenangleichung war
+		-- der City-Guardian damit HALB so gross wie sein Gegner. Ein Boss, zu dem man
+		-- hinunterschaut, ist keiner.
+		GuardianHeightStuds = 69,
 		-- ===== Was der Guardian einbringt =====
 		-- FEST, nicht zur Laufzeit gerechnet -- so verlangt es die Spec
 		-- (balancing.every-defeat-pays). Bis hierher gab dieser Guardian GAR NICHTS: ein
@@ -609,20 +687,40 @@ CityAlertConfig.Cities = {
 	},
 
 	LargeCity = {
+		-- HP-Balance fuer Level 30-40 (04.10.2026).
+		-- Referenz: Chronovore, volle Arm-Trainingskappe, 1780 Schaden je Grundtreffer.
+		-- Feuerwehr/Barrikade/Generator/Militaer folgen den Trefferzahlen von City.
+		-- Guardian: 390000 HP + 160000 Schild = rund 309 Treffer, bereits passend.
+		-- 65 angreifbare Instanzen sind im letzten Studio-Start gezaehlt worden.
+		-- Gebaeudewerte werden im Bearbeitungsmodus aus BuildingConfig angewandt.
+		-- Alarmschwellen und XP-Strecke muessen gegen den danach gemessenen Bestand
+		-- gesondert geeicht werden; die Zahlen unten stammen noch vom alten Bestand.
 		ExpectedSkinStage = 4, -- Chronovore; die Spec verlangt die Angabe je Stadt
 		-- Neu gerechnet am 18.09.2026, nachdem Hotel, Spital, Stadion und Arena
-		-- dazugekommen sind: der Durchgang waechst damit von 49 464 auf gemessene 95 544
+		-- dazugekommen sind: der Durchgang waechst damit von 49 464 ueber 95 544 auf gemessene 192 960
 		-- Alarmpunkte (26 statt 22 Bauwerke). Die alten Schwellen lagen dadurch bei 0.20 bis
 		-- 1.15 Durchgaengen -- die Stadt waere durcheskaliert, bevor sie halb abgeraeumt ist.
 		--
 		-- WICHTIG: diese vier Zahlen haengen an der Zahl der Bauwerke. Kommt eines dazu,
 		-- sagt der Durchgang-Bericht beim Serverstart die neuen Verhaeltnisse -- weichen sie
 		-- von 0.39 / 0.90 / 1.42 / 2.26 ab, gehoeren sie nachgezogen.
-		AlertThresholdLevel2 = 37000, -- 0.39 Durchgaenge
-		AlertThresholdLevel3 = 86000, -- 0.90 Durchgaenge
+		-- ===== Neu gerechnet am 06.10.2026, nach dem ersten gemessenen Bestand =====
+		-- Der Durchgang-Bericht gab 65 Gebaeude mit 10 296 000 Lebenspunkten und 1 853 280
+		-- Alarmpunkten. Gegen diese Summe lagen die alten Schwellen bei 0.04 / 0.09 / 0.15 /
+		-- 0.24 Durchgaengen -- Stufe 5 nach einem Vierundzwanzigstel der Stadt.
+		--
+		-- Die Lebenspunkt-Seite ist zugleich korrigiert worden (siehe BuildingConfig,
+		-- Mischung der Stufen). GEMESSEN am 06.10.2026, nach dem Anwenden in Studio:
+		-- 65 Gebaeude, 4 116 900 Lebenspunkte, 741 042 Alarmpunkte.
+		--
+		-- Die vier Zahlen unten sind daraus gerechnet, auf die Zielform aus Brasshaven:
+		-- 0.39 / 0.90 / 1.42 / 2.26 Durchgaenge. Sie stehen damit nicht mehr auf einer
+		-- Schaetzung, sondern auf dem Bericht.
+		AlertThresholdLevel2 = 289000, -- 0.39 Durchgaenge
+		AlertThresholdLevel3 = 667000, -- 0.90 Durchgaenge
 		AlertPerHP = 0.18,
 
-		FireEngineHP = 50000,
+		FireEngineHP = 89000, -- 50 Grundtreffer bei Level 30
 		FireEngineCount = 3,
 		FireEngineSpeed = 20,
 		FirefightingRate = 700,
@@ -637,10 +735,10 @@ CityAlertConfig.Cities = {
 		AlertDecayRate = 160,
 
 		BarricadeScale = 2.5,
-		ShieldMaxHealth = 21000,
+		ShieldMaxHealth = 106800, -- 60 Grundtreffer bei Level 30
 		ShieldRegenDelay = 8,
 		ShieldRegenRate = 0.04,
-		GeneratorMaxHealth = 2750,
+		GeneratorMaxHealth = 26700, -- 15 Grundtreffer bei Level 30
 		-- ===== Auf den Massstab gebracht (18.09.2026) =====
 		-- Die Verteidiger toeteten den erwarteten Skin (Chronovore, 800 Leben) in dreieinhalb bis fuenf Treffern.
 		-- Die Regel lautet rund 32 -- beim Guardian 16, weil er doppelt so gefaehrlich sein
@@ -658,19 +756,19 @@ CityAlertConfig.Cities = {
 		FlankAutoDetectRadius = 40,
 
 		-- ===== Stufe 4: Militär (Panzer, Raketenwerfer, Militär-Helikopter) =====
-		AlertThresholdLevel4 = 136000, -- 1.42 Durchgaenge
+		AlertThresholdLevel4 = 1052000, -- 1.42 Durchgaenge
 		MaxAlertLevel = 5, -- Konzept-Vorgabe: nicht jede Stadt kennt alle Alert-Stufen
 		MilitaryTankCount = 3,
 		MilitaryRocketLauncherCount = 2,
 		MilitaryHelicopterCount = 2,
-		TankHP = 140000,
+		TankHP = 130000, -- 73 Grundtreffer bei Level 30
 		TankDamage = 24, -- 33 Treffer
 		TankAttackRange = 75,
 		TankSpeed = 15,
-		RocketLauncherHP = 85000,
+		RocketLauncherHP = 97900, -- 55 Grundtreffer bei Level 30
 		RocketLauncherDamage = 28, -- 29 Treffer -- der haerteste des Militaers
 		RocketLauncherAttackRange = 130,
-		HelicopterHP = 70000,
+		HelicopterHP = 80100, -- 45 Grundtreffer bei Level 30
 		HelicopterDamage = 20, -- 40 Treffer -- er stoert mehr, als er wehtut
 		HelicopterAttackRange = 95,
 		HelicopterSpeed = 21,
@@ -683,7 +781,7 @@ CityAlertConfig.Cities = {
 		-- Ohne AlertThresholdLevel5 war Stufe 5 hier UNERREICHBAR, obwohl MaxAlertLevel
 		-- sie versprach -- die Stadt liess sich damit nicht abschliessen, denn die
 		-- CITY-BROKEN-Aufgabe "Guardian eliminated" setzt einen Guardian voraus.
-		AlertThresholdLevel5 = 216000, -- 2.26 Durchgaenge
+		AlertThresholdLevel5 = 1675000, -- 2.26 Durchgaenge
 		-- ===== Was der Guardian einbringt =====
 		-- FEST, nicht zur Laufzeit gerechnet -- so verlangt es die Spec
 		-- (balancing.every-defeat-pays). Bis hierher gab dieser Guardian GAR NICHTS: ein
@@ -708,6 +806,22 @@ CityAlertConfig.Cities = {
 		-- kopierte Satz "bei 2200 Schaden je Schlag".
 		GuardianXPReward = 550000,
 		GuardianCoinsReward = 8200,
+		-- ===== Er muss GROESSER sein als die Figur, die gegen ihn antritt =====
+		-- Der Dienst misst das Modell beim Spawnen und skaliert es auf diesen Wert. Eine Zahl
+		-- in Studs ist dabei verlaesslicher als ein Faktor: die Guardian-Modelle bringen sehr
+		-- verschiedene Eigengroessen mit.
+		--
+		-- Hergeleitet aus der Figur, nicht geraten. Diese Stadt ist fuer Stufe 4 ausgelegt
+		-- (ExpectedSkinStage oben), und die misst 75 Studs (SkinsConfig). Mal 1.15 ergibt
+		-- 86 -- er ueberragt sie spuerbar, ohne zu thronen.
+		--
+		-- Zuerst stand hier 1.25. Im Spiel war das "etwas zu gross" (20.09.2026).
+		--
+		-- Hier stand einmal ein fester Wert von 32, aus der Zeit, als der Avatar die
+		-- Skin-Skala trug und keine dreissig Studs hoch war. Seit der Hoehenangleichung war
+		-- der City-Guardian damit HALB so gross wie sein Gegner. Ein Boss, zu dem man
+		-- hinunterschaut, ist keiner.
+		GuardianHeightStuds = 86,
 		GuardianHP = 390000,
 		GuardianShieldHP = 160000,
 		GuardianShieldRegenDelay = 10,
@@ -730,12 +844,18 @@ CityAlertConfig.Cities = {
 	},
 
 	MegaCity = {
+		-- HP-Balance fuer Level 40-50 (04.10.2026).
+		-- Referenz: Aeon Tyrant, volle Arm-Trainingskappe, 34568 Schaden je Treffer.
+		-- Feuerwehr/Barrikaden/Militaer: gleiche Trefferzahlen wie LargeCity.
+		-- Guardian bleibt bei 7700000 HP + 3100000 Schild (rund 312 Treffer).
+		-- Letzte Studio-Zaehlung: 86 angreifbare Instanzen.
+		-- Alarmschwellen und XP-Strecke danach gegen den neuen Bestand eichen.
 		ExpectedSkinStage = 5, -- Aeon Tyrant; die Spec verlangt die Angabe je Stadt
 		AlertThresholdLevel2 = 5400000, -- 0.39 Durchgaenge
 		AlertThresholdLevel3 = 12000000, -- 0.87 Durchgaenge
 		AlertPerHP = 0.12,
 
-		FireEngineHP = 300000,
+		FireEngineHP = 1728400, -- 50 Grundtreffer bei Level 40
 		FireEngineCount = 3,
 		FireEngineSpeed = 22,
 		FirefightingRate = 3200,
@@ -750,10 +870,10 @@ CityAlertConfig.Cities = {
 		AlertDecayRate = 700,
 
 		BarricadeScale = 3.0,
-		ShieldMaxHealth = 30000,
+		ShieldMaxHealth = 2074100, -- 60 Grundtreffer bei Level 40
 		ShieldRegenDelay = 8,
 		ShieldRegenRate = 0.03,
-		GeneratorMaxHealth = 4000,
+		GeneratorMaxHealth = 518500, -- 15 Grundtreffer bei Level 40
 		-- ===== Auf den Massstab gebracht (18.09.2026) =====
 		-- Die Verteidiger toeteten den erwarteten Skin (Aeon Tyrant, 1600 Leben) in zweieinhalb bis dreieinhalb Treffern.
 		-- Die Regel lautet rund 32 -- beim Guardian 16, weil er doppelt so gefaehrlich sein
@@ -776,14 +896,14 @@ CityAlertConfig.Cities = {
 		MilitaryTankCount = 4,
 		MilitaryRocketLauncherCount = 3,
 		MilitaryHelicopterCount = 3,
-		TankHP = 450000,
+		TankHP = 2523500, -- 73 Grundtreffer bei Level 40
 		TankDamage = 48, -- 33 Treffer
 		TankAttackRange = 80,
 		TankSpeed = 16,
-		RocketLauncherHP = 270000,
+		RocketLauncherHP = 1901200, -- 55 Grundtreffer bei Level 40
 		RocketLauncherDamage = 56, -- 29 Treffer -- der haerteste des Militaers
 		RocketLauncherAttackRange = 140,
-		HelicopterHP = 220000,
+		HelicopterHP = 1555600, -- 45 Grundtreffer bei Level 40
 		HelicopterDamage = 40, -- 40 Treffer -- er stoert mehr, als er wehtut
 		HelicopterAttackRange = 100,
 		HelicopterSpeed = 22,
@@ -821,6 +941,22 @@ CityAlertConfig.Cities = {
 		-- kopierte Satz "bei 2200 Schaden je Schlag".
 		GuardianXPReward = 5100000,
 		GuardianCoinsReward = 77000,
+		-- ===== Er muss GROESSER sein als die Figur, die gegen ihn antritt =====
+		-- Der Dienst misst das Modell beim Spawnen und skaliert es auf diesen Wert. Eine Zahl
+		-- in Studs ist dabei verlaesslicher als ein Faktor: die Guardian-Modelle bringen sehr
+		-- verschiedene Eigengroessen mit.
+		--
+		-- Hergeleitet aus der Figur, nicht geraten. Diese Stadt ist fuer Stufe 5 ausgelegt
+		-- (ExpectedSkinStage oben), und die misst 90 Studs (SkinsConfig). Mal 1.15 ergibt
+		-- 103 -- er ueberragt sie spuerbar, ohne zu thronen.
+		--
+		-- Zuerst stand hier 1.25. Im Spiel war das "etwas zu gross" (20.09.2026).
+		--
+		-- Hier stand einmal ein fester Wert von 32, aus der Zeit, als der Avatar die
+		-- Skin-Skala trug und keine dreissig Studs hoch war. Seit der Hoehenangleichung war
+		-- der City-Guardian damit HALB so gross wie sein Gegner. Ein Boss, zu dem man
+		-- hinunterschaut, ist keiner.
+		GuardianHeightStuds = 103,
 		GuardianHP = 7700000,
 		GuardianShieldHP = 3100000,
 		GuardianShieldRegenDelay = 10,
@@ -917,7 +1053,29 @@ CityAlertConfig.Cities = {
 		-- endet (siehe PrologueOrchestrator.lua) -- der Spieler soll sichtbar Schaden
 		-- machen können, auch wenn der Ausgang feststeht. =====
 		AlertThresholdLevel5 = 900,
-		GuardianHP = 60000,
+		-- ===== Im Prolog auf Augenhoehe, und nur hier =====
+		-- Ueberall sonst ueberragt der Guardian die Figur um ein Viertel. Der Prolog ist die
+		-- Ausnahme: dort soll er GENAUSO gross sein wie der Kaiju -- so gewuenscht am
+		-- 21.09.2026.
+		--
+		-- 90 Studs, nicht 30. Der Prolog leiht dem Spieler die Groesse der fuenften Stufe:
+		-- er traegt das Ironpulse-MODELL (Stufe 2), aber in der Groesse des Aeon Tyrant --
+		-- siehe PROLOGUE_SCALE_SKIN_ID im PrologueOrchestrator. Wer hier die 30 der ersten
+		-- Stufe einsetzt, stellt einen Zwerg neben einen Riesen.
+		GuardianHeightStuds = 90,
+
+		-- ===== Er soll den Prolog ueberleben =====
+		-- Verdoppelt am 21.09.2026, von 60 000. Der Prolog endet damit, dass der Spieler
+		-- VERLIERT -- ein Guardian, der vorher faellt, nimmt der geskripteten Niederlage
+		-- ihre Grundlage.
+		--
+		-- ACHTUNG, die Verdopplung allein garantiert das nicht: der Prolog gibt 2 000
+		-- Schaden je Schlag und volle Spezialenergie. Ein Fokusstrahl macht Schaden mal
+		-- 1.5 je Tick ueber rund zehn Ticks, also 30 000 -- und mit trainierten Beinen das
+		-- Doppelte. Zwei bis vier Strahlen reichen damit rechnerisch immer noch. Wer das
+		-- sicher ausschliessen will, braucht eine Untergrenze auf seinen Lebenspunkten
+		-- waehrend des Prologs, keine groessere Zahl.
+		GuardianHP = 120000,
 		GuardianShieldHP = 10000,
 		GuardianShieldRegenDelay = 10,
 		-- Anteil des MAXIMALSCHILDS pro Sekunde. War 0.04 und damit staerker als der

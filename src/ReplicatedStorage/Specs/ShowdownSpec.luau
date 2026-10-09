@@ -259,12 +259,22 @@ return {
 			id = "showdown.excluded-situations",
 			intent = "WEICH: Kein Showdown im Prolog, keiner gegen einen bereits besiegten "
 				.. "Guardian, keiner während CITY BROKEN.\n"
-				.. "Der Prolog führt eigene Kamerafahrten und fügt dem Guardian selbst "
-				.. "Schaden zu -- ein Showdown darin liesse zwei Kamerasysteme "
-				.. "gegeneinander laufen. Der besiegte Guardian bleibt liegen, bis die "
-				.. "Stadt bricht; Schaden auf einen Liegenden soll nichts auslösen. Und "
-				.. "die 75 Sekunden CITY BROKEN sind ausdrücklich die Belohnungsphase ohne "
-				.. "Eskalation.",
+				.. "Im Prolog war der Showdown am 21.09.2026 kurzzeitig ERLAUBT -- mit der "
+				.. "Begründung, der Guardian-Auftritt sei der erste Kampf des Spiels und "
+				.. "gerade dort solle er wirken. Im Spiel erwies sich das als zu dicht: der "
+				.. "Prolog führt bereits eigene Kamerafahrten, Filmstreifen, Textkarten und "
+				.. "eine geskriptete Niederlage, und die Momente stahlen einander die "
+				.. "Wirkung (22.09.2026). PrologueCity steht deshalb in "
+				.. "ShowdownConfig.ExcludedCities.\n"
+				.. "'The Fall' bleibt zusätzlich am Spieler gesperrt: diese Szene führt "
+				.. "eine eigene Kamerafahrt, und zwei Kamerasysteme gegeneinander laufen zu "
+				.. "lassen ist der sicherste Weg zu Flacker- und Sprungfehlern. Der "
+				.. "Orchestrator beendet einen laufenden Showdown, bevor er die Kamera "
+				.. "nimmt; das Attribut PrologueFallInProgress verhindert zugleich einen "
+				.. "neuen.\n"
+				.. "Der besiegte Guardian bleibt liegen, bis die Stadt bricht; Schaden auf "
+				.. "einen Liegenden soll nichts auslösen. Und die 75 Sekunden CITY BROKEN "
+				.. "sind ausdrücklich die Belohnungsphase ohne Eskalation.",
 		},
 
 		{

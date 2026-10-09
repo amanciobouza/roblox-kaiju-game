@@ -557,6 +557,7 @@ RunService.RenderStepped:Connect(function(dt)
 		return
 	end
 
+	debug.profilebegin("Trenchborn.PortalEffekte")
 	local portal, dist = nearestPortal(root)
 	currentPortal = portal
 
@@ -623,6 +624,7 @@ RunService.RenderStepped:Connect(function(dt)
 	for _, band in ipairs(activeBands) do
 		updateBand(band, now, root)
 	end
+	debug.profileend()
 end)
 
 -- =========================================================

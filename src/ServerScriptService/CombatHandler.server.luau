@@ -47,8 +47,17 @@ local lastAttackTime = {}
 -- Server setzt die Sperre autoritativ.
 local PlayerPunchedEvent = RemoteEventUtils.GetOrCreate("PlayerPunchedEvent")
 
-PlayerPunchedEvent.OnServerEvent:Connect(function(player)
+PlayerPunchedEvent.OnServerEvent:Connect(function(player, klickZeit)
 	local now = os.clock()
+
+	-- ===== Nur eine Messung =====
+	-- Der Client schickt den Zeitpunkt seines Klicks auf der GEMEINSAMEN Uhr
+	-- (Workspace:GetServerTimeNow). Der Kaiju-Adapter liest ihn beim Einschlag wieder und
+	-- rechnet die Spanne aus -- siehe dort. Nichts haengt sonst daran; ein fehlender oder
+	-- unsinniger Wert macht nur die Messung stumm, nicht den Schlag.
+	if type(klickZeit) == "number" and klickZeit == klickZeit then
+		player:SetAttribute("LastPunchClickAt", klickZeit)
+	end
 	local cooldownMultiplier = (_G.GetBerserkerCooldownMultiplier and _G.GetBerserkerCooldownMultiplier(player)) or 1.0
 	local effectiveCooldown = ATTACK_COOLDOWN * cooldownMultiplier
 

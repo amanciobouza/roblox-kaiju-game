@@ -81,7 +81,7 @@ local function versucheTriumph(cityName)
 	if versuche == 0 then
 		print("[Kaiju Debug] Triumph uebersprungen: kein Kaiju-Modell an der Figur.")
 	else
-		warn(string.format("[Kaiju Debug] Triumph in %s nach %d Versuchen nicht angenommen -- "
+		warn(string.format("[Kaiju Debug] Triumph (%s) nach %d Versuchen nicht angenommen -- "
 			.. "das Rig lehnt ab, solange gesprungen, geschwommen oder ein Special gespielt wird.",
 			cityName, versuche))
 	end
@@ -105,9 +105,51 @@ local function beobachte(wert)
 	end)
 end
 
+-- ===== Auf Tastendruck, nicht nur bei CITY BROKEN (05.10.2026) =====
+-- Der Brüller hatte eine Taste, aber an der falschen Stelle: in den Client-Dateien des
+-- Asset-Pakets. Beide gingen ins Leere.
+--
+-- KaijuStageOneControls hätte die richtige Belegung, läuft im Spiel aber überhaupt nicht --
+-- sie wird von niemandem installiert. Der Installer klont nur KaijuStageOneInput, und auch
+-- das bloss bei InstallInput; der KaijuStageOneService setzt es ausdrücklich auf false, weil
+-- die Eingabe des Pakets mit der des Spiels kollidiert.
+--
+-- Der Weg, der tatsächlich lief, war der Vorschau-Zweig in KaijuPresentationClient -- und
+-- der hängt hinter "if RunService:IsStudio()". Die Taste gab es also nur in Studio; auf
+-- einem echten Server hat sie nie funktioniert.
+--
+-- Deshalb steht sie jetzt hier: im Repo, neben dem Anlass, der denselben Brüller auslöst,
+-- über dasselbe Remote. Das übersteht auch ein Workshop-Update, das die Paketdateien
+-- ersetzt.
+local UserInputService = game:GetService("UserInputService")
+
+local BRUELL_TASTE = Enum.KeyCode.Y
+
+-- Gegen Dauerfeuer: der Brüller läuft 5,1 Sekunden, und versucheTriumph sperrt sich zwar
+-- selbst über "laeuft" -- aber erst nachdem es seine vier Sekunden lang versucht hat. Ohne
+-- eigene Sperre liesse ein gehaltener Finger die Versuche aneinanderreihen.
+local TASTEN_SPERRE = 6
+local letzterBruellerAt = -math.huge
+
+UserInputService.InputBegan:Connect(function(input, verarbeitet)
+	if verarbeitet or input.KeyCode ~= BRUELL_TASTE then
+		return
+	end
+	if UserInputService:GetFocusedTextBox() then
+		return
+	end
+	if os.clock() - letzterBruellerAt < TASTEN_SPERRE then
+		return
+	end
+	letzterBruellerAt = os.clock()
+	-- "auf Tastendruck" als Anlass: derselbe Weg wie bei CITY BROKEN, nur ohne Stadt.
+	task.spawn(versucheTriumph, "auf Tastendruck")
+end)
+
 local cityAlertValues = ReplicatedStorage:WaitForChild("CityAlertValues", 60)
 if not cityAlertValues then
-	warn("[Kaiju Debug] Triumph: 'CityAlertValues' nicht gefunden -- der Siegesbrueller bleibt aus.")
+	warn("[Kaiju Debug] Triumph: 'CityAlertValues' nicht gefunden -- der Siegesbrueller bleibt "
+		.. "bei CITY BROKEN aus. Die Taste " .. BRUELL_TASTE.Name .. " funktioniert trotzdem.")
 	return
 end
 
@@ -116,4 +158,5 @@ for _, wert in ipairs(cityAlertValues:GetChildren()) do
 end
 cityAlertValues.ChildAdded:Connect(beobachte)
 
-print("[Kaiju Debug] Triumph bereit -- Siegesbrueller bei CITY BROKEN.")
+print("[Kaiju Debug] Triumph bereit -- Siegesbrueller bei CITY BROKEN und auf Taste "
+	.. BRUELL_TASTE.Name .. ".")

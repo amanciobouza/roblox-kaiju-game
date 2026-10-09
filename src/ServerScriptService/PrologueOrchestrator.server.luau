@@ -5,7 +5,8 @@
 -- Steuert den Playable Prologue ("The Fall") -- siehe Design-Dokument. Aktuell umgesetzt:
 --   Phase 1: Cold Open (Schwarzblende, Ticken, "THE CITY WILL SOON BE BROKEN.")
 --   Phase 2: Prolog-Kaiju-Setup (Power-Fantasy-Stats) + Onboarding-Hinweise
---   Phase 3: Eskalation (zeitbasiert, siehe ESCALATION_SCHEDULE)
+--   Phase 3: Eskalation (Stufe 1 am ersten zerstörten Gebäude, danach eine Stufe je
+--            ESCALATION_STEP_SECONDS -- siehe dort)
 --   Phase 4: Guardian-Auftritt (Alert 5)
 --   Phase 5: The Fall (geskripteter, timer-basierter Niederlage-Ablauf)
 --   Phase 6: "The Trench Remembers" (Titelkarten-Sequenz)
@@ -77,9 +78,34 @@ local PROLOGUE_CITY_NAME = "PrologueCity"
 -- Der Prolog-Kaiju nutzt einen ECHTEN Skin der Reihe statt eigener,
 -- willkürlicher Werte -- vermittelt so die tatsächliche Endgame-Power, die man sich im
 -- normalen Spiel erarbeiten würde, statt einer künstlich überhöhten Fantasie-Zahl.
-local PROLOGUE_SKIN_ID = 2 -- Rift Stalker (ab Level 20 freigeschaltet, passt zu PROLOGUE_LEVEL=25) -- siehe SkinsConfig.lua
+-- ===== Das Modell der zweiten Stufe, die Groesse der fuenften =====
+-- Der Prolog ist die Vorschau auf das, was der Spieler wird. Er traegt deshalb den
+-- IRONPULSE (Stufe 2 von fuenf, Id 1) -- aber in der Groesse des Aeon Tyrant (Stufe 5,
+-- Id 4): 90 Studs statt 45.
+--
+-- Vorher stand hier der Epochbreaker (Id 2) in seiner eigenen Groesse, 60 Studs.
+--
+-- Die Leihe laeuft ueber das Spieler-Attribut "ScaleFromSkinId" und von dort durch
+-- SkinsConfig.GetScale -- dieselbe Funktion, die Modell, Avatarhoehe und Zonenwechsel
+-- bedient. Eine zweite Groessentabelle waere die sichere Art gewesen, dass die beiden
+-- irgendwann auseinanderlaufen.
+local PROLOGUE_SKIN_ID = 1 -- Ironpulse -- siehe SkinsConfig
+local PROLOGUE_SCALE_SKIN_ID = 4 -- Aeon Tyrant: nur seine Groesse, nicht sein Modell
 local PROLOGUE_LEVEL = 25
 local PROLOGUE_DAMAGE = 2000 -- fester Schaden-Wert (statt Multiplikator auf Adult-Kaiju-Basis-Schaden)
+
+-- Feste Lebenspunkte, nur im Prolog. Der Ironpulse haette von sich aus 200 -- das gehoert
+-- zu einer Stufe, die der Spieler hier noch nicht erreicht hat. Der Prolog setzt Schaden
+-- und Groesse ohnehin schon eigens; die Lebenspunkte gehoeren in dieselbe Reihe.
+--
+-- Laeuft ueber das Spieler-Attribut "ForcedMaxHealth", das applySkinToCharacter beachtet.
+-- Nachtraeglich am Humanoid gesetzt waere der Wert beim ersten Wiederanziehen wieder weg,
+-- und der Prolog zieht mehrfach neu an (Fall, Wiedergeburt, Zonenwechsel).
+local PROLOGUE_HEALTH = 1000
+
+-- Wie viel weiter der Flaechenschlag im Prolog reicht. Gilt ueber ein Attribut AM SPIELER,
+-- trifft also niemanden sonst auf dem Server, und wird in Phase 7 wieder entfernt.
+local PROLOGUE_AREA_RADIUS_FACTOR = 2
 
 -- Das Ticken des Sanctuary-Uhrwerks -- zieht sich als wiederkehrendes Motiv durch den
 -- gesamten Prolog (Cold Open, Guardian-Auftritt, The Fall, "The Trench Remembers").
@@ -105,20 +131,45 @@ end
 local GUARDIAN_PHASE_DURATION_SECONDS = 25 -- "gefühlter Kampf", bevor The Fall automatisch beginnt
 local FALL_STAGGER_DURATION_SECONDS = 6 -- wie lange die Health-Abnahme sichtbar/spürbar dauert, bevor der finale Treffer kommt
 
+-- Wie lange der Sturz des Kaiju dauert, bevor die Kamera hinfährt.
+--
+-- Die Zahl ist nicht gegriffen, sondern aus der DefeatAnimation abgelesen
+-- (KaijuPresentation.updateDefeat): Einknicken bis 0,45 s, Fallen von 0,25 bis 1,8 s,
+-- Setzen von 1,8 bis 2,6 s. Bei 2,6 Sekunden liegt die Figur. Was danach noch läuft --
+-- das Erlöschen der Neonflächen und das letzte Flackern der Augen bis 4,8 s -- braucht
+-- nicht abgewartet zu werden, im Gegenteil: es soll während der Kamerafahrt geschehen.
+--
+-- Ändert sich die Animation im Workshop-Submodul, gehört diese Zahl nachgezogen. Zu kurz
+-- heisst: die Kamera fährt los, während die Figur noch fällt.
+local DEFEAT_ANIMATION_SECONDS = 2.8
+
 -- ===== Phase 3: Zeitbasierte Eskalation =====
--- PLANÄNDERUNG: der Alert-Level im Prolog steigt jetzt rein nach VERSTRICHENER ZEIT,
--- nicht mehr nach tatsächlich angerichtetem Zerstörungs-Schaden. Sekunden seit Prolog-
--- Start -> Ziel-Alert-Level. Läuft periodisch (siehe driveEscalationByTime) und setzt
--- den Fortschritt aktiv auf den zum jeweiligen Zeitpunkt passenden Wert -- so bleibt die
--- Eskalation exakt nach Plan, selbst wenn der Spieler nebenbei viele Gebäude zerstört
--- (was normalerweise ebenfalls Alert-Fortschritt geben würde).
-local ESCALATION_SCHEDULE = {
-	{ atSeconds = 0, level = 1 },
-	{ atSeconds = 18.75, level = 2 },
-	{ atSeconds = 27.5, level = 3 },
-	{ atSeconds = 37.5, level = 4 },
-	{ atSeconds = 50, level = 5 },
-}
+-- Der Alert-Level im Prolog steigt nach VERSTRICHENER ZEIT, nicht nach tatsächlich
+-- angerichtetem Zerstörungs-Schaden. driveEscalationByTime setzt den Fortschritt aktiv auf
+-- den zum jeweiligen Zeitpunkt passenden Wert -- so bleibt die Eskalation exakt nach Plan,
+-- selbst wenn der Spieler nebenbei viele Gebäude zerstört (was normalerweise ebenfalls
+-- Alert-Fortschritt geben würde).
+--
+-- ===== Woran die Uhr hängt (21.09.2026) =====
+-- Vorher lief sie ab dem Ende der Tutorial-Checkliste und mit ungleichen Abständen
+-- (0 / 18.75 / 27.5 / 37.5 / 50). Beides ist jetzt anders:
+--
+--   * Stufe 1 kommt, sobald das ERSTE Gebäude der Prologstadt fällt -- nicht vorher. Bis
+--     dahin steht die Stadt auf Stufe 0. Damit hat der Spieler die Eskalation selbst
+--     ausgelöst, statt dass sie ihm nebenher zuläuft.
+--   * Danach eine Stufe je ESCALATION_STEP_SECONDS, gleichmässig. Gleiche Abstände sind
+--     die Voraussetzung dafür, dass der Takt überhaupt als Takt wahrgenommen wird.
+--
+-- Das verlängert Phase 3 gegenüber vorher: Stufe 5 (und damit der Guardian) kommt nach
+-- vier Schritten statt nach 50 Sekunden.
+local ESCALATION_STEP_SECONDS = 20
+local ESCALATION_MAX_LEVEL = 5
+
+-- Notbremse: zerstört der Spieler nach dem DESTROY-Hinweis überhaupt nichts, gäbe es ohne
+-- diese Frist keinen Auslöser für Stufe 1 -- der Prolog bliebe für immer auf Stufe 0
+-- stehen, ohne Fehler und ohne Hinweis. Nach dieser Zeit läuft der Takt auch ohne das
+-- erste Gebäude an.
+local FIRST_BUILDING_GRACE_SECONDS = 60
 
 local function findPrologueSpawn()
 	local prologueFolder = Workspace:FindFirstChild("Prologue")
@@ -149,6 +200,21 @@ local function applyProloguePowerStats(player, character)
 		equippedSkin.Value = PROLOGUE_SKIN_ID
 	end
 
+	-- VOR ApplySkinToCharacter: die Leihe muss stehen, bevor Modell und Avatarhoehe
+	-- berechnet werden -- danach gesetzt bliebe die Figur bis zum naechsten Anlass klein.
+	player:SetAttribute("ScaleFromSkinId", PROLOGUE_SCALE_SKIN_ID)
+	player:SetAttribute("ForcedMaxHealth", PROLOGUE_HEALTH)
+
+	-- Das Modell bleibt beim Tod an der Figur. Der Fall im Prolog ist die Szene, nicht ein
+	-- Unfall -- er wird eigens geskriptet (siehe "The Fall" weiter unten). Ohne das nimmt
+	-- KaijuStageOneService beim Tod ab, und das gesamte Kippen liefe am blanken Avatar ab.
+	player:SetAttribute("KeepModelOnDeath", true)
+
+	-- Doppelter Flaechenradius -- nur fuer diesen Spieler, nur im Prolog. Der Prolog zeigt
+	-- eine Figur auf einem Stand, den der Spieler noch nicht hat; der Flaechenschlag soll
+	-- entsprechend weit reichen. Siehe getAreaAttackRadius im SpecialAttackHandler.
+	player:SetAttribute("AreaRadiusFactor", PROLOGUE_AREA_RADIUS_FACTOR)
+
 	if _G.ApplySkinToCharacter then
 		_G.ApplySkinToCharacter(player, character, PROLOGUE_SKIN_ID)
 	else
@@ -170,13 +236,45 @@ local function applyProloguePowerStats(player, character)
 	player:SetAttribute("SpecialEnergy", specialEnergyMax and specialEnergyMax.Value or 100)
 end
 
-local function teleportToPrologueArea(character)
+-- ===== Vor jedem Sprung das Ziel laden lassen =====
+-- Mit StreamingEnabled kennt ein Client nur die Umgebung, in der er gerade steht. Ein
+-- PivotTo in einen Bereich, der bei ihm noch nicht angekommen ist, lässt die Engine die
+-- Simulation anhalten und blendet "Gameplay Paused" ein.
+--
+-- Diese Meldung gehört der CoreGui und liegt damit ÜBER unseren Oberflächen -- auch über
+-- der Schwarzblende. Sie durch eine längere schwarze Strecke zu verdecken, geht deshalb
+-- nicht; verhindert werden kann nur die Pause selbst.
+--
+-- RequestStreamAroundAsync bittet den Server, genau diesen Bereich vorab an den Client zu
+-- schicken, und wartet darauf. Danach ist der Sprung für ihn kein Sprung ins Leere mehr.
+local STREAM_VORLADE_TIMEOUT = 5
+
+local function streameZielVor(player, position, anlass)
+	local start = os.clock()
+	local ok, err = pcall(function()
+		player:RequestStreamAroundAsync(position, STREAM_VORLADE_TIMEOUT)
+	end)
+	if ok then
+		print(string.format("[Kaiju-Debug] Prolog: Bereich um '%s' vorgeladen (%.2fs).",
+			anlass, os.clock() - start))
+	else
+		-- Nicht abbrechen: ohne Vorladen springt er wie bisher, nur eben mit der Meldung.
+		-- Die Warnung nennt den Grund, damit ein Fehlschlag nicht still bleibt.
+		warn(string.format(
+			"[PrologueOrchestrator] Vorladen für '%s' fehlgeschlagen (%s) -- der Sprung kann "
+				.. "'Gameplay Paused' zeigen.", anlass, tostring(err)))
+	end
+end
+
+local function teleportToPrologueArea(player, character)
 	local spawnPart = findPrologueSpawn()
 	if not spawnPart then
 		warn("[PrologueOrchestrator] Workspace.PrologueSpawn nicht gefunden -- Prolog-Kaiju bleibt an der normalen Spawn-Position stehen.")
 		return
 	end
-	character:PivotTo(spawnPart.CFrame + Vector3.new(0, 5, 0))
+	local ziel = spawnPart.CFrame + Vector3.new(0, 5, 0)
+	streameZielVor(player, ziel.Position, "PrologueSpawn")
+	character:PivotTo(ziel)
 end
 
 -- ===== Phase 1: Cold Open =====
@@ -208,6 +306,52 @@ local function findNearestPrologueHouses(fromPosition, maxCount)
 		table.insert(result, candidates[i].house)
 	end
 	return result
+end
+
+-- ===== Regie-Ziele für den Fokusstrahl =====
+-- Im Prolog bestimmt die Regie, worauf der Kaiju den Strahl richtet und in welcher
+-- Reihenfolge. Dafür trägt jedes Ziel in Studio das Attribut "PrologueTarget" mit einer
+-- Zahl: 1 zuerst, dann 2, dann 3. Die Zahlen müssen nicht lückenlos sein -- sortiert wird
+-- nach ihrem Wert, nicht nach ihrem Abstand.
+--
+-- Gesucht wird über die ganze Workspace statt nur in der Prolog-Stadt: das Attribut ist
+-- eine Regie-Anweisung und soll dort gesetzt werden können, wo das Ziel eben steht, ohne
+-- dass jemand die Ordnerstruktur kennen muss. Ein Durchlauf beim Prologstart.
+local function findPrologueFocusTargets()
+	local houseTag = _G.HOUSE_TAG or "KaijuHouse"
+	local funde = {}
+	for _, instance in ipairs(Workspace:GetDescendants()) do
+		local nummer = instance:GetAttribute("PrologueTarget")
+		if typeof(nummer) == "number" then
+			table.insert(funde, { nummer = nummer, instance = instance })
+		end
+	end
+	table.sort(funde, function(a, b)
+		return a.nummer < b.nummer
+	end)
+
+	local ziele = {}
+	for _, fund in ipairs(funde) do
+		-- Der Strahl richtet echten Schaden an, und der läuft über _G.DamageHouse. Ohne
+		-- den Haus-Tag bekäme das Ziel den Strahl zu sehen, aber keinen Schaden -- ein
+		-- Fehler, der im Spiel aussieht wie "der Laser tut nichts". Deshalb hier melden,
+		-- statt ihn still zu schlucken.
+		if CollectionService:HasTag(fund.instance, houseTag) then
+			table.insert(ziele, fund.instance)
+			print(string.format("[Kaiju-Debug] Prolog-Fokusziel %d: %s",
+				fund.nummer, fund.instance:GetFullName()))
+		else
+			warn(string.format(
+				"[PrologueOrchestrator] PrologueTarget %d an '%s' wird übersprungen -- die Instanz "
+					.. "trägt den Tag '%s' nicht und könnte deshalb keinen Fokusschaden nehmen.",
+				fund.nummer, fund.instance:GetFullName(), houseTag))
+		end
+	end
+	if #ziele == 0 then
+		print("[Kaiju-Debug] Prolog: kein Ziel mit Attribut 'PrologueTarget' gefunden "
+			.. "-- der Fokusstrahl nimmt wie bisher den Leuchtturm.")
+	end
+	return ziele
 end
 
 -- Findet alle "PrologueCameraSpawn_N"-Parts in Workspace.Prologue und sortiert sie
@@ -269,8 +413,32 @@ local function playIntroCinematic(player, character)
 		warn("[PrologueOrchestrator] Weniger als 2 'PrologueCameraSpawn_N'-Wegpunkte in Workspace.Prologue gefunden (" .. #cameraPathWaypoints .. ") -- Kamera nutzt Fallback-Pfad.")
 	end
 
+	-- Die Regie-Ziele bestimmen, wie lang die Kampfsequenz wird -- deshalb VOR der
+	-- Flugdauer der Kamera, die sich daran ausrichtet.
+	local focusTargets = findPrologueFocusTargets()
+
+	-- WICHTIG zum Timing: die echten Cooldowns sind ATTACK_COOLDOWN=0.8s (Punch),
+	-- FOCUS_ATTACK_COOLDOWN=1s, AREA_ATTACK_COOLDOWN=1.5s (siehe CombatHandler.lua/
+	-- SpecialAttackHandler.lua) -- ein zu kurzer Abstand zwischen zwei Aktionen würde vom
+	-- echten System stillschweigend ignoriert (wie ein zu schneller Doppelklick). Die
+	-- Pause zwischen Aktionen ist daher auf mindestens 0.85s festgelegt (knapp über dem
+	-- strengsten Cooldown zwischen zwei AUFEINANDERFOLGENDEN Aktionen DESSELBEN Typs).
+	local ACTION_GAP = 0.85
+
+	-- Die Sequenz besteht aus Blöcken "3x Punch + 1 Spezialaktion". Die Spezialaktionen
+	-- sind der Reihe nach: Sprung, EIN FOKUSSTRAHL JE REGIE-ZIEL, Sprung, Flächenschaden.
+	-- Bei einem Ziel ergibt das genau die 16 Aktionen, die hier vorher fest standen.
+	-- Ohne Regie-Ziel bleibt es bei einem Strahl auf den Leuchtturm, also ebenfalls 16.
+	local focusCount = math.max(#focusTargets, 1)
+	local TOTAL_ACTIONS = 4 * (3 + focusCount)
+	local combatDuration = (TOTAL_ACTIONS - 1) * ACTION_GAP
+
 	local CAMERA_ALIGN_DURATION = 0.8 -- dient nur noch als Mindest-Puffer für combatStartDelay unten (die eigentliche Align-Phase im Client gibt es nicht mehr)
-	local CAMERA_FLY_DURATION = 13
+	-- 13 Sekunden sind der eingestellte Wert für EIN Fokusziel. Jedes weitere Ziel hängt
+	-- einen Block von vier Aktionen an die Sequenz; wüchse die Kamera nicht mit, käme sie
+	-- an, während der Kaiju noch geskriptet weiterschlägt -- der Spieler bekäme die
+	-- Kontrolle mitten in die Inszenierung zurück.
+	local CAMERA_FLY_DURATION = 13 + (focusCount - 1) * 4 * ACTION_GAP
 
 	PlayIntroCinematicEvent:FireClient(player, {
 		seaView = seaSpawn.CFrame,
@@ -292,23 +460,13 @@ local function playIntroCinematic(player, character)
 	-- Geskriptete Angriffe laufen parallel zur Kamerafahrt, nicht blockierend -- feuert
 	-- jetzt die ECHTEN Button-Events (dieselben Funktionen wie ein tatsächlicher
 	-- Tasten-/Button-Druck, siehe SpecialAttackClient.lua/AttackClient.lua), inklusive
-	-- Cooldown-Prüfung. Sequenz: 3x Punch, 1x Sprung, 3x Punch, 1x Fokusschaden, 3x Punch,
-	-- 1x Sprung, 3x Punch, 1x Area Damage -- 16 Aktionen insgesamt. Der Charakter läuft
-	-- dabei kontinuierlich auf ein selbst gewähltes Ziel (den Leuchtturm) zu.
-	--
-	-- WICHTIG zum Timing: die echten Cooldowns sind ATTACK_COOLDOWN=0.8s (Punch),
-	-- FOCUS_ATTACK_COOLDOWN=1s, AREA_ATTACK_COOLDOWN=1.5s (siehe CombatHandler.lua/
-	-- SpecialAttackHandler.lua) -- ein zu kurzer Abstand zwischen zwei Aktionen würde vom
-	-- echten System stillschweigend ignoriert (wie ein zu schneller Doppelklick). Die
-	-- Pause zwischen Aktionen ist daher auf mindestens 0.85s festgelegt (knapp über dem
-	-- strengsten Cooldown zwischen zwei AUFEINANDERFOLGENDEN Aktionen DESSELBEN Typs --
-	-- Area/Focus kommen hier je nur einmal vor, ihr eigener, längerer Cooldown spielt
-	-- daher gegenüber sich selbst keine Rolle).
-	local ACTION_GAP = 0.85
-	local TOTAL_ACTIONS = 16
-	local combatDuration = (TOTAL_ACTIONS - 1) * ACTION_GAP
+	-- Cooldown-Prüfung. Der Aufbau der Sequenz steht oben bei TOTAL_ACTIONS. Der Charakter
+	-- läuft dabei kontinuierlich auf ein selbst gewähltes Ziel (den Leuchtturm) zu.
 	local combatStartDelay = math.max(CAMERA_FLY_DURATION - combatDuration, CAMERA_ALIGN_DURATION)
-	print("[Kaiju-Debug] Kampfsequenz-Timing: combatDuration=" .. combatDuration .. " combatStartDelay=" .. combatStartDelay)
+	print(string.format(
+		"[Kaiju-Debug] Kampfsequenz-Timing: %d Fokusziele, %d Aktionen, combatDuration=%.2f "
+			.. "combatStartDelay=%.2f Kameraflug=%.2f",
+		#focusTargets, TOTAL_ACTIONS, combatDuration, combatStartDelay, CAMERA_FLY_DURATION))
 
 	print("[Kaiju-Debug] playIntroCinematic: starte task.spawn für Kampfsequenz")
 	task.spawn(function()
@@ -357,8 +515,21 @@ local function playIntroCinematic(player, character)
 				return -- schon nah genug dran -- nicht weiter reinlaufen
 			end
 			local direction = toTarget.Unit
-			local newCFrame = CFrame.lookAt(rootPart.Position + direction * WALK_STEP_DISTANCE, targetPosition)
-			character:PivotTo(newCFrame)
+			-- WAAGERECHT ausrichten -- wie faceTowards darüber, nur Gieren, kein Nicken.
+			--
+			-- Hier stand als Blickziel targetPosition SELBST. Die Richtung des Schritts war
+			-- zwar flach gerechnet, das Blickziel aber nicht: die Figur neigte sich um den
+			-- Höhenunterschied zum Ziel. Solange sie Spielergrösse hatte, lagen Rumpf und
+			-- Gebäudemitte ungefähr gleich hoch und es fiel nicht auf. Seit die Figur die
+			-- Höhe ihres Modells hat, schwebt HumanoidRootPart auf Hüfthöhe -- beim
+			-- Prolog-Kaiju rund 45 Studs -- und sie schaute steil nach UNTEN auf den
+			-- Leuchtturm. Je näher sie kam, desto steiler, bis fast in die Waagerechte.
+			-- Und weil doPunch nach JEDEM Schlag hierher zurückkommt, richtete sie sich
+			-- dazwischen nie wieder auf.
+			--
+			-- Das Blickziel ist deshalb die neue Position plus die FLACHE Richtung.
+			local newPosition = rootPart.Position + direction * WALK_STEP_DISTANCE
+			character:PivotTo(CFrame.lookAt(newPosition, newPosition + direction))
 		end
 
 		local function doPunch()
@@ -389,12 +560,24 @@ local function playIntroCinematic(player, character)
 			stepTowardTarget()
 		end
 
-		local function doFocusDamage()
-			-- Zielt gezielt auf den Leuchtturm (falls vorhanden) -- die echte
-			-- Ziel-Findung (findFocusTarget in SpecialAttackHandler.lua) wählt automatisch
-			-- das nächste Gebäude in Blickrichtung, daher genügt es, den Charakter exakt
-			-- zum Leuchtturm auszurichten.
-			if leuchtturm then
+		local function doFocusDamage(ziel)
+			if ziel then
+				local zielTeil = ziel:IsA("Model") and ziel.PrimaryPart
+					or (ziel:IsA("BasePart") and ziel or nil)
+				if zielTeil then
+					faceTowards(zielTeil.Position)
+				end
+				-- Drehen allein genügt NICHT: die Kegelsuche in findFocusTarget nimmt das
+				-- nächste Haus im Kegel und begrenzt auf FOCUS_ATTACK_RANGE. Steht ein
+				-- anderes Gebäude davor oder ist das Ziel weiter weg, ginge der Strahl
+				-- woandershin. Deshalb wird das Ziel für genau diesen einen Strahl gesetzt.
+				if _G.SetForcedFocusTarget then
+					_G.SetForcedFocusTarget(player, ziel)
+				end
+				print("[Kaiju-Debug] Kampfsequenz: Fokusstrahl auf " .. ziel:GetFullName())
+			elseif leuchtturm then
+				-- Rückfall ohne Regie-Ziel: wie bisher zum Leuchtturm drehen und die
+				-- normale Zielsuche entscheiden lassen.
 				faceTowards(leuchtturm.Position)
 			else
 				faceNearestHouse()
@@ -404,47 +587,36 @@ local function playIntroCinematic(player, character)
 
 		task.wait(combatStartDelay)
 
-		-- Sequenz: 3x Punch, 1x Sprung, 3x Punch, 1x Fokusschaden, 3x Punch, 1x Sprung,
-		-- 3x Punch, 1x Area Damage -- 16 Aktionen, endet exakt wenn die Kamera bei der
-		-- letzten PrologueCameraSpawn-Station ankommt (siehe combatStartDelay-Berechnung
-		-- weiter oben).
-		doPunch()
-		task.wait(ACTION_GAP)
-		doPunch()
-		task.wait(ACTION_GAP)
-		doPunch()
-		task.wait(ACTION_GAP)
+		-- Sequenz: Blöcke aus 3x Punch + 1 Spezialaktion. Die Spezialaktionen der Reihe
+		-- nach: Sprung, ein Fokusstrahl je Regie-Ziel (PrologueTarget), Sprung,
+		-- Flächenschaden. Endet, wenn die Kamera bei der letzten PrologueCameraSpawn-
+		-- Station ankommt -- combatStartDelay und CAMERA_FLY_DURATION weiter oben rechnen
+		-- mit derselben Zahl von Aktionen (TOTAL_ACTIONS).
+		local function dreiSchlaege()
+			for _ = 1, 3 do
+				doPunch()
+				task.wait(ACTION_GAP)
+			end
+		end
 
+		dreiSchlaege()
 		doJump()
 		task.wait(ACTION_GAP)
 
-		doPunch()
-		task.wait(ACTION_GAP)
-		doPunch()
-		task.wait(ACTION_GAP)
-		doPunch()
-		task.wait(ACTION_GAP)
+		-- Ein Strahl je Ziel, in der Reihenfolge der PrologueTarget-Nummern. Ohne Ziele
+		-- bleibt focusCount bei 1, focusTargets[1] ist nil -- doFocusDamage fällt dann auf
+		-- den Leuchtturm zurück, also genau das bisherige Verhalten.
+		for index = 1, focusCount do
+			dreiSchlaege()
+			doFocusDamage(focusTargets[index])
+			task.wait(ACTION_GAP)
+		end
 
-		doFocusDamage()
-		task.wait(ACTION_GAP)
-
-		doPunch()
-		task.wait(ACTION_GAP)
-		doPunch()
-		task.wait(ACTION_GAP)
-		doPunch()
-		task.wait(ACTION_GAP)
-
+		dreiSchlaege()
 		doJump()
 		task.wait(ACTION_GAP)
 
-		doPunch()
-		task.wait(ACTION_GAP)
-		doPunch()
-		task.wait(ACTION_GAP)
-		doPunch()
-		task.wait(ACTION_GAP)
-
+		dreiSchlaege()
 		doAreaDamage()
 	end)
 
@@ -490,20 +662,38 @@ local PRESENTER_SUB = "P R E S E N T S"
 local function playColdOpen(player)
 	local partOneSteps = { { type = "fadeIn", duration = 0.1 } } -- startet bereits schwarz, minimal für sauberen Übergang
 
+	-- ===== Der Vorspann LIEGT über dem Ticken, er kommt nicht davor =====
+	-- Die Karte dauert 4.4 Sekunden (1.4 einblenden, 1.8 halten, 1.2 ausblenden) und hielt
+	-- die Sequenz so lange an. Danach folgten 7.5 weitere Sekunden, in denen der Bildschirm
+	-- schwarz war und nur die Uhr tickte und die Sirene lief -- der Vorspann verlängerte den
+	-- Start also um Zeit, von der reichlich ungenutzt danebenlag.
+	--
+	-- Mit "parallel" läuft er mit, statt aufzuhalten: der Start ist 4.4 Sekunden kürzer, und
+	-- die schwarze Strecke zeigt jetzt etwas. Das Ticken unter dem Namen ist dabei kein
+	-- Zufall, sondern passt: eine Uhrenmarke, zu der eine Uhr schlägt.
 	table.insert(partOneSteps, {
 		type = "presenterCard",
 		name = PRESENTER_NAME,
 		sub = PRESENTER_SUB,
+		parallel = true,
 	})
-	-- Ein Atemzug Schwarz, bevor das Ticken einsetzt. Ohne ihn ginge der Vorspann direkt in
-	-- den ersten Schlag über, und beides verlöre seine Wirkung.
+	-- Ein Atemzug, bevor das Ticken einsetzt -- jetzt liegt er im Einblenden der Karte und
+	-- kostet nichts extra. Der Name steht damit einen Moment allein, bevor die Uhr einsetzt.
 	table.insert(partOneSteps, { type = "wait", duration = 0.6 })
 
 	for _, step in ipairs(buildTickSteps(3, 0.7)) do
 		table.insert(partOneSteps, step)
 	end
 
-	table.insert(partOneSteps, { type = "wait", duration = 0.8 })
+	-- ===== Der Abschluss-Atemzug liegt HINTER dem Sirenenstart =====
+	-- Er stand als letzter Schritt IN der Sequenz, und die Sirene begann erst danach. Jetzt
+	-- wandert er heraus (siehe unten): die Sirene setzt an seinem Anfang ein statt an
+	-- seinem Ende und laeuft damit genau SIRENE_VORLAUF Sekunden frueher.
+	--
+	-- Diese Konstruktion statt eines Countdowns ab Sequenzbeginn: die Laenge des Vorspanns
+	-- haengt an den Tick-Toenen, und deren Dauer kennt der Server nicht. Ein gezaehlter
+	-- Vorlauf waere geraten gewesen und beim naechsten Ton falsch.
+	local SIRENE_VORLAUF = 0.8
 
 	StoryBeatService.Play(player, { steps = partOneSteps, keepBlackScreen = true })
 
@@ -511,7 +701,14 @@ local function playColdOpen(player)
 	-- -- NICHT als "sound"-Schritt innerhalb der Sequenz, da diese sonst beim
 	-- Sequenz-Ende automatisch gestoppt würde (stopAllSounds) und beim erneuten Start in
 	-- Teil 2 hörbar doppelt gestartet hätte. So läuft sie nahtlos über beide Teile.
+	--
+	-- Sie beginnt SIRENE_VORLAUF frueher als frueher: der Atemzug, der bis zum 22.09.2026
+	-- der letzte Schritt der Sequenz war, liegt jetzt dahinter. Ein erster Versuch hatte
+	-- sie viereinhalb Sekunden vorgezogen, mitten ins Uhrticken -- das war zu viel
+	-- ("Der Sound mit den Alarmsirenen ist nun zu lange").
 	StoryBeatService.PlaySiren(player, SIREN_SOUND_ID, 0.5)
+
+	task.wait(SIRENE_VORLAUF)
 
 	task.wait(1)
 
@@ -538,12 +735,77 @@ local function playColdOpen(player)
 	StoryBeatService.StopSiren(player)
 end
 
+-- ===== Das erste zerstörte Gebäude =====
+-- Es ist der Auslöser für Alarmstufe 1 (siehe ESCALATION_STEP_SECONDS). Gehorcht wird
+-- demselben Muster wie beim Absorb-Tracker weiter unten: ein dauerhafter, idempotenter
+-- Hook, davor eine Anmeldung je Durchlauf.
+--
+-- Warum ein Hook und nicht das Alert-System selbst: PrologueCity läuft als "manuell
+-- gesteuerte" Stadt (siehe _G.SetCityManuallyDriven), und genau deshalb verwirft
+-- CityAlertService organische Beiträge dort. Die Zerstörung kommt also im Alert-System gar
+-- nicht mehr an -- wohl aber an dieser Funktion, die HouseHandler bei JEDER Zerstörung
+-- ruft, bevor die Stadt geprüft wird.
+--
+-- Angemeldet wird schon VOR der Tutorial-Checkliste: wer dabei ein Gebäude umlegt, hat es
+-- umgelegt, und die Eskalation gehört ab diesem Augenblick in Gang -- auch wenn das
+-- Tutorial noch läuft.
+local firstBuildingWatchers = {} -- [player] = true, solange auf das erste Gebäude gewartet wird
+local firstBuildingDestroyedAt = {} -- [player] = os.clock() des ersten Gebäudes
+local buildingHookInstalled = false
+
+local function installBuildingHookOnce()
+	if buildingHookInstalled then
+		return
+	end
+	buildingHookInstalled = true
+	local originalAddCityAlertForBuilding = _G.AddCityAlertForBuilding
+	_G.AddCityAlertForBuilding = function(house)
+		-- Zuerst weiterreichen, unverändert: für jede andere Stadt ist dieser Aufruf der
+		-- normale Weg, auf dem Zerstörung zu Alarm wird.
+		if originalAddCityAlertForBuilding then
+			originalAddCityAlertForBuilding(house)
+		end
+
+		if not _G.ResolveCityName or _G.ResolveCityName(house) ~= PROLOGUE_CITY_NAME then
+			return
+		end
+		for watchingPlayer in pairs(firstBuildingWatchers) do
+			if not firstBuildingDestroyedAt[watchingPlayer] then
+				firstBuildingDestroyedAt[watchingPlayer] = os.clock()
+				print(string.format(
+					"[Kaiju-Debug] Prolog: erstes Gebaeude gefallen (%s) -- Alarmstufe 1, der %d-Sekunden-Takt laeuft.",
+					house:GetFullName(), ESCALATION_STEP_SECONDS))
+			end
+		end
+	end
+end
+
+-- Meldet diesen Durchlauf an. Ab jetzt zählt das nächste zerstörte Gebäude.
+local function armFirstBuildingWatch(player)
+	installBuildingHookOnce()
+	firstBuildingDestroyedAt[player] = nil
+	firstBuildingWatchers[player] = true
+end
+
+local function disarmFirstBuildingWatch(player)
+	firstBuildingWatchers[player] = nil
+	firstBuildingDestroyedAt[player] = nil
+end
+
 -- ===== Phase 2: Power Fantasy + Onboarding =====
 -- Tutorial-Checkliste: PUNCH x2, JUMP x2, ABSORB (Mengen-Schwelle) -- zeigt ein Panel
 -- beim Spieler, verfolgt die Aktionen server-seitig (zuverlässiger als rein client-
 -- seitiges Tracking, da der Server die entsprechenden Events ohnehin bereits empfängt),
--- aktualisiert die Anzeige live, und blockiert, bis alle Ziele erreicht sind.
+-- aktualisiert die Anzeige live.
 local TUTORIAL_TARGETS = { Punch = 2, Jump = 2, AbsorbAmount = 5000 }
+
+-- Wie lange der Spieler höchstens für die Checkliste bekommt. Wer früher fertig ist, geht
+-- früher weiter -- das hier ist die Obergrenze, kein Mindestaufenthalt.
+--
+-- Vorher standen hier 120 Sekunden, gedacht als reine Notbremse gegen ein Hängenbleiben.
+-- Als Frist gelesen war das keine: zwei Minuten setzen niemanden unter Druck. Der Prolog
+-- soll aber von der ersten Minute an drängen, deshalb dieselbe Länge wie eine Alarmstufe.
+local TUTORIAL_TIME_LIMIT_SECONDS = 20
 
 -- Dauerhafter, sicherer Hook auf _G.AwardSpecialEnergyForAbsorb -- trackt die
 -- TATSÄCHLICH ABSORBIERTE MENGE (nicht nur wie oft der Button gedrückt wurde), damit der
@@ -718,11 +980,11 @@ local function playTutorialChecklist(player, character)
 		end
 	end
 
-	-- Blockiert, bis alle Ziele erreicht sind -- Sicherheitsnetz: nach 120s ungeduldig
-	-- abbrechen (z.B. falls ein Spieler die Aktionen aus irgendeinem Grund nie
-	-- ausführt), damit der Prolog nicht für immer hängen bleibt.
+	-- Blockiert, bis alle Ziele erreicht sind -- längstens aber TUTORIAL_TIME_LIMIT_SECONDS.
+	-- Danach geht es weiter, erledigt oder nicht: die Checkliste ist eine Einführung, keine
+	-- Prüfung, und ein Prolog, der auf eine nie ausgeführte Aktion wartet, bleibt stehen.
 	local waited = 0
-	while not completed and player.Parent and waited < 120 do
+	while not completed and player.Parent and waited < TUTORIAL_TIME_LIMIT_SECONDS do
 		task.wait(0.2)
 		waited += 0.2
 	end
@@ -730,6 +992,17 @@ local function playTutorialChecklist(player, character)
 	activeAbsorbTrackers[player] = nil
 	for _, connection in ipairs(connections) do
 		connection:Disconnect()
+	end
+
+	if completed then
+		print(string.format("[Kaiju-Debug] Prolog: Tutorial-Checkliste erledigt nach %.1f s.", waited))
+	else
+		print(string.format(
+			"[Kaiju-Debug] Prolog: Tutorial-Zeit (%d s) abgelaufen -- offen: Punch %d/%d, Sprung %d/%d, Absorb %d/%d. Es geht trotzdem weiter.",
+			TUTORIAL_TIME_LIMIT_SECONDS,
+			progress.Punch, TUTORIAL_TARGETS.Punch,
+			progress.Jump, TUTORIAL_TARGETS.Jump,
+			progress.AbsorbAmount, TUTORIAL_TARGETS.AbsorbAmount))
 	end
 
 	HideTutorialChecklistEvent:FireClient(player, completed)
@@ -748,13 +1021,39 @@ local function playSimpleFallCinematic(player)
 		return
 	end
 
-	local headPart = character:FindFirstChild("Head")
-	-- WICHTIG: der Kaiju liegt zu diesem Zeitpunkt bereits gekippt (~80°, siehe
-	-- triggerTheFall) -- ein fester Versatz von rootPart.Position würde daher NICHT mehr
-	-- den Kopf treffen (der ist nach dem Kippen deutlich tiefer und versetzt). Deshalb
-	-- die tatsächliche Position des "Head"-Teils nutzen, das die richtige Stelle
-	-- unabhängig von der Körperhaltung kennt.
-	local headPos = headPart and headPart.Position or (rootPart.Position + Vector3.new(0, 4, 0))
+	-- ===== Wohin die Kamera schaut =====
+	-- Hier stand die Position des "Head"-Teils. Das traf, solange der Prolog den ganzen
+	-- Charakter selbst um 80 Grad kippte: der versteckte Avatar kippte mit, sein Kopf landete
+	-- ungefähr dort, wo man den Kaiju-Kopf sah.
+	--
+	-- Seit die DefeatAnimation des Rigs den Fall macht (siehe triggerTheFall), stimmt das
+	-- nicht mehr. Die Animation setzt die Gelenke in der DARSTELLUNG; der Avatar darunter
+	-- bleibt aufrecht stehen, wo er stand. Sein Kopf zeigt also auf die Stelle, an der die
+	-- Figur VOR dem Fall stand -- die Kamera würde ins Leere zoomen.
+	--
+	-- Geschätzt wird stattdessen, wo der Kopf zu liegen kommt: der Kaiju fällt nach vorn, der
+	-- Kopf landet rund eine halbe Körperlänge vor ihm. Der Boden wird dafür gemessen und
+	-- nicht angenommen -- dieselbe Vorsicht, mit der das Rig seine eigene Fallhöhe bestimmt.
+	local lookDirection = rootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
+	lookDirection = lookDirection.Magnitude > 0.01 and lookDirection.Unit or Vector3.new(0, 0, -1)
+
+	local _, characterSize = character:GetBoundingBox()
+	local aheadPosition = rootPart.Position + lookDirection * (characterSize.Y * 0.5)
+
+	local groundParams = RaycastParams.new()
+	groundParams.FilterType = Enum.RaycastFilterType.Exclude
+	groundParams.FilterDescendantsInstances = { character }
+	local groundHit = Workspace:Raycast(
+		aheadPosition + Vector3.new(0, characterSize.Y, 0),
+		Vector3.new(0, -characterSize.Y * 4, 0),
+		groundParams
+	)
+	local groundY = groundHit and groundHit.Position.Y or (rootPart.Position.Y - characterSize.Y * 0.5)
+
+	-- Etwas über dem Boden: der liegende Kopf hat ja selbst noch Höhe.
+	local headPos = Vector3.new(aheadPosition.X, groundY + characterSize.Y * 0.12, aheadPosition.Z)
+	print(string.format("[Kaiju-Debug] The Fall: Kamera zielt auf %s (Boden %.1f, Figurenhoehe %.1f).",
+		tostring(headPos), groundY, characterSize.Y))
 	-- Fokus auf den KOPF -- näher und höher als die vorherige Körper-Einstellung.
 	local headFocusStart = CFrame.lookAt(headPos + Vector3.new(7, 3, 7), headPos)
 	local headFocusEnd = CFrame.lookAt(headPos + Vector3.new(2.5, 1.2, 2.5), headPos) -- näher heran
@@ -817,6 +1116,15 @@ local function triggerTheFall(player)
 	end
 	player:SetAttribute("PrologueFallInProgress", true)
 
+	-- Ab hier führt der Prolog die Kamera. Seit der Showdown im Prolog erlaubt ist, kann
+	-- beim Guardian-Auftritt einer laufen -- der hätte seine eigene Kamera. Zwei
+	-- Kamerasysteme gegeneinander sind genau der Fehler, vor dem CLAUDE.md warnt, deshalb
+	-- wird er beendet, BEVOR die erste Einstellung von "The Fall" steht. Das Attribut oben
+	-- verhindert zugleich, dass währenddessen ein neuer beginnt (ShowdownService.isBlocked).
+	if _G.EndShowdown then
+		_G.EndShowdown(player, "Prolog-Sturz beginnt")
+	end
+
 	StoryBeatService.StopMusic(player) -- Sicherheitsnetz, falls noch aktiv
 
 	local character = player.Character
@@ -872,50 +1180,35 @@ local function triggerTheFall(player)
 	-- Spieler auf dem Server nicht automatisch respawnen würden, so kurz wie möglich.
 	Players.CharacterAutoLoads = false
 
-	-- Letzter Treffer -- Charakter "fällt". WICHTIG: BreakJointsOnDeath deaktiviert --
-	-- Roblox würde bei Health=0 sonst standardmässig ein Ragdoll auslösen (Gelenke lösen
-	-- sich, einzelne Körperteile werden physikalisch simuliert). Bei einem so grossen,
-	-- skalierten Kaiju-Rig führte das zum Einsinken in den Boden, bevor sich die Physik
-	-- "eingependelt" hat. Stattdessen: PlatformStand (Charakter bleibt als EIN Rig
-	-- zusammenhängend, reagiert nicht mehr auf normale Humanoid-Physik) + ein sanftes,
-	-- geskriptetes Kippen nach vorne über CFrame -- kontrolliert statt Physik-abhängig.
+	-- ===== Letzter Treffer -- der Kaiju fällt =====
+	--
+	-- BreakJointsOnDeath bleibt deaktiviert: Roblox würde bei Health=0 sonst ein Ragdoll
+	-- auslösen (Gelenke lösen sich, einzelne Körperteile werden physikalisch simuliert), und
+	-- bei einem so grossen, skalierten Rig endete das im Boden.
+	--
+	-- ===== Den Fall macht das Rig, nicht dieses Skript (21.09.2026) =====
+	-- Hier stand bis dahin eine Eigenkonstruktion: PlatformStand, alle Teile verankern, und
+	-- dann 1,2 Sekunden lang jeden Frame ein PivotTo, das den ganzen Charakter um 80 Grad
+	-- nach vorn kippte. Das hatte zwei Fehler, die dieselbe Wurzel haben.
+	--
+	-- Erstens lief die DefeatAnimation des Rigs die ganze Zeit MIT -- sie hängt an
+	-- HealthChanged mit Health <= 0, also an der Zeile direkt darunter, und wurde von dem
+	-- Kipp-Loop nur überlagert. Zwei Fassungen desselben Sturzes übereinander.
+	--
+	-- Zweitens rechnete der Kipp-Loop rein relativ zur Ausgangspose und fragte den Boden nie
+	-- ab -- der Kaiju blieb in der Luft liegen, wo immer er gerade stand. Die Animation des
+	-- Rigs misst ihn dagegen (KaijuStageOneRig: Raycast nach defeat.Ground) und zieht ihre
+	-- tiefste Stelle darauf.
+	--
+	-- Also beides raus. Was hier bleibt, ist der Auslöser und das Warten.
 	humanoid.BreakJointsOnDeath = false
 	humanoid.Health = 0
-	humanoid.PlatformStand = true
 
-	if character.Parent then
-		-- WICHTIG: SOFORT verankern, VOR dem Kippen -- nicht erst danach. Ohne das bleibt
-		-- der Charakter zwischen den einzelnen PivotTo-Aufrufen im Kipp-Loop (jeder
-		-- task.wait() ist ein Physik-Schritt) weiterhin normal physikalisch simuliert,
-		-- Schwerkraft wirkt bereits WÄHREND der Animation -- konnte dazu führen, dass er
-		-- schon beim Kippen durch den Boden "tunnelt" und unsichtbar wird, bevor die
-		-- Verankerung überhaupt greift.
-		for _, part in ipairs(character:GetDescendants()) do
-			if part:IsA("BasePart") then
-				part.Anchored = true
-			end
-		end
-
-		local startCFrame = character:GetPivot()
-		-- Kippt um die eigene Achse nach vorne (in Blickrichtung) um ca. 80 Grad --
-		-- wirkt wie ein kontrolliertes Umfallen, bleibt aber fest über dem Boden statt
-		-- einzusinken. Leicht angehoben, damit er nicht durch den Boden clippt, während er
-		-- kippt.
-		local tiltPivot = startCFrame * CFrame.new(0, -2, 0) -- Dreh-Achse nahe den "Füssen", nicht im Zentrum
-		local targetCFrame = tiltPivot * CFrame.Angles(math.rad(80), 0, 0) * CFrame.new(0, 2, 0)
-
-		local tiltDuration = 1.2
-		local tiltStartTime = os.clock()
-		while os.clock() - tiltStartTime < tiltDuration and character.Parent do
-			local alpha = (os.clock() - tiltStartTime) / tiltDuration
-			local easedAlpha = 1 - (1 - alpha) * (1 - alpha) -- Ease-Out, wird sanft langsamer
-			character:PivotTo(startCFrame:Lerp(targetCFrame, easedAlpha))
-			task.wait()
-		end
-		if character.Parent then
-			character:PivotTo(targetCFrame)
-		end
-	end
+	-- Das Rig übernimmt ab hier selbst: es hält den Humanoid an, verankert die
+	-- HumanoidRootPart und meldet den Fall an die Darstellung. Hier ist nichts mehr zu tun,
+	-- ausser ihn zu Ende laufen zu lassen, bevor die Kamera hinfährt.
+	print("[Kaiju-Debug] The Fall: Health=0 gesetzt -- die DefeatAnimation des Rigs laeuft jetzt.")
+	task.wait(DEFEAT_ANIMATION_SECONDS)
 
 	-- ===== Einfache Fall-Kinematik (Kamera-Zoom + Sound-Ausblendung + Schwarzblende) =====
 	playSimpleFallCinematic(player)
@@ -937,6 +1230,26 @@ local function triggerTheFall(player)
 	if equippedSkin then
 		equippedSkin.Value = 0 -- kleinster Skin ("Primal Beast", Id 0 in SkinsConfig.lua)
 	end
+
+	-- Die geliehene Groesse des Prologs endet HIER. Bliebe sie stehen, liefe der Spieler
+	-- den Rest des Spiels als 90 Studs hoher Riftborn herum -- und zwar lautlos, weil
+	-- Modell und Avatar beide derselben Leihe folgen und deshalb zueinander passen wuerden.
+	-- Genau das macht es gefaehrlich: es saehe nicht kaputt aus, nur falsch.
+	player:SetAttribute("ScaleFromSkinId", nil)
+
+	-- Ebenso die festen Lebenspunkte: ab hier gilt wieder, was zur Stufe gehoert -- beim
+	-- Riftborn also 100. Bliebe der Wert stehen, startete der Spieler das eigentliche
+	-- Spiel mit dem Zehnfachen und merkte es nie, weil nichts daran falsch aussieht.
+	player:SetAttribute("ForcedMaxHealth", nil)
+
+	-- Und die Ausnahme beim Tod. Ab hier gilt wieder die Regel: ein toter Kaiju, dessen
+	-- Modell haengenbliebe, laege sonst im Boden, bis die Leiche verschwindet.
+	player:SetAttribute("KeepModelOnDeath", nil)
+
+	-- Und der Flaechenradius zurueck auf normal. Ohne das nimmt der Spieler die doppelte
+	-- Reichweite ins ganze Spiel mit -- und zwar unsichtbar, weil der Schlag damit nicht
+	-- anders AUSSIEHT, nur weiter trifft.
+	player:SetAttribute("AreaRadiusFactor", nil)
 
 	-- ArmPower/LegPower/BodyPower ebenfalls auf die Starter-Werte zurücksetzen -- diese
 	-- wurden vom Prolog-Code bisher NICHT angefasst und blieben z.B. beim Debug-Testen
@@ -988,6 +1301,15 @@ local function triggerTheFall(player)
 	resetPowerStats()
 	player:SetAttribute("SpecialEnergy", player:GetAttribute("PrologueOriginalSpecialEnergy") or 0)
 
+	-- ===== Ab hier zeigt der Bildschirm nur noch Text =====
+	-- Bis hierher blieb die Lebensanzeige stehen -- im Fall ist sie der Inhalt der Szene.
+	-- Die Abschlusssequenz im Sanctuary braucht sie nicht mehr: dort laufen der Text und
+	-- die Kapitel-Karte, und das HUD gehoert erst danach wieder her.
+	--
+	-- VOR MarkPrologueComplete, weil darin player:LoadCharacter() steckt -- der Spieler
+	-- steht sonst einen Augenblick im Sanctuary, waehrend die Anzeige noch dasteht.
+	SetPrologueLetterboxEvent:FireClient(player, true, true)
+
 	if _G.MarkPrologueComplete then
 		_G.MarkPrologueComplete(player) -- setzt HasCompletedPrologue, speichert, spawnt normal (Level 0, Sanctuary)
 	end
@@ -1013,6 +1335,7 @@ local function triggerTheFall(player)
 	Players.CharacterAutoLoads = true
 
 	player:SetAttribute("IsInPrologue", false)
+	disarmFirstBuildingWatch(player) -- der Auslöser für Stufe 1 gehört zu DIESEM Durchlauf
 	if _G.SetCityManuallyDriven then
 		_G.SetCityManuallyDriven(PROLOGUE_CITY_NAME, false)
 	end
@@ -1039,6 +1362,10 @@ local function triggerTheFall(player)
 	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
 
 	if trenchSpawn and trenchTopMarker and humanoid and rootPart then
+		-- Derselbe Fall wie beim Sprung in die Prologstadt: der Graben liegt weit weg und
+		-- ist beim Client noch nicht angekommen. Dass der Bildschirm hier schwarz ist,
+		-- hilft nicht -- "Gameplay Paused" gehört der CoreGui und liegt darüber.
+		streameZielVor(player, trenchSpawn.Position, "TrenchSpawn")
 		character:PivotTo(trenchSpawn.CFrame)
 	end
 
@@ -1057,8 +1384,18 @@ local function triggerTheFall(player)
 	-- "WE ARE TRENCHBORN"-Kapitel-Karte. Reduziert die Anzahl aufeinanderfolgender
 	-- Text-Momente in dieser Sequenz insgesamt von sechs auf drei -- weniger "Lese-
 	-- Ermüdung", mehr Gewicht pro Moment.
+	--
+	-- Das Uhrticken schlaegt zu JEDER der beiden Zeilen -- einmal bei "POWER CAN BE
+	-- BROKEN.", einmal bei "PURPOSE CANNOT.". Die Karte blendet die zweite Zeile ohnehin
+	-- zeitversetzt ein; der Ton haengt an genau diesen zwei Zeitpunkten und nicht an
+	-- eigenen Schritten davor, die ihn nur ungefaehr treffen wuerden.
 	local trenchSteps = {
-		{ type = "text", text = "POWER CAN BE BROKEN.\nPURPOSE CANNOT.", duration = 3.5 },
+		{
+			type = "text",
+			text = "POWER CAN BE BROKEN.\nPURPOSE CANNOT.",
+			duration = 3.5,
+			lineSoundId = TICK_SOUND_ID,
+		},
 	}
 
 	print("[Kaiju-Debug] Server: feuere Trench-Remembers-Sequenz für " .. player.Name .. " -- tick=" .. tostring(os.clock()))
@@ -1227,7 +1564,44 @@ local function triggerGuardianPhase(player)
 
 	-- Guardian läuft während der gesamten Phase kontinuierlich näher zum Spieler heran,
 	-- bleibt aber in einem Mindestabstand stehen (kein Reinlaufen in den Charakter).
-	local GUARDIAN_APPROACH_MIN_DISTANCE = 18
+	--
+	-- ===== Der Mindestabstand war ein Mittelpunktabstand (26.09.2026) =====
+	-- 18 Studs -- gemessen von Wurzel zu Wurzel, und beide Figuren haben selbst eine Breite.
+	-- Der Kollisionskörper des Kaiju allein hat bei hohen Stufen über 20 Studs Halbmesser,
+	-- der Guardian kommt mit seinem eigenen dazu. Der Guardian lief also bis IN die
+	-- Spielerfigur und stand ihr danach im Bild, statt ihr gegenüber.
+	--
+	-- Deshalb sind es jetzt beide Halbmesser plus ein Zuschlag, der die Lücke ausmacht.
+	-- Gemessen wird der Kollisionskörper, nicht die Bounding Box: die misst beim Kaiju die
+	-- Spannweite der Arme (rund 142 Studs) und hätte den Guardian am anderen Ende der Stadt
+	-- stehen lassen.
+	local GUARDIAN_APPROACH_GAP_STUDS = 18
+
+	-- Der Halbmesser einer Figur, so wie der CityDefenderService ihn auch bestimmt.
+	--
+	-- Die Obergrenze ist kein Schmuck: greift der Rückfall auf die Bounding Box beim Kaiju,
+	-- kämen 71 Studs heraus, und der Guardian bliebe ausser Sichtweite stehen. Lieber ein
+	-- gedeckelter Wert als eine Annäherung, die gar nicht stattfindet.
+	local HALBMESSER_MAX = 40
+
+	local function koerperHalbmesser(instanz, colliderName)
+		if not instanz then
+			return 0
+		end
+		local collider = colliderName and instanz:FindFirstChild(colliderName)
+		if collider and collider:IsA("BasePart") then
+			return math.min(math.max(collider.Size.X, collider.Size.Z) * 0.5, HALBMESSER_MAX)
+		end
+		local ok, size = pcall(function()
+			local _, extents = instanz:GetBoundingBox()
+			return extents
+		end)
+		if ok and size then
+			return math.min(math.max(size.X, size.Z) * 0.5, HALBMESSER_MAX)
+		end
+		return 0
+	end
+
 	task.spawn(function()
 		local guardianModel = _G.GetGuardianModel and _G.GetGuardianModel(PROLOGUE_CITY_NAME)
 		local guardianRoot = guardianModel and (guardianModel.PrimaryPart or guardianModel:FindFirstChild("HumanoidRootPart"))
@@ -1245,9 +1619,16 @@ local function triggerGuardianPhase(player)
 			local toPlayer = (rootPart.Position - guardianRoot.Position) * Vector3.new(1, 0, 1)
 			local distance = toPlayer.Magnitude
 			local dt = task.wait()
-			if distance > GUARDIAN_APPROACH_MIN_DISTANCE then
+
+			-- Je Durchlauf neu gemessen: die Figur wächst im Prolog (Skin- und Zonenwechsel
+			-- skalieren sie), ein einmal gemerkter Halbmesser wäre kurz darauf falsch.
+			local minDistance = GUARDIAN_APPROACH_GAP_STUDS
+				+ koerperHalbmesser(guardianModel, nil)
+				+ koerperHalbmesser(character, "KaijuBodyCollider")
+
+			if distance > minDistance then
 				local direction = toPlayer.Unit
-				local moveDistance = math.min(distance - GUARDIAN_APPROACH_MIN_DISTANCE, 6 * dt)
+				local moveDistance = math.min(distance - minDistance, 6 * dt)
 				local step = direction * moveDistance
 				guardianModel:PivotTo(CFrame.lookAt(guardianRoot.Position + step, guardianRoot.Position + step + direction))
 			end
@@ -1296,10 +1677,33 @@ local function triggerGuardianPhase(player)
 	end)
 end
 
--- Läuft periodisch, solange der Spieler im Prolog ist -- setzt den Alert-Fortschritt
--- aktiv auf den zum aktuellen Zeitpunkt passenden Wert (siehe ESCALATION_SCHEDULE).
--- Dadurch bleibt die Eskalation exakt nach Zeitplan, auch wenn parallel Zerstörung
--- (normalerweise ebenfalls Alert-Fortschritt gebend) passiert.
+-- Setzt die Prologstadt auf genau diese Alarmstufe.
+--
+-- Stufe 1 braucht einen eigenen Weg. _G.SetCityAlertLevel(stadt, 1) setzt den Fortschritt
+-- auf 0 -- und ein Fortschritt von 0 IST Stufe 0, nicht 1: der Übergang 0 -> 1 hängt im
+-- CityAlertService allein daran, dass überhaupt etwas zerstört wurde (dort "event-basiert,
+-- NICHT schwellenwert-basiert"). Für Stufe 1 braucht es also irgendeinen Wert über 0 und
+-- unter AlertThresholdLevel2, das für PrologueCity bei 30 liegt. Die 1 hier ist genau das
+-- und sonst nichts -- sie steht für "es hat angefangen", nicht für eine Menge Zerstörung.
+local function setPrologueAlertLevel(targetLevel)
+	if targetLevel <= 1 then
+		if _G.SetCityAlertProgress then
+			_G.SetCityAlertProgress(PROLOGUE_CITY_NAME, targetLevel <= 0 and 0 or 1)
+		end
+		return
+	end
+	if _G.SetCityAlertLevel then
+		_G.SetCityAlertLevel(PROLOGUE_CITY_NAME, targetLevel)
+	end
+end
+
+-- Läuft periodisch, solange der Spieler im Prolog ist -- setzt den Alert-Fortschritt aktiv
+-- auf den zum aktuellen Zeitpunkt passenden Wert. Dadurch bleibt die Eskalation exakt nach
+-- Zeitplan, auch wenn parallel Zerstörung (normalerweise ebenfalls Alert-Fortschritt
+-- gebend) passiert.
+--
+-- Zwei Abschnitte: erst warten, bis das erste Gebäude fällt (Stadt steht auf Stufe 0),
+-- danach eine Stufe je ESCALATION_STEP_SECONDS.
 local function driveEscalationByTime(player)
 	-- WICHTIG: Generation-Absicherung gegen mehrere gleichzeitig laufende Schleifen (z.B.
 	-- Reste aus einem vorherigen, nicht sauber beendeten Testlauf). Jeder Aufruf erhöht
@@ -1310,34 +1714,70 @@ local function driveEscalationByTime(player)
 	local myGeneration = (player:GetAttribute("PrologueEscalationGeneration") or 0) + 1
 	player:SetAttribute("PrologueEscalationGeneration", myGeneration)
 
-	local startTime = os.clock()
+	local function stillMine()
+		return player.Parent
+			and player:GetAttribute("IsInPrologue")
+			and player:GetAttribute("PrologueEscalationGeneration") == myGeneration
+	end
 
-	while player.Parent and player:GetAttribute("IsInPrologue") do
-		if player:GetAttribute("PrologueEscalationGeneration") ~= myGeneration then
-			return -- eine neuere Schleife hat übernommen -- sofort beenden
+	-- ===== Abschnitt 1: Stufe 0, bis das erste Gebäude fällt =====
+	-- armFirstBuildingWatch lief schon vor der Tutorial-Checkliste; fiel dort bereits ein
+	-- Gebäude, steht der Zeitpunkt längst und diese Schleife läuft gar nicht erst.
+	setPrologueAlertLevel(0)
+
+	local waitingSince = os.clock()
+	while not firstBuildingDestroyedAt[player] do
+		if not stillMine() then
+			disarmFirstBuildingWatch(player)
+			return
 		end
+		if os.clock() - waitingSince >= FIRST_BUILDING_GRACE_SECONDS then
+			firstBuildingDestroyedAt[player] = os.clock()
+			warn(string.format(
+				"[PrologueOrchestrator] Nach %d s ist in %s kein Gebaeude gefallen -- die Eskalation laeuft "
+					.. "jetzt trotzdem an, sonst bliebe der Prolog auf Stufe 0 stehen.",
+				FIRST_BUILDING_GRACE_SECONDS, PROLOGUE_CITY_NAME))
+			break
+		end
+		task.wait(0.2)
+	end
 
+	local startTime = firstBuildingDestroyedAt[player] or os.clock()
+	firstBuildingWatchers[player] = nil -- der Auslöser hat seine Aufgabe erfüllt
+
+	-- ===== Abschnitt 2: eine Stufe je ESCALATION_STEP_SECONDS =====
+	local lastAnnouncedLevel = nil
+
+	while stillMine() do
 		local elapsed = os.clock() - startTime
+		local targetLevel = math.min(
+			ESCALATION_MAX_LEVEL,
+			1 + math.floor(elapsed / ESCALATION_STEP_SECONDS)
+		)
 
-		local targetLevel = ESCALATION_SCHEDULE[1].level
-		for _, entry in ipairs(ESCALATION_SCHEDULE) do
-			if elapsed >= entry.atSeconds then
-				targetLevel = entry.level
-			end
-		end
+		setPrologueAlertLevel(targetLevel)
 
-		if _G.SetCityAlertLevel then
-			_G.SetCityAlertLevel(PROLOGUE_CITY_NAME, targetLevel)
+		if targetLevel ~= lastAnnouncedLevel then
+			lastAnnouncedLevel = targetLevel
+			print(string.format(
+				"[Kaiju-Debug] Prolog: Alarmstufe %d nach %.1f s seit dem ersten Gebaeude.",
+				targetLevel, elapsed))
 		end
 
 		-- Guardian-Stufe (5) einmal erreicht: Zeitplan ist durchgelaufen, weiteres
 		-- periodisches Nachsetzen nicht mehr nötig (Guardian-Phase übernimmt ab hier).
-		if targetLevel >= 5 then
+		if targetLevel >= ESCALATION_MAX_LEVEL then
 			return
 		end
 
-		task.wait(2)
+		-- Eine Sekunde Auflösung bei zwanzig Sekunden Schrittweite: die Stufe kommt damit
+		-- höchstens eine Sekunde nach ihrem Zeitpunkt. Die vorherigen zwei Sekunden waren
+		-- bei ungleichen Abständen unauffällig, bei einem gleichmässigen Takt fällt ein
+		-- Versatz eher auf.
+		task.wait(1)
 	end
+
+	disarmFirstBuildingWatch(player)
 end
 
 -- ===== Phase 3: Eskalations-Listener =====
@@ -1424,11 +1864,15 @@ function resetPrologueCity()
 	end
 	print("[PrologueOrchestrator] Militär-Einheiten, Feuerwehr-Fahrzeuge und Barrikaden-Cluster für " .. PROLOGUE_CITY_NAME .. " despawnt.")
 
-	if _G.SetCityAlertLevel then
-		_G.SetCityAlertLevel(PROLOGUE_CITY_NAME, 1)
-	end
+	-- Ausdrücklich auf Stufe 0, nicht auf 1: der nächste Durchlauf soll seine Stufe 1 wieder
+	-- selbst auslösen, indem der Spieler das erste Gebäude umlegt. Hier stand
+	-- _G.SetCityAlertLevel(.., 1), was heute dasselbe bewirkt (es setzt den Fortschritt auf
+	-- 0, und das IST Stufe 0) -- aber nur zufällig. Würde jemand diesen Setzer einmal so
+	-- berichtigen, dass er wirklich Stufe 1 setzt, stünde die Prologstadt beim Start des
+	-- nächsten Spielers schon auf 1 und der Auslöser liefe ins Leere.
+	setPrologueAlertLevel(0)
 
-	print("[PrologueOrchestrator] " .. PROLOGUE_CITY_NAME .. " zurückgesetzt.")
+	print("[PrologueOrchestrator] " .. PROLOGUE_CITY_NAME .. " auf Alarmstufe 0 zurückgesetzt.")
 end
 
 -- ===== Warteschlange: PrologueCity ist ein geteilter Bereich -- nur EIN Spieler kann sie
@@ -1547,7 +1991,7 @@ function startPrologueInternal(player)
 	character = player.Character or character
 	local spawnPartForDebug = findPrologueSpawn()
 	print("[Kaiju-Debug] Prolog: PrologueSpawn-Position=" .. tostring(spawnPartForDebug and spawnPartForDebug.Position))
-	teleportToPrologueArea(character)
+	teleportToPrologueArea(player, character)
 	local rootPartForDebug = character:FindFirstChild("HumanoidRootPart")
 	print("[Kaiju-Debug] Prolog: Start #5 -- teleportiert (nach Skin-Wechsel), tatsächliche Position=" .. tostring(rootPartForDebug and rootPartForDebug.Position))
 
@@ -1561,19 +2005,33 @@ function startPrologueInternal(player)
 	playIntroCinematic(player, character)
 	print("[Kaiju-Debug] Prolog: Start #7b -- Intro-Kinematik fertig")
 
-	-- Tutorial-Checkliste (PUNCH/JUMP/ABSORB je 2x) -- blockiert, bis der Spieler alle
-	-- drei Aktionen ausgeführt hat. Löst DANACH erst den nächsten Story-Schritt aus
-	-- (DESTROY-Hint + Eskalation).
+	-- ===== Die Eskalation läuft ab HIER mit, nicht erst nach dem Tutorial =====
+	-- "Nach dem ersten zerstörten Gebäude kommt sofort Alarmstufe 1" heisst sofort. Stünde
+	-- der Treiber wie früher erst hinter der Checkliste, könnte der Spieler während des
+	-- Tutorials ein Gebäude umlegen -- die Stadt bliebe trotzdem still, und beim Start des
+	-- Treibers wäre die erste Stufe je nach verstrichener Zeit schon übersprungen.
+	--
+	-- Solange nichts fällt, kostet das nichts: der Treiber steht bei Alarmstufe 0 und wartet.
+	--
+	-- armFirstBuildingWatch läuft SYNCHRON vor dem task.spawn. Innerhalb des Treibers wäre
+	-- es ein Rennen -- und es setzt den gemerkten Zeitpunkt zurück, dürfte also ohnehin nur
+	-- genau einmal je Durchlauf laufen.
+	armFirstBuildingWatch(player)
+	task.spawn(function()
+		driveEscalationByTime(player)
+	end)
+
+	-- Tutorial-Checkliste (PUNCH/JUMP/ABSORB) -- blockiert, bis der Spieler alle drei
+	-- Aktionen ausgeführt hat, längstens aber TUTORIAL_TIME_LIMIT_SECONDS.
 	playTutorialChecklist(player, character)
 	print("[Kaiju-Debug] Prolog: Start #7c -- Tutorial-Checkliste fertig")
 
 	StoryBeatService.PlayAsync(player, { steps = { { type = "hint", text = "DESTROY.", duration = 2.5 } } })
 	print("[Kaiju-Debug] Prolog: Start #8 -- DESTROY-Hint gefeuert")
 
-	task.spawn(function()
-		driveEscalationByTime(player)
-	end)
-
+	-- Der Guardian-Auslöser (Stufe 5) kommt frühestens vier Schritte nach dem ersten
+	-- Gebäude -- die Checkliste davor ist auf TUTORIAL_TIME_LIMIT_SECONDS begrenzt und kann
+	-- ihn deshalb nicht verpassen lassen.
 	watchEscalation(player)
 	print("[Kaiju-Debug] Prolog: Start #8 -- watchEscalation fertig (Ende von Start)")
 end
@@ -1618,6 +2076,10 @@ end
 -- Wartender Spieler verlässt den Server: aus der Warteschlange entfernen und die
 -- Positionen der übrigen Wartenden neu verschicken.
 Players.PlayerRemoving:Connect(function(player)
+	-- Auch für einen Spieler, der mitten im Prolog geht: sonst bliebe sein Eintrag als
+	-- Schlüssel in den beiden Tabellen stehen und hielte das Player-Objekt fest.
+	disarmFirstBuildingWatch(player)
+
 	for index, entry in ipairs(prologueQueue) do
 		if entry.player == player then
 			table.remove(prologueQueue, index)

@@ -1,0 +1,9638 @@
+{
+  "status": "Native city assembly; terrain sculpt and Studio playtest pending",
+  "buildings": [
+    {
+      "id": "MC-01-01",
+      "asset": 1,
+      "district": "Transit Nexus",
+      "center": [
+        -650,
+        74.8,
+        -105
+      ],
+      "ground": 20,
+      "size": [
+        168.0,
+        109.6,
+        105.09180275412393
+      ],
+      "source": {
+        "package": "packages/mega-city/01-harbor-gate-terminal.rbxmx",
+        "min": [
+          -84.0,
+          0.0,
+          -47.0
+        ],
+        "max": [
+          84.0,
+          109.6,
+          58.09180275412393
+        ],
+        "size": [
+          168.0,
+          109.6,
+          105.09180275412393
+        ]
+      },
+      "yaw": 0.0,
+      "homeDistrict": "Transit Nexus",
+      "translation": [
+        -650.0,
+        20.0,
+        -110.54590137706197
+      ],
+      "placedPackage": "packages/mega-city-final/MC-01-01.rbxmx",
+      "roadAccess": [
+        -650.0,
+        -215.54590137706197
+      ]
+    },
+    {
+      "id": "MC-02-01",
+      "asset": 2,
+      "district": "Transit Nexus",
+      "center": [
+        -1077.1584564115728,
+        75.8,
+        492.8660599710111
+      ],
+      "ground": 20,
+      "size": [
+        244.0,
+        111.6,
+        110.61472661137364
+      ],
+      "source": {
+        "package": "packages/mega-city/02-cargo-logistics-hub.rbxmx",
+        "min": [
+          -126.0,
+          0.0,
+          -56.61472661137365
+        ],
+        "max": [
+          118.0,
+          111.6,
+          54.0
+        ],
+        "size": [
+          244.0,
+          111.6,
+          110.61472661137364
+        ]
+      },
+      "yaw": 0.15678528982377826,
+      "homeDistrict": "Transit Nexus",
+      "translation": [
+        -1073.0033824437457,
+        20.0,
+        493.5328126500017
+      ],
+      "placedPackage": "packages/mega-city-final/MC-02-01.rbxmx",
+      "roadAccess": [
+        -1094.8506918039436,
+        380.9484858992513
+      ]
+    },
+    {
+      "id": "MC-03-01",
+      "asset": 3,
+      "district": "Transit Nexus",
+      "center": [
+        -1696.3297920247232,
+        74.8,
+        457.26191557054267
+      ],
+      "ground": 20,
+      "size": [
+        307.5,
+        109.6,
+        89.0656543782842
+      ],
+      "source": {
+        "package": "packages/mega-city/03-elevated-transit-station.rbxmx",
+        "min": [
+          -117.5,
+          0.0,
+          -56.5
+        ],
+        "max": [
+          190.0,
+          109.6,
+          32.565654378284194
+        ],
+        "size": [
+          307.5,
+          109.6,
+          89.0656543782842
+        ]
+      },
+      "yaw": 0.06254156462375235,
+      "homeDistrict": "Transit Nexus",
+      "translation": [
+        -1731.760962258328,
+        20.0,
+        471.4713455718573
+      ],
+      "placedPackage": "packages/mega-city-final/MC-03-01.rbxmx",
+      "roadAccess": [
+        -1702.7381758792603,
+        354.92954890304406
+      ]
+    },
+    {
+      "id": "MC-03-02",
+      "asset": 3,
+      "district": "Transit Nexus",
+      "center": [
+        -583.054992848667,
+        74.8,
+        960.684648085594
+      ],
+      "ground": 20,
+      "size": [
+        307.5,
+        109.6,
+        89.0656543782842
+      ],
+      "source": {
+        "package": "packages/mega-city/03-elevated-transit-station.rbxmx",
+        "min": [
+          -117.5,
+          0.0,
+          -56.5
+        ],
+        "max": [
+          190.0,
+          109.6,
+          32.565654378284194
+        ],
+        "size": [
+          307.5,
+          109.6,
+          89.0656543782842
+        ]
+      },
+      "yaw": -0.13183749459386013,
+      "homeDistrict": "Transit Nexus",
+      "translation": [
+        -620.563571616569,
+        20.0,
+        967.7826931613195
+      ],
+      "placedPackage": "packages/mega-city-final/MC-03-02.rbxmx",
+      "roadAccess": [
+        -569.5764465030356,
+        859.0415989390481
+      ]
+    },
+    {
+      "id": "MC-07-01",
+      "asset": 7,
+      "district": "Transit Nexus",
+      "center": [
+        -1065.7329699961908,
+        55.525,
+        976.1797271421966
+      ],
+      "ground": 20,
+      "size": [
+        239.0,
+        71.05,
+        138.0
+      ],
+      "source": {
+        "package": "packages/mega-city/07-waterfront-market-hall.rbxmx",
+        "min": [
+          -119.5,
+          0.0,
+          -68.0
+        ],
+        "max": [
+          119.5,
+          71.05,
+          70.0
+        ],
+        "size": [
+          239.0,
+          71.05,
+          138.0
+        ]
+      },
+      "yaw": -0.1151314676512812,
+      "homeDistrict": "Neon Quarter",
+      "translation": [
+        -1065.6180927095102,
+        20.0,
+        975.1863474519448
+      ],
+      "placedPackage": "packages/mega-city-final/MC-07-01.rbxmx",
+      "roadAccess": [
+        -1051.1435545877355,
+        850.0205064802112
+      ]
+    },
+    {
+      "id": "MC-04-01",
+      "asset": 4,
+      "district": "Transit Nexus",
+      "center": [
+        -1590.7141444437152,
+        77.025,
+        907.8440628611788
+      ],
+      "ground": 20,
+      "size": [
+        243.5,
+        114.05,
+        127.13787175450271
+      ],
+      "source": {
+        "package": "packages/mega-city/04-neon-galleria.rbxmx",
+        "min": [
+          -118.0,
+          0.0,
+          -66.13787175450271
+        ],
+        "max": [
+          125.5,
+          114.05,
+          61.0
+        ],
+        "size": [
+          243.5,
+          114.05,
+          127.13787175450271
+        ]
+      },
+      "yaw": 0.08591161639168188,
+      "homeDistrict": "Neon Quarter",
+      "translation": [
+        -1594.2298839012185,
+        20.000000000000007,
+        910.7252965567305
+      ],
+      "placedPackage": "packages/mega-city-final/MC-04-01.rbxmx",
+      "roadAccess": [
+        -1601.145485219688,
+        786.7234894644896
+      ]
+    },
+    {
+      "id": "MC-02-02",
+      "asset": 2,
+      "district": "Transit Nexus",
+      "center": [
+        -486.73884023974887,
+        75.8,
+        1354.0157629522162
+      ],
+      "ground": 20,
+      "size": [
+        244.0,
+        111.6,
+        110.61472661137364
+      ],
+      "source": {
+        "package": "packages/mega-city/02-cargo-logistics-hub.rbxmx",
+        "min": [
+          -126.0,
+          0.0,
+          -56.61472661137365
+        ],
+        "max": [
+          118.0,
+          111.6,
+          54.0
+        ],
+        "size": [
+          244.0,
+          111.6,
+          110.61472661137364
+        ]
+      },
+      "yaw": 0.14940156349082412,
+      "homeDistrict": "Transit Nexus",
+      "translation": [
+        -482.58880261208645,
+        20.0,
+        1354.7131771061036
+      ],
+      "placedPackage": "packages/mega-city-final/MC-02-02.rbxmx",
+      "roadAccess": [
+        -503.604232119195,
+        1241.9706062695661
+      ]
+    },
+    {
+      "id": "MC-05-01",
+      "asset": 5,
+      "district": "Transit Nexus",
+      "center": [
+        -1001.4612615369361,
+        179.4736131594583,
+        1420.3946033076177
+      ],
+      "ground": 20,
+      "size": [
+        136.0,
+        318.9472263189166,
+        129.0
+      ],
+      "source": {
+        "package": "packages/mega-city/05-prism-hotel.rbxmx",
+        "min": [
+          -68.0,
+          0.0,
+          -72.0
+        ],
+        "max": [
+          68.0,
+          318.9472263189166,
+          57.0
+        ],
+        "size": [
+          136.0,
+          318.9472263189166,
+          129.0
+        ]
+      },
+      "yaw": -0.026315416081989666,
+      "homeDistrict": "Neon Quarter",
+      "translation": [
+        -1001.6586043790207,
+        20.0,
+        1427.8920065782627
+      ],
+      "placedPackage": "packages/mega-city-final/MC-05-01.rbxmx",
+      "roadAccess": [
+        -998.2379951162204,
+        1297.9370165537498
+      ]
+    },
+    {
+      "id": "MC-02-03",
+      "asset": 2,
+      "district": "Transit Nexus",
+      "center": [
+        -1382.122036321952,
+        75.8,
+        1393.1765624926131
+      ],
+      "ground": 20,
+      "size": [
+        244.0,
+        111.6,
+        110.61472661137364
+      ],
+      "source": {
+        "package": "packages/mega-city/02-cargo-logistics-hub.rbxmx",
+        "min": [
+          -126.0,
+          0.0,
+          -56.61472661137365
+        ],
+        "max": [
+          118.0,
+          111.6,
+          54.0
+        ],
+        "size": [
+          244.0,
+          111.6,
+          110.61472661137364
+        ]
+      },
+      "yaw": -0.15989876828179994,
+      "homeDistrict": "Transit Nexus",
+      "translation": [
+        -1378.3812188164409,
+        20.0,
+        1395.104121364222
+      ],
+      "placedPackage": "packages/mega-city-final/MC-02-03.rbxmx",
+      "roadAccess": [
+        -1364.0814342885712,
+        1281.3146151755739
+      ]
+    },
+    {
+      "id": "MC-03-03",
+      "asset": 3,
+      "district": "Neon Quarter",
+      "center": [
+        -432.5939913015333,
+        94.8,
+        1875.4275830652477
+      ],
+      "ground": 40,
+      "size": [
+        307.5,
+        109.6,
+        89.0656543782842
+      ],
+      "source": {
+        "package": "packages/mega-city/03-elevated-transit-station.rbxmx",
+        "min": [
+          -117.5,
+          0.0,
+          -56.5
+        ],
+        "max": [
+          190.0,
+          109.6,
+          32.565654378284194
+        ],
+        "size": [
+          307.5,
+          109.6,
+          89.0656543782842
+        ]
+      },
+      "yaw": -0.03746811336133116,
+      "homeDistrict": "Transit Nexus",
+      "translation": [
+        -469.2668318070818,
+        40.0,
+        1886.0284554038592
+      ],
+      "placedPackage": "packages/mega-city-final/MC-03-03.rbxmx",
+      "roadAccess": [
+        -428.7531785166251,
+        1772.966718299476
+      ]
+    },
+    {
+      "id": "MC-07-02",
+      "asset": 7,
+      "district": "Neon Quarter",
+      "center": [
+        -852.0331419536986,
+        75.525,
+        1920.955746367814
+      ],
+      "ground": 40,
+      "size": [
+        239.0,
+        71.05,
+        138.0
+      ],
+      "source": {
+        "package": "packages/mega-city/07-waterfront-market-hall.rbxmx",
+        "min": [
+          -119.5,
+          0.0,
+          -68.0
+        ],
+        "max": [
+          119.5,
+          71.05,
+          70.0
+        ],
+        "size": [
+          239.0,
+          71.05,
+          138.0
+        ]
+      },
+      "yaw": 0.144952758769354,
+      "homeDistrict": "Neon Quarter",
+      "translation": [
+        -852.1775876377712,
+        40.00000000000001,
+        1919.9662336370457
+      ],
+      "placedPackage": "packages/mega-city-final/MC-07-02.rbxmx",
+      "roadAccess": [
+        -870.3777438309169,
+        1795.287629560223
+      ]
+    },
+    {
+      "id": "MC-02-04",
+      "asset": 2,
+      "district": "Neon Quarter",
+      "center": [
+        -1125.694614096612,
+        95.8,
+        1964.2693841671562
+      ],
+      "ground": 40,
+      "size": [
+        244.0,
+        111.6,
+        110.61472661137364
+      ],
+      "source": {
+        "package": "packages/mega-city/02-cargo-logistics-hub.rbxmx",
+        "min": [
+          -126.0,
+          0.0,
+          -56.61472661137365
+        ],
+        "max": [
+          118.0,
+          111.6,
+          54.0
+        ],
+        "size": [
+          244.0,
+          111.6,
+          110.61472661137364
+        ]
+      },
+      "yaw": 0.09528968795008369,
+      "homeDistrict": "Transit Nexus",
+      "translation": [
+        -1121.5883708125668,
+        40.0,
+        1965.1902342664073
+      ],
+      "placedPackage": "packages/mega-city-final/MC-02-04.rbxmx",
+      "roadAccess": [
+        -1136.4753050856687,
+        1851.4760542177066
+      ]
+    },
+    {
+      "id": "MC-08-01",
+      "asset": 8,
+      "district": "Neon Quarter",
+      "center": [
+        -1598.9138503214267,
+        193.55,
+        1905.0080255535743
+      ],
+      "ground": 40,
+      "size": [
+        160.0,
+        307.1,
+        141.7
+      ],
+      "source": {
+        "package": "packages/mega-city/08-stacked-habitat.rbxmx",
+        "min": [
+          -80.0,
+          0.0,
+          -69.5
+        ],
+        "max": [
+          80.0,
+          307.1,
+          72.2
+        ],
+        "size": [
+          160.0,
+          307.1,
+          141.7
+        ]
+      },
+      "yaw": -0.10694175541817412,
+      "homeDistrict": "Stack District",
+      "translation": [
+        -1598.7697539790984,
+        40.0,
+        1903.665737863052
+      ],
+      "placedPackage": "packages/mega-city-final/MC-08-01.rbxmx",
+      "roadAccess": [
+        -1585.1606549814253,
+        1776.89412264706
+      ]
+    },
+    {
+      "id": "MC-04-02",
+      "asset": 4,
+      "district": "Neon Quarter",
+      "center": [
+        -388.6425331530593,
+        97.025,
+        2210.484031238041
+      ],
+      "ground": 40,
+      "size": [
+        243.5,
+        114.05,
+        127.13787175450271
+      ],
+      "source": {
+        "package": "packages/mega-city/04-neon-galleria.rbxmx",
+        "min": [
+          -118.0,
+          0.0,
+          -66.13787175450271
+        ],
+        "max": [
+          125.5,
+          114.05,
+          61.0
+        ],
+        "size": [
+          243.5,
+          114.05,
+          127.13787175450271
+        ]
+      },
+      "yaw": -0.13794869451237451,
+      "homeDistrict": "Neon Quarter",
+      "translation": [
+        -392.7101671957248,
+        40.00000000000001,
+        2212.512894179784
+      ],
+      "placedPackage": "packages/mega-city-final/MC-04-02.rbxmx",
+      "roadAccess": [
+        -371.9253958539162,
+        2090.0699810161136
+      ]
+    },
+    {
+      "id": "MC-08-02",
+      "asset": 8,
+      "district": "Neon Quarter",
+      "center": [
+        -710.1609113350687,
+        193.55,
+        2277.5210656168797
+      ],
+      "ground": 40,
+      "size": [
+        160.0,
+        307.1,
+        141.7
+      ],
+      "source": {
+        "package": "packages/mega-city/08-stacked-habitat.rbxmx",
+        "min": [
+          -80.0,
+          0.0,
+          -69.5
+        ],
+        "max": [
+          80.0,
+          307.1,
+          72.2
+        ],
+        "size": [
+          160.0,
+          307.1,
+          141.7
+        ]
+      },
+      "yaw": 0.0519140981532288,
+      "homeDistrict": "Stack District",
+      "translation": [
+        -710.2309638915466,
+        40.0,
+        2276.17288438302
+      ],
+      "placedPackage": "packages/mega-city-final/MC-08-02.rbxmx",
+      "roadAccess": [
+        -716.8470386700106,
+        2148.8446567407345
+      ]
+    },
+    {
+      "id": "MC-04-03",
+      "asset": 4,
+      "district": "Neon Quarter",
+      "center": [
+        -1203.8526132056236,
+        97.025,
+        2280.790029577751
+      ],
+      "ground": 40,
+      "size": [
+        243.5,
+        114.05,
+        127.13787175450271
+      ],
+      "source": {
+        "package": "packages/mega-city/04-neon-galleria.rbxmx",
+        "min": [
+          -118.0,
+          0.0,
+          -66.13787175450271
+        ],
+        "max": [
+          125.5,
+          114.05,
+          61.0
+        ],
+        "size": [
+          243.5,
+          114.05,
+          127.13787175450271
+        ]
+      },
+      "yaw": 0.1586571992973789,
+      "homeDistrict": "Neon Quarter",
+      "translation": [
+        -1207.1496420472633,
+        40.00000000000001,
+        2283.919172009604
+      ],
+      "placedPackage": "packages/mega-city-final/MC-04-03.rbxmx",
+      "roadAccess": [
+        -1223.0595828387225,
+        2160.747959919483
+      ]
+    },
+    {
+      "id": "MC-07-03",
+      "asset": 7,
+      "district": "Neon Quarter",
+      "center": [
+        -1503.0698819971724,
+        75.525,
+        2212.716524405411
+      ],
+      "ground": 40,
+      "size": [
+        239.0,
+        71.05,
+        138.0
+      ],
+      "source": {
+        "package": "packages/mega-city/07-waterfront-market-hall.rbxmx",
+        "min": [
+          -119.5,
+          0.0,
+          -68.0
+        ],
+        "max": [
+          119.5,
+          71.05,
+          70.0
+        ],
+        "size": [
+          239.0,
+          71.05,
+          138.0
+        ]
+      },
+      "yaw": 0.011374170115007989,
+      "homeDistrict": "Neon Quarter",
+      "translation": [
+        -1503.0812559220396,
+        40.00000000000001,
+        2211.7165890905862
+      ],
+      "placedPackage": "packages/mega-city-final/MC-07-03.rbxmx",
+      "roadAccess": [
+        -1504.5143704553093,
+        2085.724739422703
+      ]
+    },
+    {
+      "id": "MC-07-04",
+      "asset": 7,
+      "district": "Neon Quarter",
+      "center": [
+        -385.0425775134413,
+        75.525,
+        2561.031218376208
+      ],
+      "ground": 40,
+      "size": [
+        239.0,
+        71.05,
+        138.0
+      ],
+      "source": {
+        "package": "packages/mega-city/07-waterfront-market-hall.rbxmx",
+        "min": [
+          -119.5,
+          0.0,
+          -68.0
+        ],
+        "max": [
+          119.5,
+          71.05,
+          70.0
+        ],
+        "size": [
+          239.0,
+          71.05,
+          138.0
+        ]
+      },
+      "yaw": -0.1541200491853444,
+      "homeDistrict": "Neon Quarter",
+      "translation": [
+        -384.88906687535865,
+        40.00000000000001,
+        2560.0430713810724
+      ],
+      "placedPackage": "packages/mega-city-final/MC-07-04.rbxmx",
+      "roadAccess": [
+        -365.5467264769436,
+        2435.536549993991
+      ]
+    },
+    {
+      "id": "MC-04-04",
+      "asset": 4,
+      "district": "Neon Quarter",
+      "center": [
+        -798.2236380803021,
+        97.025,
+        2623.2977933957945
+      ],
+      "ground": 40,
+      "size": [
+        243.5,
+        114.05,
+        127.13787175450271
+      ],
+      "source": {
+        "package": "packages/mega-city/04-neon-galleria.rbxmx",
+        "min": [
+          -118.0,
+          0.0,
+          -66.13787175450271
+        ],
+        "max": [
+          125.5,
+          114.05,
+          61.0
+        ],
+        "size": [
+          243.5,
+          114.05,
+          127.13787175450271
+        ]
+      },
+      "yaw": -0.072852571735306,
+      "homeDistrict": "Neon Quarter",
+      "translation": [
+        -802.1506790000998,
+        40.00000000000001,
+        2625.586959435134
+      ],
+      "placedPackage": "packages/mega-city-final/MC-04-04.rbxmx",
+      "roadAccess": [
+        -789.374860784869,
+        2502.0513282485454
+      ]
+    },
+    {
+      "id": "MC-07-05",
+      "asset": 7,
+      "district": "Neon Quarter",
+      "center": [
+        -1083.5039726400144,
+        75.525,
+        2585.2406100027633
+      ],
+      "ground": 40,
+      "size": [
+        239.0,
+        71.05,
+        138.0
+      ],
+      "source": {
+        "package": "packages/mega-city/07-waterfront-market-hall.rbxmx",
+        "min": [
+          -119.5,
+          0.0,
+          -68.0
+        ],
+        "max": [
+          119.5,
+          71.05,
+          70.0
+        ],
+        "size": [
+          239.0,
+          71.05,
+          138.0
+        ]
+      },
+      "yaw": 0.12505919897221926,
+      "homeDistrict": "Neon Quarter",
+      "translation": [
+        -1083.6287061102632,
+        40.00000000000001,
+        2584.2484197178887
+      ],
+      "placedPackage": "packages/mega-city-final/MC-07-05.rbxmx",
+      "roadAccess": [
+        -1099.3451233616208,
+        2459.2324438236806
+      ]
+    },
+    {
+      "id": "MC-08-03",
+      "asset": 8,
+      "district": "Neon Quarter",
+      "center": [
+        -1586.6026266253596,
+        193.55,
+        2535.040597827537
+      ],
+      "ground": 40,
+      "size": [
+        160.0,
+        307.1,
+        141.7
+      ],
+      "source": {
+        "package": "packages/mega-city/08-stacked-habitat.rbxmx",
+        "min": [
+          -80.0,
+          0.0,
+          -69.5
+        ],
+        "max": [
+          80.0,
+          307.1,
+          72.2
+        ],
+        "size": [
+          160.0,
+          307.1,
+          141.7
+        ]
+      },
+      "yaw": 0.12273861642168445,
+      "homeDistrict": "Stack District",
+      "translation": [
+        -1586.7679080393127,
+        40.0,
+        2533.700753786538
+      ],
+      "placedPackage": "packages/mega-city-final/MC-08-03.rbxmx",
+      "roadAccess": [
+        -1602.3778193571072,
+        2407.159927692148
+      ]
+    },
+    {
+      "id": "MC-08-04",
+      "asset": 8,
+      "district": "Neon Quarter",
+      "center": [
+        -411.31567037025764,
+        193.55,
+        2919.014397945572
+      ],
+      "ground": 40,
+      "size": [
+        160.0,
+        307.1,
+        141.7
+      ],
+      "source": {
+        "package": "packages/mega-city/08-stacked-habitat.rbxmx",
+        "min": [
+          -80.0,
+          0.0,
+          -69.5
+        ],
+        "max": [
+          80.0,
+          307.1,
+          72.2
+        ],
+        "size": [
+          160.0,
+          307.1,
+          141.7
+        ]
+      },
+      "yaw": -0.07609883337035331,
+      "homeDistrict": "Stack District",
+      "translation": [
+        -411.21303607193386,
+        40.0,
+        2917.6683050064303
+      ],
+      "placedPackage": "packages/mega-city-final/MC-08-04.rbxmx",
+      "roadAccess": [
+        -401.5197967857997,
+        2790.537305198587
+      ]
+    },
+    {
+      "id": "MC-05-02",
+      "asset": 5,
+      "district": "Neon Quarter",
+      "center": [
+        -759.5056617405853,
+        199.4736131594583,
+        2952.1012610906337
+      ],
+      "ground": 40,
+      "size": [
+        136.0,
+        318.9472263189166,
+        129.0
+      ],
+      "source": {
+        "package": "packages/mega-city/05-prism-hotel.rbxmx",
+        "min": [
+          -68.0,
+          0.0,
+          -72.0
+        ],
+        "max": [
+          68.0,
+          318.9472263189166,
+          57.0
+        ],
+        "size": [
+          136.0,
+          318.9472263189166,
+          129.0
+        ]
+      },
+      "yaw": -0.1530943985896,
+      "homeDistrict": "Neon Quarter",
+      "translation": [
+        -760.6493897203052,
+        40.0,
+        2959.513540517936
+      ],
+      "placedPackage": "packages/mega-city-final/MC-05-02.rbxmx",
+      "roadAccess": [
+        -740.82477140516,
+        2831.0340304446995
+      ]
+    },
+    {
+      "id": "MC-08-05",
+      "asset": 8,
+      "district": "Neon Quarter",
+      "center": [
+        -1220.9418123413225,
+        193.55,
+        2887.636807753744
+      ],
+      "ground": 40,
+      "size": [
+        160.0,
+        307.1,
+        141.7
+      ],
+      "source": {
+        "package": "packages/mega-city/08-stacked-habitat.rbxmx",
+        "min": [
+          -80.0,
+          0.0,
+          -69.5
+        ],
+        "max": [
+          80.0,
+          307.1,
+          72.2
+        ],
+        "size": [
+          160.0,
+          307.1,
+          141.7
+        ]
+      },
+      "yaw": 0.015029563200379212,
+      "homeDistrict": "Stack District",
+      "translation": [
+        -1220.9621014877778,
+        40.0,
+        2886.2869602251185
+      ],
+      "placedPackage": "packages/mega-city-final/MC-08-05.rbxmx",
+      "roadAccess": [
+        -1222.8782986530075,
+        2758.801360299386
+      ]
+    },
+    {
+      "id": "MC-05-03",
+      "asset": 5,
+      "district": "Neon Quarter",
+      "center": [
+        -1506.724219916036,
+        199.4736131594583,
+        2874.9893021245457
+      ],
+      "ground": 40,
+      "size": [
+        136.0,
+        318.9472263189166,
+        129.0
+      ],
+      "source": {
+        "package": "packages/mega-city/05-prism-hotel.rbxmx",
+        "min": [
+          -68.0,
+          0.0,
+          -72.0
+        ],
+        "max": [
+          68.0,
+          318.9472263189166,
+          57.0
+        ],
+        "size": [
+          136.0,
+          318.9472263189166,
+          129.0
+        ]
+      },
+      "yaw": 0.15908968296366202,
+      "homeDistrict": "Neon Quarter",
+      "translation": [
+        -1505.5360740341966,
+        40.0,
+        2882.394591407448
+      ],
+      "placedPackage": "packages/mega-city-final/MC-05-03.rbxmx",
+      "roadAccess": [
+        -1526.1306026527438,
+        2754.036243837141
+      ]
+    },
+    {
+      "id": "MC-09-01",
+      "asset": 9,
+      "district": "Neon Quarter",
+      "center": [
+        -475.870051169581,
+        194.55,
+        3133.4638242025467
+      ],
+      "ground": 40,
+      "size": [
+        180.0,
+        309.1,
+        126.35
+      ],
+      "source": {
+        "package": "packages/mega-city/09-twin-habitat-towers.rbxmx",
+        "min": [
+          -90.0,
+          0.0,
+          -64.0
+        ],
+        "max": [
+          90.0,
+          309.1,
+          62.35
+        ],
+        "size": [
+          180.0,
+          309.1,
+          126.35
+        ]
+      },
+      "yaw": 0.04843122256101047,
+      "homeDistrict": "Stack District",
+      "translation": [
+        -475.83011102906323,
+        40.0,
+        3134.287856838536
+      ],
+      "placedPackage": "packages/mega-city-final/MC-09-01.rbxmx",
+      "roadAccess": [
+        -623.6965119288675,
+        3140.628843349984
+      ]
+    },
+    {
+      "id": "MC-08-06",
+      "asset": 8,
+      "district": "Stack District",
+      "center": [
+        -602.8613006875581,
+        213.55,
+        3564.4005238753834
+      ],
+      "ground": 60,
+      "size": [
+        160.0,
+        307.1,
+        141.7
+      ],
+      "source": {
+        "package": "packages/mega-city/08-stacked-habitat.rbxmx",
+        "min": [
+          -80.0,
+          0.0,
+          -69.5
+        ],
+        "max": [
+          80.0,
+          307.1,
+          72.2
+        ],
+        "size": [
+          160.0,
+          307.1,
+          141.7
+        ]
+      },
+      "yaw": -0.1397704953089325,
+      "homeDistrict": "Stack District",
+      "translation": [
+        -602.673224287689,
+        60.0,
+        3563.0636890808737
+      ],
+      "placedPackage": "packages/mega-city-final/MC-08-06.rbxmx",
+      "roadAccess": [
+        -584.9104531889399,
+        3436.8070695993847
+      ]
+    },
+    {
+      "id": "MC-06-01",
+      "asset": 6,
+      "district": "Stack District",
+      "center": [
+        -871.0718798419418,
+        191.3,
+        3498.7996480639913
+      ],
+      "ground": 60,
+      "size": [
+        164.0,
+        262.6,
+        159.0
+      ],
+      "source": {
+        "package": "packages/mega-city/06-holo-entertainment-tower.rbxmx",
+        "min": [
+          -82.0,
+          0.0,
+          -79.5
+        ],
+        "max": [
+          82.0,
+          262.6,
+          79.5
+        ],
+        "size": [
+          164.0,
+          262.6,
+          159.0
+        ]
+      },
+      "yaw": -0.10418559514712844,
+      "homeDistrict": "Neon Quarter",
+      "translation": [
+        -871.0718798419418,
+        60.0,
+        3498.7996480639913
+      ],
+      "placedPackage": "packages/mega-city-final/MC-06-01.rbxmx",
+      "roadAccess": [
+        -856.7722628355123,
+        3362.0452296583344
+      ]
+    },
+    {
+      "id": "MC-05-04",
+      "asset": 5,
+      "district": "Stack District",
+      "center": [
+        -1340.612241871825,
+        219.4736131594583,
+        3528.6626245639377
+      ],
+      "ground": 60,
+      "size": [
+        136.0,
+        318.9472263189166,
+        129.0
+      ],
+      "source": {
+        "package": "packages/mega-city/05-prism-hotel.rbxmx",
+        "min": [
+          -68.0,
+          0.0,
+          -72.0
+        ],
+        "max": [
+          68.0,
+          318.9472263189166,
+          57.0
+        ],
+        "size": [
+          136.0,
+          318.9472263189166,
+          129.0
+        ]
+      },
+      "yaw": 0.0982109195408103,
+      "homeDistrict": "Neon Quarter",
+      "translation": [
+        -1339.876843506972,
+        60.0,
+        3536.126483434855
+      ],
+      "placedPackage": "packages/mega-city-final/MC-05-04.rbxmx",
+      "roadAccess": [
+        -1352.6237484977612,
+        3406.7529296722882
+      ]
+    },
+    {
+      "id": "MC-06-02",
+      "asset": 6,
+      "district": "Stack District",
+      "center": [
+        -1636.6159108503443,
+        191.3,
+        3584.7950255558753
+      ],
+      "ground": 60,
+      "size": [
+        164.0,
+        262.6,
+        159.0
+      ],
+      "source": {
+        "package": "packages/mega-city/06-holo-entertainment-tower.rbxmx",
+        "min": [
+          -82.0,
+          0.0,
+          -79.5
+        ],
+        "max": [
+          82.0,
+          262.6,
+          79.5
+        ],
+        "size": [
+          164.0,
+          262.6,
+          159.0
+        ]
+      },
+      "yaw": 0.14336187614978782,
+      "homeDistrict": "Neon Quarter",
+      "translation": [
+        -1636.6159108503443,
+        60.0,
+        3584.7950255558753
+      ],
+      "placedPackage": "packages/mega-city-final/MC-06-02.rbxmx",
+      "roadAccess": [
+        -1656.2607150598826,
+        3448.705600295979
+      ]
+    },
+    {
+      "id": "MC-15-01",
+      "asset": 15,
+      "district": "Stack District",
+      "center": [
+        -707.3680248669863,
+        134.75,
+        3867.1344853955006
+      ],
+      "ground": 60,
+      "size": [
+        240.0,
+        149.5,
+        188.5
+      ],
+      "source": {
+        "package": "packages/mega-city/15-data-center.rbxmx",
+        "min": [
+          -120.0,
+          0.0,
+          -94.0
+        ],
+        "max": [
+          120.0,
+          149.5,
+          94.5
+        ],
+        "size": [
+          240.0,
+          149.5,
+          188.5
+        ]
+      },
+      "yaw": -0.041023947141282886,
+      "homeDistrict": "Research Enclave",
+      "translation": [
+        -707.357771756702,
+        60.0,
+        3866.8846957365286
+      ],
+      "placedPackage": "packages/mega-city-final/MC-15-01.rbxmx",
+      "roadAccess": [
+        -701.1238807038976,
+        3715.0125830813677
+      ]
+    },
+    {
+      "id": "MC-09-02",
+      "asset": 9,
+      "district": "Stack District",
+      "center": [
+        -1077.9949101486488,
+        214.55,
+        3826.113525970378
+      ],
+      "ground": 60,
+      "size": [
+        180.0,
+        309.1,
+        126.35
+      ],
+      "source": {
+        "package": "packages/mega-city/09-twin-habitat-towers.rbxmx",
+        "min": [
+          -90.0,
+          0.0,
+          -64.0
+        ],
+        "max": [
+          90.0,
+          309.1,
+          62.35
+        ],
+        "size": [
+          180.0,
+          309.1,
+          126.35
+        ]
+      },
+      "yaw": -0.15972630577288408,
+      "homeDistrict": "Stack District",
+      "translation": [
+        -1078.1261247504985,
+        60.0,
+        3826.928024422348
+      ],
+      "placedPackage": "packages/mega-city-final/MC-09-02.rbxmx",
+      "roadAccess": [
+        -1058.722268476955,
+        3706.4809806158864
+      ]
+    },
+    {
+      "id": "MC-08-07",
+      "asset": 8,
+      "district": "Stack District",
+      "center": [
+        -1361.8207015328305,
+        213.55,
+        3886.7803356627705
+      ],
+      "ground": 60,
+      "size": [
+        160.0,
+        307.1,
+        141.7
+      ],
+      "source": {
+        "package": "packages/mega-city/08-stacked-habitat.rbxmx",
+        "min": [
+          -80.0,
+          0.0,
+          -69.5
+        ],
+        "max": [
+          80.0,
+          307.1,
+          72.2
+        ],
+        "size": [
+          160.0,
+          307.1,
+          141.7
+        ]
+      },
+      "yaw": -0.022690787103466326,
+      "homeDistrict": "Stack District",
+      "translation": [
+        -1361.7900715988137,
+        60.0,
+        3885.4306831863373
+      ],
+      "placedPackage": "packages/mega-city-final/MC-08-07.rbxmx",
+      "roadAccess": [
+        -1358.897244497226,
+        3757.96350485654
+      ]
+    },
+    {
+      "id": "MC-05-05",
+      "asset": 5,
+      "district": "Stack District",
+      "center": [
+        -1799.6448217214324,
+        219.4736131594583,
+        3908.566033661422
+      ],
+      "ground": 60,
+      "size": [
+        136.0,
+        318.9472263189166,
+        129.0
+      ],
+      "source": {
+        "package": "packages/mega-city/05-prism-hotel.rbxmx",
+        "min": [
+          -68.0,
+          0.0,
+          -72.0
+        ],
+        "max": [
+          68.0,
+          318.9472263189166,
+          57.0
+        ],
+        "size": [
+          136.0,
+          318.9472263189166,
+          129.0
+        ]
+      },
+      "yaw": 0.1506749634588806,
+      "homeDistrict": "Neon Quarter",
+      "translation": [
+        -1798.5190306009608,
+        60.0,
+        3915.9810585671835
+      ],
+      "placedPackage": "packages/mega-city-final/MC-05-05.rbxmx",
+      "roadAccess": [
+        -1818.0327433558014,
+        3787.453960200646
+      ]
+    },
+    {
+      "id": "MC-08-08",
+      "asset": 8,
+      "district": "Stack District",
+      "center": [
+        -777.1965524334566,
+        213.55,
+        4170.991763390716
+      ],
+      "ground": 60,
+      "size": [
+        160.0,
+        307.1,
+        141.7
+      ],
+      "source": {
+        "package": "packages/mega-city/08-stacked-habitat.rbxmx",
+        "min": [
+          -80.0,
+          0.0,
+          -69.5
+        ],
+        "max": [
+          80.0,
+          307.1,
+          72.2
+        ],
+        "size": [
+          160.0,
+          307.1,
+          141.7
+        ]
+      },
+      "yaw": 0.08279494594985258,
+      "homeDistrict": "Stack District",
+      "translation": [
+        -777.3081979533392,
+        60.0,
+        4169.646387875148
+      ],
+      "placedPackage": "packages/mega-city-final/MC-08-08.rbxmx",
+      "roadAccess": [
+        -787.8524970533649,
+        4042.5831447381606
+      ]
+    },
+    {
+      "id": "MC-05-06",
+      "asset": 5,
+      "district": "Stack District",
+      "center": [
+        -1112.965288806751,
+        219.4736131594583,
+        4170.631433908238
+      ],
+      "ground": 60,
+      "size": [
+        136.0,
+        318.9472263189166,
+        129.0
+      ],
+      "source": {
+        "package": "packages/mega-city/05-prism-hotel.rbxmx",
+        "min": [
+          -68.0,
+          0.0,
+          -72.0
+        ],
+        "max": [
+          68.0,
+          318.9472263189166,
+          57.0
+        ],
+        "size": [
+          136.0,
+          318.9472263189166,
+          129.0
+        ]
+      },
+      "yaw": -0.11764810571946609,
+      "homeDistrict": "Neon Quarter",
+      "translation": [
+        -1113.8456155372578,
+        60.0,
+        4178.079589710016
+      ],
+      "placedPackage": "packages/mega-city-final/MC-05-06.rbxmx",
+      "roadAccess": [
+        -1098.5866188751395,
+        4048.978222479202
+      ]
+    },
+    {
+      "id": "MC-10-01",
+      "asset": 10,
+      "district": "Stack District",
+      "center": [
+        -1617.798653754653,
+        117.525,
+        4238.319951686441
+      ],
+      "ground": 60,
+      "size": [
+        190.0,
+        115.05,
+        132.5
+      ],
+      "source": {
+        "package": "packages/mega-city/10-utility-block.rbxmx",
+        "min": [
+          -95.0,
+          0.0,
+          -67.5
+        ],
+        "max": [
+          95.0,
+          115.05,
+          65.0
+        ],
+        "size": [
+          190.0,
+          115.05,
+          132.5
+        ]
+      },
+      "yaw": -0.12972470967313346,
+      "homeDistrict": "Stack District",
+      "translation": [
+        -1617.9603552175445,
+        60.00000000000001,
+        4239.5594486154
+      ],
+      "placedPackage": "packages/mega-city-final/MC-10-01.rbxmx",
+      "roadAccess": [
+        -1601.725528343242,
+        4115.113956947917
+      ]
+    },
+    {
+      "id": "MC-15-02",
+      "asset": 15,
+      "district": "Stack District",
+      "center": [
+        -1880.2472300015695,
+        134.75,
+        4217.218688880881
+      ],
+      "ground": 60,
+      "size": [
+        240.0,
+        149.5,
+        188.5
+      ],
+      "source": {
+        "package": "packages/mega-city/15-data-center.rbxmx",
+        "min": [
+          -120.0,
+          0.0,
+          -94.0
+        ],
+        "max": [
+          120.0,
+          149.5,
+          94.5
+        ],
+        "size": [
+          240.0,
+          149.5,
+          188.5
+        ]
+      },
+      "yaw": 0.06590099141787097,
+      "homeDistrict": "Research Enclave",
+      "translation": [
+        -1880.2636933268425,
+        60.0,
+        4216.969231552023
+      ],
+      "placedPackage": "packages/mega-city-final/MC-15-02.rbxmx",
+      "roadAccess": [
+        -1890.273395092861,
+        4065.299175606377
+      ]
+    },
+    {
+      "id": "MC-10-02",
+      "asset": 10,
+      "district": "Stack District",
+      "center": [
+        -857.7661964463952,
+        117.525,
+        4486.220621920047
+      ],
+      "ground": 60,
+      "size": [
+        190.0,
+        115.05,
+        132.5
+      ],
+      "source": {
+        "package": "packages/mega-city/10-utility-block.rbxmx",
+        "min": [
+          -95.0,
+          0.0,
+          -67.5
+        ],
+        "max": [
+          95.0,
+          115.05,
+          65.0
+        ],
+        "size": [
+          190.0,
+          115.05,
+          132.5
+        ]
+      },
+      "yaw": 0.15601257837664942,
+      "homeDistrict": "Stack District",
+      "translation": [
+        -857.5719708725352,
+        60.00000000000001,
+        4487.455440297971
+      ],
+      "placedPackage": "packages/mega-city-final/MC-10-02.rbxmx",
+      "roadAccess": [
+        -877.0722184880814,
+        4363.479675154406
+      ]
+    },
+    {
+      "id": "MC-09-03",
+      "asset": 9,
+      "district": "Stack District",
+      "center": [
+        -1313.14276111234,
+        214.55,
+        4526.662175907067
+      ],
+      "ground": 60,
+      "size": [
+        180.0,
+        309.1,
+        126.35
+      ],
+      "source": {
+        "package": "packages/mega-city/09-twin-habitat-towers.rbxmx",
+        "min": [
+          -90.0,
+          0.0,
+          -64.0
+        ],
+        "max": [
+          90.0,
+          309.1,
+          62.35
+        ],
+        "size": [
+          180.0,
+          309.1,
+          126.35
+        ]
+      },
+      "yaw": -0.003667660959201894,
+      "homeDistrict": "Stack District",
+      "translation": [
+        -1313.1457869258475,
+        60.0,
+        4527.487170358231
+      ],
+      "placedPackage": "packages/mega-city-final/MC-09-03.rbxmx",
+      "roadAccess": [
+        -1312.6983332919979,
+        4405.487990913263
+      ]
+    },
+    {
+      "id": "MC-08-09",
+      "asset": 8,
+      "district": "Stack District",
+      "center": [
+        -1639.4905973101472,
+        213.55,
+        4574.837681942455
+      ],
+      "ground": 60,
+      "size": [
+        160.0,
+        307.1,
+        141.7
+      ],
+      "source": {
+        "package": "packages/mega-city/08-stacked-habitat.rbxmx",
+        "min": [
+          -80.0,
+          0.0,
+          -69.5
+        ],
+        "max": [
+          80.0,
+          307.1,
+          72.2
+        ],
+        "size": [
+          160.0,
+          307.1,
+          141.7
+        ]
+      },
+      "yaw": -0.1574756062867022,
+      "homeDistrict": "Stack District",
+      "translation": [
+        -1639.278882815918,
+        60.0,
+        4573.504386411474
+      ],
+      "placedPackage": "packages/mega-city-final/MC-08-09.rbxmx",
+      "roadAccess": [
+        -1619.2836250275957,
+        4447.5820307077365
+      ]
+    },
+    {
+      "id": "MC-09-04",
+      "asset": 9,
+      "district": "Stack District",
+      "center": [
+        -2131.957409668639,
+        214.55,
+        4519.121409247762
+      ],
+      "ground": 60,
+      "size": [
+        180.0,
+        309.1,
+        126.35
+      ],
+      "source": {
+        "package": "packages/mega-city/09-twin-habitat-towers.rbxmx",
+        "min": [
+          -90.0,
+          0.0,
+          -64.0
+        ],
+        "max": [
+          90.0,
+          309.1,
+          62.35
+        ],
+        "size": [
+          180.0,
+          309.1,
+          126.35
+        ]
+      },
+      "yaw": -0.0591492705164117,
+      "homeDistrict": "Stack District",
+      "translation": [
+        -2132.006179367297,
+        60.0,
+        4519.944966481045
+      ],
+      "placedPackage": "packages/mega-city-final/MC-09-04.rbxmx",
+      "roadAccess": [
+        -2124.7941754444523,
+        4398.1583210743465
+      ]
+    },
+    {
+      "id": "MC-08-10",
+      "asset": 8,
+      "district": "Stack District",
+      "center": [
+        -898.6694240804921,
+        213.55,
+        4818.6115275698285
+      ],
+      "ground": 60,
+      "size": [
+        160.0,
+        307.1,
+        141.7
+      ],
+      "source": {
+        "package": "packages/mega-city/08-stacked-habitat.rbxmx",
+        "min": [
+          -80.0,
+          0.0,
+          -69.5
+        ],
+        "max": [
+          80.0,
+          307.1,
+          72.2
+        ],
+        "size": [
+          160.0,
+          307.1,
+          141.7
+        ]
+      },
+      "yaw": 0.13388099528328595,
+      "homeDistrict": "Stack District",
+      "translation": [
+        -898.849623975501,
+        60.0,
+        4817.273608290559
+      ],
+      "placedPackage": "packages/mega-city-final/MC-08-10.rbxmx",
+      "roadAccess": [
+        -915.8685029485601,
+        4690.914565248519
+      ]
+    },
+    {
+      "id": "MC-18-01",
+      "asset": 18,
+      "district": "Stack District",
+      "center": [
+        -1322.4588483297034,
+        228.5,
+        4884.001385428162
+      ],
+      "ground": 60,
+      "size": [
+        232.0,
+        337.0,
+        179.5
+      ],
+      "source": {
+        "package": "packages/mega-city/18-corporate-headquarters.rbxmx",
+        "min": [
+          -116.0,
+          0.0,
+          -96.5
+        ],
+        "max": [
+          116.0,
+          337.0,
+          83.0
+        ],
+        "size": [
+          232.0,
+          337.0,
+          179.5
+        ]
+      },
+      "yaw": 0.11255432482866885,
+      "homeDistrict": "Corporate Heights",
+      "translation": [
+        -1321.7007097495612,
+        60.0,
+        4890.708674440371
+      ],
+      "placedPackage": "packages/mega-city-final/MC-18-01.rbxmx",
+      "roadAccess": [
+        -1339.0536594728158,
+        4737.186281494253
+      ]
+    },
+    {
+      "id": "MC-19-01",
+      "asset": 19,
+      "district": "Stack District",
+      "center": [
+        -1861.9554858485121,
+        285.5,
+        4893.778497129853
+      ],
+      "ground": 60,
+      "size": [
+        160.0,
+        451.0,
+        153.5
+      ],
+      "source": {
+        "package": "packages/mega-city/19-financial-spire.rbxmx",
+        "min": [
+          -80.0,
+          0.0,
+          -82.5
+        ],
+        "max": [
+          80.0,
+          451.0,
+          71.0
+        ],
+        "size": [
+          160.0,
+          451.0,
+          153.5
+        ]
+      },
+      "yaw": -0.088983137914989,
+      "homeDistrict": "Corporate Heights",
+      "translation": [
+        -1862.4664639474229,
+        60.0,
+        4899.505747899851
+      ],
+      "placedPackage": "packages/mega-city-final/MC-19-01.rbxmx",
+      "roadAccess": [
+        -1849.9808251827358,
+        4759.561620389484
+      ]
+    },
+    {
+      "id": "MC-15-03",
+      "asset": 15,
+      "district": "Stack District",
+      "center": [
+        -2164.3412106989576,
+        134.75,
+        4825.288669114338
+      ],
+      "ground": 60,
+      "size": [
+        240.0,
+        149.5,
+        188.5
+      ],
+      "source": {
+        "package": "packages/mega-city/15-data-center.rbxmx",
+        "min": [
+          -120.0,
+          0.0,
+          -94.0
+        ],
+        "max": [
+          120.0,
+          149.5,
+          94.5
+        ],
+        "size": [
+          240.0,
+          149.5,
+          188.5
+        ]
+      },
+      "yaw": -0.14804964888993508,
+      "homeDistrict": "Research Enclave",
+      "translation": [
+        -2164.3043333492815,
+        60.0,
+        4825.041403950837
+      ],
+      "placedPackage": "packages/mega-city-final/MC-15-03.rbxmx",
+      "roadAccess": [
+        -2141.882904746082,
+        4674.704184542629
+      ]
+    },
+    {
+      "id": "MC-09-05",
+      "asset": 9,
+      "district": "Stack District",
+      "center": [
+        -957.8049421730186,
+        214.55,
+        5167.2272163308
+      ],
+      "ground": 60,
+      "size": [
+        180.0,
+        309.1,
+        126.35
+      ],
+      "source": {
+        "package": "packages/mega-city/09-twin-habitat-towers.rbxmx",
+        "min": [
+          -90.0,
+          0.0,
+          -64.0
+        ],
+        "max": [
+          90.0,
+          309.1,
+          62.35
+        ],
+        "size": [
+          180.0,
+          309.1,
+          126.35
+        ]
+      },
+      "yaw": 0.029926215585216815,
+      "homeDistrict": "Stack District",
+      "translation": [
+        -957.7802567301707,
+        60.0,
+        5168.051846932289
+      ],
+      "placedPackage": "packages/mega-city-final/MC-09-05.rbxmx",
+      "roadAccess": [
+        -961.4307100967791,
+        5046.106473136403
+      ]
+    },
+    {
+      "id": "MC-08-11",
+      "asset": 8,
+      "district": "Stack District",
+      "center": [
+        -1400.5775663016123,
+        213.55,
+        5231.931760796294
+      ],
+      "ground": 60,
+      "size": [
+        160.0,
+        307.1,
+        141.7
+      ],
+      "source": {
+        "package": "packages/mega-city/08-stacked-habitat.rbxmx",
+        "min": [
+          -80.0,
+          0.0,
+          -69.5
+        ],
+        "max": [
+          80.0,
+          307.1,
+          72.2
+        ],
+        "size": [
+          160.0,
+          307.1,
+          141.7
+        ]
+      },
+      "yaw": 0.15998719958790467,
+      "homeDistrict": "Stack District",
+      "translation": [
+        -1400.7926288206872,
+        60.0,
+        5230.599001210739
+      ],
+      "placedPackage": "packages/mega-city-final/MC-08-11.rbxmx",
+      "roadAccess": [
+        -1421.104088955542,
+        5104.727262574975
+      ]
+    },
+    {
+      "id": "MC-09-06",
+      "asset": 9,
+      "district": "Stack District",
+      "center": [
+        -1774.0595168783066,
+        214.55,
+        5199.47773181006
+      ],
+      "ground": 60,
+      "size": [
+        180.0,
+        309.1,
+        126.35
+      ],
+      "source": {
+        "package": "packages/mega-city/09-twin-habitat-towers.rbxmx",
+        "min": [
+          -90.0,
+          0.0,
+          -64.0
+        ],
+        "max": [
+          90.0,
+          309.1,
+          62.35
+        ],
+        "size": [
+          180.0,
+          309.1,
+          126.35
+        ]
+      },
+      "yaw": 0.03389258905676409,
+      "homeDistrict": "Stack District",
+      "translation": [
+        -1774.03156084527,
+        60.0,
+        5200.302258013535
+      ],
+      "placedPackage": "packages/mega-city-final/MC-09-06.rbxmx",
+      "roadAccess": [
+        -1778.1656651246155,
+        5078.372322469356
+      ]
+    },
+    {
+      "id": "MC-08-12",
+      "asset": 8,
+      "district": "Stack District",
+      "center": [
+        -2373.9457626775743,
+        213.55,
+        5145.06319163287
+      ],
+      "ground": 60,
+      "size": [
+        160.0,
+        307.1,
+        141.7
+      ],
+      "source": {
+        "package": "packages/mega-city/08-stacked-habitat.rbxmx",
+        "min": [
+          -80.0,
+          0.0,
+          -69.5
+        ],
+        "max": [
+          80.0,
+          307.1,
+          72.2
+        ],
+        "size": [
+          160.0,
+          307.1,
+          141.7
+        ]
+      },
+      "yaw": -0.146467464725391,
+      "homeDistrict": "Stack District",
+      "translation": [
+        -2373.7487378204332,
+        60.0,
+        5143.72764634885
+      ],
+      "placedPackage": "packages/mega-city-final/MC-08-12.rbxmx",
+      "roadAccess": [
+        -2355.140834645998,
+        5017.592813969167
+      ]
+    },
+    {
+      "id": "MC-19-02",
+      "asset": 19,
+      "district": "Stack District",
+      "center": [
+        -870.5811759300746,
+        285.5,
+        5504.770112455953
+      ],
+      "ground": 60,
+      "size": [
+        160.0,
+        451.0,
+        153.5
+      ],
+      "source": {
+        "package": "packages/mega-city/19-financial-spire.rbxmx",
+        "min": [
+          -80.0,
+          0.0,
+          -82.5
+        ],
+        "max": [
+          80.0,
+          451.0,
+          71.0
+        ],
+        "size": [
+          160.0,
+          451.0,
+          153.5
+        ]
+      },
+      "yaw": -0.09231837900616682,
+      "homeDistrict": "Corporate Heights",
+      "translation": [
+        -871.1112529136637,
+        60.0,
+        5510.495627139496
+      ],
+      "placedPackage": "packages/mega-city-final/MC-19-02.rbxmx",
+      "roadAccess": [
+        -858.1589370537881,
+        5370.593920524222
+      ]
+    },
+    {
+      "id": "MC-11-01",
+      "asset": 11,
+      "district": "Reactor Works",
+      "center": [
+        774.4870634659221,
+        116.55,
+        693.4243774252495
+      ],
+      "ground": 20,
+      "size": [
+        278.0,
+        193.1,
+        156.0
+      ],
+      "source": {
+        "package": "packages/mega-city/11-major-power-station.rbxmx",
+        "min": [
+          -139.0,
+          0.0,
+          -78.0
+        ],
+        "max": [
+          139.0,
+          193.1,
+          78.0
+        ],
+        "size": [
+          278.0,
+          193.1,
+          156.0
+        ]
+      },
+      "yaw": 0.10964171485393456,
+      "homeDistrict": "Reactor Works",
+      "translation": [
+        774.4870634659221,
+        20.0,
+        693.4243774252495
+      ],
+      "placedPackage": "packages/mega-city-final/MC-11-01.rbxmx",
+      "roadAccess": [
+        759.6056477892699,
+        558.2410076364375
+      ]
+    },
+    {
+      "id": "MC-02-05",
+      "asset": 2,
+      "district": "Reactor Works",
+      "center": [
+        1316.8690886108773,
+        75.8,
+        631.4615806841402
+      ],
+      "ground": 20,
+      "size": [
+        244.0,
+        111.6,
+        110.61472661137364
+      ],
+      "source": {
+        "package": "packages/mega-city/02-cargo-logistics-hub.rbxmx",
+        "min": [
+          -126.0,
+          0.0,
+          -56.61472661137365
+        ],
+        "max": [
+          118.0,
+          111.6,
+          54.0
+        ],
+        "size": [
+          244.0,
+          111.6,
+          110.61472661137364
+        ]
+      },
+      "yaw": 0.13605439788079124,
+      "homeDistrict": "Transit Nexus",
+      "translation": [
+        1321.0094483601708,
+        20.0,
+        632.2143223127795
+      ],
+      "placedPackage": "packages/mega-city-final/MC-02-05.rbxmx",
+      "roadAccess": [
+        1301.500639826959,
+        519.2013056031349
+      ]
+    },
+    {
+      "id": "MC-11-02",
+      "asset": 11,
+      "district": "Reactor Works",
+      "center": [
+        2073.6822199940257,
+        116.55,
+        612.453487980599
+      ],
+      "ground": 20,
+      "size": [
+        278.0,
+        193.1,
+        156.0
+      ],
+      "source": {
+        "package": "packages/mega-city/11-major-power-station.rbxmx",
+        "min": [
+          -139.0,
+          0.0,
+          -78.0
+        ],
+        "max": [
+          139.0,
+          193.1,
+          78.0
+        ],
+        "size": [
+          278.0,
+          193.1,
+          156.0
+        ]
+      },
+      "yaw": -0.055369691458300445,
+      "homeDistrict": "Reactor Works",
+      "translation": [
+        2073.6822199940257,
+        20.0,
+        612.453487980599
+      ],
+      "placedPackage": "packages/mega-city-final/MC-11-02.rbxmx",
+      "roadAccess": [
+        2081.208650897632,
+        476.66190931000085
+      ]
+    },
+    {
+      "id": "MC-13-01",
+      "asset": 13,
+      "district": "Reactor Works",
+      "center": [
+        779.7175173786243,
+        85.8967336986197,
+        1210.4430666511541
+      ],
+      "ground": 20,
+      "size": [
+        244.0,
+        131.7934673972394,
+        179.0
+      ],
+      "source": {
+        "package": "packages/mega-city/13-grid-substation.rbxmx",
+        "min": [
+          -122.0,
+          0.0,
+          -100.5
+        ],
+        "max": [
+          122.0,
+          131.7934673972394,
+          78.5
+        ],
+        "size": [
+          244.0,
+          131.7934673972394,
+          179.0
+        ]
+      },
+      "yaw": -0.1581413369069514,
+      "homeDistrict": "Reactor Works",
+      "translation": [
+        777.9852042734406,
+        20.0,
+        1221.3058053162242
+      ],
+      "placedPackage": "packages/mega-city-final/MC-13-01.rbxmx",
+      "roadAccess": [
+        802.9462612890418,
+        1064.7836163695324
+      ]
+    },
+    {
+      "id": "MC-12-01",
+      "asset": 12,
+      "district": "Reactor Works",
+      "center": [
+        1409.4877457861812,
+        97.675,
+        1207.8941114954964
+      ],
+      "ground": 20,
+      "size": [
+        246.0,
+        155.35,
+        150.0
+      ],
+      "source": {
+        "package": "packages/mega-city/12-cooling-plant.rbxmx",
+        "min": [
+          -123.0,
+          0.0,
+          -75.0
+        ],
+        "max": [
+          123.0,
+          155.35,
+          75.0
+        ],
+        "size": [
+          246.0,
+          155.35,
+          150.0
+        ]
+      },
+      "yaw": -0.007712799590247435,
+      "homeDistrict": "Reactor Works",
+      "translation": [
+        1409.4877457861812,
+        20.0,
+        1207.8941114954964
+      ],
+      "placedPackage": "packages/mega-city-final/MC-12-01.rbxmx",
+      "roadAccess": [
+        1410.5135379613496,
+        1074.898067379841
+      ]
+    },
+    {
+      "id": "MC-13-02",
+      "asset": 13,
+      "district": "Reactor Works",
+      "center": [
+        2030.0757178226984,
+        85.8967336986197,
+        1140.7127147456993
+      ],
+      "ground": 20,
+      "size": [
+        244.0,
+        131.7934673972394,
+        179.0
+      ],
+      "source": {
+        "package": "packages/mega-city/13-grid-substation.rbxmx",
+        "min": [
+          -122.0,
+          0.0,
+          -100.5
+        ],
+        "max": [
+          122.0,
+          131.7934673972394,
+          78.5
+        ],
+        "size": [
+          244.0,
+          131.7934673972394,
+          179.0
+        ]
+      },
+      "yaw": 0.1550647054541808,
+      "homeDistrict": "Reactor Works",
+      "translation": [
+        2031.7746021384287,
+        20.0,
+        1151.5807316798857
+      ],
+      "placedPackage": "packages/mega-city-final/MC-13-02.rbxmx",
+      "roadAccess": [
+        2007.295223589042,
+        994.9824876736524
+      ]
+    },
+    {
+      "id": "MC-12-02",
+      "asset": 12,
+      "district": "Reactor Works",
+      "center": [
+        791.7429537392603,
+        117.675,
+        2284.5624723669903
+      ],
+      "ground": 40,
+      "size": [
+        246.0,
+        155.35,
+        150.0
+      ],
+      "source": {
+        "package": "packages/mega-city/12-cooling-plant.rbxmx",
+        "min": [
+          -123.0,
+          0.0,
+          -75.0
+        ],
+        "max": [
+          123.0,
+          155.35,
+          75.0
+        ],
+        "size": [
+          246.0,
+          155.35,
+          150.0
+        ]
+      },
+      "yaw": 0.0695680240690627,
+      "homeDistrict": "Reactor Works",
+      "translation": [
+        791.7429537392603,
+        40.0,
+        2284.5624723669903
+      ],
+      "placedPackage": "packages/mega-city-final/MC-12-02.rbxmx",
+      "roadAccess": [
+        782.4978680064396,
+        2151.8841832998155
+      ]
+    },
+    {
+      "id": "MC-13-03",
+      "asset": 13,
+      "district": "Reactor Works",
+      "center": [
+        1393.5069212659237,
+        105.8967336986197,
+        2344.181969535623
+      ],
+      "ground": 40,
+      "size": [
+        244.0,
+        131.7934673972394,
+        179.0
+      ],
+      "source": {
+        "package": "packages/mega-city/13-grid-substation.rbxmx",
+        "min": [
+          -122.0,
+          0.0,
+          -100.5
+        ],
+        "max": [
+          122.0,
+          131.7934673972394,
+          78.5
+        ],
+        "size": [
+          244.0,
+          131.7934673972394,
+          179.0
+        ]
+      },
+      "yaw": -0.12731405947232743,
+      "homeDistrict": "Reactor Works",
+      "translation": [
+        1392.1102468446063,
+        40.0,
+        2355.0929411037664
+      ],
+      "placedPackage": "packages/mega-city-final/MC-13-03.rbxmx",
+      "roadAccess": [
+        1412.2350555517703,
+        2197.8757598718794
+      ]
+    },
+    {
+      "id": "MC-12-03",
+      "asset": 12,
+      "district": "Reactor Works",
+      "center": [
+        1881.585387973689,
+        117.675,
+        2301.429015587243
+      ],
+      "ground": 40,
+      "size": [
+        246.0,
+        155.35,
+        150.0
+      ],
+      "source": {
+        "package": "packages/mega-city/12-cooling-plant.rbxmx",
+        "min": [
+          -123.0,
+          0.0,
+          -75.0
+        ],
+        "max": [
+          123.0,
+          155.35,
+          75.0
+        ],
+        "size": [
+          246.0,
+          155.35,
+          150.0
+        ]
+      },
+      "yaw": -0.12035353135070981,
+      "homeDistrict": "Reactor Works",
+      "translation": [
+        1881.585387973689,
+        40.0,
+        2301.429015587243
+      ],
+      "placedPackage": "packages/mega-city-final/MC-12-03.rbxmx",
+      "roadAccess": [
+        1897.5537920812371,
+        2169.3911040986936
+      ]
+    },
+    {
+      "id": "MC-10-03",
+      "asset": 10,
+      "district": "Reactor Works",
+      "center": [
+        711.3592047225845,
+        97.525,
+        2805.364941064382
+      ],
+      "ground": 40,
+      "size": [
+        190.0,
+        115.05,
+        132.5
+      ],
+      "source": {
+        "package": "packages/mega-city/10-utility-block.rbxmx",
+        "min": [
+          -95.0,
+          0.0,
+          -67.5
+        ],
+        "max": [
+          95.0,
+          115.05,
+          65.0
+        ],
+        "size": [
+          190.0,
+          115.05,
+          132.5
+        ]
+      },
+      "yaw": 0.07930510297438308,
+      "homeDistrict": "Stack District",
+      "translation": [
+        711.4582322228213,
+        40.00000000000001,
+        2806.611012312023
+      ],
+      "placedPackage": "packages/mega-city-final/MC-10-03.rbxmx",
+      "roadAccess": [
+        701.5158711990514,
+        2681.5054590488962
+      ]
+    },
+    {
+      "id": "MC-15-04",
+      "asset": 15,
+      "district": "Reactor Works",
+      "center": [
+        1299.200792989853,
+        114.75,
+        2862.7231547966276
+      ],
+      "ground": 40,
+      "size": [
+        240.0,
+        149.5,
+        188.5
+      ],
+      "source": {
+        "package": "packages/mega-city/15-data-center.rbxmx",
+        "min": [
+          -120.0,
+          0.0,
+          -94.0
+        ],
+        "max": [
+          120.0,
+          149.5,
+          94.5
+        ],
+        "size": [
+          240.0,
+          149.5,
+          188.5
+        ]
+      },
+      "yaw": 0.1519882926745596,
+      "homeDistrict": "Research Enclave",
+      "translation": [
+        1299.1629420393324,
+        40.0,
+        2862.476036797395
+      ],
+      "placedPackage": "packages/mega-city-final/MC-15-04.rbxmx",
+      "roadAccess": [
+        1276.149564122874,
+        2712.2282932640087
+      ]
+    },
+    {
+      "id": "MC-10-04",
+      "asset": 10,
+      "district": "Reactor Works",
+      "center": [
+        1720.8509620100117,
+        97.525,
+        2890.601004566787
+      ],
+      "ground": 40,
+      "size": [
+        190.0,
+        115.05,
+        132.5
+      ],
+      "source": {
+        "package": "packages/mega-city/10-utility-block.rbxmx",
+        "min": [
+          -95.0,
+          0.0,
+          -67.5
+        ],
+        "max": [
+          95.0,
+          115.05,
+          65.0
+        ],
+        "size": [
+          190.0,
+          115.05,
+          132.5
+        ]
+      },
+      "yaw": -0.018677057836707686,
+      "homeDistrict": "Stack District",
+      "translation": [
+        1720.827617045018,
+        40.00000000000001,
+        2891.850786552819
+      ],
+      "placedPackage": "packages/mega-city-final/MC-10-04.rbxmx",
+      "roadAccess": [
+        1723.1714515303759,
+        2766.372675155232
+      ]
+    },
+    {
+      "id": "MC-13-04",
+      "asset": 13,
+      "district": "Research Enclave",
+      "center": [
+        571.216180788209,
+        125.8967336986197,
+        3624.4037282390987
+      ],
+      "ground": 60,
+      "size": [
+        244.0,
+        131.7934673972394,
+        179.0
+      ],
+      "source": {
+        "package": "packages/mega-city/13-grid-substation.rbxmx",
+        "min": [
+          -122.0,
+          0.0,
+          -100.5
+        ],
+        "max": [
+          122.0,
+          131.7934673972394,
+          78.5
+        ],
+        "size": [
+          244.0,
+          131.7934673972394,
+          179.0
+        ]
+      },
+      "yaw": -0.159438560623733,
+      "homeDistrict": "Reactor Works",
+      "translation": [
+        569.4697777423108,
+        60.0,
+        3635.264210567305
+      ],
+      "placedPackage": "packages/mega-city-final/MC-13-04.rbxmx",
+      "roadAccess": [
+        594.6338579945716,
+        3478.7745333836074
+      ]
+    },
+    {
+      "id": "MC-12-04",
+      "asset": 12,
+      "district": "Research Enclave",
+      "center": [
+        1073.9527764003212,
+        137.675,
+        3617.514651775789
+      ],
+      "ground": 60,
+      "size": [
+        246.0,
+        155.35,
+        150.0
+      ],
+      "source": {
+        "package": "packages/mega-city/12-cooling-plant.rbxmx",
+        "min": [
+          -123.0,
+          0.0,
+          -75.0
+        ],
+        "max": [
+          123.0,
+          155.35,
+          75.0
+        ],
+        "size": [
+          246.0,
+          155.35,
+          150.0
+        ]
+      },
+      "yaw": -0.0449228950286095,
+      "homeDistrict": "Reactor Works",
+      "translation": [
+        1073.9527764003212,
+        60.000000000000014,
+        3617.514651775789
+      ],
+      "placedPackage": "packages/mega-city-final/MC-12-04.rbxmx",
+      "roadAccess": [
+        1079.9255120697565,
+        3484.648830630458
+      ]
+    },
+    {
+      "id": "MC-13-05",
+      "asset": 13,
+      "district": "Research Enclave",
+      "center": [
+        1475.35683545262,
+        125.8967336986197,
+        3685.896206252117
+      ],
+      "ground": 60,
+      "size": [
+        244.0,
+        131.7934673972394,
+        179.0
+      ],
+      "source": {
+        "package": "packages/mega-city/13-grid-substation.rbxmx",
+        "min": [
+          -122.0,
+          0.0,
+          -100.5
+        ],
+        "max": [
+          122.0,
+          131.7934673972394,
+          78.5
+        ],
+        "size": [
+          244.0,
+          131.7934673972394,
+          179.0
+        ]
+      },
+      "yaw": 0.14151884286401456,
+      "homeDistrict": "Reactor Works",
+      "translation": [
+        1476.9083517443391,
+        60.0,
+        3696.7862382629296
+      ],
+      "placedPackage": "packages/mega-city-final/MC-13-05.rbxmx",
+      "roadAccess": [
+        1454.5524124500225,
+        3539.8707770162164
+      ]
+    },
+    {
+      "id": "MC-16-01",
+      "asset": 16,
+      "district": "Research Enclave",
+      "center": [
+        496.7155123517563,
+        146.775,
+        4321.103953438841
+      ],
+      "ground": 60,
+      "size": [
+        280.0,
+        173.55,
+        218.5
+      ],
+      "source": {
+        "package": "packages/mega-city/16-guardian-robotics-lab.rbxmx",
+        "min": [
+          -140.0,
+          0.0,
+          -104.5
+        ],
+        "max": [
+          140.0,
+          173.55,
+          114.0
+        ],
+        "size": [
+          280.0,
+          173.55,
+          218.5
+        ]
+      },
+      "yaw": 0.10137468247886414,
+      "homeDistrict": "Research Enclave",
+      "translation": [
+        496.2348069525346,
+        60.0,
+        4316.378340005735
+      ],
+      "placedPackage": "packages/mega-city-final/MC-16-01.rbxmx",
+      "roadAccess": [
+        479.7896222423194,
+        4154.712617294187
+      ]
+    },
+    {
+      "id": "MC-17-01",
+      "asset": 17,
+      "district": "Research Enclave",
+      "center": [
+        953.0951016083035,
+        154.75,
+        4257.41248982756
+      ],
+      "ground": 60,
+      "size": [
+        264.0,
+        189.5,
+        222.7
+      ],
+      "source": {
+        "package": "packages/mega-city/17-containment-facility.rbxmx",
+        "min": [
+          -132.0,
+          0.0,
+          -109.7
+        ],
+        "max": [
+          132.0,
+          189.5,
+          113.0
+        ],
+        "size": [
+          264.0,
+          189.5,
+          222.7
+        ]
+      },
+      "yaw": -0.10108053859076041,
+      "homeDistrict": "Research Enclave",
+      "translation": [
+        953.2616006309196,
+        60.0,
+        4255.770911905112
+      ],
+      "placedPackage": "packages/mega-city-final/MC-17-01.rbxmx",
+      "roadAccess": [
+        970.1839558386324,
+        4088.9269012417867
+      ]
+    },
+    {
+      "id": "MC-14-01",
+      "asset": 14,
+      "district": "Research Enclave",
+      "center": [
+        1488.4359598249023,
+        133.0,
+        4292.399012941343
+      ],
+      "ground": 60,
+      "size": [
+        274.0,
+        146.0,
+        204.5
+      ],
+      "source": {
+        "package": "packages/mega-city/14-nuclear-research-facility.rbxmx",
+        "min": [
+          -137.0,
+          0.0,
+          -99.5
+        ],
+        "max": [
+          137.0,
+          146.0,
+          105.0
+        ],
+        "size": [
+          274.0,
+          146.0,
+          204.5
+        ]
+      },
+      "yaw": -0.14169565291928637,
+      "homeDistrict": "Research Enclave",
+      "translation": [
+        1488.824320258557,
+        60.0,
+        4289.676573562116
+      ],
+      "placedPackage": "packages/mega-city-final/MC-14-01.rbxmx",
+      "roadAccess": [
+        1511.0667814587875,
+        4133.755045479056
+      ]
+    },
+    {
+      "id": "MC-18-02",
+      "asset": 18,
+      "district": "Research Enclave",
+      "center": [
+        483.1094825528662,
+        228.5,
+        4994.997509542999
+      ],
+      "ground": 60,
+      "size": [
+        232.0,
+        337.0,
+        179.5
+      ],
+      "source": {
+        "package": "packages/mega-city/18-corporate-headquarters.rbxmx",
+        "min": [
+          -116.0,
+          0.0,
+          -96.5
+        ],
+        "max": [
+          116.0,
+          337.0,
+          83.0
+        ],
+        "size": [
+          232.0,
+          337.0,
+          179.5
+        ]
+      },
+      "yaw": 0.044558221708118274,
+      "homeDistrict": "Corporate Heights",
+      "translation": [
+        483.41015103338503,
+        60.0,
+        5001.740809808064
+      ],
+      "placedPackage": "packages/mega-city-final/MC-18-02.rbxmx",
+      "roadAccess": [
+        476.52818359039907,
+        4847.394159296581
+      ]
+    },
+    {
+      "id": "MC-13-06",
+      "asset": 13,
+      "district": "Research Enclave",
+      "center": [
+        965.2657650457808,
+        125.8967336986197,
+        4943.333896634941
+      ],
+      "ground": 60,
+      "size": [
+        244.0,
+        131.7934673972394,
+        179.0
+      ],
+      "source": {
+        "package": "packages/mega-city/13-grid-substation.rbxmx",
+        "min": [
+          -122.0,
+          0.0,
+          -100.5
+        ],
+        "max": [
+          122.0,
+          131.7934673972394,
+          78.5
+        ],
+        "size": [
+          244.0,
+          131.7934673972394,
+          179.0
+        ]
+      },
+      "yaw": 0.1594699026949514,
+      "homeDistrict": "Reactor Works",
+      "translation": [
+        967.0125084808318,
+        60.0,
+        4954.194324221924
+      ],
+      "placedPackage": "packages/mega-city-final/MC-13-06.rbxmx",
+      "roadAccess": [
+        941.8435235303242,
+        4797.705435809485
+      ]
+    },
+    {
+      "id": "MC-16-02",
+      "asset": 16,
+      "district": "Research Enclave",
+      "center": [
+        1688.5335154476725,
+        146.775,
+        4907.116071862929
+      ],
+      "ground": 60,
+      "size": [
+        280.0,
+        173.55,
+        218.5
+      ],
+      "source": {
+        "package": "packages/mega-city/16-guardian-robotics-lab.rbxmx",
+        "min": [
+          -140.0,
+          0.0,
+          -104.5
+        ],
+        "max": [
+          140.0,
+          173.55,
+          114.0
+        ],
+        "size": [
+          280.0,
+          173.55,
+          218.5
+        ]
+      },
+      "yaw": 0.019054233491916643,
+      "homeDistrict": "Research Enclave",
+      "translation": [
+        1688.4430133151593,
+        60.0,
+        4902.366934113399
+      ],
+      "placedPackage": "packages/mega-city-final/MC-16-02.rbxmx",
+      "roadAccess": [
+        1685.3468877291862,
+        4739.896432155795
+      ]
+    },
+    {
+      "id": "MC-19-03",
+      "asset": 19,
+      "district": "Research Enclave",
+      "center": [
+        474.76401945436277,
+        285.5,
+        5490.2630532111625
+      ],
+      "ground": 60,
+      "size": [
+        160.0,
+        451.0,
+        153.5
+      ],
+      "source": {
+        "package": "packages/mega-city/19-financial-spire.rbxmx",
+        "min": [
+          -80.0,
+          0.0,
+          -82.5
+        ],
+        "max": [
+          80.0,
+          451.0,
+          71.0
+        ],
+        "size": [
+          160.0,
+          451.0,
+          153.5
+        ]
+      },
+      "yaw": -0.15186917958738083,
+      "homeDistrict": "Corporate Heights",
+      "translation": [
+        473.89412460328475,
+        60.0,
+        5495.9468708496925
+      ],
+      "placedPackage": "packages/mega-city-final/MC-19-03.rbxmx",
+      "roadAccess": [
+        495.1498161817996,
+        5357.064022464736
+      ]
+    },
+    {
+      "id": "MC-08-13",
+      "asset": 8,
+      "district": "Corporate Heights",
+      "center": [
+        -867.7257678074427,
+        233.55,
+        6136.45924340762
+      ],
+      "ground": 80,
+      "size": [
+        160.0,
+        307.1,
+        141.7
+      ],
+      "source": {
+        "package": "packages/mega-city/08-stacked-habitat.rbxmx",
+        "min": [
+          -80.0,
+          0.0,
+          -69.5
+        ],
+        "max": [
+          80.0,
+          307.1,
+          72.2
+        ],
+        "size": [
+          160.0,
+          307.1,
+          141.7
+        ]
+      },
+      "yaw": -0.07963476448558407,
+      "homeDistrict": "Stack District",
+      "translation": [
+        -867.6183744687376,
+        80.0,
+        6135.113521790494
+      ],
+      "placedPackage": "packages/mega-city-final/MC-08-13.rbxmx",
+      "roadAccess": [
+        -857.4756702576916,
+        6008.017591284095
+      ]
+    },
+    {
+      "id": "MC-09-07",
+      "asset": 9,
+      "district": "Corporate Heights",
+      "center": [
+        -1304.264461261008,
+        234.55,
+        6068.17703319007
+      ],
+      "ground": 80,
+      "size": [
+        180.0,
+        309.1,
+        126.35
+      ],
+      "source": {
+        "package": "packages/mega-city/09-twin-habitat-towers.rbxmx",
+        "min": [
+          -90.0,
+          0.0,
+          -64.0
+        ],
+        "max": [
+          90.0,
+          309.1,
+          62.35
+        ],
+        "size": [
+          180.0,
+          309.1,
+          126.35
+        ]
+      },
+      "yaw": 0.12010291647066647,
+      "homeDistrict": "Stack District",
+      "translation": [
+        -1304.16561439502,
+        80.0,
+        6068.996090146016
+      ],
+      "placedPackage": "packages/mega-city-final/MC-09-07.rbxmx",
+      "roadAccess": [
+        -1318.7829691229238,
+        5947.874940296955
+      ]
+    },
+    {
+      "id": "MC-08-14",
+      "asset": 8,
+      "district": "Corporate Heights",
+      "center": [
+        -1925.7881622968207,
+        233.55,
+        6073.630673782004
+      ],
+      "ground": 80,
+      "size": [
+        160.0,
+        307.1,
+        141.7
+      ],
+      "source": {
+        "package": "packages/mega-city/08-stacked-habitat.rbxmx",
+        "min": [
+          -80.0,
+          0.0,
+          -69.5
+        ],
+        "max": [
+          80.0,
+          307.1,
+          72.2
+        ],
+        "size": [
+          160.0,
+          307.1,
+          141.7
+        ]
+      },
+      "yaw": 0.1275437508477215,
+      "homeDistrict": "Stack District",
+      "translation": [
+        -1925.9598799086116,
+        80.0,
+        6072.291639405373
+      ],
+      "placedPackage": "packages/mega-city-final/MC-08-14.rbxmx",
+      "roadAccess": [
+        -1942.1776543555336,
+        5945.827281612401
+      ]
+    },
+    {
+      "id": "MC-20-01",
+      "asset": 20,
+      "district": "Corporate Heights",
+      "center": [
+        -692.9690437670837,
+        268.75,
+        6520.183730891887
+      ],
+      "ground": 80,
+      "size": [
+        264.0,
+        377.5,
+        156.5
+      ],
+      "source": {
+        "package": "packages/mega-city/20-skybridge-towers.rbxmx",
+        "min": [
+          -132.0,
+          0.0,
+          -83.5
+        ],
+        "max": [
+          132.0,
+          377.5,
+          73.0
+        ],
+        "size": [
+          264.0,
+          377.5,
+          156.5
+        ]
+      },
+      "yaw": -0.06922578542754153,
+      "homeDistrict": "Corporate Heights",
+      "translation": [
+        -693.3321889337234,
+        80.0,
+        6525.421156365146
+      ],
+      "placedPackage": "packages/mega-city-final/MC-20-01.rbxmx",
+      "roadAccess": [
+        -683.5445620614353,
+        6384.260069800155
+      ]
+    },
+    {
+      "id": "MC-19-04",
+      "asset": 19,
+      "district": "Corporate Heights",
+      "center": [
+        -1167.445796221665,
+        305.5,
+        6493.628511714718
+      ],
+      "ground": 80,
+      "size": [
+        160.0,
+        451.0,
+        153.5
+      ],
+      "source": {
+        "package": "packages/mega-city/19-financial-spire.rbxmx",
+        "min": [
+          -80.0,
+          0.0,
+          -82.5
+        ],
+        "max": [
+          80.0,
+          451.0,
+          71.0
+        ],
+        "size": [
+          160.0,
+          451.0,
+          153.5
+        ]
+      },
+      "yaw": -0.15515787802644426,
+      "homeDistrict": "Corporate Heights",
+      "translation": [
+        -1168.3343786970581,
+        80.0,
+        6499.309437799823
+      ],
+      "placedPackage": "packages/mega-city-final/MC-19-04.rbxmx",
+      "roadAccess": [
+        -1146.6220590809285,
+        6360.497243894219
+      ]
+    },
+    {
+      "id": "MC-20-02",
+      "asset": 20,
+      "district": "Corporate Heights",
+      "center": [
+        -1759.5767440064817,
+        268.75,
+        6435.495158652238
+      ],
+      "ground": 80,
+      "size": [
+        264.0,
+        377.5,
+        156.5
+      ],
+      "source": {
+        "package": "packages/mega-city/20-skybridge-towers.rbxmx",
+        "min": [
+          -132.0,
+          0.0,
+          -83.5
+        ],
+        "max": [
+          132.0,
+          377.5,
+          73.0
+        ],
+        "size": [
+          264.0,
+          377.5,
+          156.5
+        ]
+      },
+      "yaw": 0.007333394461643383,
+      "homeDistrict": "Corporate Heights",
+      "translation": [
+        -1759.5382440306398,
+        80.0,
+        6440.745017483851
+      ],
+      "placedPackage": "packages/mega-city-final/MC-20-02.rbxmx",
+      "roadAccess": [
+        -1760.575910046187,
+        6299.248822308008
+      ]
+    },
+    {
+      "id": "MC-20-03",
+      "asset": 20,
+      "district": "Corporate Heights",
+      "center": [
+        599.8626850949287,
+        268.75,
+        6100.482371359708
+      ],
+      "ground": 80,
+      "size": [
+        264.0,
+        377.5,
+        156.5
+      ],
+      "source": {
+        "package": "packages/mega-city/20-skybridge-towers.rbxmx",
+        "min": [
+          -132.0,
+          0.0,
+          -83.5
+        ],
+        "max": [
+          132.0,
+          377.5,
+          73.0
+        ],
+        "size": [
+          264.0,
+          377.5,
+          156.5
+        ]
+      },
+      "yaw": 0.15808316498512368,
+      "homeDistrict": "Corporate Heights",
+      "translation": [
+        600.6891693020477,
+        80.0,
+        6105.666908354984
+      ],
+      "placedPackage": "packages/mega-city-final/MC-20-03.rbxmx",
+      "roadAccess": [
+        578.4134521006481,
+        5965.931292196599
+      ]
+    },
+    {
+      "id": "MC-16-03",
+      "asset": 16,
+      "district": "Corporate Heights",
+      "center": [
+        1053.535928768558,
+        166.775,
+        6144.351898754346
+      ],
+      "ground": 80,
+      "size": [
+        280.0,
+        173.55,
+        218.5
+      ],
+      "source": {
+        "package": "packages/mega-city/16-guardian-robotics-lab.rbxmx",
+        "min": [
+          -140.0,
+          0.0,
+          -104.5
+        ],
+        "max": [
+          140.0,
+          173.55,
+          114.0
+        ],
+        "size": [
+          280.0,
+          173.55,
+          218.5
+        ]
+      },
+      "yaw": 0.05572589183974991,
+      "homeDistrict": "Research Enclave",
+      "translation": [
+        1053.2713677588017,
+        80.0,
+        6139.609272111638
+      ],
+      "placedPackage": "packages/mega-city-final/MC-16-03.rbxmx",
+      "roadAccess": [
+        1044.2205963724032,
+        5977.361518545337
+      ]
+    },
+    {
+      "id": "MC-15-05",
+      "asset": 15,
+      "district": "Corporate Heights",
+      "center": [
+        1554.768002778137,
+        154.75,
+        6085.455238156502
+      ],
+      "ground": 80,
+      "size": [
+        240.0,
+        149.5,
+        188.5
+      ],
+      "source": {
+        "package": "packages/mega-city/15-data-center.rbxmx",
+        "min": [
+          -120.0,
+          0.0,
+          -94.0
+        ],
+        "max": [
+          120.0,
+          149.5,
+          94.5
+        ],
+        "size": [
+          240.0,
+          149.5,
+          188.5
+        ]
+      },
+      "yaw": -0.13585413782556607,
+      "homeDistrict": "Research Enclave",
+      "translation": [
+        1554.8018619351665,
+        80.0,
+        6085.20754165373
+      ],
+      "placedPackage": "packages/mega-city-final/MC-15-05.rbxmx",
+      "roadAccess": [
+        1575.388229409034,
+        5934.608067968625
+      ]
+    },
+    {
+      "id": "MC-18-03",
+      "asset": 18,
+      "district": "Corporate Heights",
+      "center": [
+        651.3104046740285,
+        248.5,
+        6440.259721633541
+      ],
+      "ground": 80,
+      "size": [
+        232.0,
+        337.0,
+        179.5
+      ],
+      "source": {
+        "package": "packages/mega-city/18-corporate-headquarters.rbxmx",
+        "min": [
+          -116.0,
+          0.0,
+          -96.5
+        ],
+        "max": [
+          116.0,
+          337.0,
+          83.0
+        ],
+        "size": [
+          232.0,
+          337.0,
+          179.5
+        ]
+      },
+      "yaw": -0.1099180316111003,
+      "homeDistrict": "Corporate Heights",
+      "translation": [
+        650.5699510884812,
+        80.0,
+        6446.968986011075
+      ],
+      "placedPackage": "packages/mega-city-final/MC-18-03.rbxmx",
+      "roadAccess": [
+        667.5181109354528,
+        6293.401379147513
+      ]
+    },
+    {
+      "id": "MC-19-05",
+      "asset": 19,
+      "district": "Corporate Heights",
+      "center": [
+        1044.7489480887284,
+        305.5,
+        6507.144973514683
+      ],
+      "ground": 80,
+      "size": [
+        160.0,
+        451.0,
+        153.5
+      ],
+      "source": {
+        "package": "packages/mega-city/19-financial-spire.rbxmx",
+        "min": [
+          -80.0,
+          0.0,
+          -82.5
+        ],
+        "max": [
+          80.0,
+          451.0,
+          71.0
+        ],
+        "size": [
+          160.0,
+          451.0,
+          153.5
+        ]
+      },
+      "yaw": 0.09200789635069313,
+      "homeDistrict": "Corporate Heights",
+      "translation": [
+        1045.2772473737937,
+        80.0,
+        6512.870652501965
+      ],
+      "placedPackage": "packages/mega-city-final/MC-19-05.rbxmx",
+      "roadAccess": [
+        1032.3683691908936,
+        6372.96493116056
+      ]
+    },
+    {
+      "id": "MC-21-01",
+      "asset": 21,
+      "district": "Corporate Heights",
+      "center": [
+        0,
+        393.0,
+        7700
+      ],
+      "ground": 80,
+      "size": [
+        290.0,
+        626.0,
+        250.0
+      ],
+      "source": {
+        "package": "packages/mega-city/21-mega-tower.rbxmx",
+        "min": [
+          -145.0,
+          0.0,
+          -125.0
+        ],
+        "max": [
+          145.0,
+          626.0,
+          125.0
+        ],
+        "size": [
+          290.0,
+          626.0,
+          250.0
+        ]
+      },
+      "yaw": 0,
+      "homeDistrict": "Corporate Heights",
+      "translation": [
+        0.0,
+        80.0,
+        7700.0
+      ],
+      "placedPackage": "packages/mega-city-final/MC-21-01.rbxmx"
+    }
+  ],
+  "roads": [
+    {
+      "kind": "Main road",
+      "width": 180,
+      "points": [
+        [
+          -377.598500002082,
+          0
+        ],
+        [
+          -380.18634591707854,
+          75
+        ],
+        [
+          -381.37490460805395,
+          150
+        ],
+        [
+          -381.15173992989133,
+          225
+        ],
+        [
+          -379.5202025112351,
+          300
+        ],
+        [
+          -376.4994531157688,
+          375
+        ],
+        [
+          -372.12431318341163,
+          450
+        ],
+        [
+          -366.44494302065806,
+          525
+        ],
+        [
+          -359.52635048337345,
+          600
+        ],
+        [
+          -351.44773534530265,
+          675
+        ],
+        [
+          -342.3016768223347,
+          750
+        ],
+        [
+          -332.1931738787993,
+          825
+        ],
+        [
+          -321.2385499333772,
+          900
+        ],
+        [
+          -309.5642353685254,
+          975
+        ],
+        [
+          -297.3054427940693,
+          1050
+        ],
+        [
+          -284.60475129464544,
+          1125
+        ],
+        [
+          -271.61061688104456,
+          1200
+        ],
+        [
+          -258.4758270539793,
+          1275
+        ],
+        [
+          -245.35591777010916,
+          1350
+        ],
+        [
+          -232.4075711770279,
+          1425
+        ],
+        [
+          -219.78701226675238,
+          1500
+        ],
+        [
+          -207.64842210365077,
+          1575
+        ],
+        [
+          -196.14238453675728,
+          1650
+        ],
+        [
+          -185.4143823375544,
+          1725
+        ],
+        [
+          -175.60335754647858,
+          1800
+        ],
+        [
+          -166.84034950165568,
+          1875
+        ],
+        [
+          -159.24722260055955,
+          1950
+        ],
+        [
+          -152.93549434873987,
+          2025
+        ],
+        [
+          -148.00527271796227,
+          2100
+        ],
+        [
+          -144.5443103053784,
+          2175
+        ],
+        [
+          -142.62718128878413,
+          2250
+        ],
+        [
+          -142.3145857394137,
+          2325
+        ],
+        [
+          -143.6527845067653,
+          2400
+        ],
+        [
+          -146.67316664768586,
+          2475
+        ],
+        [
+          -151.39195024630547,
+          2550
+        ],
+        [
+          -157.81001646821898,
+          2625
+        ],
+        [
+          -165.91287581129478,
+          2700
+        ],
+        [
+          -175.67076475071198,
+          2775
+        ],
+        [
+          -187.03887031626823,
+          2850
+        ],
+        [
+          -199.9576795702949,
+          2925
+        ],
+        [
+          -214.35345045596048,
+          3000
+        ],
+        [
+          -230.13880003732484,
+          3075
+        ],
+        [
+          -247.21340573205757,
+          3150
+        ],
+        [
+          -265.46481472315554,
+          3225
+        ],
+        [
+          -284.76935630638957,
+          3300
+        ],
+        [
+          -304.99315146703157,
+          3375
+        ],
+        [
+          -325.9932134674887,
+          3450
+        ],
+        [
+          -347.61863265582036,
+          3525
+        ],
+        [
+          -369.71183806773684,
+          3600
+        ],
+        [
+          -392.1099276909365,
+          3675
+        ],
+        [
+          -414.6460584955988,
+          3750
+        ],
+        [
+          -437.1508865192493,
+          3825
+        ],
+        [
+          -459.45404644427214,
+          3900
+        ],
+        [
+          -481.385659243267,
+          3975
+        ],
+        [
+          -502.7778556167918,
+          4050
+        ],
+        [
+          -523.4663021387856,
+          4125
+        ],
+        [
+          -543.2917162885359,
+          4200
+        ],
+        [
+          -562.1013559170932,
+          4275
+        ],
+        [
+          -579.7504682031877,
+          4350
+        ],
+        [
+          -596.103682830291,
+          4425
+        ],
+        [
+          -611.0363339913038,
+          4500
+        ],
+        [
+          -624.4356959253705,
+          4575
+        ],
+        [
+          -636.2021170326465,
+          4650
+        ],
+        [
+          -646.2500382116483,
+          4725
+        ],
+        [
+          -654.5088819277166,
+          4800
+        ],
+        [
+          -660.9237996504282,
+          4875
+        ],
+        [
+          -665.456266685412,
+          4950
+        ],
+        [
+          -668.0845150571645,
+          5025
+        ],
+        [
+          -668.8037969520343,
+          5100
+        ],
+        [
+          -667.6264732754331,
+          5175
+        ],
+        [
+          -664.5819240792936,
+          5250
+        ],
+        [
+          -659.7162799341224,
+          5325
+        ],
+        [
+          -653.0919757099133,
+          5400
+        ],
+        [
+          -644.7871306438499,
+          5475
+        ],
+        [
+          -634.8947609607842,
+          5550
+        ],
+        [
+          -623.5218336254351,
+          5625
+        ],
+        [
+          -610.7881719948742,
+          5700
+        ],
+        [
+          -596.8252261607636,
+          5775
+        ],
+        [
+          -581.7747225815242,
+          5850
+        ],
+        [
+          -565.7872091691108,
+          5925
+        ],
+        [
+          -549.0205132834803,
+          6000
+        ],
+        [
+          -531.6381310775604,
+          6075
+        ],
+        [
+          -513.8075673115849,
+          6150
+        ],
+        [
+          -495.69864511122,
+          6225
+        ],
+        [
+          -477.4818051802378,
+          6300
+        ],
+        [
+          -451.04921256277385,
+          6375
+        ],
+        [
+          -427.8325813499012,
+          6450
+        ],
+        [
+          -407.8965938029337,
+          6525
+        ],
+        [
+          -391.2478985512079,
+          6600
+        ],
+        [
+          -377.83671232250776,
+          6675
+        ],
+        [
+          -367.55920747837393,
+          6750
+        ]
+      ]
+    },
+    {
+      "kind": "Main road",
+      "width": 180,
+      "points": [
+        [
+          377.598500002082,
+          0
+        ],
+        [
+          381.3679617884506,
+          75
+        ],
+        [
+          386.0884157670848,
+          150
+        ],
+        [
+          391.7086936275645,
+          225
+        ],
+        [
+          398.16800725657504,
+          300
+        ],
+        [
+          405.39659028056485,
+          375
+        ],
+        [
+          413.316405862929,
+          450
+        ],
+        [
+          421.8419131197946,
+          525
+        ],
+        [
+          430.88088470839773,
+          600
+        ],
+        [
+          440.3352684047946,
+          675
+        ],
+        [
+          450.10208579389564,
+          750
+        ],
+        [
+          460.07436151573046,
+          825
+        ],
+        [
+          470.1420768203769,
+          900
+        ],
+        [
+          480.1931414559125,
+          975
+        ],
+        [
+          490.1143781287781,
+          1050
+        ],
+        [
+          499.7925139184764,
+          1125
+        ],
+        [
+          509.1151730883433,
+          1200
+        ],
+        [
+          517.9718657067717,
+          1275
+        ],
+        [
+          526.2549663802173,
+          1350
+        ],
+        [
+          533.8606772079743,
+          1425
+        ],
+        [
+          540.6899688120092,
+          1500
+        ],
+        [
+          546.649492991068,
+          1575
+        ],
+        [
+          551.652460219101,
+          1650
+        ],
+        [
+          555.6194748793731,
+          1725
+        ],
+        [
+          558.4793208253466,
+          1800
+        ],
+        [
+          560.1696896165023,
+          1875
+        ],
+        [
+          560.6378436205204,
+          1950
+        ],
+        [
+          559.8412061301003,
+          2025
+        ],
+        [
+          557.7478707379344,
+          2100
+        ],
+        [
+          554.3370224679977,
+          2175
+        ],
+        [
+          549.5992635916502,
+          2250
+        ],
+        [
+          543.5368376736917,
+          2325
+        ],
+        [
+          536.1637462008956,
+          2400
+        ],
+        [
+          527.5057531413896,
+          2475
+        ],
+        [
+          517.6002739584275,
+          2550
+        ],
+        [
+          506.49614694076644,
+          2625
+        ],
+        [
+          494.2532861916782,
+          2700
+        ],
+        [
+          480.94221721143384,
+          2775
+        ],
+        [
+          466.6434976806779,
+          2850
+        ],
+        [
+          451.4470277671145,
+          2925
+        ],
+        [
+          435.45125599515626,
+          3000
+        ],
+        [
+          418.7622883957318,
+          3075
+        ],
+        [
+          401.4929102491506,
+          3150
+        ],
+        [
+          383.76153120666186,
+          3225
+        ],
+        [
+          365.69106588746115,
+          3300
+        ],
+        [
+          347.40776316246297,
+          3375
+        ],
+        [
+          329.03999822409054,
+          3450
+        ],
+        [
+          310.7170421785291,
+          3525
+        ],
+        [
+          292.5678242659078,
+          3600
+        ],
+        [
+          274.7197019046182,
+          3675
+        ],
+        [
+          257.2972535660298,
+          3750
+        ],
+        [
+          240.42110902053213,
+          3825
+        ],
+        [
+          224.206830768031,
+          3900
+        ],
+        [
+          208.76385949582735,
+          3975
+        ],
+        [
+          194.194535220738,
+          4050
+        ],
+        [
+          180.5932044025556,
+          4125
+        ],
+        [
+          168.04542179914668,
+          4200
+        ],
+        [
+          156.6272542096583,
+          4275
+        ],
+        [
+          146.40469156343264,
+          4350
+        ],
+        [
+          137.43316910091468,
+          4425
+        ],
+        [
+          129.75720270091392,
+          4500
+        ],
+        [
+          123.41013777579595,
+          4575
+        ],
+        [
+          118.41401061888335,
+          4650
+        ],
+        [
+          114.77951967846174,
+          4725
+        ],
+        [
+          112.50610297678165,
+          4800
+        ],
+        [
+          111.58211681065171,
+          4875
+        ],
+        [
+          111.98510997631111,
+          4950
+        ],
+        [
+          113.68218706195601,
+          5025
+        ],
+        [
+          116.63045384643169,
+          5100
+        ],
+        [
+          120.77753752526861,
+          5175
+        ],
+        [
+          126.0621743424113,
+          5250
+        ],
+        [
+          132.41485721907162,
+          5325
+        ],
+        [
+          139.75853611701206,
+          5400
+        ],
+        [
+          148.0093641255608,
+          5475
+        ],
+        [
+          157.0774825907348,
+          5550
+        ],
+        [
+          166.8678389809063,
+          5625
+        ],
+        [
+          177.28103157650966,
+          5700
+        ],
+        [
+          188.21417545280826,
+          5775
+        ],
+        [
+          199.56178456878362,
+          5850
+        ],
+        [
+          211.216665059444,
+          5925
+        ],
+        [
+          223.0708150355438,
+          6000
+        ],
+        [
+          235.01632631135612,
+          6075
+        ],
+        [
+          246.94628350104125,
+          6150
+        ],
+        [
+          258.7556558466056,
+          6225
+        ],
+        [
+          270.3421769707873,
+          6300
+        ],
+        [
+          288.1399402061602,
+          6375
+        ],
+        [
+          303.7138126404139,
+          6450
+        ],
+        [
+          317.10104004230584,
+          6525
+        ],
+        [
+          328.37253695893304,
+          6600
+        ],
+        [
+          337.6307929136648,
+          6675
+        ],
+        [
+          345.0073864334966,
+          6750
+        ]
+      ]
+    },
+    {
+      "kind": "Bridge",
+      "width": 220,
+      "points": [
+        [
+          -281.46102824886344,
+          1700
+        ],
+        [
+          -188.8952081383139,
+          1700
+        ],
+        [
+          -96.14369053656687,
+          1700
+        ],
+        [
+          -3.2528998164217584,
+          1700
+        ],
+        [
+          89.7307396493221,
+          1700
+        ],
+        [
+          182.76080348786533,
+          1700
+        ],
+        [
+          275.79086732640855,
+          1700
+        ],
+        [
+          368.7745067921524,
+          1700
+        ],
+        [
+          461.66529751229757,
+          1700
+        ],
+        [
+          554.4168151140445,
+          1700
+        ],
+        [
+          646.9826352245941,
+          1700
+        ]
+      ]
+    },
+    {
+      "kind": "Bridge",
+      "width": 220,
+      "points": [
+        [
+          -709.4384488644276,
+          5700
+        ],
+        [
+          -610.7881719948742,
+          5700
+        ],
+        [
+          -512.2134292176572,
+          5700
+        ],
+        [
+          -413.69533700969214,
+          5700
+        ],
+        [
+          -315.2150118478952,
+          5700
+        ],
+        [
+          -216.75357020918233,
+          5700
+        ],
+        [
+          -118.29212857046943,
+          5700
+        ],
+        [
+          -19.8118034086725,
+          5700
+        ],
+        [
+          78.70628879929252,
+          5700
+        ],
+        [
+          177.28103157650966,
+          5700
+        ],
+        [
+          275.93130844606304,
+          5700
+        ]
+      ]
+    },
+    {
+      "kind": "Rear boulevard",
+      "width": 160,
+      "points": [
+        [
+          -2050,
+          6750
+        ],
+        [
+          2050,
+          6750
+        ]
+      ]
+    },
+    {
+      "kind": "Plaza approach",
+      "width": 180,
+      "points": [
+        [
+          0,
+          6750
+        ],
+        [
+          0,
+          7550
+        ]
+      ]
+    },
+    {
+      "kind": "Collector",
+      "width": 64,
+      "points": [
+        [
+          -2160,
+          280
+        ],
+        [
+          -400,
+          280
+        ]
+      ]
+    },
+    {
+      "kind": "Collector",
+      "width": 64,
+      "points": [
+        [
+          -2160,
+          280
+        ],
+        [
+          -1760,
+          1400
+        ]
+      ]
+    },
+    {
+      "kind": "Collector",
+      "width": 64,
+      "points": [
+        [
+          -1760,
+          1400
+        ],
+        [
+          -1731.2,
+          1486.4
+        ],
+        [
+          -1727.2295375326494,
+          1499.9113632509277
+        ],
+        [
+          -1724.278150130596,
+          1513.5654530037093
+        ],
+        [
+          -1722.3458377938412,
+          1527.3622692583458
+        ],
+        [
+          -1721.4326005223843,
+          1541.3018120148367
+        ],
+        [
+          -1721.5384383162252,
+          1555.3840812731823
+        ],
+        [
+          -1759.311989469146,
+          2424.1757577903572
+        ],
+        [
+          -1759.1116732602538,
+          2430.3204849858294
+        ],
+        [
+          -1757.9603162088924,
+          2436.0952728045286
+        ],
+        [
+          -1755.8579183150634,
+          2441.500121246457
+        ],
+        [
+          -1752.804479578766,
+          2446.5350303116143
+        ],
+        [
+          -1748.8,
+          2451.2
+        ],
+        [
+          -1720,
+          2480
+        ]
+      ]
+    },
+    {
+      "kind": "Collector",
+      "width": 64,
+      "points": [
+        [
+          -1720,
+          2480
+        ],
+        [
+          -1644.505098235595,
+          3272.696468526254
+        ],
+        [
+          -1641.5392628707812,
+          3291.0697398568036
+        ],
+        [
+          -1636.2458353648142,
+          3308.3467286694513
+        ],
+        [
+          -1628.6248157176951,
+          3324.5274349642004
+        ],
+        [
+          -1618.676203929424,
+          3339.6118587410506
+        ],
+        [
+          -1606.4,
+          3353.6
+        ],
+        [
+          -1553.6,
+          3406.4
+        ],
+        [
+          -1541.1915263470569,
+          3420.370841917661
+        ],
+        [
+          -1530.8461053882265,
+          3435.4033676706413
+        ],
+        [
+          -1522.5637371235096,
+          3451.4975772589432
+        ],
+        [
+          -1516.3444215529057,
+          3468.653470682565
+        ],
+        [
+          -1512.1881586764152,
+          3486.871047941508
+        ],
+        [
+          -1482.6039471078616,
+          3664.3763173528305
+        ],
+        [
+          -1482.1145261490317,
+          3670.4488431058126
+        ],
+        [
+          -1482.7294209588304,
+          3676.167474247019
+        ],
+        [
+          -1484.4486315372578,
+          3681.5322107764528
+        ],
+        [
+          -1487.2721578843145,
+          3686.5430526941136
+        ],
+        [
+          -1491.2,
+          3691.2
+        ],
+        [
+          -1508.8,
+          3708.8
+        ],
+        [
+          -1513.4532642197723,
+          3712.9562528439556
+        ],
+        [
+          -1518.4530568790892,
+          3716.465011375818
+        ],
+        [
+          -1523.7993779779504,
+          3719.32627559559
+        ],
+        [
+          -1529.4922275163563,
+          3721.5400455032714
+        ],
+        [
+          -1535.5316054943064,
+          3723.1063210988614
+        ],
+        [
+          -1704.4683945056936,
+          3756.8936789011386
+        ],
+        [
+          -1710.5077724836442,
+          3757.56395449673
+        ],
+        [
+          -1716.2006220220496,
+          3757.08972440441
+        ],
+        [
+          -1721.546943120911,
+          3755.4709886241826
+        ],
+        [
+          -1726.546735780228,
+          3752.707747156046
+        ],
+        [
+          -1731.2,
+          3748.8
+        ],
+        [
+          -1748.8,
+          3731.2
+        ],
+        [
+          -1753.0323516907843,
+          3726.5669449276484
+        ],
+        [
+          -1756.769406763136,
+          3721.627779710592
+        ],
+        [
+          -1760.0111652170558,
+          3716.3825043488323
+        ],
+        [
+          -1762.7576270525437,
+          3710.831118842369
+        ],
+        [
+          -1765.0087922695996,
+          3704.9736231912016
+        ],
+        [
+          -1800,
+          3600
+        ]
+      ]
+    },
+    {
+      "kind": "Collector",
+      "width": 64,
+      "points": [
+        [
+          -1800,
+          3600
+        ],
+        [
+          -2246.557775897211,
+          4344.262959828685
+        ],
+        [
+          -2259.0244139412093,
+          4366.892918492323
+        ],
+        [
+          -2269.6705487909717,
+          4390.1931623461805
+        ],
+        [
+          -2278.4961804464992,
+          4414.163691390262
+        ],
+        [
+          -2285.5013089077916,
+          4438.804505624565
+        ],
+        [
+          -2290.685934174848,
+          4464.115605049089
+        ],
+        [
+          -2320,
+          4640
+        ]
+      ]
+    },
+    {
+      "kind": "Collector",
+      "width": 64,
+      "points": [
+        [
+          -2320,
+          4640
+        ],
+        [
+          -2493.102808620423,
+          5020.8261789649305
+        ],
+        [
+          -2502.7857975170714,
+          5044.728754537557
+        ],
+        [
+          -2510.3170111033523,
+          5069.097424427375
+        ],
+        [
+          -2515.6964493792675,
+          5093.932188634389
+        ],
+        [
+          -2518.9241123448173,
+          5119.233047158597
+        ],
+        [
+          -2520.0,
+          5145.0
+        ],
+        [
+          -2520.0,
+          5295.0
+        ],
+        [
+          -2518.557779489815,
+          5320.56333076528
+        ],
+        [
+          -2514.2311179592575,
+          5345.253323061113
+        ],
+        [
+          -2507.0200154083295,
+          5369.069976887506
+        ],
+        [
+          -2496.9244718370305,
+          5392.0132922444545
+        ],
+        [
+          -2483.94448724536,
+          5414.08326913196
+        ],
+        [
+          -2372.425284395445,
+          5581.362073406833
+        ],
+        [
+          -2367.9521820130853,
+          5588.967726980373
+        ],
+        [
+          -2364.47310238236,
+          5596.87434642646
+        ],
+        [
+          -2361.988045503271,
+          5605.081931745093
+        ],
+        [
+          -2360.497011375818,
+          5613.5904829362735
+        ],
+        [
+          -2360.0,
+          5622.4
+        ],
+        [
+          -2360,
+          5680
+        ]
+      ]
+    },
+    {
+      "kind": "Collector",
+      "width": 64,
+      "points": [
+        [
+          -2360,
+          5680
+        ],
+        [
+          -1960,
+          6520
+        ]
+      ]
+    },
+    {
+      "kind": "Collector",
+      "width": 64,
+      "points": [
+        [
+          -1960,
+          6520
+        ],
+        [
+          -1960,
+          6720
+        ]
+      ]
+    },
+    {
+      "kind": "Collector",
+      "width": 64,
+      "points": [
+        [
+          2200,
+          280
+        ],
+        [
+          440,
+          320
+        ]
+      ]
+    },
+    {
+      "kind": "Collector",
+      "width": 64,
+      "points": [
+        [
+          2200,
+          280
+        ],
+        [
+          2259.4451952089057,
+          458.3355856267166
+        ],
+        [
+          2266.7007028826815,
+          483.1307717194328
+        ],
+        [
+          2272.023382071132,
+          508.18479849895425
+        ],
+        [
+          2275.4132327742577,
+          533.4976659652813
+        ],
+        [
+          2276.87025499206,
+          559.0693741184139
+        ],
+        [
+          2276.3944487245362,
+          584.8999229583518
+        ],
+        [
+          2243.5144011416764,
+          1176.7407794498274
+        ],
+        [
+          2240.4572167306733,
+          1201.3060988478899
+        ],
+        [
+          2234.0971844110036,
+          1224.3946806019378
+        ],
+        [
+          2224.4343041826683,
+          1246.0065247119724
+        ],
+        [
+          2211.468576045667,
+          1266.141631177993
+        ],
+        [
+          2195.2,
+          1284.8
+        ],
+        [
+          2087.9195959492895,
+          1392.0804040507107
+        ],
+        [
+          2085.0685414075456,
+          1395.3794585924554
+        ],
+        [
+          2082.8510545417444,
+          1398.940945458256
+        ],
+        [
+          2081.2671353518863,
+          1402.7648646481136
+        ],
+        [
+          2080.316783837972,
+          1406.8512161620285
+        ],
+        [
+          2080.0,
+          1411.2
+        ],
+        [
+          2080,
+          1440
+        ]
+      ]
+    },
+    {
+      "kind": "Collector",
+      "width": 64,
+      "points": [
+        [
+          2080,
+          1440
+        ],
+        [
+          2051.2,
+          1555.2
+        ],
+        [
+          2047.2518748208167,
+          1573.173246057965
+        ],
+        [
+          2044.3674992832662,
+          1591.2529842318572
+        ],
+        [
+          2042.546873387349,
+          1609.4392145216793
+        ],
+        [
+          2041.7899971330653,
+          1627.7319369274296
+        ],
+        [
+          2042.096870520414,
+          1646.1311514491088
+        ],
+        [
+          2080,
+          2480
+        ]
+      ]
+    },
+    {
+      "kind": "Collector",
+      "width": 64,
+      "points": [
+        [
+          2080,
+          2480
+        ],
+        [
+          1815.3755049948336,
+          3122.6594878696897
+        ],
+        [
+          1808.944323196694,
+          3137.446072236602
+        ],
+        [
+          1801.9511817981402,
+          3151.9334156330883
+        ],
+        [
+          1794.3960807991734,
+          3166.1215180591503
+        ],
+        [
+          1786.2790201997934,
+          3180.010379514788
+        ],
+        [
+          1777.6,
+          3193.6
+        ],
+        [
+          1742.4,
+          3246.4
+        ],
+        [
+          1734.3360000000002,
+          3260.111286971408
+        ],
+        [
+          1728.064,
+          3274.3651478856314
+        ],
+        [
+          1723.5839999999998,
+          3289.161582742671
+        ],
+        [
+          1720.896,
+          3304.5005915425263
+        ],
+        [
+          1720.0,
+          3320.3821742851965
+        ],
+        [
+          1720.0,
+          3424.1608081014215
+        ],
+        [
+          1720.4480000000003,
+          3430.3109171849105
+        ],
+        [
+          1721.792,
+          3436.0898909165116
+        ],
+        [
+          1724.0320000000002,
+          3441.4977292962276
+        ],
+        [
+          1727.1680000000001,
+          3446.534432324057
+        ],
+        [
+          1731.2,
+          3451.2
+        ],
+        [
+          1760,
+          3480
+        ]
+      ]
+    },
+    {
+      "kind": "Collector",
+      "width": 64,
+      "points": [
+        [
+          1760,
+          3480
+        ],
+        [
+          1800,
+          4640
+        ]
+      ]
+    },
+    {
+      "kind": "Collector",
+      "width": 64,
+      "points": [
+        [
+          1800,
+          4640
+        ],
+        [
+          1857.6,
+          4726.4
+        ],
+        [
+          1865.734163582448,
+          4740.109762396296
+        ],
+        [
+          1872.2166543297906,
+          4754.359049585182
+        ],
+        [
+          1877.0474722420286,
+          4769.147861566661
+        ],
+        [
+          1880.2266173191624,
+          4784.476198340732
+        ],
+        [
+          1881.754089561191,
+          4800.344059907393
+        ],
+        [
+          1920,
+          5680
+        ]
+      ]
+    },
+    {
+      "kind": "Collector",
+      "width": 64,
+      "points": [
+        [
+          1920,
+          5680
+        ],
+        [
+          1840,
+          6520
+        ]
+      ]
+    },
+    {
+      "kind": "Collector",
+      "width": 64,
+      "points": [
+        [
+          1840,
+          6520
+        ],
+        [
+          1840,
+          6720
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -650.0,
+          -215.54590137706197
+        ],
+        [
+          -575.2850109748842,
+          -235.84687593519433
+        ],
+        [
+          -569.334407023926,
+          -236.89400059852443
+        ],
+        [
+          -563.7106039509583,
+          -236.71287533666995
+        ],
+        [
+          -558.4136017559815,
+          -235.30350014963108
+        ],
+        [
+          -553.4434004389954,
+          -232.6658750374078
+        ],
+        [
+          -548.8,
+          -228.8
+        ],
+        [
+          -520,
+          -200
+        ],
+        [
+          -377.62513880171525,
+          0.7720359086746085
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1702.7381758792603,
+          354.92954890304406
+        ],
+        [
+          -1720.0,
+          280.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1094.8506918039436,
+          380.9484858992513
+        ],
+        [
+          -1080.0,
+          280.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          2081.208650897632,
+          476.66190931000085
+        ],
+        [
+          2200.0,
+          400.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          1301.500639826959,
+          519.2013056031349
+        ],
+        [
+          1320.0,
+          280.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          759.6056477892699,
+          558.2410076364375
+        ],
+        [
+          760.0,
+          280.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1601.145485219688,
+          786.7234894644896
+        ],
+        [
+          -1792.55565958272,
+          797.3628495740192
+        ],
+        [
+          -1810.9796221329411,
+          799.6562237273724
+        ],
+        [
+          -1828.296037449779,
+          804.4266258466469
+        ],
+        [
+          -1844.5049055332352,
+          811.6740559318431
+        ],
+        [
+          -1859.6062263833091,
+          821.3985139829608
+        ],
+        [
+          -1873.6,
+          833.6
+        ],
+        [
+          -1960.0,
+          920.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -569.5764465030356,
+          859.0415989390481
+        ],
+        [
+          -330.62885331984523,
+          835.7100017769743
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1051.1435545877355,
+          850.0205064802112
+        ],
+        [
+          -560.0,
+          840.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          2007.295223589042,
+          994.9824876736524
+        ],
+        [
+          2280.0,
+          960.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          1410.5135379613496,
+          1074.898067379841
+        ],
+        [
+          2000.0,
+          1000.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          802.9462612890418,
+          1064.7836163695324
+        ],
+        [
+          528.6298584869654,
+          1040.7559000818385
+        ],
+        [
+          525.1795860123069,
+          1040.529218414324
+        ],
+        [
+          521.732655377903,
+          1040.4538934772513
+        ],
+        [
+          518.2890665837546,
+          1040.5299252706207
+        ],
+        [
+          514.8488196298609,
+          1040.7573137944319
+        ],
+        [
+          511.4119145162223,
+          1041.1360590486847
+        ],
+        [
+          489.3282661293652,
+          1044.0573537453029
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -503.604232119195,
+          1241.9706062695661
+        ],
+        [
+          -279.74904834315106,
+          1153.0263163186073
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1364.0814342885712,
+          1281.3146151755739
+        ],
+        [
+          -1476.3428016008,
+          1251.5680922491606
+        ],
+        [
+          -1493.3368191023271,
+          1248.681005117278
+        ],
+        [
+          -1509.393112887548,
+          1249.2742175209578
+        ],
+        [
+          -1524.5116829564627,
+          1253.3477294602003
+        ],
+        [
+          -1538.6925293090717,
+          1260.901540935006
+        ],
+        [
+          -1551.9356519453745,
+          1271.9356519453745
+        ],
+        [
+          -1720.0,
+          1440.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -998.2379951162204,
+          1297.9370165537498
+        ],
+        [
+          -1360.0,
+          1280.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -428.7531785166251,
+          1772.966718299476
+        ],
+        [
+          -280.0,
+          1700.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1585.1606549814253,
+          1776.89412264706
+        ],
+        [
+          -1720.0,
+          1760.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -870.3777438309169,
+          1795.287629560223
+        ],
+        [
+          -440.0,
+          1760.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1136.4753050856687,
+          1851.4760542177066
+        ],
+        [
+          -880.0,
+          1800.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -371.9253958539162,
+          2090.0699810161136
+        ],
+        [
+          -149.36595097276404,
+          2079.3009570861755
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1504.5143704553093,
+          2085.724739422703
+        ],
+        [
+          -1760.0,
+          2080.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -716.8470386700106,
+          2148.8446567407345
+        ],
+        [
+          -560,
+          2080
+        ],
+        [
+          -360.0,
+          2080.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1223.0595828387225,
+          2160.747959919483
+        ],
+        [
+          -1321.6566831948423,
+          2102.6094287774554
+        ],
+        [
+          -1337.240792322204,
+          2094.4700344175717
+        ],
+        [
+          -1353.318466260162,
+          2088.139394359884
+        ],
+        [
+          -1369.889705008717,
+          2083.617508604393
+        ],
+        [
+          -1386.9545085678692,
+          2080.9043771510983
+        ],
+        [
+          -1404.5128769376179,
+          2080.0
+        ],
+        [
+          -1520.0,
+          2080.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          782.4978680064396,
+          2151.8841832998155
+        ],
+        [
+          558.3385490982593,
+          2078.8371814711786
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          1897.5537920812371,
+          2169.3911040986936
+        ],
+        [
+          2040.0,
+          2160.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          1412.2350555517703,
+          2197.8757598718794
+        ],
+        [
+          1675.5354541200954,
+          2165.4721257015767
+        ],
+        [
+          1693.3346906368615,
+          2163.50216044901
+        ],
+        [
+          1711.1607634832344,
+          2161.9699652525674
+        ],
+        [
+          1729.0136726592154,
+          2160.875540112252
+        ],
+        [
+          1746.8934181648037,
+          2160.218885028063
+        ],
+        [
+          1764.8,
+          2160.0
+        ],
+        [
+          1880.0,
+          2160.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1602.3778193571072,
+          2407.159927692148
+        ],
+        [
+          -1760.0,
+          2400.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -365.5467264769436,
+          2435.536549993991
+        ],
+        [
+          -145.28751590644174,
+          2440.592497656063
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1099.3451233616208,
+          2459.2324438236806
+        ],
+        [
+          -862.006167065134,
+          2185.3907189953616
+        ],
+        [
+          -852.7399469216859,
+          2176.250060157032
+        ],
+        [
+          -842.5462201434483,
+          2169.14065883833
+        ],
+        [
+          -831.4249867304214,
+          2164.062515039258
+        ],
+        [
+          -819.3762466826054,
+          2161.0156287598147
+        ],
+        [
+          -806.4,
+          2160.0
+        ],
+        [
+          -720.0,
+          2160.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -789.374860784869,
+          2502.0513282485454
+        ],
+        [
+          -1000.0,
+          2360.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          701.5158711990514,
+          2681.5054590488962
+        ],
+        [
+          498.10156977131516,
+          2676.4253409078215
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          1276.149564122874,
+          2712.2282932640087
+        ],
+        [
+          822.3488651770534,
+          2681.512688103308
+        ],
+        [
+          813.4072737133145,
+          2680.9681203861173
+        ],
+        [
+          804.4615914637393,
+          2680.544567717191
+        ],
+        [
+          795.5118184283285,
+          2680.242030096529
+        ],
+        [
+          786.5579546070821,
+          2680.0605075241324
+        ],
+        [
+          777.6,
+          2680.0
+        ],
+        [
+          720.0,
+          2680.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1526.1306026527438,
+          2754.036243837141
+        ],
+        [
+          -1720.0,
+          2760.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1222.8782986530075,
+          2758.801360299386
+        ],
+        [
+          -1464.3381364635366,
+          2722.3634784884143
+        ],
+        [
+          -1470.4244073366635,
+          2721.9606262325856
+        ],
+        [
+          -1476.1537291268733,
+          2722.642852255829
+        ],
+        [
+          -1481.5261018341657,
+          2724.4101565581464
+        ],
+        [
+          -1486.5415254585414,
+          2727.262539139537
+        ],
+        [
+          -1491.2,
+          2731.2
+        ],
+        [
+          -1520.0,
+          2760.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          1723.1714515303759,
+          2766.372675155232
+        ],
+        [
+          1807.2880064285052,
+          2761.784349043465
+        ],
+        [
+          1819.990934463821,
+          2762.068593737396
+        ],
+        [
+          1831.9301237125724,
+          2764.348807053958
+        ],
+        [
+          1843.105574174759,
+          2768.624988993153
+        ],
+        [
+          1853.517285850382,
+          2774.89713955498
+        ],
+        [
+          1863.1652587394403,
+          2783.16525873944
+        ],
+        [
+          2000.0,
+          2920.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -401.5197967857997,
+          2790.537305198587
+        ],
+        [
+          -179.92143630713488,
+          2803.04340308887
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -740.82477140516,
+          2831.0340304446995
+        ],
+        [
+          -455.4152605170411,
+          2763.640019669144
+        ],
+        [
+          -449.4177667309064,
+          2762.7776125882524
+        ],
+        [
+          -443.7574937861348,
+          2763.1024070808917
+        ],
+        [
+          -438.4344416827266,
+          2764.614403147063
+        ],
+        [
+          -433.4486104206817,
+          2767.3136007867656
+        ],
+        [
+          -428.8,
+          2771.2
+        ],
+        [
+          -400.0,
+          2800.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -623.6965119288675,
+          3140.628843349984
+        ],
+        [
+          -600.0,
+          2840.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -856.7722628355123,
+          3362.0452296583344
+        ],
+        [
+          -640.0,
+          3160.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1352.6237484977612,
+          3406.7529296722882
+        ],
+        [
+          -1520.0,
+          3440.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -584.9104531889399,
+          3436.8070695993847
+        ],
+        [
+          -760.0,
+          3280.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1656.2607150598826,
+          3448.705600295979
+        ],
+        [
+          -1600.0,
+          3360.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          1079.9255120697565,
+          3484.648830630458
+        ],
+        [
+          1720.0,
+          3440.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          594.6338579945716,
+          3478.7745333836074
+        ],
+        [
+          333.10229699311697,
+          3433.4126575171654
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          1454.5524124500225,
+          3539.8707770162164
+        ],
+        [
+          1440.0,
+          3480.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1058.722268476955,
+          3706.4809806158864
+        ],
+        [
+          -1480.0,
+          3680.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -701.1238807038976,
+          3715.0125830813677
+        ],
+        [
+          -408.4777292563236,
+          3729.4718668898595
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1358.897244497226,
+          3757.96350485654
+        ],
+        [
+          -1360.0,
+          3680.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1818.0327433558014,
+          3787.453960200646
+        ],
+        [
+          -1920.0,
+          3800.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1098.5866188751395,
+          4048.978222479202
+        ],
+        [
+          -960,
+          3960
+        ],
+        [
+          -925.52380597346,
+          3753.14283584076
+        ],
+        [
+          -924.8792358230146,
+          3741.2114149380877
+        ],
+        [
+          -927.3645701504456,
+          3731.931420902674
+        ],
+        [
+          -932.9798089557537,
+          3725.3028537345217
+        ],
+        [
+          -941.7249522389384,
+          3721.325713433631
+        ],
+        [
+          -953.6,
+          3720.0
+        ],
+        [
+          -1040.0,
+          3720.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -787.8524970533649,
+          4042.5831447381606
+        ],
+        [
+          -960.0,
+          3960.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1890.273395092861,
+          4065.299175606377
+        ],
+        [
+          -2000.0,
+          3960.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1601.725528343242,
+          4115.113956947917
+        ],
+        [
+          -1779.052778077221,
+          4047.9356092215944
+        ],
+        [
+          -1787.4897779694218,
+          4045.078789901821
+        ],
+        [
+          -1796.0430001077996,
+          4042.856819319774
+        ],
+        [
+          -1804.7124444923552,
+          4041.2696974754544
+        ],
+        [
+          -1813.498111123089,
+          4040.3174243688636
+        ],
+        [
+          -1822.4,
+          4040.0
+        ],
+        [
+          -1880.0,
+          4040.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          970.1839558386324,
+          4088.9269012417867
+        ],
+        [
+          1198.7760584840266,
+          3810.2552151113455
+        ],
+        [
+          1213.9843729559943,
+          3789.589468987743
+        ],
+        [
+          1226.6301631591175,
+          3767.796402706008
+        ],
+        [
+          1236.7134290933973,
+          3744.8760162661442
+        ],
+        [
+          1244.2341707588332,
+          3720.82830966815
+        ],
+        [
+          1249.192388155425,
+          3695.653282912024
+        ],
+        [
+          1280.0,
+          3480.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          1511.0667814587875,
+          4133.755045479056
+        ],
+        [
+          1760.0,
+          4120.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          479.7896222423194,
+          4154.712617294187
+        ],
+        [
+          175.4254283180703,
+          4155.88858155951
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -877.0722184880814,
+          4363.479675154406
+        ],
+        [
+          -574.123751767758,
+          4326.089237474583
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -2124.7941754444523,
+          4398.1583210743465
+        ],
+        [
+          -2200.0,
+          4320.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1312.6983332919979,
+          4405.487990913263
+        ],
+        [
+          -880.0,
+          4360.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1619.2836250275957,
+          4447.5820307077365
+        ],
+        [
+          -1371.0160413532963,
+          4402.021591675504
+        ],
+        [
+          -1366.6022664661098,
+          4401.293818672323
+        ],
+        [
+          -1362.1737748871865,
+          4400.727773003182
+        ],
+        [
+          -1357.7305666165273,
+          4400.323454668081
+        ],
+        [
+          -1353.2726416541318,
+          4400.080863667021
+        ],
+        [
+          -1348.8,
+          4400.0
+        ],
+        [
+          -1320.0,
+          4400.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -915.8685029485601,
+          4690.914565248519
+        ],
+        [
+          -691.0276095615523,
+          4680.510290956996
+        ],
+        [
+          -686.620003999109,
+          4680.385221341536
+        ],
+        [
+          -682.2192749610208,
+          4680.41824526075
+        ],
+        [
+          -677.8254224472877,
+          4680.60936271464
+        ],
+        [
+          -673.43844645791,
+          4680.958573703205
+        ],
+        [
+          -669.0583469928872,
+          4681.465878226446
+        ],
+        [
+          -640.9226678317399,
+          4685.235279380165
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -2141.882904746082,
+          4674.704184542629
+        ],
+        [
+          -2320.0,
+          4640.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1339.0536594728158,
+          4737.186281494253
+        ],
+        [
+          -1440.5350246523883,
+          4667.212158818391
+        ],
+        [
+          -1454.7424157775288,
+          4655.498289170046
+        ],
+        [
+          -1465.7926088748598,
+          4642.12640727972
+        ],
+        [
+          -1473.6856039443821,
+          4627.096513147418
+        ],
+        [
+          -1478.4214009860957,
+          4610.408606773137
+        ],
+        [
+          -1480.0,
+          4592.062688156876
+        ],
+        [
+          -1480.0,
+          4440.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1849.9808251827358,
+          4759.561620389484
+        ],
+        [
+          -2009.0070698785908,
+          4692.976836382163
+        ],
+        [
+          -2021.5085247222985,
+          4688.305175284585
+        ],
+        [
+          -2034.2185451562925,
+          4684.671661097579
+        ],
+        [
+          -2047.1371311805747,
+          4682.0762938211465
+        ],
+        [
+          -2060.264282795144,
+          4680.519073455287
+        ],
+        [
+          -2073.6,
+          4680.0
+        ],
+        [
+          -2160.0,
+          4680.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          1685.3468877291862,
+          4739.896432155795
+        ],
+        [
+          1800.0,
+          4680.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          941.8435235303242,
+          4797.705435809485
+        ],
+        [
+          1680.0,
+          4720.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          476.52818359039907,
+          4847.394159296581
+        ],
+        [
+          112.01452237351215,
+          4839.901620388576
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -2355.140834645998,
+          5017.592813969167
+        ],
+        [
+          -2440.0,
+          4960.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -961.4307100967791,
+          5046.106473136403
+        ],
+        [
+          -668.2294540468953,
+          5040.11288454129
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1778.1656651246155,
+          5078.372322469356
+        ],
+        [
+          -1736.2863862348925,
+          5021.94425029142
+        ],
+        [
+          -1730.4232871903314,
+          5012.951217082538
+        ],
+        [
+          -1725.8630990445613,
+          5003.527517689027
+        ],
+        [
+          -1722.6058217975828,
+          4993.673152110887
+        ],
+        [
+          -1720.6514554493956,
+          4983.38812034812
+        ],
+        [
+          -1720.0,
+          4972.672422400722
+        ],
+        [
+          -1720.0,
+          4793.6
+        ],
+        [
+          -1721.3440000000003,
+          4781.504000000001
+        ],
+        [
+          -1725.376,
+          4772.0960000000005
+        ],
+        [
+          -1732.096,
+          4765.376
+        ],
+        [
+          -1741.504,
+          4761.344
+        ],
+        [
+          -1753.6,
+          4760.0
+        ],
+        [
+          -1840.0,
+          4760.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1421.104088955542,
+          5104.727262574975
+        ],
+        [
+          -1720.0,
+          5000.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          495.1498161817996,
+          5357.064022464736
+        ],
+        [
+          132.1908617746813,
+          5322.355501816249
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -858.1589370537881,
+          5370.593920524222
+        ],
+        [
+          -656.8058785266887,
+          5357.951401108633
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1318.7829691229238,
+          5947.874940296955
+        ],
+        [
+          -709.4384488644276,
+          5700.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1942.1776543555336,
+          5945.827281612401
+        ],
+        [
+          -2048.487793714722,
+          5956.759497718858
+        ],
+        [
+          -2060.7281879774227,
+          5958.82207854007
+        ],
+        [
+          -2072.2396057373,
+          5962.417419178789
+        ],
+        [
+          -2083.0220469943556,
+          5967.545519635017
+        ],
+        [
+          -2093.075511748589,
+          5974.206379908755
+        ],
+        [
+          -2102.4,
+          5982.4
+        ],
+        [
+          -2160.0,
+          6040.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          1575.388229409034,
+          5934.608067968625
+        ],
+        [
+          1920.0,
+          5920.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          578.4134521006481,
+          5965.931292196599
+        ],
+        [
+          217.31529929995673,
+          5963.585437923483
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -857.4756702576916,
+          6008.017591284095
+        ],
+        [
+          -920.0,
+          5920.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          1044.2205963724032,
+          5977.361518545337
+        ],
+        [
+          615.7087680913975,
+          5922.028448927306
+        ],
+        [
+          609.6056115784945,
+          5921.7462073134775
+        ],
+        [
+          603.8631565129031,
+          5922.52224161383
+        ],
+        [
+          598.4814028946236,
+          5924.3565518283685
+        ],
+        [
+          593.4603507236559,
+          5927.249137957093
+        ],
+        [
+          588.8,
+          5931.2
+        ],
+        [
+          560.0,
+          5960.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1760.575910046187,
+          6299.248822308008
+        ],
+        [
+          -2040.0,
+          6320.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          667.5181109354528,
+          6293.401379147513
+        ],
+        [
+          440.16237842445014,
+          6282.011943261897
+        ],
+        [
+          424.43237093368725,
+          6282.272763319241
+        ],
+        [
+          409.37225120095843,
+          6284.664778100786
+        ],
+        [
+          394.9820192262638,
+          6289.187987606536
+        ],
+        [
+          381.2616750096034,
+          6295.842391836489
+        ],
+        [
+          368.21121855097715,
+          6304.627990790645
+        ],
+        [
+          286.46863768206134,
+          6367.957109966589
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -1146.6220590809285,
+          6360.497243894219
+        ],
+        [
+          -1120.0,
+          5920.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          1032.3683691908936,
+          6372.96493116056
+        ],
+        [
+          680.0,
+          6280.0
+        ]
+      ]
+    },
+    {
+      "kind": "Access lane",
+      "width": 64,
+      "points": [
+        [
+          -683.5445620614353,
+          6384.260069800155
+        ],
+        [
+          -484.4376692151637,
+          6271.3622228336
+        ]
+      ]
+    },
+    {
+      "kind": "Junction link",
+      "width": 64,
+      "points": [
+        [
+          -877.0722184880814,
+          4363.479675154406
+        ],
+        [
+          -880.0,
+          4360.0
+        ]
+      ]
+    },
+    {
+      "kind": "Junction link",
+      "width": 64,
+      "points": [
+        [
+          2007.295223589042,
+          994.9824876736524
+        ],
+        [
+          2000.0,
+          1000.0
+        ]
+      ]
+    },
+    {
+      "kind": "Junction link",
+      "width": 64,
+      "points": [
+        [
+          -1312.6983332919979,
+          4405.487990913263
+        ],
+        [
+          -1320.0,
+          4400.0
+        ]
+      ]
+    },
+    {
+      "kind": "Junction link",
+      "width": 64,
+      "points": [
+        [
+          -870.3777438309169,
+          1795.287629560223
+        ],
+        [
+          -880.0,
+          1800.0
+        ]
+      ]
+    },
+    {
+      "kind": "Junction link",
+      "width": 64,
+      "points": [
+        [
+          667.5181109354528,
+          6293.401379147513
+        ],
+        [
+          680.0,
+          6280.0
+        ]
+      ]
+    },
+    {
+      "kind": "Junction link",
+      "width": 64,
+      "points": [
+        [
+          701.5158711990514,
+          2681.5054590488962
+        ],
+        [
+          720.0,
+          2680.0
+        ]
+      ]
+    },
+    {
+      "kind": "Junction link",
+      "width": 64,
+      "points": [
+        [
+          1897.5537920812371,
+          2169.3911040986936
+        ],
+        [
+          1880.0,
+          2160.0
+        ]
+      ]
+    },
+    {
+      "kind": "Junction link",
+      "width": 64,
+      "points": [
+        [
+          -1058.722268476955,
+          3706.4809806158864
+        ],
+        [
+          -1040.0,
+          3720.0
+        ]
+      ]
+    },
+    {
+      "kind": "Junction link",
+      "width": 64,
+      "points": [
+        [
+          -623.6965119288675,
+          3140.628843349984
+        ],
+        [
+          -640.0,
+          3160.0
+        ]
+      ]
+    },
+    {
+      "kind": "Junction link",
+      "width": 64,
+      "points": [
+        [
+          -1138.4944873642203,
+          5874.535482623307
+        ],
+        [
+          -1120.0,
+          5920.0
+        ]
+      ]
+    },
+    {
+      "kind": "Junction link",
+      "width": 64,
+      "points": [
+        [
+          -966.8910295642266,
+          5804.729001326192
+        ],
+        [
+          -920.0,
+          5920.0
+        ]
+      ]
+    }
+  ],
+  "guides": [
+    {
+      "name": "RIFT_EDGE_CYAN",
+      "points": [
+        [
+          -251.60671088571,
+          25,
+          0
+        ],
+        [
+          -252.7541955219529,
+          25,
+          50
+        ],
+        [
+          -253.31676468752894,
+          25,
+          100
+        ],
+        [
+          -253.29194707758847,
+          25,
+          150
+        ],
+        [
+          -252.680141130267,
+          25,
+          200
+        ],
+        [
+          -251.48461701745114,
+          25,
+          250
+        ],
+        [
+          -249.71150578631807,
+          25,
+          300
+        ],
+        [
+          -247.3697756613599,
+          25,
+          350
+        ],
+        [
+          -244.47119557904202,
+          25,
+          400
+        ],
+        [
+          -241.03028608973642,
+          25,
+          450
+        ],
+        [
+          -237.06425782370897,
+          25,
+          500
+        ],
+        [
+          -232.5929377793325,
+          25,
+          550
+        ],
+        [
+          -227.63868375193923,
+          25,
+          600
+        ],
+        [
+          -222.2262872804222,
+          25,
+          650
+        ],
+        [
+          -216.3828655454748,
+          25,
+          700
+        ],
+        [
+          -210.13774270783816,
+          25,
+          750
+        ],
+        [
+          -203.5223212267671,
+          25,
+          800
+        ],
+        [
+          -196.5699437477902,
+          25,
+          850
+        ],
+        [
+          -189.31574619442986,
+          25,
+          900
+        ],
+        [
+          -181.7965027405777,
+          25,
+          950
+        ],
+        [
+          -174.05046337844811,
+          25,
+          1000
+        ],
+        [
+          -166.11718483123445,
+          25,
+          1050
+        ],
+        [
+          -158.0373555895916,
+          25,
+          1100
+        ],
+        [
+          -149.85261587671357,
+          25,
+          1150
+        ],
+        [
+          -141.60537336795295,
+          25,
+          1200
+        ],
+        [
+          -133.338615507567,
+          25,
+          1250
+        ],
+        [
+          -125.09571927723275,
+          25,
+          1300
+        ],
+        [
+          -116.92025927844736,
+          25,
+          1350
+        ],
+        [
+          -108.85581499385349,
+          25,
+          1400
+        ],
+        [
+          -100.94577809096698,
+          25,
+          1450
+        ],
+        [
+          -93.23316062583955,
+          25,
+          1500
+        ],
+        [
+          -85.76040499398276,
+          25,
+          1550
+        ],
+        [
+          -78.56919646158306,
+          25,
+          1600
+        ],
+        [
+          -71.70027909181867,
+          30.0,
+          1650
+        ],
+        [
+          -65.19327585916523,
+          35.0,
+          1700
+        ],
+        [
+          -59.086513719172636,
+          40.0,
+          1750
+        ],
+        [
+          -53.41685437254553,
+          45,
+          1800
+        ],
+        [
+          -48.21953143073205,
+          45,
+          1850
+        ],
+        [
+          -43.52799465587484,
+          45,
+          1900
+        ],
+        [
+          -39.373761911186094,
+          45,
+          1950
+        ],
+        [
+          -35.78627941884534,
+          45,
+          2000
+        ],
+        [
+          -32.79279088166114,
+          45,
+          2050
+        ],
+        [
+          -30.418215982265597,
+          45,
+          2100
+        ],
+        [
+          -28.685038729782043,
+          45,
+          2150
+        ],
+        [
+          -27.61320607899004,
+          45,
+          2200
+        ],
+        [
+          -27.220037201249156,
+          45,
+          2250
+        ],
+        [
+          -27.52014374007943,
+          45,
+          2300
+        ],
+        [
+          -28.525361337543494,
+          45,
+          2350
+        ],
+        [
+          -30.24469267065079,
+          45,
+          2400
+        ],
+        [
+          -32.68426219008615,
+          45,
+          2450
+        ],
+        [
+          -35.847282706839145,
+          45,
+          2500
+        ],
+        [
+          -39.73403392591635,
+          45,
+          2550
+        ],
+        [
+          -44.341852980407666,
+          45,
+          2600
+        ],
+        [
+          -49.665136973859006,
+          45,
+          2650
+        ],
+        [
+          -55.69535749428469,
+          45,
+          2700
+        ],
+        [
+          -62.42108701932371,
+          45,
+          2750
+        ],
+        [
+          -69.82803708906987,
+          45,
+          2800
+        ],
+        [
+          -77.89910808105856,
+          45,
+          2850
+        ],
+        [
+          -86.61445038081051,
+          45,
+          2900
+        ],
+        [
+          -95.95153670126615,
+          45,
+          2950
+        ],
+        [
+          -105.88524526541842,
+          45,
+          3000
+        ],
+        [
+          -116.38795352850315,
+          45,
+          3050
+        ],
+        [
+          -127.42964207925083,
+          45,
+          3100
+        ],
+        [
+          -138.9780083239803,
+          45,
+          3150
+        ],
+        [
+          -150.99858952273235,
+          45,
+          3200
+        ],
+        [
+          -163.45489471324922,
+          50.0,
+          3250
+        ],
+        [
+          -176.3085450264208,
+          55.0,
+          3300
+        ],
+        [
+          -189.5194218658958,
+          60.0,
+          3350
+        ],
+        [
+          -203.04582239493828,
+          65,
+          3400
+        ],
+        [
+          -216.84462174535764,
+          65,
+          3450
+        ],
+        [
+          -230.8714413365253,
+          65,
+          3500
+        ],
+        [
+          -245.08082266719083,
+          65,
+          3550
+        ],
+        [
+          -259.42640591911623,
+          65,
+          3600
+        ],
+        [
+          -273.86111268956176,
+          65,
+          3650
+        ],
+        [
+          -288.33733214949507,
+          65,
+          3700
+        ],
+        [
+          -302.80710990617064,
+          65,
+          3750
+        ],
+        [
+          -317.22233883258207,
+          65,
+          3800
+        ],
+        [
+          -331.53495111235435,
+          65,
+          3850
+        ],
+        [
+          -345.697110737061,
+          65,
+          3900
+        ],
+        [
+          -359.661405683872,
+          65,
+          3950
+        ],
+        [
+          -373.3810389950141,
+          65,
+          4000
+        ],
+        [
+          -386.8100179768875,
+          65,
+          4050
+        ],
+        [
+          -399.9033407359978,
+          65,
+          4100
+        ],
+        [
+          -412.61717927124846,
+          65,
+          4150
+        ],
+        [
+          -424.9090583477327,
+          65,
+          4200
+        ],
+        [
+          -436.7380293860835,
+          65,
+          4250
+        ],
+        [
+          -448.06483861378047,
+          65,
+          4300
+        ],
+        [
+          -458.85208874066416,
+          65,
+          4350
+        ],
+        [
+          -469.064393440336,
+          65,
+          4400
+        ],
+        [
+          -478.66852394215925,
+          65,
+          4450
+        ],
+        [
+          -487.6335470652563,
+          65,
+          4500
+        ],
+        [
+          -495.9309540561951,
+          65,
+          4550
+        ],
+        [
+          -503.5347796259483,
+          65,
+          4600
+        ],
+        [
+          -510.4217106191217,
+          65,
+          4650
+        ],
+        [
+          -516.5711837892833,
+          65,
+          4700
+        ],
+        [
+          -521.9654721983684,
+          65,
+          4750
+        ],
+        [
+          -526.5897598053991,
+          65,
+          4800
+        ],
+        [
+          -530.4322038600029,
+          65,
+          4850
+        ],
+        [
+          -533.4839847691486,
+          65,
+          4900
+        ],
+        [
+          -535.7393431609772,
+          65,
+          4950
+        ],
+        [
+          -537.1956039272321,
+          65,
+          5000
+        ],
+        [
+          -537.85318708534,
+          65,
+          5050
+        ],
+        [
+          -537.7156053623141,
+          65,
+          5100
+        ],
+        [
+          -536.7894484649871,
+          65,
+          5150
+        ],
+        [
+          -535.0843540642915,
+          65,
+          5200
+        ],
+        [
+          -532.6129655849827,
+          65,
+          5250
+        ],
+        [
+          -529.3908769559772,
+          65,
+          5300
+        ],
+        [
+          -525.4365645399298,
+          65,
+          5350
+        ],
+        [
+          -520.771306523422,
+          65,
+          5400
+        ],
+        [
+          -515.4190901107518,
+          65,
+          5450
+        ],
+        [
+          -509.4065069244154,
+          65,
+          5500
+        ],
+        [
+          -502.76263707356156,
+          65,
+          5550
+        ],
+        [
+          -495.518922407592,
+          65,
+          5600
+        ],
+        [
+          -487.70902952531566,
+          70.0,
+          5650
+        ],
+        [
+          -479.36870316029933,
+          75.0,
+          5700
+        ],
+        [
+          -470.53561060996,
+          80.0,
+          5750
+        ],
+        [
+          -461.2491779192246,
+          85,
+          5800
+        ],
+        [
+          -451.55041856896804,
+          85,
+          5850
+        ],
+        [
+          -441.4817554547015,
+          85,
+          5900
+        ],
+        [
+          -431.0868369718975,
+          85,
+          5950
+        ],
+        [
+          -420.4103480507651,
+          85,
+          6000
+        ],
+        [
+          -409.49781700505656,
+          85,
+          6050
+        ],
+        [
+          -398.39541907655223,
+          85,
+          6100
+        ],
+        [
+          -387.14977756911185,
+          85,
+          6150
+        ],
+        [
+          -375.80776347364076,
+          85,
+          6200
+        ],
+        [
+          -364.41629448797084,
+          85,
+          6250
+        ],
+        [
+          -353.02213433356684,
+          85,
+          6300
+        ],
+        [
+          -336.0232658606717,
+          85,
+          6350
+        ],
+        [
+          -320.3651828006904,
+          85,
+          6400
+        ],
+        [
+          -306.0705504247863,
+          85,
+          6450
+        ],
+        [
+          -293.1512806415952,
+          85,
+          6500
+        ],
+        [
+          -281.6086576286755,
+          85,
+          6550
+        ],
+        [
+          -271.43352909389426,
+          85,
+          6600
+        ],
+        [
+          -262.60656152928743,
+          85,
+          6650
+        ]
+      ],
+      "color": [
+        44,
+        224,
+        255
+      ]
+    },
+    {
+      "name": "RIFT_EDGE_CYAN",
+      "points": [
+        [
+          251.60671088571,
+          25,
+          0
+        ],
+        [
+          253.279624945045,
+          25,
+          50
+        ],
+        [
+          255.4159216097602,
+          25,
+          100
+        ],
+        [
+          258.00545823661935,
+          25,
+          150
+        ],
+        [
+          261.03588422707196,
+          25,
+          200
+        ],
+        [
+          264.4926976477198,
+          25,
+          250
+        ],
+        [
+          268.359310531658,
+          25,
+          300
+        ],
+        [
+          272.6171225502426,
+          25,
+          350
+        ],
+        [
+          277.2456027181022,
+          25,
+          400
+        ],
+        [
+          282.2223787692538,
+          25,
+          450
+        ],
+        [
+          287.5233338189434,
+          25,
+          500
+        ],
+        [
+          293.1227099042973,
+          25,
+          550
+        ],
+        [
+          298.9932179769635,
+          25,
+          600
+        ],
+        [
+          305.10615390259795,
+          25,
+          650
+        ],
+        [
+          311.431520005255,
+          25,
+          700
+        ],
+        [
+          317.9381516793991,
+          25,
+          750
+        ],
+        [
+          324.5938485783209,
+          25,
+          800
+        ],
+        [
+          331.36550987515733,
+          25,
+          850
+        ],
+        [
+          338.2192730814295,
+          25,
+          900
+        ],
+        [
+          345.12065589799363,
+          25,
+          950
+        ],
+        [
+          352.0347005645081,
+          25,
+          1000
+        ],
+        [
+          358.9261201659433,
+          25,
+          1050
+        ],
+        [
+          365.75944634828585,
+          25,
+          1100
+        ],
+        [
+          372.4991778904224,
+          25,
+          1150
+        ],
+        [
+          379.10992957525167,
+          25,
+          1200
+        ],
+        [
+          385.55658080038114,
+          25,
+          1250
+        ],
+        [
+          391.8044233673849,
+          25,
+          1300
+        ],
+        [
+          397.8193078885554,
+          25,
+          1350
+        ],
+        [
+          403.56778825146597,
+          25,
+          1400
+        ],
+        [
+          409.0172635845186,
+          25,
+          1450
+        ],
+        [
+          414.1361171710963,
+          25,
+          1500
+        ],
+        [
+          418.89385176601746,
+          25,
+          1550
+        ],
+        [
+          423.2612207758316,
+          25,
+          1600
+        ],
+        [
+          427.21035477416245,
+          30.0,
+          1650
+        ],
+        [
+          430.7148828348959,
+          35.0,
+          1700
+        ],
+        [
+          433.7500481796198,
+          40.0,
+          1750
+        ],
+        [
+          436.2928176514136,
+          45,
+          1800
+        ],
+        [
+          438.3219845449452,
+          45,
+          1850
+        ],
+        [
+          439.8182643429048,
+          45,
+          1900
+        ],
+        [
+          440.764382931147,
+          45,
+          1950
+        ],
+        [
+          441.14515688954464,
+          45,
+          2000
+        ],
+        [
+          440.94756548249387,
+          45,
+          2050
+        ],
+        [
+          440.1608140022377,
+          45,
+          2100
+        ],
+        [
+          438.7763881496652,
+          45,
+          2150
+        ],
+        [
+          436.7880991709381,
+          45,
+          2200
+        ],
+        [
+          434.1921195041152,
+          45,
+          2250
+        ],
+        [
+          430.9870087277836,
+          45,
+          2300
+        ],
+        [
+          427.1737296434335,
+          45,
+          2350
+        ],
+        [
+          422.7556543647812,
+          45,
+          2400
+        ],
+        [
+          417.73856033025385,
+          45,
+          2450
+        ],
+        [
+          412.13061619922,
+          45,
+          2500
+        ],
+        [
+          405.9423576380383,
+          45,
+          2550
+        ],
+        [
+          399.186653048358,
+          45,
+          2600
+        ],
+        [
+          391.8786593370783,
+          45,
+          2650
+        ],
+        [
+          384.0357678746681,
+          45,
+          2700
+        ],
+        [
+          375.6775408358743,
+          45,
+          2750
+        ],
+        [
+          366.82563816388534,
+          45,
+          2800
+        ],
+        [
+          357.5037354454682,
+          45,
+          2850
+        ],
+        [
+          347.73743303011844,
+          45,
+          2900
+        ],
+        [
+          337.55415677055475,
+          45,
+          2950
+        ],
+        [
+          326.9830508046142,
+          45,
+          3000
+        ],
+        [
+          316.0548628394585,
+          45,
+          3050
+        ],
+        [
+          304.80182243767666,
+          45,
+          3100
+        ],
+        [
+          293.2575128410734,
+          45,
+          3150
+        ],
+        [
+          281.4567369014001,
+          45,
+          3200
+        ],
+        [
+          269.4353777177394,
+          50.0,
+          3250
+        ],
+        [
+          257.2302546074924,
+          55.0,
+          3300
+        ],
+        [
+          244.87897506170506,
+          60.0,
+          3350
+        ],
+        [
+          232.41978335564716,
+          65,
+          3400
+        ],
+        [
+          219.89140650195952,
+          65,
+          3450
+        ],
+        [
+          207.3328982462106,
+          65,
+          3500
+        ],
+        [
+          194.78348181325117,
+          65,
+          3550
+        ],
+        [
+          182.2823921172872,
+          65,
+          3600
+        ],
+        [
+          169.86871814908545,
+          65,
+          3650
+        ],
+        [
+          157.58124625019758,
+          65,
+          3700
+        ],
+        [
+          145.4583049766015,
+          65,
+          3750
+        ],
+        [
+          133.53761224278065,
+          65,
+          3800
+        ],
+        [
+          121.85612542212915,
+          65,
+          3850
+        ],
+        [
+          110.44989506081987,
+          65,
+          3900
+        ],
+        [
+          99.3539228400823,
+          65,
+          3950
+        ],
+        [
+          88.60202439641618,
+          65,
+          4000
+        ],
+        [
+          78.22669758083372,
+          65,
+          4050
+        ],
+        [
+          68.25899670703231,
+          65,
+          4100
+        ],
+        [
+          58.728413304711445,
+          65,
+          4150
+        ],
+        [
+          49.66276385834352,
+          65,
+          4200
+        ],
+        [
+          41.08808497387567,
+          65,
+          4250
+        ],
+        [
+          33.02853637638401,
+          65,
+          4300
+        ],
+        [
+          25.506312100909163,
+          65,
+          4350
+        ],
+        [
+          18.54156019689269,
+          65,
+          4400
+        ],
+        [
+          12.15231122409048,
+          65,
+          4450
+        ],
+        [
+          6.354415774866538,
+          65,
+          4500
+        ],
+        [
+          1.1614912146385463,
+          65,
+          4550
+        ],
+        [
+          -3.415122210755283,
+          65,
+          4600
+        ],
+        [
+          -7.366395794641417,
+          65,
+          4650
+        ],
+        [
+          -10.685637251933844,
+          65,
+          4700
+        ],
+        [
+          -13.368506041476047,
+          65,
+          4750
+        ],
+        [
+          -15.413019145535747,
+          65,
+          4800
+        ],
+        [
+          -16.81954736264233,
+          65,
+          4850
+        ],
+        [
+          -17.590802207538093,
+          65,
+          4900
+        ],
+        [
+          -17.731813548123494,
+          65,
+          4950
+        ],
+        [
+          -17.24989814377184,
+          65,
+          5000
+        ],
+        [
+          -16.154619282215357,
+          65,
+          5050
+        ],
+        [
+          -14.457737743288481,
+          65,
+          5100
+        ],
+        [
+          -12.173154347120857,
+          65,
+          5150
+        ],
+        [
+          -9.31684437188209,
+          65,
+          5200
+        ],
+        [
+          -5.9067841518995365,
+          65,
+          5250
+        ],
+        [
+          -1.9628701909082125,
+          65,
+          5300
+        ],
+        [
+          2.4931688526064915,
+          65,
+          5350
+        ],
+        [
+          7.437866930520709,
+          65,
+          5400
+        ],
+        [
+          12.846121724319284,
+          65,
+          5450
+        ],
+        [
+          18.691301704891647,
+          65,
+          5500
+        ],
+        [
+          24.94535870351209,
+          65,
+          5550
+        ],
+        [
+          31.578945550320405,
+          65,
+          5600
+        ],
+        [
+          38.56153832365562,
+          70.0,
+          5650
+        ],
+        [
+          45.861562741934655,
+          75.0,
+          5700
+        ],
+        [
+          53.446524219350536,
+          80.0,
+          5750
+        ],
+        [
+          61.28314109741036,
+          85,
+          5800
+        ],
+        [
+          69.33748055622739,
+          85,
+          5850
+        ],
+        [
+          77.57509670244683,
+          85,
+          5900
+        ],
+        [
+          85.96117032473411,
+          85,
+          5950
+        ],
+        [
+          94.46064980282851,
+          85,
+          6000
+        ],
+        [
+          103.03839265231366,
+          85,
+          6050
+        ],
+        [
+          111.65930718443299,
+          85,
+          6100
+        ],
+        [
+          120.28849375856817,
+          85,
+          6150
+        ],
+        [
+          128.89138510438463,
+          85,
+          6200
+        ],
+        [
+          137.43388519122243,
+          85,
+          6250
+        ],
+        [
+          145.88250612411633,
+          85,
+          6300
+        ],
+        [
+          158.97091907398817,
+          85,
+          6350
+        ],
+        [
+          170.99378049207579,
+          85,
+          6400
+        ],
+        [
+          181.951781715299,
+          85,
+          6450
+        ],
+        [
+          191.8533495410888,
+          85,
+          6500
+        ],
+        [
+          200.7144197477386,
+          85,
+          6550
+        ],
+        [
+          208.55816750161935,
+          85,
+          6600
+        ],
+        [
+          215.4146963028388,
+          85,
+          6650
+        ]
+      ],
+      "color": [
+        44,
+        224,
+        255
+      ]
+    },
+    {
+      "name": "COASTLINE_GREEN",
+      "points": [
+        [
+          -252.27427726117875,
+          25,
+          25.918097105484925
+        ],
+        [
+          -299.5886819407724,
+          25,
+          24.05242735828543
+        ],
+        [
+          -346.79049242742786,
+          25,
+          18.80408055672569
+        ],
+        [
+          -393.87294593768837,
+          25,
+          11.559153102937488
+        ],
+        [
+          -440.8727984393035,
+          25,
+          3.8916290208993285
+        ],
+        [
+          -487.8701138533066,
+          25,
+          -2.6834556949896857
+        ],
+        [
+          -534.9733506365482,
+          25,
+          -6.945656678830758
+        ],
+        [
+          -582.2812438769591,
+          25,
+          -8.15782658046534
+        ],
+        [
+          -629.8653921730082,
+          25,
+          -6.179276597021282
+        ],
+        [
+          -677.7511127628994,
+          25,
+          -1.4862549345665172
+        ],
+        [
+          -725.9019980447194,
+          25,
+          4.90333896557248
+        ],
+        [
+          -774.2166469469877,
+          25,
+          11.589562028946363
+        ],
+        [
+          -822.553440120613,
+          25,
+          17.01012194176129
+        ],
+        [
+          -870.7452268645526,
+          25,
+          19.68679638121449
+        ],
+        [
+          -918.6165224172,
+          25,
+          18.4611344884246
+        ],
+        [
+          -966.0015055752701,
+          25,
+          12.683581274142725
+        ],
+        [
+          -1012.7663203213963,
+          25,
+          2.327174187721994
+        ],
+        [
+          -1058.853353085864,
+          25,
+          -11.991664033346517
+        ],
+        [
+          -1104.3273350770987,
+          25,
+          -29.088689965357112
+        ],
+        [
+          -1149.343377836113,
+          25,
+          -47.37266525196789
+        ],
+        [
+          -1194.1553543640096,
+          25,
+          -65.06746858885468
+        ],
+        [
+          -1239.0895429913605,
+          25,
+          -80.46225853817401
+        ],
+        [
+          -1284.4977245391472,
+          25,
+          -92.15220930324969
+        ],
+        [
+          -1330.6981562144065,
+          25,
+          -99.23375852901731
+        ],
+        [
+          -1377.9166023918528,
+          25,
+          -101.42516847902792
+        ],
+        [
+          -1426.2402973415365,
+          25,
+          -99.0944724343602
+        ],
+        [
+          -1475.595309041496,
+          25,
+          -93.19085342020263
+        ],
+        [
+          -1525.7532089796816,
+          25,
+          -85.09007015771603
+        ],
+        [
+          -1576.3668299115693,
+          25,
+          -76.37750374527042
+        ],
+        [
+          -1627.0283693176134,
+          25,
+          -68.6017896295673
+        ],
+        [
+          -1677.338561034704,
+          25,
+          -63.0364039649991
+        ],
+        [
+          -1726.9752282209238,
+          25,
+          -60.48532640595393
+        ],
+        [
+          -1775.752673592939,
+          25,
+          -61.1621920823726
+        ],
+        [
+          -1823.6666047467645,
+          25,
+          -64.66118910752945
+        ],
+        [
+          -1870.9194573100976,
+          25,
+          -70.0240418967233
+        ],
+        [
+          -1917.9186216529017,
+          25,
+          -75.89284946350386
+        ],
+        [
+          -1965.239372509355,
+          25,
+          -80.72552533906467
+        ],
+        [
+          -2013.5490982575243,
+          25,
+          -83.0410813186442
+        ],
+        [
+          -2063.4994274916216,
+          25,
+          -81.65744846682344
+        ],
+        [
+          -2115.603830777069,
+          25,
+          -75.88562406247242
+        ],
+        [
+          -2170.1257493437283,
+          25,
+          -65.65050747070337
+        ],
+        [
+          -2227.0040538749945,
+          25,
+          -51.51984794336791
+        ],
+        [
+          -2285.837672592038,
+          25,
+          -34.63660149440118
+        ],
+        [
+          -2345.9384066510434,
+          25,
+          -16.564585161060407
+        ],
+        [
+          -2406.4413111715603,
+          25,
+          0.9295804720460055
+        ],
+        [
+          -2466.416411190599,
+          25,
+          16.12561633826492
+        ],
+        [
+          -2525.0546542444467,
+          25,
+          27.592485762008458
+        ],
+        [
+          -2581.7678067982692,
+          25,
+          34.38864918728768
+        ],
+        [
+          -2636.2046277333734,
+          25,
+          36.18969779657743
+        ],
+        [
+          -2688.2796637372467,
+          25,
+          33.32434397127362
+        ]
+      ],
+      "color": [
+        88,
+        255,
+        148
+      ]
+    },
+    {
+      "name": "COASTLINE_GREEN",
+      "points": [
+        [
+          252.4155016308176,
+          25,
+          25.918097105484925
+        ],
+        [
+          299.7103083325027,
+          25,
+          24.05242735828543
+        ],
+        [
+          346.86483371523406,
+          25,
+          18.80408055672569
+        ],
+        [
+          393.9010386344558,
+          25,
+          11.559153102937488
+        ],
+        [
+          440.875982729407,
+          25,
+          3.8916290208993285
+        ],
+        [
+          487.8701138533066,
+          25,
+          -2.6834556949896857
+        ],
+        [
+          534.9733506365482,
+          25,
+          -6.945656678830758
+        ],
+        [
+          582.2812438769591,
+          25,
+          -8.15782658046534
+        ],
+        [
+          629.8653921730082,
+          25,
+          -6.179276597021282
+        ],
+        [
+          677.7511127628994,
+          25,
+          -1.4862549345665172
+        ],
+        [
+          725.9070531821399,
+          25,
+          4.90333896557248
+        ],
+        [
+          774.2448876431339,
+          25,
+          11.589562028946363
+        ],
+        [
+          822.6142739649886,
+          25,
+          17.01012194176129
+        ],
+        [
+          870.826711096236,
+          25,
+          19.68679638121449
+        ],
+        [
+          918.6881769301222,
+          25,
+          18.4611344884246
+        ],
+        [
+          966.0353294430324,
+          25,
+          12.683581274142725
+        ],
+        [
+          1012.767459018535,
+          25,
+          2.327174187721994
+        ],
+        [
+          1058.853353085864,
+          25,
+          -11.991664033346517
+        ],
+        [
+          1104.3273350770987,
+          25,
+          -29.088689965357112
+        ],
+        [
+          1149.343377836113,
+          25,
+          -47.37266525196789
+        ],
+        [
+          1194.1553543640096,
+          25,
+          -65.06746858885468
+        ],
+        [
+          1239.0895429913605,
+          25,
+          -80.46225853817401
+        ],
+        [
+          1284.4977245391472,
+          25,
+          -92.15220930324969
+        ],
+        [
+          1330.6981562144065,
+          25,
+          -99.23375852901731
+        ],
+        [
+          1377.9166023918528,
+          25,
+          -101.42516847902792
+        ],
+        [
+          1426.2402973415365,
+          25,
+          -99.0944724343602
+        ],
+        [
+          1475.595309041496,
+          25,
+          -93.19085342020263
+        ],
+        [
+          1525.7532089796816,
+          25,
+          -85.09007015771603
+        ],
+        [
+          1576.3668299115693,
+          25,
+          -76.37750374527042
+        ],
+        [
+          1627.0283693176134,
+          25,
+          -68.6017896295673
+        ],
+        [
+          1677.338561034704,
+          25,
+          -63.0364039649991
+        ],
+        [
+          1726.9752282209238,
+          25,
+          -60.48532640595393
+        ],
+        [
+          1775.752673592939,
+          25,
+          -61.1621920823726
+        ],
+        [
+          1823.6666047467645,
+          25,
+          -64.66118910752945
+        ],
+        [
+          1870.9194573100976,
+          25,
+          -70.0240418967233
+        ],
+        [
+          1917.9186216529017,
+          25,
+          -75.89284946350386
+        ],
+        [
+          1965.239372509355,
+          25,
+          -80.72552533906467
+        ],
+        [
+          2013.5490982575243,
+          25,
+          -83.0410813186442
+        ],
+        [
+          2063.4994274916216,
+          25,
+          -81.65744846682344
+        ],
+        [
+          2115.603830777069,
+          25,
+          -75.88562406247242
+        ],
+        [
+          2170.1257493437283,
+          25,
+          -65.65050747070337
+        ],
+        [
+          2227.0040538749945,
+          25,
+          -51.51984794336791
+        ],
+        [
+          2285.837672592038,
+          25,
+          -34.63660149440118
+        ],
+        [
+          2345.9384066510434,
+          25,
+          -16.564585161060407
+        ],
+        [
+          2406.441492858936,
+          25,
+          0.9295804720460055
+        ],
+        [
+          2466.4710832108863,
+          25,
+          16.12561633826492
+        ],
+        [
+          2525.214712747274,
+          25,
+          27.592485762008458
+        ],
+        [
+          2582.016404780498,
+          25,
+          34.38864918728768
+        ],
+        [
+          2636.4799417402915,
+          25,
+          36.18969779657743
+        ],
+        [
+          2688.513114700084,
+          25,
+          33.32434397127362
+        ]
+      ],
+      "color": [
+        88,
+        255,
+        148
+      ]
+    },
+    {
+      "name": "RIFT_DEPTH_GUIDE",
+      "points": [
+        [
+          201.73343249385206,
+          45,
+          2300
+        ],
+        [
+          201.73343249385206,
+          -880,
+          2300
+        ]
+      ],
+      "color": [
+        237,
+        175,
+        63
+      ]
+    },
+    {
+      "name": "RIFT_DEPTH_GUIDE",
+      "points": [
+        [
+          -11.769271545157356,
+          65,
+          3500
+        ],
+        [
+          -11.769271545157356,
+          -880,
+          3500
+        ]
+      ],
+      "color": [
+        237,
+        175,
+        63
+      ]
+    },
+    {
+      "name": "RIFT_DEPTH_GUIDE",
+      "points": [
+        [
+          -263.6284105206086,
+          65,
+          4700
+        ],
+        [
+          -263.6284105206086,
+          -880,
+          4700
+        ]
+      ],
+      "color": [
+        237,
+        175,
+        63
+      ]
+    },
+    {
+      "name": "RIFT_DEPTH_GUIDE",
+      "points": [
+        [
+          -143.36805594605963,
+          85,
+          6100
+        ],
+        [
+          -143.36805594605963,
+          -880,
+          6100
+        ]
+      ],
+      "color": [
+        237,
+        175,
+        63
+      ]
+    }
+  ],
+  "pillars": [
+    {
+      "x": -2018.8978791621073,
+      "z": 1550,
+      "radius": 220,
+      "ground": 20,
+      "footprint": [
+        [
+          -1798.8978791621073,
+          1550.0
+        ],
+        [
+          -1835.2872776585214,
+          1704.0675880018975
+        ],
+        [
+          -1985.25066955873,
+          1740.8228081045004
+        ],
+        [
+          -2136.5332840520314,
+          1753.750498038285
+        ],
+        [
+          -2231.159683133736,
+          1627.2569785173205
+        ],
+        [
+          -2203.912138697097,
+          1482.6603166144619
+        ],
+        [
+          -2141.3546619987696,
+          1337.8986303954728
+        ],
+        [
+          -1982.446814616164,
+          1343.2757403348794
+        ],
+        [
+          -1859.1565713868424,
+          1415.9611275619986
+        ]
+      ]
+    },
+    {
+      "x": -1970.028111918433,
+      "z": 3350,
+      "radius": 220,
+      "ground": 50,
+      "footprint": [
+        [
+          -1727.8132779195046,
+          3350.0
+        ],
+        [
+          -1804.6885160402617,
+          3488.736393920374
+        ],
+        [
+          -1934.7194359857237,
+          3550.245451891948
+        ],
+        [
+          -2093.214137630718,
+          3563.364455316164
+        ],
+        [
+          -2159.3980775950013,
+          3418.9250307702832
+        ],
+        [
+          -2175.115182476344,
+          3275.354410884068
+        ],
+        [
+          -2090.4330392077873,
+          3141.4525484532023
+        ],
+        [
+          -1936.3367737354376,
+          3158.9269262841854
+        ],
+        [
+          -1790.9200755907384,
+          3199.7105127765444
+        ]
+      ]
+    },
+    {
+      "x": -2657.917816905014,
+      "z": 5700,
+      "radius": 220,
+      "ground": 70,
+      "footprint": [
+        [
+          -2413.9123648368163,
+          5700.0
+        ],
+        [
+          -2507.916188394135,
+          5825.866311159471
+        ],
+        [
+          -2618.2870150411813,
+          5924.757446107225
+        ],
+        [
+          -2774.5312922102585,
+          5901.980464075861
+        ],
+        [
+          -2840.358864793749,
+          5766.403110939835
+        ],
+        [
+          -2884.59038524831,
+          5617.497932198369
+        ],
+        [
+          -2766.704646482009,
+          5511.575683978309
+        ],
+        [
+          -2622.8385726148235,
+          5501.055719611113
+        ],
+        [
+          -2469.1686544196427,
+          5541.620647373505
+        ]
+      ]
+    },
+    {
+      "x": 2352.031325934142,
+      "z": 1550,
+      "radius": 220,
+      "ground": 20,
+      "footprint": [
+        [
+          2575.7568941469226,
+          1550.0
+        ],
+        [
+          2503.7296817986794,
+          1677.290034456133
+        ],
+        [
+          2394.6711706823194,
+          1791.8225763116602
+        ],
+        [
+          2248.070799731976,
+          1730.0649133637467
+        ],
+        [
+          2154.185860266221,
+          1622.0098604876591
+        ],
+        [
+          2122.1061801602577,
+          1466.3140908289886
+        ],
+        [
+          2253.747210777418,
+          1379.7669189716034
+        ],
+        [
+          2391.3700743273725,
+          1326.8988714309562
+        ],
+        [
+          2531.8320052554004,
+          1399.1293162961076
+        ]
+      ]
+    },
+    {
+      "x": 2025.3876651142425,
+      "z": 3350,
+      "radius": 220,
+      "ground": 50,
+      "footprint": [
+        [
+          2225.4080792381133,
+          3350.0
+        ],
+        [
+          2194.257479749294,
+          3491.698599177247
+        ],
+        [
+          2066.956969549032,
+          3585.7512404951744
+        ],
+        [
+          1928.5274236578866,
+          3517.7668594357974
+        ],
+        [
+          1803.9671967651873,
+          3430.590459736338
+        ],
+        [
+          1813.53326695422,
+          3272.8913050713713
+        ],
+        [
+          1926.8347338834521,
+          3179.3013158734298
+        ],
+        [
+          2067.9413471777325,
+          3108.6660765555375
+        ],
+        [
+          2185.877446102639,
+          3215.333083964914
+        ]
+      ]
+    },
+    {
+      "x": 2224.4106764866497,
+      "z": 5700,
+      "radius": 220,
+      "ground": 70,
+      "footprint": [
+        [
+          2419.095075635543,
+          5700.0
+        ],
+        [
+          2410.1393213057,
+          5855.844837366722
+        ],
+        [
+          2261.8141072373974,
+          5912.125396808046
+        ],
+        [
+          2122.5700863681786,
+          5876.393076357989
+        ],
+        [
+          1992.919369297852,
+          5784.255945308096
+        ],
+        [
+          2035.3361889662767,
+          5631.182514483447
+        ],
+        [
+          2115.0645469462443,
+          5510.60694802501
+        ],
+        [
+          2266.178926597608,
+          5463.120482508475
+        ],
+        [
+          2372.981494843899,
+          5575.334281112726
+        ]
+      ]
+    }
+  ],
+  "typeCounts": {
+    "1": 1,
+    "2": 5,
+    "3": 3,
+    "4": 4,
+    "5": 6,
+    "6": 2,
+    "7": 5,
+    "8": 14,
+    "9": 7,
+    "10": 4,
+    "11": 2,
+    "12": 4,
+    "13": 6,
+    "14": 1,
+    "15": 5,
+    "16": 3,
+    "17": 1,
+    "18": 3,
+    "19": 5,
+    "20": 3,
+    "21": 1
+  },
+  "equalTypeNeighbourEdges": 0,
+  "sourcePlan": "00-glacier-layout.json",
+  "roadWidth": {
+    "main": 180,
+    "bridge": 220,
+    "local": 64
+  },
+  "terrainInstructions": "Cyan=rim; green=coast; amber=depth. Preserve native Terrain. Remove TerrainProxy after sculpting."
+}

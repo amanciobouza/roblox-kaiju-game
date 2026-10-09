@@ -205,7 +205,21 @@ RunService.Heartbeat:Connect(function()
 			-- sonst würde z.B. Village (Deckel 3) schon bei Level 1 "fertig" wirken, weil
 			-- es dort schlicht noch keine Military-/Titan-Aufgabe zu erledigen gibt.
 			if currentLevel == maxLevel and allApplicableTasksComplete then
-				triggerCityBroken(cityName)
+				-- ===== Beim ERSTEN Mal gehoert dieser Augenblick der Geschichte =====
+				-- In Mega City endet mit dem letzten Guardian das Kapitel. Statt der
+				-- Belohnung kommt dann die Falle (ChapterFinaleService). Beim zweiten Sieg
+				-- und bei jeder anderen Stadt laeuft CITY BROKEN wie immer.
+				--
+				-- Die Frage stellt der andere Dienst, weil sie am SPIELER haengt ("hat er
+				-- das Kapitel schon abgeschlossen?") und nicht an der Stadt. Hier steht
+				-- nur die Weiche.
+				if _G.ChapterFinaleDue and _G.ChapterFinaleDue(cityName) then
+					if _G.RunChapterFinale then
+						_G.RunChapterFinale(cityName)
+					end
+				else
+					triggerCityBroken(cityName)
+				end
 			end
 		end
 	end

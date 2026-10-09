@@ -332,7 +332,13 @@ local function reconcile(player, character)
 	-- einfliesst, erkennt der Abgleich einen Zonenwechsel von selbst als "muss neu gebaut
 	-- werden" -- ohne dass es hier eine eigene Fallunterscheidung braucht.
 	local imSanctuary = player:GetAttribute("CurrentZone") == "Sanctuary"
-	local worn = skin and StageModels.GetWorn(skin.Faction or "Kaiju", skin.Id, imSanctuary) or nil
+	-- Geliehene Groesse: der Prolog traegt ein frueheres Modell in der Groesse einer
+	-- spaeteren Stufe (siehe SkinsConfig.GetScale). Ausserhalb des Prologs ist das nil und
+	-- aendert nichts.
+	local scaleSkinId = player:GetAttribute("ScaleFromSkinId")
+	local worn = skin
+		and StageModels.GetWorn(skin.Faction or "Kaiju", skin.Id, imSanctuary, scaleSkinId)
+		or nil
 
 	-- ===== Der Notausgang fuer Vergleiche =====
 	-- Das Debug-Panel kann diesen Spieler auf den blanken Roblox-Avatar zuruecksetzen: kein
@@ -433,7 +439,22 @@ local function watchCharacter(player, character)
 	if humanoid then
 		-- Beim Tod abnehmen. Ohne das bliebe das Modell an der Leiche hängen, bis sie
 		-- entfernt wird -- sichtbar als ein Kaiju, der im Boden liegt.
+		--
+		-- ===== Ausser der Tod IST die Szene =====
+		-- Im Prolog fällt der Kaiju vor laufender Kamera, und dieser Fall ist eigens
+		-- geskriptet: BreakJointsOnDeath aus, Teile verankert, kontrolliertes Kippen über
+		-- 1.2 Sekunden (siehe PrologueOrchestrator, "The Fall"). Das Abnehmen hier lief
+		-- trotzdem mit -- und liess die ganze Sequenz am blanken Roblox-Avatar ablaufen.
+		--
+		-- IM SPIEL BESTAETIGT am 21.09.2026: "Wenn der Kaiju im Prolog stirbt, verschwindet
+		-- der Skin und man sieht den weissen Default-Roblox-Skin."
+		--
+		-- Die Begruendung oben bleibt fuer JEDEN anderen Tod gueltig. Sie gilt nur dort
+		-- nicht, wo die Leiche das ist, was der Spieler sehen soll.
 		humanoid.Died:Connect(function()
+			if player:GetAttribute("KeepModelOnDeath") == true then
+				return
+			end
 			uninstall(character)
 		end)
 	end
@@ -449,11 +470,41 @@ local function watchPlayer(player)
 	-- läuft SOFORT -- der Kollisionskörper muss weg sein, bevor applyZoneAwareScale die
 	-- Figur skaliert. Beide hängen am selben Attribut, und in welcher Reihenfolge Roblox
 	-- sie aufruft, ist nicht zugesichert.
+	--
+	-- ===== Aber nicht bei JEDEM Zonenwechsel =====
+	-- "CurrentZone" hat vier Werte (Sanctuary, PvE, PvP, None); für die Grösse zählt allein,
+	-- ob es Sanctuary ist -- hier bei der Signatur genauso wie in PlayerSetup.zielGroesse.
+	-- Ein Wechsel PvE -> None -> PvE ändert also nichts, was einen Neubau nötig machte, und
+	-- applyZoneAwareScale steigt bei gleicher Zielgrösse ohnehin sofort wieder aus.
+	--
+	-- Trotzdem lief die ganze Abfolge: abnehmen, verdecken, mehrere hundert Teile neu bauen.
+	-- Wer an einem Zonenrand entlanglief, sah den Kaiju dabei alle paar Sekunden kurz
+	-- verschwinden (gemeldet am 21.09.2026). Deshalb wird jetzt die Sanctuary-Zugehörigkeit
+	-- verglichen statt der Zone: nur ihr Wechsel ändert die Grösse, und nur er rechtfertigt
+	-- den Abriss.
+	local wasSanctuary = player:GetAttribute("CurrentZone") == "Sanctuary"
+
 	player:GetAttributeChangedSignal("CurrentZone"):Connect(function()
+		local isSanctuary = player:GetAttribute("CurrentZone") == "Sanctuary"
+		local changed = isSanctuary ~= wasSanctuary
+		-- Auch ohne Figur nachführen (etwa wenn der Spieler gerade tot ist), sonst gilt beim
+		-- nächsten Wechsel ein überholter Vergleichswert und es wird umsonst neu gebaut.
+		wasSanctuary = isSanctuary
+
+		if not changed then
+			return
+		end
+
 		local character = player.Character
 		if not character then
 			return
 		end
+
+		print(string.format(
+			"[Kaiju Debug] Zonenwechsel fuer %s: Sanctuary %s -- Kaiju-Modell wird neu gebaut.",
+			player.Name,
+			isSanctuary and "betreten" or "verlassen"
+		))
 		uninstall(character)
 
 		-- Jetzt haengt kein Modell und kein Kollisionskoerper mehr an der Figur -- genau

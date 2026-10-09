@@ -27,6 +27,15 @@ local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 
 local CityAlertConfig = require(ReplicatedStorage:WaitForChild("CityAlertConfig"))
+-- ===== Glaettung der Darstellung =====
+-- SmoothMotion.PivotTo setzt die Pose wie zuvor UND nennt dem Client sein Ziel, damit der
+-- die Schritte dazwischen glaetten kann. Die Bewegung bleibt serverseitig: an der Position
+-- der Einheiten haengen TankAttackRange und RocketLauncherAttackRange.
+--
+-- Es MUSS an jeder Stelle stehen, die die Pose setzt -- auch beim Rueckstoss-Wackeln nach
+-- einem Schuss. Eine Pose, die der Server setzt ohne sie zu melden, ueberschreibt der
+-- Client im naechsten Bild mit seinem alten Ziel; das Wackeln waere dann gar nicht zu sehen.
+local SmoothMotion = require(ReplicatedStorage:WaitForChild("SmoothMotion"))
 -- Refactoring: das Bodenfahrzeug-Abstandssystem lebt jetzt in einem eigenen Modul --
 -- gehörte konzeptionell nie wirklich hierher, da FireEngineController.lua es genauso
 -- mitnutzt. Vorher als _G-Funktionen direkt hier definiert.
@@ -715,6 +724,9 @@ local function spawnUnit(cityName, unitType, templateFolder, spawnPart, config)
 	end
 	model:PivotTo(spawnPart.CFrame)
 	model.Parent = Workspace
+	-- Ab jetzt glaettet der Client die Bewegung dieser Einheit (siehe SmoothMotion). Der
+	-- Spawn selbst bekommt kein Ziel mitgeteilt -- das setzt der erste Fahrschritt.
+	SmoothMotion.Track(model)
 
 	-- Bodenfahrzeuge sofort registrieren, damit andere Fahrzeuge sie von Anfang an als
 	-- Hindernis kennen -- Helikopter bewusst ausgenommen (fliegen, kein Bodenabstand nötig).
@@ -836,7 +848,7 @@ local function updateTank(cityName, unit, config)
 		newPosition = GroundVehicleSeparation.ApplySeparation(unit.Model, "Tank", newPosition)
 		GroundVehicleSeparation.RegisterPosition(unit.Model, "Tank", newPosition)
 		local facingCFrame = CFrame.lookAt(newPosition, newPosition + direction)
-		unit.Model:PivotTo(facingCFrame)
+		SmoothMotion.PivotTo(unit.Model, facingCFrame)
 
 		-- Staubwolke hinter dem Fahrzeug, gedrosselt.
 		if os.clock() - (unit.LastDustAt or 0) >= TANK_DUST_INTERVAL then
@@ -935,7 +947,7 @@ local function updateTank(cityName, unit, config)
 			facingCFrame = facingCFrame * shakeOffset
 			unit.TankShakeAmount = unit.TankShakeAmount * 0.6 -- klingt deutlich schneller ab als der Rückstoss
 		end
-		unit.Model:PivotTo(facingCFrame)
+		SmoothMotion.PivotTo(unit.Model, facingCFrame)
 	end
 end
 
@@ -967,7 +979,7 @@ local function updateRocketLauncher(cityName, unit, config)
 		-- 180°-Korrektur: das Modell ist mit umgekehrter Vorderseite aufgebaut, ohne
 		-- diese Korrektur zeigt es vom Ziel weg statt darauf.
 		local facingCFrame = CFrame.lookAt(currentPosition, currentPosition + horizontalToTarget.Unit) * CFrame.Angles(0, math.rad(180), 0)
-		unit.Model:PivotTo(facingCFrame)
+		SmoothMotion.PivotTo(unit.Model, facingCFrame)
 	end
 
 	if distance <= attackRange and os.clock() - unit.LastAttackAt >= ROCKET_LAUNCHER_ATTACK_COOLDOWN then
@@ -1160,7 +1172,7 @@ local function updateHelicopterUnit(cityName, unit, config)
 		local facingCFrame = facingDirection.Magnitude > 0.1
 			and CFrame.lookAt(newPosition, newPosition + facingDirection.Unit)
 			or CFrame.new(newPosition)
-		unit.Model:PivotTo(facingCFrame)
+		SmoothMotion.PivotTo(unit.Model, facingCFrame)
 		currentPosition = newPosition
 	end
 

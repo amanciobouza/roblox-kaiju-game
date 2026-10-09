@@ -499,6 +499,13 @@ _G.SetCityManuallyDriven = function(cityName, isManual)
 	manuallyDrivenCities[cityName] = isManual or nil
 end
 
+-- Gegenstueck zum Setzer. Wer eine Stadt von Hand steuert, besitzt auch ihre Folgen: die
+-- automatischen Auf- und Abbauten, die sonst an der Alarmstufe haengen, duerfen ihm nicht
+-- dazwischenfunken. Der CityDefenderService fragt das, bevor er einen Guardian abraeumt.
+_G.IsCityManuallyDriven = function(cityName)
+	return manuallyDrivenCities[cityName] == true
+end
+
 local function addCityAlert(instance, amount)
 	if not amount or amount <= 0 then
 		return
@@ -778,7 +785,10 @@ task.spawn(function()
 	-- Lebenspunkten gemessen, aber wie sie sich auf die Gebaeudetypen verteilen, weiss
 	-- ebenfalls nur Studio -- und ohne diese Aufteilung laesst sich nicht sagen, welcher
 	-- Typ zu weich ist, sondern nur, dass der Durchschnitt zu weich ist.
-	local BERICHT_BEIM_START = { "Village", "City" }
+	-- LargeCity dazu (06.10.2026): sie wird jetzt geeicht, und dafuer braucht es den
+	-- gezaehlten Bestand. Der Config sagt selbst, dass seine Schwellen "noch vom alten
+	-- Bestand" stammen -- am 04.10. sind Gebaeude dazugekommen (65 Instanzen statt 9).
+	local BERICHT_BEIM_START = { "Village", "City", "LargeCity" }
 	if #BERICHT_BEIM_START > 0 then
 		local werkzeuge = ServerScriptService:FindFirstChild("StudioTools")
 		local bericht = werkzeuge and werkzeuge:FindFirstChild("GebaeudeBericht")

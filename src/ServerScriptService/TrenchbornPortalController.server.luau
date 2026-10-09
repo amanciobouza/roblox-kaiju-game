@@ -47,8 +47,22 @@ local function teleport(player, character, humanoid, root, portal)
 	remote:FireClient(player, "BeginTeleport", portal)
 	local delayTime = portal:GetAttribute("TeleportDelay")
 	if typeof(delayTime) ~= "number" then delayTime = 1.35 end
-	task.wait(math.max(0.8, delayTime))
-	if character.Parent and humanoid.Parent and humanoid.Health > 0 and root.Parent then
+	-- Den Zielbereich waehrend der Portalblende anfordern, bevor die Figur springt.
+	-- Die Anfrage garantiert nach ihrem Timeout keine Vollstaendigkeit; die
+	-- Streaming-Schutzpause bleibt deshalb als Absicherung eingeschaltet.
+	local transitStart = os.clock()
+	if Workspace.StreamingEnabled then
+		local ok, err = pcall(function()
+			player:RequestStreamAroundAsync(destination.Position + Vector3.new(0, 4, 0), 5)
+		end)
+		if not ok then
+			warn("[TrenchbornPortal] Ziel-Vorladen fehlgeschlagen: " .. tostring(err))
+		end
+		print(string.format("[TrenchbornPortal] Ziel-Vorladen beendet (%.2fs)", os.clock() - transitStart))
+	end
+	task.wait(math.max(0, math.max(0.8, delayTime) - (os.clock() - transitStart)))
+	if player.Parent and player.Character == character and character.Parent
+		and humanoid.Parent and humanoid.Health > 0 and root.Parent then
 		destination = destinationFor(portal)
 		if destination then
 			character:PivotTo(destination.CFrame * CFrame.new(0, 4, 0))
