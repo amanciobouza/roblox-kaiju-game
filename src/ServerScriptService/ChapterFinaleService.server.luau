@@ -54,13 +54,19 @@ local SetPrologueLetterboxEvent = RemoteEventUtils.GetOrCreate("SetPrologueLette
 local TrenchOrbitCameraEvent = RemoteEventUtils.GetOrCreate("TrenchOrbitCameraEvent")
 local RestorePrologueCameraEvent = RemoteEventUtils.GetOrCreate("RestorePrologueCameraEvent")
 
--- ===== Toene, die noch fehlen =====
--- Leer heisst: der Schritt wird uebersprungen. Eine erfundene Asset-Nummer waere
--- schlimmer als Stille -- sie erzeugt bei jedem Durchlauf ein "Failed to load sound" und
--- verdeckt die Tonfehler, die echt sind.
-local TON_BEEP = ""
-local TON_THOOM = ""
-local TON_HERZSCHLAG = ""
+-- ===== Die drei Toene der Szene =====
+-- Eine leere Zeichenkette hiesse "Schritt ueberspringen" -- so lief die Sequenz, solange
+-- die Nummern fehlten. Eine ERFUNDENE Nummer waere dagegen schlimmer als Stille gewesen:
+-- sie erzeugt bei jedem Durchlauf ein "Failed to load sound" und verdeckt die Tonfehler,
+-- die echt sind.
+--
+-- Die Zeitabstaende zwischen den Toenen (siehe spieleSignal, spieleFalle, spieleRueckkehr)
+-- sind auf KURZE Toene gerechnet. Was die drei wirklich dauern, sagt beim ersten Lauf die
+-- Zeile "[Kaiju Debug] StoryBeat-Ton ...: Laenge x.xx s" -- passt es nicht, gehoeren die
+-- Wartezeiten angepasst und nicht die Toene.
+local TON_BEEP = "rbxassetid://9125937249" -- Signal des Guardians, zweimal
+local TON_THOOM = "rbxassetid://123087173903285" -- die erwachenden Tuerme, dreimal
+local TON_HERZSCHLAG = "rbxassetid://9116795681" -- Rueckkehr ins Sanctuary, zweimal
 
 -- Welche Stadt welches Kapitel beendet. Mehr als ein Eintrag wird es erst geben, wenn
 -- Kapitel II sein eigenes Finale bekommt -- die Form steht schon dafuer bereit.
@@ -259,7 +265,11 @@ local function spieleRueckkehr(player)
 end
 
 -- Die Spieler, fuer die in dieser Stadt gerade ein Finale faellig waere.
-local function faelligeSpieler(cityName)
+-- erzwingenFuer: EIN Spieler, fuer den die beiden Bedingungen unten nicht gelten. Nur der
+-- Debug-Knopf setzt das (siehe unten). Ohne diesen Weg waere der Knopf nach dem ersten
+-- Druck wertlos: das Finale schliesst das Kapitel ab, und ein abgeschlossenes Kapitel ist
+-- nie wieder faellig. Zum Pruefen einer Szene braucht man sie aber mehrmals.
+local function faelligeSpieler(cityName, erzwingenFuer)
 	local eintrag = FINALE_JE_STADT[cityName]
 	if not eintrag then
 		return nil
@@ -267,10 +277,12 @@ local function faelligeSpieler(cityName)
 
 	local offen = {}
 	for _, player in ipairs(Players:GetPlayers()) do
-		-- Nur wer tatsaechlich DA ist. Wer das Kapitel noch offen hat, aber in einer
-		-- anderen Stadt steht, hat den Kampf nicht gesehen -- ihm ein Finale zu zeigen,
-		-- waere eine Belohnung fuer Abwesenheit.
-		if player:GetAttribute("CurrentCityName") == cityName then
+		if player == erzwingenFuer then
+			table.insert(offen, player)
+		elseif player:GetAttribute("CurrentCityName") == cityName then
+			-- Nur wer tatsaechlich DA ist. Wer das Kapitel noch offen hat, aber in einer
+			-- anderen Stadt steht, hat den Kampf nicht gesehen -- ihm ein Finale zu zeigen,
+			-- waere eine Belohnung fuer Abwesenheit.
 			if not (_G.HasCompletedChapter and _G.HasCompletedChapter(player, eintrag.Kapitel)) then
 				table.insert(offen, player)
 			end
@@ -291,12 +303,12 @@ _G.ChapterFinaleDue = function(cityName)
 	return faelligeSpieler(cityName) ~= nil
 end
 
-_G.RunChapterFinale = function(cityName)
+_G.RunChapterFinale = function(cityName, erzwingenFuer)
 	if laeuft[cityName] then
 		return false
 	end
 
-	local offen, eintrag = faelligeSpieler(cityName)
+	local offen, eintrag = faelligeSpieler(cityName, erzwingenFuer)
 	if not offen then
 		return false
 	end
@@ -380,4 +392,51 @@ _G.RunChapterFinale = function(cityName)
 	return true
 end
 
-print("[Kaiju] ChapterFinaleService bereit -- Finale von Kapitel I in Mega City, einmalig.")
+-- ===== Debug: das Finale von Hand starten =====
+-- Der normale Ausloeser ist schwer herzustellen: Mega City auf Hoechststufe, alle Aufgaben
+-- erledigt, Kapitel noch offen -- und das genau einmal je Speicherstand. Eine Szene, die
+-- man nur so zu sehen bekommt, laesst sich nicht beurteilen.
+--
+-- Der Knopf umgeht deshalb beide Bedingungen (Standort und Kapitelabschluss) fuer den
+-- Spieler, der ihn drueckt. Was er NICHT umgeht, ist die Sperre gegen einen zweiten
+-- gleichzeitigen Durchlauf: zwei Vorstellungen uebereinander zeigen nur, dass sie sich
+-- ueberlagern. Gleiche Form wie der Prolog-Knopf (PrologueOrchestrator).
+local DebugStartChapterFinaleEvent = RemoteEventUtils.GetOrCreate("DebugStartChapterFinaleEvent")
+local DebugStartChapterFinaleResultEvent =
+	RemoteEventUtils.GetOrCreate("DebugStartChapterFinaleResultEvent")
+
+-- Welche Stadt der Knopf startet. Kapitel I spielt in Mega City (FINALE_JE_STADT oben);
+-- kommt Kapitel II dazu, braucht der Knopf eine Auswahl -- heute waere sie eine Liste mit
+-- einem Eintrag.
+local DEBUG_FINALE_CITY = "MegaCity"
+local DEBUG_COOLDOWN_SECONDS = 5
+
+DebugStartChapterFinaleEvent.OnServerEvent:Connect(function(player)
+	if not player:GetAttribute("DebugMode") then
+		DebugStartChapterFinaleResultEvent:FireClient(player, false, "Debug-Modus zuerst aktivieren!")
+		return
+	end
+
+	-- Gegen Doppelklicks, zusaetzlich zur Sperre am Knopf selbst.
+	local now = os.clock()
+	local letzter = player:GetAttribute("ChapterFinaleDebugLastStartAt")
+	if letzter and now - letzter < DEBUG_COOLDOWN_SECONDS then
+		DebugStartChapterFinaleResultEvent:FireClient(player, false, "Bitte kurz warten.")
+		return
+	end
+	player:SetAttribute("ChapterFinaleDebugLastStartAt", now)
+
+	local gestartet = _G.RunChapterFinale(DEBUG_FINALE_CITY, player)
+	if gestartet then
+		print(string.format("[Kaiju-Debug] Kapitelfinale von Hand gestartet fuer %s (%s).",
+			player.Name, DEBUG_FINALE_CITY))
+		DebugStartChapterFinaleResultEvent:FireClient(player, true, nil)
+	else
+		-- Der einzige Grund, aus dem es jetzt noch scheitern kann: es laeuft schon.
+		-- Standort und Kapitelabschluss sind oben ausdruecklich umgangen.
+		DebugStartChapterFinaleResultEvent:FireClient(player, false, "Laeuft bereits.")
+	end
+end)
+
+print("[Kaiju] ChapterFinaleService bereit -- Finale von Kapitel I in Mega City, einmalig. "
+	.. "Von Hand startbar ueber das Debug-Panel.")

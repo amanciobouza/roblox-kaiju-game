@@ -56,6 +56,8 @@ local DebugToggleSkipCollapseEvent = waitForRemote("DebugToggleSkipCollapseEvent
 local DebugStartPrologueEvent = waitForRemote("DebugStartPrologueEvent")
 local DebugRunSpecCheckEvent = waitForRemote("DebugRunSpecCheckEvent")
 local DebugStartPrologueResultEvent = waitForRemote("DebugStartPrologueResultEvent")
+local DebugStartChapterFinaleEvent = waitForRemote("DebugStartChapterFinaleEvent")
+local DebugStartChapterFinaleResultEvent = waitForRemote("DebugStartChapterFinaleResultEvent")
 local DebugRevealArchiveEvent = waitForRemote("DebugRevealArchiveEvent")
 local DebugSetSessionTimeEvent = waitForRemote("DebugSetSessionTimeEvent")
 local DebugSetScaleEvent = waitForRemote("DebugSetScaleEvent")
@@ -195,7 +197,7 @@ local ORDER = {
 	SchalterA = 100, -- Partikel | Einsturz ueberspringen
 	SchalterB = 110, -- Telemetrie | Archiv
 	SchalterC = 120, -- Prolog starten | Spec-Pruefung
-	SchalterD = 125, -- Blanker Avatar
+	SchalterD = 125, -- Blanker Avatar | Kapitelfinale starten
 
 	ShowdownKopf = 130,
 	ShowdownA = 140, -- erzwingen | Kurzdauer
@@ -1012,6 +1014,65 @@ plainAvatarButton.TextColor3 = Color3.new(1, 1, 1)
 plainAvatarButton.Text = "🧍 Avatar: OFF"
 plainAvatarButton.AutoButtonColor = true
 plainAvatarButton.Parent = schalterRowD
+
+-- ===== Kapitelfinale starten (Debug) =====
+-- Der echte Anlass ist kaum herzustellen: Mega City auf Hoechststufe, alle Aufgaben
+-- erledigt, Kapitel noch offen -- und das genau einmal je Speicherstand. Der Knopf umgeht
+-- Standort und Kapitelabschluss (siehe ChapterFinaleService).
+--
+-- Neben dem blanken Avatar statt beim Prolog-Knopf, weil die Reihe darueber voll ist. Die
+-- Sperrmechanik ist dieselbe wie dort: Knopf sperren, auf die Antwort des Servers warten,
+-- und ein Sicherheitsnetz, falls sie ausbleibt.
+local chapterFinaleButton = Instance.new("TextButton")
+chapterFinaleButton.Name = "ChapterFinaleButton"
+chapterFinaleButton.Size = halbeBreite()
+chapterFinaleButton.LayoutOrder = 2
+chapterFinaleButton.BackgroundColor3 = Color3.fromRGB(120, 70, 110)
+chapterFinaleButton.Font = Enum.Font.FredokaOne
+chapterFinaleButton.TextScaled = true
+chapterFinaleButton.TextColor3 = Color3.new(1, 1, 1)
+chapterFinaleButton.Text = "🎞️ Finale Kap. I"
+chapterFinaleButton.AutoButtonColor = true
+chapterFinaleButton.Parent = schalterRowD
+applyComicStyle(chapterFinaleButton, 10, 2)
+
+local chapterFinaleLocked = false
+
+local function unlockChapterFinaleButton()
+	chapterFinaleLocked = false
+	chapterFinaleButton.AutoButtonColor = true
+	chapterFinaleButton.BackgroundColor3 = Color3.fromRGB(120, 70, 110)
+	chapterFinaleButton.Text = "🎞️ Finale Kap. I"
+end
+
+if DebugStartChapterFinaleResultEvent then
+	DebugStartChapterFinaleResultEvent.OnClientEvent:Connect(function(success, errorMessage)
+		if success then
+			chapterFinaleButton.Text = "🎞️ Laeuft!"
+			-- Die Vorstellung dauert rund vierzig Sekunden; so lange braucht der Knopf
+			-- nicht wieder anzuspringen.
+			task.delay(45, unlockChapterFinaleButton)
+		else
+			chapterFinaleButton.Text = "⚠️ " .. tostring(errorMessage or "Fehlgeschlagen")
+			task.delay(2.5, unlockChapterFinaleButton)
+		end
+	end)
+end
+
+chapterFinaleButton.MouseButton1Click:Connect(function()
+	if chapterFinaleLocked then
+		return
+	end
+	if DebugStartChapterFinaleEvent then
+		chapterFinaleLocked = true
+		chapterFinaleButton.AutoButtonColor = false
+		chapterFinaleButton.BackgroundColor3 = Color3.fromRGB(80, 45, 75)
+		chapterFinaleButton.Text = "🎞️ Sende..."
+		DebugStartChapterFinaleEvent:FireServer()
+		-- Sicherheitsnetz, falls der Server nie antwortet.
+		task.delay(10, unlockChapterFinaleButton)
+	end
+end)
 
 -- ===== Schnellforschung =====
 --

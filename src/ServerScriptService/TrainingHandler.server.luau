@@ -60,13 +60,42 @@ end)
 -- Obergrenze * TRAINING_PROGRESS_RATIO, waechst also im selben Verhaeltnis mit.
 local STAT_CAP_SCALE = 2.1
 
+-- ===== Flachgelegt am 11.10.2026: der Faktor JE DEKADE ist das Spielgefuehl =====
+-- Amancio: "Zwischen Level 30 und 40 wird man so schnell so viel staerker, dass man am
+-- Ende nur noch durch die Stadt laeuft und alles gleich zerstoert wird. Es soll sich
+-- wieder so anfuehlen wie Village."
+--
+-- Nachgerechnet: entscheidend ist nicht der Schaden beim Eintritt in eine Stadt -- der war
+-- ueber BuildingConfig korrekt auf 15/45/89 Treffer geeicht -- sondern wie stark er
+-- INNERHALB der Dekade waechst. Die Gebaeude stehen waehrend dieser zehn Level still.
+--
+--   Dekade       Obergrenze          Faktor   L1-Haus am Dekadenende
+--   Village       9 ->     45          x5.2    2.9 Treffer
+--   Brasshaven   45 ->    182          x3.5    4.2 Treffer
+--   City        182 ->    364          x1.9    8.0 Treffer
+--   LargeCity   364 ->   6364         x17.5    1.1 Treffer   <- hier bricht es
+--   MegaCity   6364 ->  83333         x13.1    1.5 Treffer
+--
+-- Ein Grundhaus in LargeCity kostete bei Level 30 noch 15 Schlaege und bei Level 39 genau
+-- einen. Deshalb hier 1820 und 9100 statt 6364 und 83333: das sind 364*5 und 1820*5, also
+-- der Village-Faktor. Daraus werden x4.3 je Dekade und 3.5 Treffer am Dekadenende --
+-- zwischen Village und Brasshaven.
+--
+-- WICHTIG: diese zwei Zahlen sind der Ursprung der HP-Tabellen von LargeCity und MegaCity
+-- (BuildingConfig) und der Verteidiger-Werte beider Staedte (CityAlertConfig). Der
+-- Eintrittsschaden sinkt dadurch von 1779 auf 1569 und von 34568 auf 8978; beide Tabellen
+-- sind am 11.10.2026 mitgezogen worden, damit die Trefferzahlen gleich bleiben. Wer hier
+-- wieder dreht, zieht sie erneut mit -- sonst verschiebt sich lautlos jede Trefferzahl.
+--
+-- Die ersten vier Stuetzpunkte bleiben unangetastet: Village bis City sind gespielt und
+-- bestaetigt, City erst am 06.10.2026.
 local STAT_CAP_BREAKPOINTS = {
 	{ level = 0, cap = 9 },
 	{ level = 9, cap = 45 },
 	{ level = 19, cap = 182 },
 	{ level = 29, cap = 364 },
-	{ level = 39, cap = 6364 },
-	{ level = 49, cap = 83333 },
+	{ level = 39, cap = 1820 }, -- war 6364
+	{ level = 49, cap = 9100 }, -- war 83333
 }
 
 local TRAIN_CLICK_COOLDOWN = 0.6 -- Sekunden zwischen zwei zählenden Klicks (doppelt so lang wie vorher)

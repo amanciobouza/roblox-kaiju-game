@@ -82,7 +82,31 @@
       "Bash(awk -F: '{s+=$2} END {print s}')",
       "Bash(luau src/StarterPlayerScripts/KaijuTriumphClient.client.luau)",
       "Bash(awk 'NR>=1560 && NR<=1600' src/ServerScriptService/KaijuStageOneCombatAdapter.luau)",
-      "Bash(awk 'NR<=1624 && /^\\\\tlocal function |^\\\\tfunction /{l=NR\": \"$0} END{print l}' src/ServerScriptService/KaijuStageOneCombatAdapter.luau)"
+      "Bash(awk 'NR<=1624 && /^\\\\tlocal function |^\\\\tfunction /{l=NR\": \"$0} END{print l}' src/ServerScriptService/KaijuStageOneCombatAdapter.luau)",
+      "Bash(luau src/StarterPlayerScripts/DebugPanelClient.client.luau)",
+      "Bash(luau src/ServerScriptService/ChapterFinaleService.server.luau)",
+      "Bash(grep -rhoP 'rbxassetid://\\\\d+' src/ --include=*.luau)",
+      "Bash(luau src/ServerScriptService/ZoneManager.server.luau)",
+      "Bash(git -C packages/trenchborn-asset-workshop log --oneline -1)",
+      "Bash(git -C packages/trenchborn-asset-workshop log --oneline origin/game-integration -1)",
+      "Bash(git -C packages/trenchborn-asset-workshop show origin/feature/chapter1-collectibles-gate-b:collectibles-package.project.json)",
+      "Bash(git commit *)",
+      "Bash(python -c \"import json;d=json.load\\(open\\('default.project.json'\\)\\);print\\('JSON gueltig'\\);print\\(list\\(d['tree']['ReplicatedStorage'].keys\\(\\)\\)\\)\")",
+      "Bash(awk 'NR>=460 && NR<=470' src/StarterPlayerScripts/TalentCeremonyClient.client.luau)",
+      "Bash(awk 'NR<=465 && /^local function |^function /{l=NR\": \"$0} END{print l}' src/StarterPlayerScripts/TalentCeremonyClient.client.luau)",
+      "Bash(luau src/StarterPlayerScripts/TalentCeremonyClient.client.luau)",
+      "Bash(luau src/StarterPlayerScripts/CollectibleCeremonyClient.client.luau)",
+      "Bash(luau -e ' *)",
+      "Bash(luau src/ReplicatedStorage/CinematicCamera.luau)",
+      "Bash(luau src/ReplicatedStorage/CinematicFormat.luau)",
+      "Bash(luau src/ReplicatedStorage/CollectibleConfig.luau)",
+      "Bash(luau src/StarterPlayerScripts/NavigationClient.client.luau)",
+      "Bash(awk 'NR>=689 && NR<=845' src/ReplicatedStorage/CityAlertConfig.luau)",
+      "Bash(awk 'NR>=846 && NR<=1000' src/ReplicatedStorage/CityAlertConfig.luau)",
+      "Bash(luau tools/tmp/abstand.luau)",
+      "Bash(luau src/StarterPlayerScripts/EnergyTypesClient.client.luau)",
+      "Bash(luau src/ServerScriptService/CollectibleService.server.luau)",
+      "Bash(luau src/StarterPlayerScripts/PlayerNameTagClient.client.luau)"
     ]
   }
 }

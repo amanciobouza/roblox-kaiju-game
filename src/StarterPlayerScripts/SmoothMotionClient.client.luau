@@ -22,69 +22,86 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
-local SmoothMotion = require(ReplicatedStorage:WaitForChild("SmoothMotion"))
+local SmoothMotion = require(ReplicatedStorage:WaitForChild("SmoothMotion", 10))
 
--- [model] = die aktuell GEZEIGTE Pose. Nicht am Modell ablesbar: dort steht gerade entweder
--- unsere eigene letzte Setzung oder ein frisch replizierter Serverwert -- der eine wäre ein
--- Zwischenwert, der andere der Ruck, den wir gerade verstecken wollen. Deshalb eigene
--- Buchführung.
---
--- Schwache Schlüssel: ein entferntes Modell soll nicht durch diesen Eintrag am Leben
--- gehalten werden.
-local shown = setmetatable({}, { __mode = "k" })
+-- Tag-Liste und Zielwerte werden bei Aenderungen gepflegt, nicht jedes Bild neu gesucht.
+local models = {}
+local POSITION_EPSILON = 0.001
+local ANGLE_EPSILON = 0.0001
 
-local function zielPose(model)
-	local value = model:GetAttribute(SmoothMotion.TargetAttribute)
-	if typeof(value) == "CFrame" then
-		return value
+local function gleichePose(a, b)
+	if a == b then return true end
+	if (a.Position - b.Position).Magnitude > POSITION_EPSILON then
+		return false
 	end
-	return nil
+	local _, angle = a:ToObjectSpace(b):ToAxisAngle()
+	return math.abs(angle) <= ANGLE_EPSILON
 end
 
 local function vergiss(model)
-	shown[model] = nil
+	local state = models[model]
+	if state then
+		state.connection:Disconnect()
+		models[model] = nil
+	end
 end
 
-CollectionService:GetInstanceAddedSignal(SmoothMotion.Tag):Connect(function(model)
-	-- Beim ersten Mal nichts glätten: wo das Modell erscheint, ist es auch richtig.
-	local ziel = zielPose(model)
-	if ziel then
-		shown[model] = ziel
+local function merke(model)
+	if not model:IsA("Model") or models[model] then return end
+	local state = {}
+	local function liesZiel()
+		local value = model:GetAttribute(SmoothMotion.TargetAttribute)
+		state.target = typeof(value) == "CFrame" and value or nil
 	end
-end)
+	state.connection = model:GetAttributeChangedSignal(SmoothMotion.TargetAttribute):Connect(liesZiel)
+	liesZiel()
+	state.shown = state.target
+	models[model] = state
+end
 
+CollectionService:GetInstanceAddedSignal(SmoothMotion.Tag):Connect(merke)
 CollectionService:GetInstanceRemovedSignal(SmoothMotion.Tag):Connect(vergiss)
+for _, model in ipairs(CollectionService:GetTagged(SmoothMotion.Tag)) do
+	merke(model)
+end
 
 local function schritt(deltaTime)
-	-- Exponentielle Glättung: der zurückgelegte Anteil hängt an der verstrichenen Zeit, nicht
-	-- an der Bildrate. Ein festes Alpha je Bild würde bei 30 fps halb so schnell folgen wie
-	-- bei 60 -- die Glättung sähe auf jedem Gerät anders aus.
 	local alpha = 1 - math.exp(-deltaTime / SmoothMotion.TimeConstant)
-
-	for _, model in ipairs(CollectionService:GetTagged(SmoothMotion.Tag)) do
-		if model:IsA("Model") and model.Parent then
-			local ziel = zielPose(model)
-			if ziel then
-				local aktuell = shown[model]
-
-				-- Grosse Sprünge nicht glätten, sondern übernehmen: Spawn, Teleport oder ein
-				-- Wechsel der Stadt sind kein Bewegungsschritt. Geglättet flöge das Modell
-				-- sichtbar durch die halbe Karte.
-				if not aktuell
-					or (ziel.Position - aktuell.Position).Magnitude > SmoothMotion.SnapDistance
-				then
-					aktuell = ziel
-				else
-					aktuell = aktuell:Lerp(ziel, alpha)
-				end
-
-				shown[model] = aktuell
-				-- pcall, weil zwischen der Tag-Abfrage und hier ein Teil verschwinden kann
-				-- (despawn mitten im Bild) -- PivotTo wirft dann.
-				pcall(function()
-					model:PivotTo(aktuell)
-				end)
+	for model, state in pairs(models) do
+		local ziel = state.target
+		if ziel and model:IsDescendantOf(workspace) then
+			local aktuell = state.shown
+			if not aktuell or (ziel.Position - aktuell.Position).Magnitude > SmoothMotion.SnapDistance then
+				aktuell = ziel
+			elseif not gleichePose(aktuell, ziel) then
+				aktuell = aktuell:Lerp(ziel, alpha)
+				if gleichePose(aktuell, ziel) then aktuell = ziel end
+			else
+				aktuell = ziel
 			end
+			state.shown = aktuell
+			-- Auch bei unveraendertem Ziel kann die Replikation unsere Zwischenpose
+			-- ueberschrieben haben. Nur ueberspringen, wenn die sichtbare Pose stimmt.
+			pcall(function()
+				-- ===== Animierte Modelle NUR an der Wurzel =====
+				-- PivotTo setzt jedes Teil einzeln und loescht damit die Pose, die eine
+				-- Motor6D-Animation gerade herstellt. Bei den Guardians hiess das: sie
+				-- standen starr da, ohne Lauf- und ohne Todesanimation (14.10.2026).
+				--
+				-- Die uebrigen Teile folgen der Wurzel von selbst -- das Rig schweisst sie
+				-- als einen Koerper daran. Genau so bewegt der Server sie auch.
+				local wurzel = model:GetAttribute(SmoothMotion.RootOnlyAttribute)
+					and model.PrimaryPart
+					or nil
+
+				if wurzel then
+					if not gleichePose(wurzel.CFrame, aktuell) then
+						wurzel.CFrame = aktuell
+					end
+				elseif not gleichePose(model:GetPivot(), aktuell) then
+					model:PivotTo(aktuell)
+				end
+			end)
 		end
 	end
 end
@@ -96,4 +113,4 @@ RunService.RenderStepped:Connect(function(deltaTime)
 end)
 
 print("[Kaiju Debug] SmoothMotionClient bereit -- glaettet Modelle mit dem Tag '"
-	.. SmoothMotion.Tag .. "'.")
+	.. SmoothMotion.Tag .. "'; Tag-Cache aktiv, ruhende Posen werden nicht neu gesetzt.")

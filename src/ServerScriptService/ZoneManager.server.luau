@@ -188,6 +188,33 @@ local function determineCurrentZone(character)
 	return ZONE_AUSSEN
 end
 
+-- ===== Ein Sprung ist kein Grenzgang =====
+-- Die Bestätigungen oben gibt es gegen das Flattern AM RAND einer Zone -- gegen eine Figur,
+-- die mit jedem Schritt halb hineinragt. Sie kosten aber 0.6 bis 0.9 Sekunden, und das ist
+-- genau die Zeit, in der ein Spieler nach einem Teleport am FALSCHEN Maß dasteht, bevor
+-- Grösse und Modell nachgezogen werden.
+--
+-- Amancio am 11.10.2026: "Aktuell sieht es immer so aus, als dass er im Ziel ist und dann
+-- entweder grösser oder kleiner wird. So merkt man als Spieler schnell, dass man in der
+-- Grösse skaliert wurde."
+--
+-- Ein Teleport ist von einem Grenzgang eindeutig zu unterscheiden, und zwar an der
+-- Entfernung: die schnellste Figur im Spiel läuft 37 Studs je Sekunde (SkinsConfig), also
+-- rund 11 Studs je Messung. Ein Portal oder ein Spawn versetzt sie um Hunderte. Alles
+-- jenseits dieser Schwelle ist ein Sprung, bei dem es nichts zu bestätigen gibt -- dort
+-- flattert nichts, es ist einfach woanders.
+--
+-- Das deckt JEDE Teleport-Quelle ab: Portale, den Prolog, das Debug-Panel und die
+-- Studio-Skripte, die das Repo nicht kennt. Hätte ich stattdessen am Portal-Ereignis
+-- gehorcht, wäre genau der Rest liegengeblieben.
+--
+-- 120 und nicht 60: im freien Fall erreicht eine Figur rund 200 Studs je Sekunde, also bis
+-- zu 60 Studs je Messung. Bei 60 hätte jeder tiefe Sprung als Teleport gezählt. Schaden
+-- täte das nicht -- im Fall flattert nichts, was zu bestätigen wäre --, aber die Schwelle
+-- soll meinen, was sie sagt.
+local SPRUNG_DISTANZ = 120
+local letztePosition = setmetatable({}, { __mode = "k" })
+
 -- immediate = true umgeht die Bestätigungen (beim Spawnen gibt es keine Vorgeschichte,
 -- die flattern könnte, und die Zone muss sofort stimmen).
 local function pollPlayer(player, immediate)
@@ -195,6 +222,20 @@ local function pollPlayer(player, immediate)
 	if not character then
 		return
 	end
+
+	local rootPart = character:FindFirstChild("HumanoidRootPart")
+	if rootPart then
+		local vorher = letztePosition[player]
+		letztePosition[player] = rootPart.Position
+		if vorher and (rootPart.Position - vorher).Magnitude > SPRUNG_DISTANZ then
+			immediate = true
+			print(string.format(
+				"[Kaiju Debug] Zone: %s ist um %.0f Studs gesprungen -- Zone sofort gesetzt, "
+					.. "ohne die %d Bestaetigungen.",
+				player.Name, (rootPart.Position - vorher).Magnitude, ZONE_CHANGE_CONFIRMATIONS))
+		end
+	end
+
 	local zone = determineCurrentZone(character)
 
 	if zone == player:GetAttribute("CurrentZone") then

@@ -29,6 +29,8 @@ local PARTICLE_RESPAWN_RADIUS = 18
 local PARTICLE_DEPTH = 8
 local PARTICLE_SPEED = 7.5
 local BAND_SEGMENTS = 14
+local EFFECT_DISTANCE = 200
+local EFFECT_INTERVAL = 1 / 30
 
 -- AUDIO
 local PORTAL_AMBIENT_SOUND_ID = "rbxassetid://1838788947"
@@ -122,10 +124,24 @@ end
 -- =========================================================
 -- PORTAL HELPERS
 -- =========================================================
+-- Pro Portal nur einmal suchen; Streaming-Aenderungen verwerfen den Cache.
+local portalCache = {}
 local function getField(portal)
-	return portal:FindFirstChild("EnergyField", true)
-		or portal:FindFirstChild("PortalField", true)
-		or portal:FindFirstChild("Field", true)
+	local state = portalCache[portal]
+	if not state then
+		-- Transit-Events duerfen auch ein noch nicht registriertes Portal nennen.
+		return portal:FindFirstChild("EnergyField", true)
+			or portal:FindFirstChild("PortalField", true)
+			or portal:FindFirstChild("Field", true)
+	end
+	if not state.searched then
+		state.field = portal:FindFirstChild("EnergyField", true)
+			or portal:FindFirstChild("PortalField", true)
+			or portal:FindFirstChild("Field", true)
+		state.fallback = portal:FindFirstChildWhichIsA("BasePart", true)
+		state.searched = true
+	end
+	return state.field
 end
 
 local function getPortalColor(portal)
@@ -148,7 +164,9 @@ local function getPortalCenter(portal)
 	if portal.PrimaryPart then
 		return portal.PrimaryPart.Position, portal.PrimaryPart.CFrame
 	end
-	local p = portal:FindFirstChildWhichIsA("BasePart", true)
+	local state = portalCache[portal]
+	local p
+	if state then p = state.fallback else p = portal:FindFirstChildWhichIsA("BasePart", true) end
 	if p then
 		return p.Position, p.CFrame
 	end
@@ -181,8 +199,11 @@ local function getOrCreateSound(parent, name, soundId, looped, volume)
 end
 
 local function ensurePortalAudio(portal)
-	if portalAudio[portal] then
-		return portalAudio[portal]
+	local existing = portalAudio[portal]
+	if existing then
+		if existing.ambient:IsDescendantOf(portal) then return existing end
+		for _, sound in pairs(existing) do sound:Destroy() end
+		portalAudio[portal] = nil
 	end
 
 	local field = getField(portal)
@@ -279,8 +300,7 @@ end
 
 local portalParticles = {}
 
-local function makeParticle(portal)
-	local color = getPortalColor(portal)
+local function makeParticle(color)
 	local p = Instance.new("Part")
 	p.Name = "PortalParticle"
 	p.Shape = Enum.PartType.Ball
@@ -303,6 +323,7 @@ local function makeParticle(portal)
 
 	return {
 		part = p,
+		light = light,
 		phase = math.random() * math.pi * 2,
 		radius = 5 + math.random() * PARTICLE_RESPAWN_RADIUS,
 		angle = math.random() * math.pi * 2,
@@ -311,11 +332,11 @@ local function makeParticle(portal)
 	}
 end
 
-local function ensureParticles(portal)
+local function ensureParticles(portal, color)
 	if portalParticles[portal] then return end
 	portalParticles[portal] = {}
 	for _ = 1, PARTICLE_COUNT_PER_PORTAL do
-		table.insert(portalParticles[portal], makeParticle(portal))
+		table.insert(portalParticles[portal], makeParticle(color))
 	end
 end
 
@@ -415,8 +436,7 @@ local function positionSegment(part, a, b, thickness, transparency)
 	part.CFrame = CFrame.lookAt((a+b)*0.5, b)
 end
 
-local function updateBand(band, t, root)
-	local center, cf = getPortalCenter(band.portal)
+local function updateBand(band, t, root, center, cf)
 	if not center or not cf or not root then return end
 
 	local start = center
@@ -532,86 +552,115 @@ end
 -- =========================================================
 local currentPortal = nil
 
-local function nearestPortal(root)
-	local best, bestDist
-	for _, portal in ipairs(portalsFolder:GetChildren()) do
-		if portal:IsA("Model") and portalActive(portal) then
-			local center = getPortalCenter(portal)
-			if center then
-				local d = (root.Position - center).Magnitude
-				if not bestDist or d < bestDist then
-					best = portal
-					bestDist = d
-				end
-			end
-		end
-	end
-	return best, bestDist
+local function clearParticles(portal)
+	local particles = portalParticles[portal]
+	if not particles then return end
+	for _, data in ipairs(particles) do data.part:Destroy() end
+	portalParticles[portal] = nil
 end
 
+local function forgetPortal(portal)
+	local state = portalCache[portal]
+	if not state then return end
+	for _, connection in ipairs(state.connections) do connection:Disconnect() end
+	portalCache[portal] = nil
+	clearParticles(portal)
+	local audio = portalAudio[portal]
+	if audio then
+		for _, sound in pairs(audio) do sound:Destroy() end
+		portalAudio[portal] = nil
+	end
+	if currentPortal == portal then
+		currentPortal = nil
+		clearBands()
+	end
+end
+
+local function rememberPortal(portal)
+	if not portal:IsA("Model") or portalCache[portal] then return end
+	local state = { connections = {}, searched = false }
+	portalCache[portal] = state
+	local function invalidate(descendant)
+		if descendant:IsA("BasePart") then state.searched = false end
+	end
+	table.insert(state.connections, portal.DescendantAdded:Connect(invalidate))
+	table.insert(state.connections, portal.DescendantRemoving:Connect(invalidate))
+end
+portalsFolder.ChildAdded:Connect(rememberPortal)
+portalsFolder.ChildRemoved:Connect(forgetPortal)
+for _, portal in ipairs(portalsFolder:GetChildren()) do rememberPortal(portal) end
+
+local elapsed = 0
 RunService.RenderStepped:Connect(function(dt)
+	elapsed += dt
+	if elapsed < EFFECT_INTERVAL then return end
+	local step = elapsed
+	elapsed = 0
+	camera = workspace.CurrentCamera or camera
 	local char = player.Character
 	local root = char and char:FindFirstChild("HumanoidRootPart")
-	if not root then
-		clearBands()
-		return
-	end
-
 	debug.profilebegin("Trenchborn.PortalEffekte")
-	local portal, dist = nearestPortal(root)
-	currentPortal = portal
-
-	-- Ambient is always attached to every active portal.
-	-- Tension is dynamically driven only by the nearest portal.
-	for _, p in ipairs(portalsFolder:GetChildren()) do
-		if p:IsA("Model") and portalActive(p) then
-			ensurePortalAudio(p)
-			if p == portal then
-				updatePortalAudio(p, dist)
-			else
-				updatePortalAudio(p, nil)
-			end
+	local portal, dist, nearestCenter, nearestCF
+	local now = time()
+	local viewPosition = camera and camera.CFrame.Position
+	for p in pairs(portalCache) do
+		local center, cf = getPortalCenter(p)
+		local active = portalActive(p)
+		local playerDistance = root and center and (root.Position - center).Magnitude
+		if active and playerDistance and (not dist or playerDistance < dist) then
+			portal, dist, nearestCenter, nearestCF = p, playerDistance, center, cf
 		end
-	end
-
-	-- persistent portal particles
-	for _, p in ipairs(portalsFolder:GetChildren()) do
-		if p:IsA("Model") and portalActive(p) then
-			ensureParticles(p)
-			local center, cf = getPortalCenter(p)
-			if center and cf then
-				for _, data in ipairs(portalParticles[p]) do
-					data.radius -= data.speed * dt
-					data.angle += dt * (0.75 + 8/math.max(data.radius,2))
-					if data.radius <= 0.6 then
-						resetParticle(data)
-					end
-					local wobble = math.sin(time()*3 + data.phase) * 0.7
-					local pos =
-						center
-						+ cf.RightVector * math.cos(data.angle) * data.radius
-						+ cf.UpVector * (data.y * (data.radius/(PARTICLE_RESPAWN_RADIUS+8)) + wobble)
+		-- Naehe zur Kamera ODER Figur erhaelt Effekte auch bei besonderen Kamerafahrten.
+		local near = center and ((viewPosition and (viewPosition - center).Magnitude <= EFFECT_DISTANCE)
+			or (playerDistance and playerDistance <= EFFECT_DISTANCE))
+		if active and near and cf then
+			local color = getPortalColor(p)
+			ensureParticles(p, color)
+			ensurePortalAudio(p)
+			for _, data in ipairs(portalParticles[p]) do
+				-- Nach einem langen Ladebild keine riesigen Partikelspruenge nachholen.
+				local particleStep = math.min(step, 0.1)
+				data.radius -= data.speed * particleStep
+				data.angle += particleStep * (0.75 + 8/math.max(data.radius,2))
+				if data.radius <= 0.6 then resetParticle(data) end
+				local wobble = math.sin(now*3 + data.phase) * 0.7
+				data.part.Position = center
+					+ cf.RightVector * math.cos(data.angle) * data.radius
+					+ cf.UpVector * (data.y * (data.radius/(PARTICLE_RESPAWN_RADIUS+8)) + wobble)
 					- cf.LookVector * (PARTICLE_DEPTH * (1 - math.clamp(data.radius/25,0,1)))
-					data.part.Position = pos
-					data.part.Color = getPortalColor(p)
+				if data.part.Color ~= color then
+					data.part.Color = color
+					data.light.Color = color
 				end
 			end
+		else
+			-- Einmal entfernen, danach keine Partikel- oder Audioarbeit in der Ferne.
+			clearParticles(p)
+			local audio = portalAudio[p]
+			if audio then
+				if audio.ambient.IsPlaying then audio.ambient:Stop() end
+				if audio.tension.IsPlaying then audio.tension:Stop() end
+			end
 		end
 	end
-
+	if currentPortal ~= portal then clearBands() end
+	currentPortal = portal
+	for p, audio in pairs(portalAudio) do
+		local visible = portalParticles[p] ~= nil
+		if visible then
+			if not audio.ambient.IsPlaying then audio.ambient:Play() end
+			if not audio.tension.IsPlaying then audio.tension:Play() end
+			updatePortalAudio(p, p == portal and dist or nil)
+		end
+	end
 	if portal and dist then
 		local attractDist = portal:GetAttribute("AttractionDistance") or DEFAULT_ATTRACTION_DISTANCE
 		local cineDist = portal:GetAttribute("CinematicDistance") or DEFAULT_CINEMATIC_DISTANCE
 		local maxBands = portal:GetAttribute("MaxBands") or DEFAULT_MAX_BANDS
-
-		if not inTransit then
-			showBars(dist <= cineDist)
-		end
-
+		if not inTransit then showBars(dist <= cineDist) end
 		if dist <= attractDist then
 			local alpha = 1 - math.clamp((dist - MIN_BAND_DISTANCE) / math.max(attractDist - MIN_BAND_DISTANCE, 1), 0, 1)
-			local bandCount = math.clamp(math.ceil(alpha * maxBands), 1, maxBands)
-			setBandCount(portal, bandCount)
+			setBandCount(portal, math.clamp(math.ceil(alpha * maxBands), 1, maxBands))
 		else
 			setBandCount(portal, 0)
 		end
@@ -619,10 +668,8 @@ RunService.RenderStepped:Connect(function(dt)
 		if not inTransit then showBars(false) end
 		clearBands()
 	end
-
-	local now = time()
 	for _, band in ipairs(activeBands) do
-		updateBand(band, now, root)
+		updateBand(band, now, root, nearestCenter, nearestCF)
 	end
 	debug.profileend()
 end)
@@ -638,4 +685,4 @@ remote.OnClientEvent:Connect(function(action, portal)
 	end
 end)
 
-print("[TrenchbornPortalFX] CLIENT v3.3 ACTIVE - particles + grab bands + dynamic portal audio + upgraded transit")
+print("[Kaiju Debug] Portal-Effekte bereit -- maximal 30 Updates/s, Partikel bis 200 Studs, Feld-Cache aktiv.")

@@ -18,6 +18,7 @@
 --  - Keine Scripts/Humanoid nötig -- der Helikopter ist rein dekorativ, komplett
 --    serverseitig positioniert.
 
+local CollectionService = game:GetService("CollectionService")
 local Workspace = game:GetService("Workspace")
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -35,6 +36,7 @@ local MAX_PLAYER_LEVEL = 50
 local JUMP_HEIGHT_RATIO = 0.5 -- entspricht der Sprunghöhen-Formel in PlayerSetup.lua (characterHeight * 0.5)
 local EYE_LEVEL_RATIO = 0.9 -- Augen sitzen ungefähr bei 90% der Charakterhöhe
 local BUILDING_CLEARANCE = 15 -- Mindestabstand über dem Gebäude, damit der Helikopter sichtbar drüber fliegt
+local UPDATE_INTERVAL = 1 / 15 -- Weniger replizierte Posen, Client glaettet weiter.
 local ORBIT_PERIOD = 28 -- Sekunden für eine volle Ellipsen-Umrundung (halbierte Geschwindigkeit)
 local ELLIPSE_WIDENING = 0.9 -- wie viel breiter die Ellipse ist als die reine Verbindungslinie (0 = Linie, 1 = sehr rund)
 local ORBIT_SIZE_BUFFER = 30 -- fester Zusatz-Abstand zu den Brennpunkten (additiv statt multiplikativ -- verhindert übertriebene Grösse bei weit auseinanderliegenden Brennpunkten)
@@ -132,10 +134,14 @@ local function spawnHelicopter(cityName)
 		model:Destroy()
 		return
 	end
+	CollectionService:AddTag(model, "AlertHelicopterVisual")
+	for _, light in ipairs(findSearchlights(model)) do
+		light.Angle = 35 -- Schwenken ist ausschliesslich eine lokale Dekoration.
+	end
 	model.Parent = Workspace
 	-- Der Client glättet die Bewegung (siehe SmoothMotion). Ohne das ruckelte der Helikopter
-	-- am auffälligsten von allen: er fliegt dauernd, und seine Pose wird bei JEDEM Heartbeat
-	-- neu gesetzt -- repliziert wird sie aber nur mit der Netzwerkrate.
+	-- am auffaelligsten von allen: er fliegt dauernd. Der Server setzt die Pose
+	-- jetzt maximal 15-mal pro Sekunde, der Client glaettet die Zwischenbilder.
 	SmoothMotion.Track(model)
 	print("[AlertHelicopterService] Helikopter für '" .. cityName .. "' erfolgreich in Workspace gespawnt.")
 
@@ -170,7 +176,6 @@ local function spawnHelicopter(cityName)
 	activeHelicopters[cityName] = {
 		model = model,
 		angle = 0,
-		searchlights = findSearchlights(model),
 	}
 end
 
@@ -294,7 +299,7 @@ local function updateHelicopter(cityName, heli, deltaTime)
 		heli.smoothedFocusA = rawFocusA
 		heli.smoothedFocusB = rawFocusB
 	end
-	local smoothAlpha = math.clamp(FOCUS_SMOOTHING_RATE * deltaTime, 0, 1)
+	local smoothAlpha = 1 - math.exp(-FOCUS_SMOOTHING_RATE * deltaTime)
 	heli.smoothedFocusA = heli.smoothedFocusA:Lerp(rawFocusA, smoothAlpha)
 	heli.smoothedFocusB = heli.smoothedFocusB:Lerp(rawFocusB, smoothAlpha)
 	local focusA, focusB = heli.smoothedFocusA, heli.smoothedFocusB
@@ -364,12 +369,6 @@ local function updateHelicopter(cityName, heli, deltaTime)
 	if not ok then
 		return
 	end
-
-	-- Suchscheinwerfer: langsam schwenkend nach unten gerichtet, für den "suchenden"
-	-- Effekt -- reine Kosmetik, kein Gameplay-Zweck.
-	for _, light in ipairs(heli.searchlights) do
-		light.Angle = 35 + math.sin(os.clock() * 0.6) * 8
-	end
 end
 
 -- ===== Level-Wechsel abonnieren: spawnt bei Erreichen von Level 1 (von 0 aus), despawnt
@@ -403,10 +402,18 @@ task.spawn(function()
 	end)
 end)
 
+local elapsed = 0
 RunService.Heartbeat:Connect(function(deltaTime)
+	elapsed += deltaTime
+	if elapsed < UPDATE_INTERVAL then return end
+	-- Keine Nachholschleife: nach einem langsamen Bild nur eine neue Pose senden.
+	local step = elapsed
+	elapsed = 0
+	debug.profilebegin("Trenchborn.HelikopterServer")
 	for cityName, heli in pairs(activeHelicopters) do
-		updateHelicopter(cityName, heli, deltaTime)
+		updateHelicopter(cityName, heli, step)
 	end
+	debug.profileend()
 end)
 
-print("[Kaiju] AlertHelicopterService bereit -- Level 1 (Präsenz-Helikopter, bleibt bei höheren Leveln aktiv).")
+print("[Kaiju Debug] AlertHelicopterService bereit -- maximal 15 Bewegungsupdates/s; Level 1 (Präsenz-Helikopter, bleibt bei höheren Leveln aktiv).")

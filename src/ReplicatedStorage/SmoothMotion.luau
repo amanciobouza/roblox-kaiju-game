@@ -37,6 +37,23 @@ SmoothMotion.Tag = "SmoothMotion"
 -- Darin steht die Pose, die der Server MEINT. CFrame ist ein gültiger Attributtyp.
 SmoothMotion.TargetAttribute = "MotionTarget"
 
+-- ===== Nur die Wurzel bewegen, nicht das ganze Modell =====
+-- Steht dieses Attribut, setzt der Client die PrimaryPart und sonst nichts.
+--
+-- Für ein Modell, dessen Gelenke animiert werden, ist das der EINZIGE richtige Weg.
+-- Model:PivotTo setzt jedes Teil einzeln und überschreibt damit die Pose, die eine
+-- Motor6D-Animation gerade herstellt -- die Figur steht dann starr da und bewegt beim
+-- Laufen die Beine nicht.
+--
+-- Genau das ist passiert: der CityDefenderService bewegt animierte Guardians seit dem
+-- 26.09.2026 bewusst nur über ihre Wurzel, und die Glättung hat daraus am 04.10.2026
+-- wieder ein PivotTo auf das ganze Modell gemacht -- clientseitig und im RenderStepped,
+-- also an der Stelle, an der es garantiert gewinnt. Gemeldet am 14.10.2026: "Ich sehe noch
+-- keine Laufanimation der Wächter."
+--
+-- Die übrigen Teile folgen trotzdem: das Rig schweisst sie als einen Körper an die Wurzel.
+SmoothMotion.RootOnlyAttribute = "MotionRootOnly"
+
 -- Zeitkonstante der Glättung in Sekunden: nach dieser Zeit hat der Client rund zwei Drittel
 -- des Weges zum Ziel zurückgelegt. Klein genug, dass nichts sichtbar nachschleppt, gross
 -- genug, dass die Replikationsschritte verschwinden.
@@ -67,6 +84,16 @@ function SmoothMotion.SetTarget(model, cframe)
 		return
 	end
 	model:SetAttribute(SmoothMotion.TargetAttribute, cframe)
+end
+
+-- Sagt der Glättung, dass dieses Modell animierte Gelenke hat und deshalb nur an der
+-- Wurzel bewegt werden darf (siehe RootOnlyAttribute). Mehrfach aufrufbar: SetAttribute mit
+-- demselben Wert tut nichts.
+function SmoothMotion.SetRootOnly(model, rootOnly)
+	if not model then
+		return
+	end
+	model:SetAttribute(SmoothMotion.RootOnlyAttribute, rootOnly and true or nil)
 end
 
 -- Bewegt das Modell UND meldet dem Client das Ziel -- der übliche Fall, in einer Zeile.

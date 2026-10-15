@@ -360,7 +360,7 @@ CityAlertConfig.Cities = {
 		-- vier zu denselben Braenden; seit sie die Energie durch die Entfernung teilt
 		-- (FireEngineController, FEUER_BEZUGSWEITE), nimmt jedes Fahrzeug den staerksten
 		-- Brand in seiner Naehe. Damit bleiben die 45 richtig.
-		FireEngineCount = 4,
+		FireEngineCount = 3, -- war 4 (14.10.2026)
 		FireEngineSpeed = 16,
 		-- ===== So viel, dass Ignorieren etwas kostet =====
 		-- Ein brennendes Gebäude gibt 60 Prozent seiner Energie über die Brenndauer ab: bei
@@ -557,7 +557,7 @@ CityAlertConfig.Cities = {
 		-- Feuerwehr fiel damit schneller als in jeder Stadt davor, obwohl sie hier auf
 		-- einen viel staerkeren Spieler trifft.
 		FireEngineHP = 31000,
-		FireEngineCount = 2,
+		FireEngineCount = 4, -- war 2 (14.10.2026)
 		FireEngineSpeed = 18,
 		FirefightingRate = 140,
 		FirefightingRange = 55,
@@ -688,9 +688,19 @@ CityAlertConfig.Cities = {
 
 	LargeCity = {
 		-- HP-Balance fuer Level 30-40 (04.10.2026).
-		-- Referenz: Chronovore, volle Arm-Trainingskappe, 1780 Schaden je Grundtreffer.
+		-- Referenz: Chronovore, volle Arm-Trainingskappe, 1569 Schaden je Grundtreffer.
 		-- Feuerwehr/Barrikade/Generator/Militaer folgen den Trefferzahlen von City.
-		-- Guardian: 390000 HP + 160000 Schild = rund 309 Treffer, bereits passend.
+		-- Guardian: 344000 HP + 141100 Schild = rund 309 Treffer, bereits passend.
+		--
+		-- ===== Mitgezogen am 11.10.2026: Eintrittsschaden 1780 -> 1569 =====
+		-- Die Stuetzpunkt-Kurve in TrainingHandler ist flachgelegt worden, weil der Schaden
+		-- innerhalb der Dekade um x17.5 wuchs und ein Grundhaus bei Level 39 nur noch EINEN
+		-- Schlag kostete. Der Eintrittsschaden sinkt dadurch um den Faktor 0.882. ALLE
+		-- Lebenspunkt-Werte und alle vier Alarmschwellen sind mit demselben Faktor
+		-- mitgezogen -- die Trefferzahlen und die Durchgang-Verhaeltnisse bleiben damit
+		-- genau die, die daneben stehen. Die SCHADENSWERTE der Verteidiger (ElectricDamage,
+		-- TankDamage, GuardianImpactFistDamage ...) sind bewusst UNVERAENDERT: sie messen
+		-- sich am Leben des Spielers, nicht an seinem Schaden.
 		-- 65 angreifbare Instanzen sind im letzten Studio-Start gezaehlt worden.
 		-- Gebaeudewerte werden im Bearbeitungsmodus aus BuildingConfig angewandt.
 		-- Alarmschwellen und XP-Strecke muessen gegen den danach gemessenen Bestand
@@ -716,14 +726,14 @@ CityAlertConfig.Cities = {
 		-- Die vier Zahlen unten sind daraus gerechnet, auf die Zielform aus Brasshaven:
 		-- 0.39 / 0.90 / 1.42 / 2.26 Durchgaenge. Sie stehen damit nicht mehr auf einer
 		-- Schaetzung, sondern auf dem Bericht.
-		AlertThresholdLevel2 = 289000, -- 0.39 Durchgaenge
-		AlertThresholdLevel3 = 667000, -- 0.90 Durchgaenge
+		AlertThresholdLevel2 = 255000, -- 0.39 Durchgaenge
+		AlertThresholdLevel3 = 588000, -- 0.90 Durchgaenge
 		AlertPerHP = 0.18,
 
-		FireEngineHP = 89000, -- 50 Grundtreffer bei Level 30
-		FireEngineCount = 3,
+		FireEngineHP = 78500, -- 50 Grundtreffer bei Level 30
+		FireEngineCount = 5, -- war 3 (14.10.2026)
 		FireEngineSpeed = 20,
-		FirefightingRate = 700,
+		FirefightingRate = 617,
 		FirefightingRange = 60,
 		-- FireEngineDestroyAlertValue ist ENTFALLEN (war 650), wie in SmallTown: besiegte
 		-- Verteidigung darf die Lage nicht verschärfen (Specs/BalancingSpec,
@@ -732,13 +742,13 @@ CityAlertConfig.Cities = {
 		WaterTowerEfficiencyBonus = 0,
 
 		AlertDecayDelay = 25,
-		AlertDecayRate = 160,
+		AlertDecayRate = 141,
 
 		BarricadeScale = 2.5,
-		ShieldMaxHealth = 106800, -- 60 Grundtreffer bei Level 30
+		ShieldMaxHealth = 94100, -- 60 Grundtreffer bei Level 30
 		ShieldRegenDelay = 8,
 		ShieldRegenRate = 0.04,
-		GeneratorMaxHealth = 26700, -- 15 Grundtreffer bei Level 30
+		GeneratorMaxHealth = 23500, -- 15 Grundtreffer bei Level 30
 		-- ===== Auf den Massstab gebracht (18.09.2026) =====
 		-- Die Verteidiger toeteten den erwarteten Skin (Chronovore, 800 Leben) in dreieinhalb bis fuenf Treffern.
 		-- Die Regel lautet rund 32 -- beim Guardian 16, weil er doppelt so gefaehrlich sein
@@ -756,19 +766,19 @@ CityAlertConfig.Cities = {
 		FlankAutoDetectRadius = 40,
 
 		-- ===== Stufe 4: Militär (Panzer, Raketenwerfer, Militär-Helikopter) =====
-		AlertThresholdLevel4 = 1052000, -- 1.42 Durchgaenge
+		AlertThresholdLevel4 = 928000, -- 1.42 Durchgaenge
 		MaxAlertLevel = 5, -- Konzept-Vorgabe: nicht jede Stadt kennt alle Alert-Stufen
 		MilitaryTankCount = 3,
 		MilitaryRocketLauncherCount = 2,
 		MilitaryHelicopterCount = 2,
-		TankHP = 130000, -- 73 Grundtreffer bei Level 30
+		TankHP = 114500, -- 73 Grundtreffer bei Level 30
 		TankDamage = 24, -- 33 Treffer
 		TankAttackRange = 75,
 		TankSpeed = 15,
-		RocketLauncherHP = 97900, -- 55 Grundtreffer bei Level 30
+		RocketLauncherHP = 86300, -- 55 Grundtreffer bei Level 30
 		RocketLauncherDamage = 28, -- 29 Treffer -- der haerteste des Militaers
 		RocketLauncherAttackRange = 130,
-		HelicopterHP = 80100, -- 45 Grundtreffer bei Level 30
+		HelicopterHP = 70600, -- 45 Grundtreffer bei Level 30
 		HelicopterDamage = 20, -- 40 Treffer -- er stoert mehr, als er wehtut
 		HelicopterAttackRange = 95,
 		HelicopterSpeed = 21,
@@ -781,7 +791,7 @@ CityAlertConfig.Cities = {
 		-- Ohne AlertThresholdLevel5 war Stufe 5 hier UNERREICHBAR, obwohl MaxAlertLevel
 		-- sie versprach -- die Stadt liess sich damit nicht abschliessen, denn die
 		-- CITY-BROKEN-Aufgabe "Guardian eliminated" setzt einen Guardian voraus.
-		AlertThresholdLevel5 = 1675000, -- 2.26 Durchgaenge
+		AlertThresholdLevel5 = 1477000, -- 2.26 Durchgaenge
 		-- ===== Was der Guardian einbringt =====
 		-- FEST, nicht zur Laufzeit gerechnet -- so verlangt es die Spec
 		-- (balancing.every-defeat-pays). Bis hierher gab dieser Guardian GAR NICHTS: ein
@@ -822,8 +832,8 @@ CityAlertConfig.Cities = {
 		-- der City-Guardian damit HALB so gross wie sein Gegner. Ein Boss, zu dem man
 		-- hinunterschaut, ist keiner.
 		GuardianHeightStuds = 86,
-		GuardianHP = 390000,
-		GuardianShieldHP = 160000,
+		GuardianHP = 344000,
+		GuardianShieldHP = 141100,
 		GuardianShieldRegenDelay = 10,
 		-- Anteil des MAXIMALSCHILDS pro Sekunde. War 0.04 und damit staerker als der
 		-- Spielerschaden: bei 2200 Schaden je Schlag regenerierte der Schild mit rund
@@ -845,20 +855,52 @@ CityAlertConfig.Cities = {
 
 	MegaCity = {
 		-- HP-Balance fuer Level 40-50 (04.10.2026).
-		-- Referenz: Aeon Tyrant, volle Arm-Trainingskappe, 34568 Schaden je Treffer.
+		-- Referenz: Aeon Tyrant, volle Arm-Trainingskappe, 8978 Schaden je Treffer.
+		--
+		-- ===== Mitgezogen am 11.10.2026: Eintrittsschaden 34568 -> 8978 =====
+		-- Gleiche Ursache und gleiches Vorgehen wie bei LargeCity (siehe dort): der obere
+		-- Stuetzpunkt der Kraftkurve stand auf 83333 und liess den Schaden ueber die Dekade
+		-- um x13.1 wachsen. Mit 9100 sind es x4.3. Alle Lebenspunkt-Werte und alle vier
+		-- Alarmschwellen sind mit dem Faktor 0.2597 mitgezogen, die Schadenswerte der
+		-- Verteidiger bewusst nicht.
 		-- Feuerwehr/Barrikaden/Militaer: gleiche Trefferzahlen wie LargeCity.
-		-- Guardian bleibt bei 7700000 HP + 3100000 Schild (rund 312 Treffer).
+		-- Guardian bei 2000000 HP + 805100 Schild (rund 312 Treffer).
 		-- Letzte Studio-Zaehlung: 86 angreifbare Instanzen.
 		-- Alarmschwellen und XP-Strecke danach gegen den neuen Bestand eichen.
 		ExpectedSkinStage = 5, -- Aeon Tyrant; die Spec verlangt die Angabe je Stadt
-		AlertThresholdLevel2 = 5400000, -- 0.39 Durchgaenge
-		AlertThresholdLevel3 = 12000000, -- 0.87 Durchgaenge
+
+		-- ===== Gesenkt am 14.10.2026: die Eskalation gehoert in Schlaegen gemessen =====
+		-- Amancio: "In MegaCity fuehlt sich der Alarmstufen-Fortschritt zu langsam an. Es ist
+		-- sehr eng und man kann nicht so schnell navigieren."
+		--
+		-- Nicht der Zerfall war schuld -- MegaCity hat proportional den schwaechsten von
+		-- allen Staedten. Schuld war der MASSSTAB der Schwellen. Sie waren in Durchgaengen
+		-- geeicht, also ANTEILIG an der Stadt (0.39/0.87/1.45/2.25, die Form aus Brasshaven).
+		-- Ein Anteil sagt aber nichts darueber, wie lange er dauert. In Schlaegen gerechnet
+		-- war die Leiter steil gewachsen:
+		--
+		--   bis Stufe 2 / 5:  Village 106/611   SmallTown 444/2593   City 616/3593
+		--                     LargeCity 903/5230   MegaCity 1301/7473
+		--
+		-- MegaCity verlangte fuer Stufe 2 mehr als das Doppelte von City -- und das zaehlt
+		-- die Laufwege noch gar nicht mit, die hier wegen der dichten Bebauung am laengsten
+		-- sind. Der Anteil blieb gleich, die Arbeit dahinter verdoppelte sich.
+		--
+		-- Die vier Zahlen unten sind deshalb so gesetzt, dass MegaCity GENAU SO VIELE
+		-- SCHLAEGE bis zu jeder Stufe braucht wie City. Faktor 0.473; in Durchgaengen sind
+		-- das 0.18/0.41/0.69/1.07, Stufe 5 also nach etwa einem vollen Zug durch die Stadt.
+		--
+		-- Die Enge selbst ist damit NICHT behoben -- die liegt in der Welt, nicht hier.
+		-- Diese Aenderung gleicht sie nur aus. LargeCity steht mit 903 Schlaegen ebenfalls
+		-- ueber City, ist aber nicht bemaengelt worden und bleibt vorerst.
+		AlertThresholdLevel2 = 663000, -- 616 Schlaege -- wie City
+		AlertThresholdLevel3 = 1548000, -- 1436 Schlaege -- wie City
 		AlertPerHP = 0.12,
 
-		FireEngineHP = 1728400, -- 50 Grundtreffer bei Level 40
-		FireEngineCount = 3,
+		FireEngineHP = 448900, -- 50 Grundtreffer bei Level 40
+		FireEngineCount = 6, -- war 3 (14.10.2026)
 		FireEngineSpeed = 22,
-		FirefightingRate = 3200,
+		FirefightingRate = 831,
 		FirefightingRange = 65,
 		-- FireEngineDestroyAlertValue ist ENTFALLEN (war 2400), wie in SmallTown: besiegte
 		-- Verteidigung darf die Lage nicht verschärfen (Specs/BalancingSpec,
@@ -867,13 +909,13 @@ CityAlertConfig.Cities = {
 		WaterTowerEfficiencyBonus = 0, -- Megacity hat einen Reaktor statt Wasserturm -- kein Bonus hier
 
 		AlertDecayDelay = 30,
-		AlertDecayRate = 700,
+		AlertDecayRate = 182,
 
 		BarricadeScale = 3.0,
-		ShieldMaxHealth = 2074100, -- 60 Grundtreffer bei Level 40
+		ShieldMaxHealth = 538700, -- 60 Grundtreffer bei Level 40
 		ShieldRegenDelay = 8,
 		ShieldRegenRate = 0.03,
-		GeneratorMaxHealth = 518500, -- 15 Grundtreffer bei Level 40
+		GeneratorMaxHealth = 134700, -- 15 Grundtreffer bei Level 40
 		-- ===== Auf den Massstab gebracht (18.09.2026) =====
 		-- Die Verteidiger toeteten den erwarteten Skin (Aeon Tyrant, 1600 Leben) in zweieinhalb bis dreieinhalb Treffern.
 		-- Die Regel lautet rund 32 -- beim Guardian 16, weil er doppelt so gefaehrlich sein
@@ -891,19 +933,19 @@ CityAlertConfig.Cities = {
 		FlankAutoDetectRadius = 40,
 
 		-- ===== Stufe 4: Militär (Panzer, Raketenwerfer, Militär-Helikopter) =====
-		AlertThresholdLevel4 = 20000000, -- 1.45 Durchgaenge
+		AlertThresholdLevel4 = 2435000, -- 2261 Schlaege -- wie City
 		MaxAlertLevel = 5, -- Konzept-Vorgabe: nicht jede Stadt kennt alle Alert-Stufen
 		MilitaryTankCount = 4,
 		MilitaryRocketLauncherCount = 3,
 		MilitaryHelicopterCount = 3,
-		TankHP = 2523500, -- 73 Grundtreffer bei Level 40
+		TankHP = 655400, -- 73 Grundtreffer bei Level 40
 		TankDamage = 48, -- 33 Treffer
 		TankAttackRange = 80,
 		TankSpeed = 16,
-		RocketLauncherHP = 1901200, -- 55 Grundtreffer bei Level 40
+		RocketLauncherHP = 493800, -- 55 Grundtreffer bei Level 40
 		RocketLauncherDamage = 56, -- 29 Treffer -- der haerteste des Militaers
 		RocketLauncherAttackRange = 140,
-		HelicopterHP = 1555600, -- 45 Grundtreffer bei Level 40
+		HelicopterHP = 404000, -- 45 Grundtreffer bei Level 40
 		HelicopterDamage = 40, -- 40 Treffer -- er stoert mehr, als er wehtut
 		HelicopterAttackRange = 100,
 		HelicopterSpeed = 22,
@@ -916,7 +958,7 @@ CityAlertConfig.Cities = {
 		-- Ohne AlertThresholdLevel5 war Stufe 5 hier UNERREICHBAR, obwohl MaxAlertLevel
 		-- sie versprach -- die Stadt liess sich damit nicht abschliessen, denn die
 		-- CITY-BROKEN-Aufgabe "Guardian eliminated" setzt einen Guardian voraus.
-		AlertThresholdLevel5 = 31000000, -- 2.25 Durchgaenge
+		AlertThresholdLevel5 = 3871000, -- 3593 Schlaege -- wie City
 		-- ===== Was der Guardian einbringt =====
 		-- FEST, nicht zur Laufzeit gerechnet -- so verlangt es die Spec
 		-- (balancing.every-defeat-pays). Bis hierher gab dieser Guardian GAR NICHTS: ein
@@ -957,8 +999,8 @@ CityAlertConfig.Cities = {
 		-- der City-Guardian damit HALB so gross wie sein Gegner. Ein Boss, zu dem man
 		-- hinunterschaut, ist keiner.
 		GuardianHeightStuds = 103,
-		GuardianHP = 7700000,
-		GuardianShieldHP = 3100000,
+		GuardianHP = 2000000,
+		GuardianShieldHP = 805100,
 		GuardianShieldRegenDelay = 10,
 		-- Anteil des MAXIMALSCHILDS pro Sekunde. War 0.04 und damit staerker als der
 		-- Spielerschaden: bei 2200 Schaden je Schlag regenerierte der Schild mit rund

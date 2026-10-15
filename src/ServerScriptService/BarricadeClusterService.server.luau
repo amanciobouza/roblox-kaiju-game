@@ -1236,7 +1236,32 @@ end
 -- ===== Level-Wechsel abonnieren: Cluster aktivieren sich EINZELN über
 -- _G.TryActivateBarricadeCluster. Beim Rückfall unter Level 3 werden ALLE aktiven
 -- Cluster despawnt. =====
-if _G.CityAlertLevelChanged then
+-- ===== WARTEN, nicht einmal pruefen (11.10.2026) =====
+-- Hier stand "if _G.CityAlertLevelChanged then ... end" -- eine einmalige, synchrone
+-- Pruefung beim eigenen Start. Das war ein Wettlauf, und er ist aufgegangen wie er wollte:
+-- CityAlertService setzt dieses Ereignis erst in Zeile 39, und davor liegt in Zeile 21 ein
+-- ReplicatedStorage:WaitForChild("CityAlertConfig") -- also ein Yield. Startete dieser
+-- Dienst in der Luecke, war die Bedingung falsch, der Handler wurde NIE verbunden, und
+-- Stufe 3 loeste nichts aus. Ohne Fehler, ohne Warnung: die Bestandsmeldung weiter unten
+-- zaehlte die Cluster trotzdem auf, der Dienst meldete sich "bereit", und niemand konnte
+-- sehen, dass der Draht fehlte.
+--
+-- Skripte direkt unter ServerScriptService starten in unbestimmter Reihenfolge. Genau
+-- deshalb warten SECHS andere Dienste auf dasselbe Ereignis -- AchievementService,
+-- AlertHelicopterService, CityDefenderService, FireEngineController, MilitaryService und
+-- PrologueOrchestrator. Dieser hier war der einzige, der es nicht tat.
+task.spawn(function()
+	local attempts = 0
+	while not _G.CityAlertLevelChanged and attempts < 100 do
+		task.wait(0.1)
+		attempts += 1
+	end
+	if not _G.CityAlertLevelChanged then
+		warn("[BarricadeClusterService] _G.CityAlertLevelChanged nie gefunden (10s Timeout) -- "
+			.. "Stufe 3 loest keine Barrikaden aus. Laeuft CityAlertService?")
+		return
+	end
+
 	_G.CityAlertLevelChanged.Event:Connect(function(cityName, newLevel, oldLevel)
 		-- "< 3 und vorher >= 3" statt nur des exakten 3->2-Schritts -- deckt auch grössere
 		-- Sprünge ab (z.B. der direkte Rücksprung von Level 5 auf 0 nach CITY BROKEN, siehe
@@ -1276,7 +1301,12 @@ if _G.CityAlertLevelChanged then
 			everActivatedForCity[cityName] = nil
 		end
 	end)
-end
+
+	-- Der Nachweis, dass der Draht steht. Ohne diese Zeile sieht ein verbundener Dienst
+	-- genauso aus wie der Wettlauf-Fall von oben -- und das war der ganze Fehler.
+	print("[Kaiju Debug] BarricadeClusterService: an CityAlertLevelChanged angeschlossen "
+		.. "(nach " .. tostring(attempts) .. " Versuch(en)) -- Stufe 3 loest jetzt aus.")
+end)
 
 -- ===== Bestandsmeldung beim Start =====
 -- Die Barrikaden haengen an Markern in Studio (Workspace.BarricadeSpawns.<Stadt>, je

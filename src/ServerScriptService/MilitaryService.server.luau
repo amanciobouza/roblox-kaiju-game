@@ -722,16 +722,30 @@ local function spawnUnit(cityName, unitType, templateFolder, spawnPart, config)
 		model:Destroy()
 		return nil
 	end
-	model:PivotTo(spawnPart.CFrame)
+	-- ===== Beim Spawnen auseinanderdrücken, nicht erst beim Losfahren =====
+	-- Hier stand PivotTo(spawnPart.CFrame) -- der Spawnpunkt wurde ungeprüft genommen. Die
+	-- Spawnpunkte werden zufällig aus einem Ordner gezogen (pickRandomSpawnPoint), also
+	-- konnten zwei Panzer auf nahen Punkten ineinander auftauchen. Beim Panzer löste sich
+	-- das mit dem ersten Fahrschritt; der Raketenwerfer fährt nie und blieb so stehen.
+	--
+	-- Nur Bodenfahrzeuge: Helikopter fliegen und brauchen keinen Bodenabstand.
+	local spawnPosition = spawnPart.Position
+	local istBodenfahrzeug = unitType == "Tank" or unitType == "RocketLauncher"
+	if istBodenfahrzeug then
+		spawnPosition = GroundVehicleSeparation.ApplySpawnSeparation(model, unitType, spawnPosition)
+	end
+	-- Die Drehung des Spawnpunkts bleibt -- sie sagt, wohin die Einheit schaut.
+	model:PivotTo(CFrame.new(spawnPosition) * spawnPart.CFrame.Rotation)
 	model.Parent = Workspace
 	-- Ab jetzt glaettet der Client die Bewegung dieser Einheit (siehe SmoothMotion). Der
 	-- Spawn selbst bekommt kein Ziel mitgeteilt -- das setzt der erste Fahrschritt.
 	SmoothMotion.Track(model)
 
 	-- Bodenfahrzeuge sofort registrieren, damit andere Fahrzeuge sie von Anfang an als
-	-- Hindernis kennen -- Helikopter bewusst ausgenommen (fliegen, kein Bodenabstand nötig).
-	if unitType == "Tank" or unitType == "RocketLauncher" then
-		GroundVehicleSeparation.RegisterPosition(model, unitType, spawnPart.Position)
+	-- Hindernis kennen. Mit der TATSÄCHLICHEN Position, nicht der des Spawnpunkts: sonst
+	-- weichen die nächsten Fahrzeuge um einen Ort herum, an dem keines steht.
+	if istBodenfahrzeug then
+		GroundVehicleSeparation.RegisterPosition(model, unitType, spawnPosition)
 	end
 
 	local unitId = nextUnitId

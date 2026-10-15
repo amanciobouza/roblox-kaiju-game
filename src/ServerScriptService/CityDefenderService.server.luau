@@ -1912,15 +1912,23 @@ local function stepTowards(guardian, config, destination, blickZiel)
 	-- Ohne Rig bleibt es beim alten Weg: dort gibt es keine Motor6D-Animation, die man
 	-- zerstoeren koennte, und die prozedurale Beinpose braucht das starre Setzen.
 	local ziel = CFrame.lookAt(newPosition, newPosition + blick)
-	if guardian.animation and BEWEGUNG_UEBER_WURZEL then
+	local ueberWurzel = guardian.animation and BEWEGUNG_UEBER_WURZEL
+	if ueberWurzel then
 		rootPart.CFrame = ziel
 	else
 		guardian.model:PivotTo(ziel)
 	end
+
 	-- Dem Client sein Ziel nennen, damit er die Schritte dazwischen glaetten kann. Beide
 	-- Zweige oben setzen die Pose fortlaufend, und beide werden nur mit der Netzwerkrate
 	-- repliziert -- siehe SmoothMotion. Die Bewegung selbst bleibt hier: an der Position des
 	-- Guardians haengt seine Reichweite.
+	--
+	-- UND: dem Client dieselbe Unterscheidung mitgeben, die oben getroffen wird. Ohne sie
+	-- glaettete er mit Model:PivotTo und setzte damit jedes Teil einzeln -- genau das, was
+	-- dieser Zweig vermeidet. Die Folge war ein Guardian ohne Lauf- und ohne Todesanimation
+	-- (14.10.2026); die Pose wurde jedes Bild ueberschrieben, bevor man sie sah.
+	SmoothMotion.SetRootOnly(guardian.model, ueberWurzel)
 	SmoothMotion.SetTarget(guardian.model, ziel)
 
 	if not guardian.animation then
@@ -1938,7 +1946,20 @@ local function faceAndStand(guardian, lookAtPosition, alert)
 	if toLook.Magnitude > 0.1 then
 		-- Auch das Stehen laeuft je Tick durch und dreht ihn dem Ziel nach -- ohne Glaettung
 		-- ruckelt schon dieses Nachdrehen.
-		SmoothMotion.PivotTo(guardian.model, CFrame.lookAt(standPosition, standPosition + toLook))
+		--
+		-- Dieselbe Unterscheidung wie in stepTowards: ein animierter Guardian wird NUR an
+		-- der Wurzel gedreht. Hier stand ein SmoothMotion.PivotTo, das jedes Teil einzeln
+		-- setzte -- und weil der Guardian die meiste Zeit steht statt laeuft, war genau das
+		-- die Stelle, an der die Idle- und die Todesanimation verschwanden.
+		local ziel = CFrame.lookAt(standPosition, standPosition + toLook)
+		local ueberWurzel = guardian.animation and BEWEGUNG_UEBER_WURZEL
+		if ueberWurzel then
+			rootPart.CFrame = ziel
+		else
+			guardian.model:PivotTo(ziel)
+		end
+		SmoothMotion.SetRootOnly(guardian.model, ueberWurzel)
+		SmoothMotion.SetTarget(guardian.model, ziel)
 	end
 	if guardian.animation then
 		playGuardianLoop(guardian, alert and "AlertIdle" or "Idle")

@@ -8,6 +8,12 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local NumberFormat = require(ReplicatedStorage:WaitForChild("NumberFormat"))
+-- Nur fuer das Faust-Symbol neben der Staerke (siehe dort).
+local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
+
+-- Das Gelb der Staerke. Es stand zweimal im Code, seit Symbol und Zahl es teilen -- und
+-- zwei Stellen fuer eine Farbe sind eine Stelle zu viel.
+local STRENGTH_COLOR = Color3.fromRGB(255, 220, 40)
 
 -- Abstand über dem höchsten Punkt der Figur.
 --
@@ -71,19 +77,55 @@ local function createNameTag(player, character)
 	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	layout.Parent = billboard
 
-	-- Stärke: oben, gelb -- nur die Zahl, ohne "Stärke:"-Präfix
+	-- ===== Stärke: oben, gelb -- jetzt mit Faust davor =====
+	-- Die blosse Zahl sagte nicht, WAS sie zählt (gemeldet am 15.10.2026). Davor steht
+	-- deshalb die Faust -- dasselbe Symbol, das im HUD den Nahangriff trägt. Das ist keine
+	-- Zierde, sondern genau die Aussage: die Zahl ist das Attribut "Damage", also der
+	-- Schaden eines Schlags.
+	--
+	-- Ein Symbol und kein Emoji: ein Emoji zeichnet das Betriebssystem in seinem eigenen
+	-- bunten Stil, und aus demselben Grund sind die Emoji im ganzen HUD schon durch Symbole
+	-- ersetzt worden.
+	--
+	-- Die Zeile ist ein eigener Container, weil das Schild senkrecht gestapelt ist (Stärke
+	-- über Name) und Symbol und Zahl waagrecht nebeneinander gehören.
+	local strengthRow = Instance.new("Frame")
+	strengthRow.Name = "StrengthRow"
+	strengthRow.LayoutOrder = 1
+	strengthRow.Size = UDim2.new(1, 0, 0, 22)
+	strengthRow.BackgroundTransparency = 1
+	strengthRow.Parent = billboard
+
+	local strengthRowLayout = Instance.new("UIListLayout")
+	strengthRowLayout.FillDirection = Enum.FillDirection.Horizontal
+	strengthRowLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	strengthRowLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	strengthRowLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+	strengthRowLayout.Padding = UDim.new(0, 4)
+	strengthRowLayout.Parent = strengthRow
+
+	-- Dieselbe Farbe wie die Zahl: die beiden sind EINE Aussage, nicht zwei nebeneinander.
+	local strengthIcon = HudChrome.IconImage(strengthRow, HudChrome.Icon.Punch, STRENGTH_COLOR)
+	strengthIcon.Name = "StrengthIcon"
+	strengthIcon.LayoutOrder = 1
+	strengthIcon.Size = UDim2.fromOffset(20, 20)
+
 	local strengthLabel = Instance.new("TextLabel")
 	strengthLabel.Name = "StrengthLabel"
-	strengthLabel.LayoutOrder = 1
-	strengthLabel.Size = UDim2.new(1, 0, 0, 22)
+	strengthLabel.LayoutOrder = 2
+	-- AutomaticSize statt voller Breite: nur so steht die Zahl direkt neben dem Symbol
+	-- statt mittig in einer Zeile, die das Symbol an den Rand drückt. Damit entfällt
+	-- TextScaled -- es braucht eine feste Grösse, um die Breite berechnen zu können.
+	strengthLabel.AutomaticSize = Enum.AutomaticSize.X
+	strengthLabel.Size = UDim2.new(0, 0, 1, 0)
 	strengthLabel.BackgroundTransparency = 1
 	strengthLabel.Font = Enum.Font.LuckiestGuy
-	strengthLabel.TextScaled = true
-	strengthLabel.TextColor3 = Color3.fromRGB(255, 220, 40)
+	strengthLabel.TextSize = 22
+	strengthLabel.TextColor3 = STRENGTH_COLOR
 	strengthLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
 	strengthLabel.TextStrokeTransparency = 0
 	strengthLabel.Text = NumberFormat.Format(character:GetAttribute("Damage") or 0)
-	strengthLabel.Parent = billboard
+	strengthLabel.Parent = strengthRow
 
 	-- Name: darunter (aber immer noch über dem Charakter), weiß
 	local nameLabel = Instance.new("TextLabel")

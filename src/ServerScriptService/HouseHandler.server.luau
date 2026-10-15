@@ -1707,6 +1707,13 @@ local function destroyHouse(house, destroyerPlayer, originPosition, isPassiveDam
 			end)
 			local buildingHeight = (ok and houseSize and houseSize.Y) or 0
 			_G.RegisterDestroyedBuildingForHelicopter(cityName, house, destroyPosition, house:GetAttribute("MaxHealth") or 0, destroyerPlayer, buildingHeight)
+
+			-- Fundstücke von Kapitel I: war dieses Gebäude der Träger, erscheint hier das
+			-- Stück (siehe CollectibleService). Im selben Block wie die Helikopter-Meldung,
+			-- weil beide dasselbe brauchen -- Stadt, Gebäude und die Stelle, an der es fiel.
+			if _G.RegisterDestroyedBuildingForCollectible then
+				_G.RegisterDestroyedBuildingForCollectible(cityName, house, destroyPosition)
+			end
 		end
 	end
 

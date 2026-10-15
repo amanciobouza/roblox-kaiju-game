@@ -26,7 +26,6 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -36,9 +35,8 @@ local Workspace = game:GetService("Workspace")
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
 local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
 local CameraSessionUtils = require(ReplicatedStorage:WaitForChild("CameraSessionUtils"))
--- Fuer GetFigurePoint: die Kamera zielt auf die SICHTBARE Figur, nicht auf den versteckten
--- Avatar -- dessen Kopf wackelt mit der Laufanimation (siehe dort).
-local StageModels = require(ReplicatedStorage:WaitForChild("StageModels"))
+-- Die Umrundung selbst -- geteilt mit den Fundstuecken von Kapitel I (siehe dort).
+local OrbitCeremonyUtils = require(ReplicatedStorage:WaitForChild("OrbitCeremonyUtils"))
 local TalentTreeConfig = require(ReplicatedStorage:WaitForChild("TalentTreeConfig"))
 
 local TalentCeremonyEvent = RemoteEventUtils.GetOrCreate("TalentCeremonyEvent")
@@ -333,88 +331,28 @@ end
 
 -- ===== Die Kamera umrundet die Figur =====
 --
--- Gerechnet wird je Bild aus dem aktuellen Standort der Figur, nicht einmal vorweg: die
--- Figur steht zwar still, aber sie kann auf einem Fahrzeug oder einer fallenden Truemmerlage
--- stehen -- eine einmal gemerkte Mitte laege dann daneben.
+-- Die Bewegung selbst liegt seit dem 11.10.2026 in OrbitCeremonyUtils. Sie wird dort
+-- unveraendert gefuehrt -- gleiche Winkel, gleiche Abstaende, gleiche Weichzeichnung --,
+-- aber die Fundstuecke von Kapitel I brauchen GENAU DIESE Fahrt ebenfalls. Nachgebaut
+-- staende sie an zwei Orten, und der zweite fiele beim ersten Feinschliff zurueck.
+--
+-- Was hier bleibt, ist der Rahmen dieses Anlasses: Ladeton, Texttafel, Vignette,
+-- Steuerungssperre. Und das Einsammeln der Verbindung, damit ein Abbruch sie trennt.
 local function umrunde(sessionId, dauer)
-	local camera = Workspace.CurrentCamera
-	if not camera then
-		return
+	local verbindung = OrbitCeremonyUtils.Umrunde(player, sessionId, {
+		Dauer = dauer,
+		AbstandStart = ABSTAND_START,
+		AbstandEnde = ABSTAND_ENDE,
+		HoeheStart = HOEHE_START,
+		HoeheEnde = HOEHE_ENDE,
+		EndWinkel = END_WINKEL,
+		StartWinkelPlus = START_WINKEL - END_WINKEL,
+		FokusRadius = FOKUS_RADIUS,
+	}, tiefenschaerfe)
+
+	if verbindung then
+		table.insert(eingaben, verbindung)
 	end
-	camera.CameraType = Enum.CameraType.Scriptable
-
-	local begonnen = os.clock()
-	local verbindung
-	verbindung = RunService.RenderStepped:Connect(function()
-		if not CameraSessionUtils.IsCurrent(sessionId) then
-			verbindung:Disconnect()
-			return
-		end
-		local character, root = figurTeile()
-		if not root then
-			verbindung:Disconnect()
-			return
-		end
-
-		local fortschritt = math.clamp((os.clock() - begonnen) / dauer, 0, 1)
-		-- Weich anlaufen und weich stehenbleiben: eine Drehung mit gleichmaessigem Tempo
-		-- wirkt wie ein Messgeraet, nicht wie eine Inszenierung.
-		local weich = fortschritt * fortschritt * (3 - 2 * fortschritt)
-		local winkel = START_WINKEL + (END_WINKEL - START_WINKEL) * weich
-		local abstand = ABSTAND_START + (ABSTAND_ENDE - ABSTAND_START) * weich
-		local hoehe = HOEHE_START + (HOEHE_ENDE - HOEHE_START) * weich
-
-		local skala = 1
-		local ok, s = pcall(function()
-			return character:GetScale()
-		end)
-		if ok and type(s) == "number" and s > 0 then
-			skala = s
-		end
-
-		-- Gezielt wird auf KOPFHOEHE, nicht auf die Mitte der Figur. Am Ende steht die
-		-- Kamera nah und tief -- auf die Mitte gerichtet saehe man von dort den Brustkorb
-		-- und das Kinn.
-		--
-		-- ===== Der Kopf des SKINS, nicht der des Avatars (02.10.2026) =====
-		-- Hier stand character:FindFirstChild("Head") -- der Kopf des versteckten Avatars.
-		-- Der ist auf die Hoehe des Kaiju skaliert, und die Standard-Laufanimation von Roblox
-		-- bewegt ihn: bei einem Faktor von bis zu achtzehn wird aus einem kleinen Nicken ein
-		-- Ausschlag von mehreren Studs. Die Kamera zielte jede Zehntelsekunde auf eine andere
-		-- Stelle, und die Umrundung ruckelte entsprechend.
-		--
-		-- GetFigurePoint nimmt die Waagrechte von der Wurzel (die keine Animation anfasst)
-		-- und die Hoehe aus dem Huellquader des sichtbaren Modells. 0.9 ist Kopfhoehe --
-		-- knapp unter dem Scheitel, damit der Kopf im Bild steht und nicht die Luft darueber.
-		local ziel = StageModels.GetFigurePoint(character, 0.9)
-			or (root.Position + Vector3.new(0, 2 * skala, 0))
-
-		-- Die Blickrichtung der Figur ist die Null. Flach gelegt, damit eine Figur an einem
-		-- Hang die Kamera nicht mit in die Schraege zieht.
-		local vorne = root.CFrame.LookVector
-		vorne = Vector3.new(vorne.X, 0, vorne.Z)
-		if vorne.Magnitude < 0.001 then
-			vorne = Vector3.new(0, 0, 1)
-		else
-			vorne = vorne.Unit
-		end
-
-		local richtung = CFrame.Angles(0, math.rad(winkel), 0) * vorne
-		local auge = ziel + richtung * (abstand * skala) + Vector3.new(0, hoehe * skala, 0)
-		camera.CFrame = CFrame.lookAt(auge, ziel)
-
-		-- Die Schaerfe folgt der Kamera. Gemessen wird der echte Abstand Auge zu Kopf --
-		-- nicht der Radius der Umrundung, denn die Kamera steht auch ueber der Figur.
-		if tiefenschaerfe then
-			tiefenschaerfe.FocusDistance = (auge - ziel).Magnitude
-			tiefenschaerfe.InFocusRadius = FOKUS_RADIUS * skala
-		end
-
-		if fortschritt >= 1 then
-			verbindung:Disconnect()
-		end
-	end)
-	table.insert(eingaben, verbindung)
 end
 
 local function spieleAktion(effectKey)

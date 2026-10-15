@@ -278,7 +278,10 @@ local NAV_BUTTONS = {
 	{ key = "Monster", icon = HudChrome.Icon.Skins, label = "Skins" },
 	{ key = "Achievements", icon = HudChrome.Icon.Achievements, label = "Achievements" },
 	{ key = "Talents", icon = HudChrome.Icon.Talents, label = "Talents" },
-	{ key = "Pets", icon = HudChrome.Icon.Companion, label = "Companion" },
+	-- Schluessel weiterhin "Pets", Beschriftung jetzt "Fragments": derselbe Grund wie bei
+	-- "Monster"/"Skins" darueber -- der Schluessel steht im Speicherstand (NavBadge_Pets).
+	-- Der Companion war ein leerer Platzhalter; der Platz gehoert den Fragmenten.
+	{ key = "Pets", icon = HudChrome.Icon.Companion, label = "Fragments" },
 	{ key = "Gifts", icon = HudChrome.Icon.Gift, label = "Gift" },
 	{ key = "Faction", icon = HudChrome.Icon.Faction, label = "Faction" },
 	{ key = "Archive", icon = HudChrome.Icon.Archive, label = "Archive" },
@@ -400,11 +403,14 @@ local function showNavNotice(text)
 	end)
 end
 
--- Punkte ohne eigenes System. Companion ist bis heute ein leerer Platzhalter -- kein
--- einziger Treffer im ganzen Projekt ausserhalb dieser Datei. Er bleibt sichtbar, aber
--- ausgegraut: ein Knopf, der auf Druck gar nichts tut, wirkt kaputt, deshalb sagt er kurz,
--- woran es liegt.
-local UNBUILT_KEYS = { Pets = true }
+-- Punkte ohne eigenes System -- sie bleiben sichtbar, aber ausgegraut: ein Knopf, der auf
+-- Druck gar nichts tut, wirkt kaputt, deshalb sagt er kurz, woran es liegt.
+--
+-- Seit dem 11.10.2026 ist die Liste LEER. Darin stand "Pets" (Companion), und das war der
+-- einzige Eintrag; sein Platz traegt jetzt die Fragmente von Kapitel I. Die Liste bleibt
+-- als Mechanik stehen: der naechste ungebaute Punkt braucht sie wieder, und sie ist der
+-- Unterschied zwischen "noch nicht gebaut" und "kaputt".
+local UNBUILT_KEYS = {}
 
 local navBadges = {}
 
@@ -676,12 +682,180 @@ local function createPlaceholderPanel(key, title, subtitle, message)
 	return panel
 end
 
-createPlaceholderPanel(
-	"Pets",
-	"COMPANION",
-	"NOT YET BUILT",
-	"Coming soon! A personal companion that fights alongside you, grows through your bond, and evolves as you play."
-)
+-- ===== Fragmente statt Companion (11.10.2026) =====
+-- Der Companion war von Anfang an ein leerer Platzhalter -- kein einziger Treffer im
+-- Projekt ausserhalb dieser Datei. Der Platz gehört jetzt den Fragmenten von Kapitel I: je
+-- Stadt eines, auffindbar nur im Fenster von CITY BROKEN (siehe CollectibleService).
+--
+-- ===== Warum der Schlüssel "Pets" bleibt =====
+-- Dieselbe Begründung wie bei "Monster"/"Skins" weiter oben: der Schlüssel steht im
+-- Speicherstand (NavBadge_Pets) und in der Whitelist des NavBadgeService. Ihn umzubenennen
+-- würde bei jedem Spieler das gemerkte Lämpchen verwerfen -- für nichts, denn sichtbar ist
+-- nur die Beschriftung.
+--
+-- Der ganze Block liegt in einem do-Block. Diese Datei ist gross, und Luau lässt je
+-- Funktion nur 200 Lokale zu -- aus 20 Namen hier wird so keiner auf oberster Ebene.
+do
+	local CollectibleConfig = require(ReplicatedStorage:WaitForChild("CollectibleConfig"))
+	local ModelPreviewUtils = require(ReplicatedStorage:WaitForChild("ModelPreviewUtils"))
+	-- Beide hier und nicht oben: im do-Block kosten sie keinen Platz auf oberster Ebene.
+	local CityAlertConfigLokal = require(ReplicatedStorage:WaitForChild("CityAlertConfig"))
+	local CityIdentityLokal = require(ReplicatedStorage:WaitForChild("CityIdentity"))
+
+	local schirm = HudChrome.Screen(screenGui, {
+		name = "FragmentsPanel",
+		title = "FRAGMENTS",
+		subtitle = "",
+	})
+	local panel = schirm.panel
+	panel.ZIndex = 5
+	TopInsetUtils.Bind(panel)
+	panels["Pets"] = panel
+	schirm.close.MouseButton1Click:Connect(function()
+		_G.NavReturnToMenu()
+	end)
+
+	local fortschritt = schirm.subtitle
+
+	local raster = Instance.new("Frame")
+	raster.Name = "FragmentGrid"
+	raster.AnchorPoint = Vector2.new(0.5, 0)
+	raster.Position = UDim2.new(0.5, 0, 0, 16)
+	raster.Size = UDim2.new(1, -32, 1, -32)
+	raster.BackgroundTransparency = 1
+	raster.Parent = schirm.content
+
+	local layout = Instance.new("UIGridLayout")
+	layout.CellSize = UDim2.fromOffset(190, 232)
+	layout.CellPadding = UDim2.fromOffset(14, 14)
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = raster
+
+	-- Die Reihenfolge der Kampagne, nicht die einer Tabelle: pairs über ByCity wäre bei
+	-- jedem Spielstart eine andere. CityOrder ist die verbindliche Abfolge.
+	local reihenfolge = {}
+	for _, cityName in ipairs(CityAlertConfigLokal.CityOrder) do
+		if CollectibleConfig.ForCity(cityName) then
+			table.insert(reihenfolge, cityName)
+		end
+	end
+
+	local modellOrdner = ReplicatedStorage:FindFirstChild(CollectibleConfig.FolderName)
+	if not modellOrdner then
+		warn("[Kaiju Debug] Fragmente: " .. CollectibleConfig.FolderName .. " fehlt -- die "
+			.. "Kacheln zeigen Platzhalter statt der Modelle.")
+	end
+
+	local kacheln = {} -- [cityName] = { name, stadt, viewport, vorschau }
+
+	for index, cityName in ipairs(reihenfolge) do
+		local eintrag = CollectibleConfig.ForCity(cityName)
+
+		local kachel = Instance.new("Frame")
+		kachel.Name = cityName .. "Fragment"
+		kachel.LayoutOrder = index
+		kachel.Parent = raster
+		HudChrome.Panel(kachel, { fill = HudChrome.Color.PanelRaised })
+
+		local bild = Instance.new("Frame")
+		bild.Name = "Bild"
+		bild.Position = UDim2.fromOffset(8, 8)
+		bild.Size = UDim2.new(1, -16, 0, 140)
+		bild.BackgroundTransparency = 1
+		bild.Parent = kachel
+
+		local vorlage = modellOrdner and modellOrdner:FindFirstChild(eintrag.Model)
+		local vorschau = nil
+		if vorlage then
+			local viewport = ModelPreviewUtils.CreateViewport(bild, 2)
+			vorschau = vorlage:Clone()
+			vorschau.Parent = viewport
+			pcall(function()
+				ModelPreviewUtils.Fit(viewport, vorschau, bild)
+			end)
+			ModelPreviewUtils.Spin(vorschau)
+		else
+			ModelPreviewUtils.ShowPlaceholder(bild, 2)
+		end
+
+		local name = Instance.new("TextLabel")
+		name.Name = "Name"
+		name.Position = UDim2.fromOffset(8, 154)
+		name.Size = UDim2.new(1, -16, 0, 26)
+		name.BackgroundTransparency = 1
+		name.Text = string.upper(eintrag.Title)
+		name.Parent = kachel
+		HudChrome.Label(name, 17)
+
+		local stadt = Instance.new("TextLabel")
+		stadt.Name = "Stadt"
+		stadt.Position = UDim2.fromOffset(8, 180)
+		stadt.Size = UDim2.new(1, -16, 0, 20)
+		stadt.BackgroundTransparency = 1
+		stadt.Text = CityIdentityLokal.DisplayName(cityName) or cityName
+		stadt.Parent = kachel
+		HudChrome.Sublabel(stadt)
+
+		local zustand = Instance.new("TextLabel")
+		zustand.Name = "Zustand"
+		zustand.Position = UDim2.fromOffset(8, 202)
+		zustand.Size = UDim2.new(1, -16, 0, 22)
+		zustand.BackgroundTransparency = 1
+		zustand.Text = ""
+		zustand.Parent = kachel
+		HudChrome.Number(zustand, 15)
+
+		kacheln[cityName] = {
+			kachel = kachel,
+			zustand = zustand,
+			vorschau = vorschau,
+		}
+	end
+
+	-- ===== Was gesammelt ist =====
+	-- Steht in der Lebensstatistik und kommt als Attribut am Spieler an (StatsService,
+	-- Präfix "Stat_"). Der Client fragt also nichts ab und hält nichts nach -- er liest.
+	local function istGefunden(cityName)
+		return (player:GetAttribute("Stat_CollectibleFound." .. cityName) or 0) > 0
+	end
+
+	local function zeichne()
+		local gefunden = 0
+		for cityName, teile in pairs(kacheln) do
+			local hat = istGefunden(cityName)
+			if hat then
+				gefunden += 1
+			end
+
+			teile.zustand.Text = hat and "FOUND" or "MISSING"
+			-- Bernstein für gefunden, gedämpft für offen. Cyan bleibt der Special Energy
+			-- vorbehalten (siehe HudChrome).
+			teile.zustand.TextColor3 = hat and HudChrome.Color.Ready or HudChrome.Color.TextDim
+
+			-- Ein offenes Fragment bleibt sichtbar, aber zurückgenommen: man soll wissen,
+			-- was es gibt -- das ist der Zweck dieser Übersicht --, ohne dass es wie
+			-- erledigt aussieht.
+			if teile.vorschau then
+				for _, part in ipairs(teile.vorschau:GetDescendants()) do
+					if part:IsA("BasePart") then
+						part.Transparency = hat and 0 or 0.55
+					end
+				end
+			end
+		end
+
+		fortschritt.Text = string.format("%d / %d COLLECTED", gefunden, #reihenfolge)
+	end
+
+	for _, cityName in ipairs(reihenfolge) do
+		player:GetAttributeChangedSignal("Stat_CollectibleFound." .. cityName):Connect(zeichne)
+	end
+	zeichne()
+
+	print(string.format("[Kaiju Debug] Fragmente-Panel bereit -- %d Kacheln, Modelle %s.",
+		#reihenfolge, modellOrdner and "geladen" or "FEHLEN"))
+end
 
 -- ===== Echtes Achievement-Panel (ersetzt den bisherigen Platzhalter) =====
 local AchievementsConfig = require(ReplicatedStorage:WaitForChild("AchievementsConfig"))

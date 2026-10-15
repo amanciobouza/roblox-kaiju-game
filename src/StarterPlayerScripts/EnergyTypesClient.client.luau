@@ -15,6 +15,10 @@ local StageModels = require(ReplicatedStorage:WaitForChild("StageModels"))
 local SkinsConfig = require(ReplicatedStorage:WaitForChild("SkinsConfig"))
 local TopInsetUtils = require(ReplicatedStorage:WaitForChild("TopInsetUtils"))
 local HudChrome = require(ReplicatedStorage:WaitForChild("HudChrome"))
+-- Fuer den Kapitelfortschritt auf der Fraktionskarte. Beide nur gelesen: die Fundstuecke
+-- stehen in CollectibleConfig, ihre Reihenfolge ist die der Staedte (CityAlertConfig).
+local CollectibleConfig = require(ReplicatedStorage:WaitForChild("CollectibleConfig", 30))
+local CityAlertConfig = require(ReplicatedStorage:WaitForChild("CityAlertConfig", 30))
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local SoundService = game:GetService("SoundService")
@@ -476,6 +480,17 @@ local VORSCHAU_UNTEN = 8 + VORSCHAU_HOEHE
 local ANSICHT_DREHUNG = 25
 local CARD_MAX_WIDTH = 460
 
+-- ===== Die Städte, die ein Fundstück tragen =====
+-- Reihenfolge aus CityAlertConfig.CityOrder, gefiltert auf die, die ein Stück haben. So
+-- steht die Reihenfolge an EINER Stelle, und eine Stadt ohne Fundstück (PrologueCity) faellt
+-- von selbst heraus, statt als leeres Feld zu erscheinen.
+local KAPITEL_STAEDTE = {}
+for _, cityName in ipairs(CityAlertConfig.CityOrder or {}) do
+	if CollectibleConfig.ForCity(cityName) then
+		table.insert(KAPITEL_STAEDTE, cityName)
+	end
+end
+
 local cardRow = Instance.new("Frame")
 -- Im Inhaltsbereich: die Kopfhoehe ist dort schon abgezogen.
 cardRow.Size = UDim2.new(1, -32, 1, -24)
@@ -647,13 +662,18 @@ for index, faction in ipairs(FACTIONS) do
 	subtitleLabel.ZIndex = 71
 	subtitleLabel.Parent = card
 
-	-- Fortschritts-Container: nur für gesperrte Fraktionen sichtbar/befüllt.
+	-- Fortschritts-Container. Trug bisher NUR die Freischaltbedingungen und war deshalb bei
+	-- Kaiju ganz verborgen. Jetzt steht oben darin der Kapitelfortschritt -- der gilt fuer
+	-- JEDE Fraktion --, die Bedingungen darunter bleiben den gesperrten vorbehalten.
+	--
+	-- Die Hoehe ist gewachsen (108 -> 184) fuer die Fundstueck-Reihe und ihren Balken. Die
+	-- Reihen stapelt der UIListLayout, es gibt also keine ausgerechnete Position
+	-- nachzuziehen -- genau der Fehler, vor dem der Kommentar bei VORSCHAU_HOEHE warnt.
 	local progressContainer = Instance.new("Frame")
-	progressContainer.Size = UDim2.new(1, -16, 0, 108)
+	progressContainer.Size = UDim2.new(1, -16, 0, 184)
 	progressContainer.Position = UDim2.new(0, 8, 0, VORSCHAU_UNTEN + 152)
 	progressContainer.BackgroundTransparency = 1
 	progressContainer.ZIndex = 71
-	progressContainer.Visible = (faction.key ~= "Kaiju")
 	progressContainer.Parent = card
 
 	local progressLayout = Instance.new("UIListLayout")
@@ -698,9 +718,86 @@ for index, faction in ipairs(FACTIONS) do
 		return label, fill
 	end
 
+	-- ===== Die Fundstücke des Kapitels =====
+	-- Amancio am 14.10.2026: der Faction-Screen soll die zu sammelnden Elemente zeigen, mit
+	-- einem Balken; alle gesammelt heisst das Kapitel zu 100 % durchgespielt.
+	--
+	-- Je Stadt ein Stück, fünf Städte -- also zwanzig Prozent je Fund. Die Zahl wird
+	-- GERECHNET und nicht hingeschrieben: käme je eine sechste Stadt dazu, wären 20 falsch,
+	-- und zwar lautlos.
+	--
+	-- Gezeigt wird hier die ZAHL des Stücks, nicht sein Name. Auf einer Karte von 270 Pixeln
+	-- steht "Ancient Eggshell" nicht lesbar neben vier anderen. Was jedes Stück IST, zeigt
+	-- das Fragmente-Panel mit Modell und Titel -- diese Karte sagt, was es gibt und wie weit
+	-- man ist.
+	local slotRow = Instance.new("Frame")
+	slotRow.Name = "Fundstuecke"
+	slotRow.Size = UDim2.new(1, 0, 0, 30)
+	slotRow.BackgroundTransparency = 1
+	slotRow.LayoutOrder = 1
+	slotRow.ZIndex = 71
+	slotRow.Parent = progressContainer
+
+	local slotLayout = Instance.new("UIListLayout")
+	slotLayout.FillDirection = Enum.FillDirection.Horizontal
+	slotLayout.Padding = UDim.new(0, 4)
+	slotLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	slotLayout.Parent = slotRow
+
+	local slots = {}
+	for index, cityName in ipairs(KAPITEL_STAEDTE) do
+		local eintrag = CollectibleConfig.ForCity(cityName)
+		local slot = Instance.new("TextLabel")
+		slot.Name = cityName
+		-- Gleichmaessig geteilte Breite statt fester Pixel: die Karte waechst mit dem
+		-- Bildschirm (siehe layoutFactionCards), feste Felder wuerden ueberstehen.
+		slot.Size = UDim2.new(1 / #KAPITEL_STAEDTE, -4, 1, 0)
+		slot.BackgroundColor3 = Color3.fromRGB(50, 48, 60)
+		slot.BorderSizePixel = 0
+		slot.Text = string.format("%02d", index)
+		slot.LayoutOrder = index
+		slot.ZIndex = 71
+		slot.Parent = slotRow
+		HudChrome.Number(slot, 13)
+		local ecke = Instance.new("UICorner")
+		-- HudChrome.Radius.Small ist eine ZAHL (4), kein UDim -- die Panel-Helfer nehmen sie
+		-- als Option. Direkt an CornerRadius zugewiesen waere es ein Laufzeitfehler.
+		ecke.CornerRadius = UDim.new(0, HudChrome.Radius.Small)
+		ecke.Parent = slot
+		slots[cityName] = slot
+		-- Der Titel als Instanzname: im Explorer von Studio steht dann "Golden Fruit" statt
+		-- "Village". Keine Hilfe im Spiel -- Roblox hat kein Tooltip auf einem TextLabel --,
+		-- aber sie beantwortet beim Nachsehen, welches Feld welches Stueck meint.
+		if eintrag then
+			slot.Name = eintrag.Title
+		end
+	end
+
+	local chapterLabel, chapterFill = makeProgressBar("CHAPTER 0%")
+	chapterLabel.Parent.LayoutOrder = 2
+
+	-- Die Freischaltbedingungen bleiben den gesperrten Fraktionen vorbehalten. Sie liegen
+	-- jetzt in einem eigenen Rahmen, damit der Kapitelfortschritt darueber bei JEDER Karte
+	-- stehen kann -- vorher war der ganze Container bei Kaiju verborgen.
+	local unlockRows = Instance.new("Frame")
+	unlockRows.Name = "Freischaltung"
+	unlockRows.Size = UDim2.new(1, 0, 0, 108)
+	unlockRows.BackgroundTransparency = 1
+	unlockRows.LayoutOrder = 3
+	unlockRows.Visible = (faction.key ~= "Kaiju")
+	unlockRows.ZIndex = 71
+	unlockRows.Parent = progressContainer
+
+	local unlockLayout = Instance.new("UIListLayout")
+	unlockLayout.Padding = UDim.new(0, 5)
+	unlockLayout.Parent = unlockRows
+
 	local levelLabel, levelFill = makeProgressBar("Level 0/0")
 	local energyLabel, energyFill = makeProgressBar("Energy 0/0")
 	local milestoneLabel, milestoneFill = makeProgressBar("Goal 0/0")
+	levelLabel.Parent.Parent = unlockRows
+	energyLabel.Parent.Parent = unlockRows
+	milestoneLabel.Parent.Parent = unlockRows
 
 	local selectButton = Instance.new("TextButton")
 	selectButton.Size = UDim2.new(1, -16, 0, 34)
@@ -725,6 +822,9 @@ for index, faction in ipairs(FACTIONS) do
 
 	factionCards[faction.key] = {
 		card = card,
+		slots = slots,
+		chapterLabel = chapterLabel,
+		chapterFill = chapterFill,
 		levelLabel = levelLabel,
 		levelFill = levelFill,
 		energyLabel = energyLabel,
@@ -733,6 +833,9 @@ for index, faction in ipairs(FACTIONS) do
 		milestoneFill = milestoneFill,
 		selectButton = selectButton,
 		progressContainer = progressContainer,
+		-- Getrennt gemerkt, weil nur DIESER Teil von der Freischaltung abhaengt. Der
+		-- Kapitelfortschritt darueber gilt fuer jede Karte (siehe unten im Zustands-Update).
+		unlockRows = unlockRows,
 		color = faction.color,
 	}
 end
@@ -758,6 +861,69 @@ end
 cardRow:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutFactionCards)
 layoutFactionCards()
 
+-- ===== Der Kapitelfortschritt =====
+-- Gelesen, nicht gehalten: ein Fund steht in der Lebensstatistik und kommt als Attribut
+-- "Stat_CollectibleFound.<Stadt>" am Spieler an (StatsService, Praefix "Stat_"). Genau so
+-- liest es auch das Fragmente-Panel in NavigationClient -- eine Wahrheit, zwei Ansichten.
+--
+-- ===== Eine Grenze, die hier benannt gehoert =====
+-- Der Schluessel traegt die STADT, nicht die Fraktion. Fuer Kapitel I stimmt das: es gibt
+-- genau einen Satz Fundstuecke. Sobald Jaeger seine eigenen bekommt, zeigte Village als
+-- gefunden, obwohl der Kaiju es gefunden hat -- dann braucht der Schluessel einen
+-- Fraktionsteil, und zwar dort, wo er GESCHRIEBEN wird (CollectibleService).
+-- Bis dahin zeigen die beiden gesperrten Karten bewusst dieselbe Zahl; sie sind verschlossen
+-- und niemand kann in ihnen sammeln.
+local function istGefunden(cityName)
+	return (player:GetAttribute("Stat_CollectibleFound." .. cityName) or 0) > 0
+end
+
+local function zeichneKapitelFortschritt()
+	local gesamt = #KAPITEL_STAEDTE
+	if gesamt == 0 then
+		return
+	end
+	local gefunden = 0
+	for _, cityName in ipairs(KAPITEL_STAEDTE) do
+		if istGefunden(cityName) then
+			gefunden += 1
+		end
+	end
+	local anteil = gefunden / gesamt
+
+	for _, refs in pairs(factionCards) do
+		for _, cityName in ipairs(KAPITEL_STAEDTE) do
+			local slot = refs.slots and refs.slots[cityName]
+			if slot then
+				local hat = istGefunden(cityName)
+				-- Bernstein fuer gefunden, gedaempft fuer offen -- dieselbe Sprache wie im
+				-- Fragmente-Panel. Cyan bleibt der Special Energy vorbehalten.
+				slot.BackgroundColor3 = hat and refs.color or Color3.fromRGB(50, 48, 60)
+				slot.TextColor3 = hat and Color3.fromRGB(20, 18, 26) or HudChrome.Color.TextDim
+			end
+		end
+		if refs.chapterLabel then
+			refs.chapterLabel.Text = string.format("CHAPTER %d%%  (%d/%d)",
+				math.floor(anteil * 100 + 0.5), gefunden, gesamt)
+			refs.chapterLabel.TextColor3 = (gefunden >= gesamt)
+				and HudChrome.Color.Ready
+				or HudChrome.Color.TextSecondary
+		end
+		if refs.chapterFill then
+			refs.chapterFill.Size = UDim2.new(anteil, 0, 1, 0)
+			refs.chapterFill.BackgroundColor3 = refs.color or Color3.fromRGB(120, 220, 140)
+		end
+	end
+end
+
+for _, cityName in ipairs(KAPITEL_STAEDTE) do
+	player:GetAttributeChangedSignal("Stat_CollectibleFound." .. cityName):Connect(zeichneKapitelFortschritt)
+end
+zeichneKapitelFortschritt()
+
+print(string.format(
+	"[Kaiju Debug] Fraktionskarten: Kapitelfortschritt ueber %d Fundstuecke, %d %% je Stueck.",
+	#KAPITEL_STAEDTE, #KAPITEL_STAEDTE > 0 and math.floor(100 / #KAPITEL_STAEDTE + 0.5) or 0))
+
 -- ===== Fortschritt vom Server abrufen und in die Karten eintragen =====
 local ENERGY_ICONS_FOR_PROGRESS = {
 	Heat = "🔥",
@@ -778,13 +944,21 @@ local function refreshFactionProgress()
 	for factionKey, info in pairs(result) do
 		local refs = factionCards[factionKey]
 		if refs then
+			-- ===== Nur die Freischaltbedingungen haengen am Zustand =====
+			-- Hier stand refs.progressContainer.Visible -- und das war richtig, solange der
+			-- Container NICHTS ausser den Bedingungen trug. Seit dem 14.10.2026 steht der
+			-- Kapitelfortschritt mit darin, und damit verschwand er bei Kaiju mit: die
+			-- Fraktion ist freigeschaltet, also wurde der ganze Block verborgen.
+			--
+			-- Im Spiel gemeldet am 15.10.2026: "Bei Kaiju fehlt es." Jetzt schaltet diese
+			-- Stelle nur noch den Teil, der ihr gehoert.
 			if info.unlocked then
-				refs.progressContainer.Visible = false
+				refs.unlockRows.Visible = false
 				refs.selectButton.Text = "SELECT"
 				refs.selectButton.BackgroundColor3 = refs.color
 			elseif info.progress then
 				local p = info.progress
-				refs.progressContainer.Visible = true
+				refs.unlockRows.Visible = true
 				refs.selectButton.Text = "🔒 LOCKED"
 				refs.selectButton.BackgroundColor3 = Color3.fromRGB(60, 58, 68)
 

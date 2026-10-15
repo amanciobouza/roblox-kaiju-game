@@ -54,12 +54,18 @@ local STAGE_LEVEL_MILESTONES = { 0, 10, 20, 30, 40 }
 -- mal dem DamagePercent seiner Entwicklungsstufe. Von Hand geführt, weil die Kappenkurve
 -- in TrainingHandler steht und eine Spec nichts importiert -- dafür steht die Annahme hier
 -- sichtbar und lässt sich widerlegen, statt in einer Kommentarzeile zu verschwinden.
+--
+-- NACHGEZOGEN am 11.10.2026: die beiden oberen Stuetzpunkte der Kappenkurve sind
+-- flachgelegt worden (6364 -> 1820, 83333 -> 9100), weil der Schaden innerhalb der Dekade
+-- 30-40 um x17.5 wuchs. Die beiden unteren Zahlen hier aendern sich dadurch nicht; die
+-- beiden oberen schon. Dass diese Regel die Aenderung gemeldet hat, ist der Zweck der
+-- Tabelle: 34568 war eine Behauptung, die nicht mehr stimmte.
 local ENTRY_DAMAGE_BY_CITY = {
 	Village = 18,
 	SmallTown = 135,
 	City = 614,
-	LargeCity = 1780,
-	MegaCity = 34568,
+	LargeCity = 1569, -- war 1780
+	MegaCity = 8978, -- war 34568
 }
 
 local function cityConfig(ctx, cityName)

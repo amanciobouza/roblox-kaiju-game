@@ -45,6 +45,9 @@
 
       "TrenchbornAssetWorkshop": {
         "$path": "packages/trenchborn-asset-workshop/package.project.json"
+      },
+      "TrenchbornCollectibles": {
+        "$path": "packages/trenchborn-asset-workshop/collectibles-package.project.json"
       }
     },
     

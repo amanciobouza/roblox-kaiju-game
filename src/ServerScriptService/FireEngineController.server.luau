@@ -1286,13 +1286,28 @@ local function spawnEnginesForCity(cityName)
 			end
 		end
 
-		local offset = Vector3.new((i - 1) * 10 - (config.FireEngineCount - 1) * 5, 3, 0)
+		-- ===== Der Abstand in der Reihe kommt aus dem Abstandsmodul =====
+		-- Hier stand eine feste 10. Der Mindestabstand gleichartiger Bodenfahrzeuge ist aber
+		-- 24 -- die Feuerwehr spawnte also deutlich INNERHALB ihres eigenen Minimums, sah
+		-- wie ein Klumpen aus und schob sich erst beim Losfahren auseinander.
+		--
+		-- Jetzt aus GroundVehicleSeparation.SPAWN_MIN_DISTANCE_SAME_TYPE: eine Zahl, ein Ort.
+		-- Eine zweite Kopie hier wäre genau die Doppelung, die beim nächsten Nachjustieren
+		-- auseinanderläuft.
+		local reihenAbstand = GroundVehicleSeparation.SPAWN_MIN_DISTANCE_SAME_TYPE
+		local offset = Vector3.new(
+			(i - 1) * reihenAbstand - (config.FireEngineCount - 1) * reihenAbstand * 0.5, 3, 0)
 		engine.Parent = Workspace
 		-- WICHTIG: wird an PivotMath.groundAlignedCFrame() weitergegeben (siehe
 		-- driveTowards weiter unten) -- war bisher nirgends gesetzt, das Modul bekam also
 		-- immer 'nil' übergeben, was auf Schrägen zu Wackeln/Steckenbleiben führen konnte.
 		engine:SetAttribute("GroundClearance", GROUND_CLEARANCE)
-		local spawnAt = spawnPosition + offset
+		-- Die Reihe sorgt für den Abstand UNTEREINANDER; die Trennung darüber zusätzlich für
+		-- den Abstand zu Fahrzeugen, die schon stehen (Panzer, frühere Feuerwehrautos).
+		-- VOR der Bodenausrichtung, denn sie verschiebt nur X und Z -- die Höhe wird danach
+		-- ohnehin neu gemessen.
+		local spawnAt = GroundVehicleSeparation.ApplySpawnSeparation(
+			engine, "FireEngine", spawnPosition + offset)
 		local groundY = getGroundInfo(spawnAt, spawnAt.Y)
 		engine:PivotTo(CFrame.new(spawnAt.X, groundY + GROUND_CLEARANCE, spawnAt.Z))
 		GroundVehicleSeparation.RegisterPosition(engine, "FireEngine", spawnAt)

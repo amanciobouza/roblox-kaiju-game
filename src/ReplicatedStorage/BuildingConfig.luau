@@ -201,14 +201,23 @@ BuildingConfig.City = {
 	},
 }
 
--- LargeCity: Level 30-40, Chronovore; Eintrittsschaden 1780 bei voller Arm-Trainingskappe.
+-- LargeCity: Level 30-40, Chronovore; Eintrittsschaden 1569 bei voller Arm-Trainingskappe.
 -- L1/L2/L3 halten 15/45/89 Grundtreffer. Alle 21 Workshop-Typen sind L3.
+--
+-- ===== Mitgezogen am 11.10.2026 (Eintrittsschaden 1780 -> 1569) =====
+-- Nicht die Gebaeude waren falsch, sondern die Stuetzpunkt-Kurve in TrainingHandler: sie
+-- liess den Schaden innerhalb der Dekade um x17.5 wachsen, sodass ein Grundhaus bei Level
+-- 39 nur noch EINEN Schlag kostete. Die Kurve ist dort flachgelegt; weil der
+-- Eintrittsschaden daran haengt, sinken diese Werte um den Faktor 0.882 mit. Die
+-- Trefferzahlen 15/45/89 bleiben dadurch unveraendert -- und bleiben es nun auch bis
+-- Level 39 (dort 3.5 statt 1.1 Treffer).
+-- MUSS IN STUDIO ANGEWANDT WERDEN: GebaeudeWerteSetzen.Anwenden("LargeCity").
 -- Zaehlung im Studio am 04.10.2026: 65 angreifbare Instanzen; weitere Typen werden
 -- ueber ihr eindeutiges _L1/_L2/_L3-Suffix zugeordnet. Unbekannte Typen werden gemeldet.
 BuildingConfig.LargeCity = {
-	L1 = { MaxHealth = 26700 },
-	L2 = { MaxHealth = 80100 },
-	L3 = { MaxHealth = 158400 },
+	L1 = { MaxHealth = 23500 },
+	L2 = { MaxHealth = 70600 },
+	L3 = { MaxHealth = 139600 },
 }
 BuildingConfig.LargeCityMasterTypes = {
 	B01 = "LargeCity_LuxuryWaterfrontResort_L3",
@@ -258,60 +267,67 @@ BuildingConfig.LargeCityMasterTypes = {
 -- trotzdem L1-Leben. Umbenennen waere Studio-Arbeit an 65 Modellen fuer nichts.
 
 -- Wahrzeichen (L3, 89 Treffer) -- je einmal in der Stadt
-BuildingConfig.LargeCity.LargeCity_LuxuryWaterfrontResort_L3 = { MaxHealth = 158400 }
-BuildingConfig.LargeCity.LargeCity_CentralHospital_L3 = { MaxHealth = 158400 }
-BuildingConfig.LargeCity.LargeCity_Stadium_L3 = { MaxHealth = 158400 }
-BuildingConfig.LargeCity.LargeCity_UptownArena_L3 = { MaxHealth = 158400 }
-BuildingConfig.LargeCity.LargeCity_EmberlineResponseHQ_L3 = { MaxHealth = 158400 }
-BuildingConfig.LargeCity.LargeCity_PoliceHQ_L3 = { MaxHealth = 158400 }
-BuildingConfig.LargeCity.LargeCity_Courthouse_L3 = { MaxHealth = 158400 }
-BuildingConfig.LargeCity.LargeCity_CentralStation_L3 = { MaxHealth = 158400 }
-BuildingConfig.LargeCity.LargeCity_CoastConventionCentre_L3 = { MaxHealth = 158400 }
-BuildingConfig.LargeCity.LargeCity_TropicalSignalTower_L3 = { MaxHealth = 158400 }
+BuildingConfig.LargeCity.LargeCity_LuxuryWaterfrontResort_L3 = { MaxHealth = 139600 }
+BuildingConfig.LargeCity.LargeCity_CentralHospital_L3 = { MaxHealth = 139600 }
+BuildingConfig.LargeCity.LargeCity_Stadium_L3 = { MaxHealth = 139600 }
+BuildingConfig.LargeCity.LargeCity_UptownArena_L3 = { MaxHealth = 139600 }
+BuildingConfig.LargeCity.LargeCity_EmberlineResponseHQ_L3 = { MaxHealth = 139600 }
+BuildingConfig.LargeCity.LargeCity_PoliceHQ_L3 = { MaxHealth = 139600 }
+BuildingConfig.LargeCity.LargeCity_Courthouse_L3 = { MaxHealth = 139600 }
+BuildingConfig.LargeCity.LargeCity_CentralStation_L3 = { MaxHealth = 139600 }
+BuildingConfig.LargeCity.LargeCity_CoastConventionCentre_L3 = { MaxHealth = 139600 }
+BuildingConfig.LargeCity.LargeCity_TropicalSignalTower_L3 = { MaxHealth = 139600 }
 
 -- Grossbauten (L2, 45 Treffer) -- zwei bis vier Mal, Tuerme und Infrastruktur
-BuildingConfig.LargeCity.LargeCity_SummitTower_L3 = { MaxHealth = 80100 }
-BuildingConfig.LargeCity.LargeCity_TropicalHighRise_L3 = { MaxHealth = 80100 }
-BuildingConfig.LargeCity.LargeCity_MeridianPharma_L3 = { MaxHealth = 80100 }
-BuildingConfig.LargeCity.LargeCity_PowerUtility_L3 = { MaxHealth = 80100 }
-BuildingConfig.LargeCity.LargeCity_OceanGalleria_L3 = { MaxHealth = 80100 }
+BuildingConfig.LargeCity.LargeCity_SummitTower_L3 = { MaxHealth = 70600 }
+BuildingConfig.LargeCity.LargeCity_TropicalHighRise_L3 = { MaxHealth = 70600 }
+BuildingConfig.LargeCity.LargeCity_MeridianPharma_L3 = { MaxHealth = 70600 }
+BuildingConfig.LargeCity.LargeCity_PowerUtility_L3 = { MaxHealth = 70600 }
+BuildingConfig.LargeCity.LargeCity_OceanGalleria_L3 = { MaxHealth = 70600 }
 
 -- Grundbestand (L1, 15 Treffer) -- vier bis acht Mal, der Teppich der Stadt
-BuildingConfig.LargeCity.LargeCity_OfficeTower_L3 = { MaxHealth = 26700 }
-BuildingConfig.LargeCity.LargeCity_ResidentialTower_L3 = { MaxHealth = 26700 }
-BuildingConfig.LargeCity.LargeCity_UptownResidences_L3 = { MaxHealth = 26700 }
-BuildingConfig.LargeCity.LargeCity_UptownParking_L3 = { MaxHealth = 26700 }
-BuildingConfig.LargeCity.LargeCity_CityHotel_L3 = { MaxHealth = 26700 }
-BuildingConfig.LargeCity.LargeCity_StadiumHotel_L3 = { MaxHealth = 26700 }
+BuildingConfig.LargeCity.LargeCity_OfficeTower_L3 = { MaxHealth = 23500 }
+BuildingConfig.LargeCity.LargeCity_ResidentialTower_L3 = { MaxHealth = 23500 }
+BuildingConfig.LargeCity.LargeCity_UptownResidences_L3 = { MaxHealth = 23500 }
+BuildingConfig.LargeCity.LargeCity_UptownParking_L3 = { MaxHealth = 23500 }
+BuildingConfig.LargeCity.LargeCity_CityHotel_L3 = { MaxHealth = 23500 }
+BuildingConfig.LargeCity.LargeCity_StadiumHotel_L3 = { MaxHealth = 23500 }
 
--- MegaCity: Level 40-50, Aeon Tyrant, 34568 Schaden je Grundtreffer.
+-- MegaCity: Level 40-50, Aeon Tyrant, 8978 Schaden je Grundtreffer.
 -- Gleicher Massstab wie LargeCity: L1/L2/L3 = 15/45/89 Treffer.
+--
+-- ===== Mitgezogen am 11.10.2026 (Eintrittsschaden 34568 -> 8978) =====
+-- Dieselbe Ursache wie bei LargeCity: der obere Stuetzpunkt der Kraftkurve stand auf
+-- 83333 und liess den Schaden ueber die Dekade um x13.1 wachsen. Mit 9100 sind es x4.3,
+-- und der Eintrittsschaden sinkt auf gut ein Viertel -- diese Werte entsprechend. Die
+-- Trefferzahlen bleiben 15/45/89 und enden bei 3.5 statt 1.5 Treffern.
+-- MUSS IN STUDIO ANGEWANDT WERDEN: GebaeudeWerteSetzen.Anwenden("MegaCity").
 -- MC-01 bis MC-21 sind die grossen Workshop-Bauwerke (L3).
 BuildingConfig.MegaCity = {
-	L1 = { MaxHealth = 518500 },
-	L2 = { MaxHealth = 1555600 },
-	L3 = { MaxHealth = 3076600 },
-	["MC-01"] = { MaxHealth = 3076600 },
-	["MC-02"] = { MaxHealth = 3076600 },
-	["MC-03"] = { MaxHealth = 3076600 },
-	["MC-04"] = { MaxHealth = 3076600 },
-	["MC-05"] = { MaxHealth = 3076600 },
-	["MC-06"] = { MaxHealth = 3076600 },
-	["MC-07"] = { MaxHealth = 3076600 },
-	["MC-08"] = { MaxHealth = 3076600 },
-	["MC-09"] = { MaxHealth = 3076600 },
-	["MC-10"] = { MaxHealth = 3076600 },
-	["MC-11"] = { MaxHealth = 3076600 },
-	["MC-12"] = { MaxHealth = 3076600 },
-	["MC-13"] = { MaxHealth = 3076600 },
-	["MC-14"] = { MaxHealth = 3076600 },
-	["MC-15"] = { MaxHealth = 3076600 },
-	["MC-16"] = { MaxHealth = 3076600 },
-	["MC-17"] = { MaxHealth = 3076600 },
-	["MC-18"] = { MaxHealth = 3076600 },
-	["MC-19"] = { MaxHealth = 3076600 },
-	["MC-20"] = { MaxHealth = 3076600 },
-	["MC-21"] = { MaxHealth = 3076600 },
+	L1 = { MaxHealth = 134700 },
+	L2 = { MaxHealth = 404000 },
+	L3 = { MaxHealth = 799000 },
+	["MC-01"] = { MaxHealth = 799000 },
+	["MC-02"] = { MaxHealth = 799000 },
+	["MC-03"] = { MaxHealth = 799000 },
+	["MC-04"] = { MaxHealth = 799000 },
+	["MC-05"] = { MaxHealth = 799000 },
+	["MC-06"] = { MaxHealth = 799000 },
+	["MC-07"] = { MaxHealth = 799000 },
+	["MC-08"] = { MaxHealth = 799000 },
+	["MC-09"] = { MaxHealth = 799000 },
+	["MC-10"] = { MaxHealth = 799000 },
+	["MC-11"] = { MaxHealth = 799000 },
+	["MC-12"] = { MaxHealth = 799000 },
+	["MC-13"] = { MaxHealth = 799000 },
+	["MC-14"] = { MaxHealth = 799000 },
+	["MC-15"] = { MaxHealth = 799000 },
+	["MC-16"] = { MaxHealth = 799000 },
+	["MC-17"] = { MaxHealth = 799000 },
+	["MC-18"] = { MaxHealth = 799000 },
+	["MC-19"] = { MaxHealth = 799000 },
+	["MC-20"] = { MaxHealth = 799000 },
+	["MC-21"] = { MaxHealth = 799000 },
 }
 
 -- Layout-Kopien haben LC-xx-Namen. MasterId/AssetId bewahren den eigentlichen Typ.

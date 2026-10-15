@@ -384,14 +384,39 @@ local XP_LEVEL_STEPS = {
 	-- zusammen, das Tempo bleibt gleich. Verboten waere der umgekehrte Fall -- ein Level,
 	-- das billiger ist als das davor.
 	14200, 14650, 15050, 15500, 16000, 16450, 16950, 17450, 18000, 18550,
+
+	-- ===== Level 30-39, LargeCity -- geeicht am 11.10.2026 =====
+	-- Amancio: "Zwischen Level 30 und 40 wird man so schnell so viel staerker." Das hatte
+	-- zwei Ursachen. Die eine war die Kraftkurve (siehe TrainingHandler). Die andere steht
+	-- hier: Level 30 bis 39 liefen noch ueber den vorlaeufigen geometrischen Rueckfall von
+	-- 18 550 aus und kosteten damit zusammen 3 674 783 XP.
+	--
+	-- LargeCity ist jetzt bestueckt und damit eichbar. Der Studio-Bericht vom 06.10.2026 gab
+	-- 65 Gebaeude mit 4 116 900 Lebenspunkten; diese Summe wird von genau einer Mischung
+	-- erklaert, 12x L3 + 15x L2 + 38x L1. Mit den gesenkten Werten tragen die 65 Gebaeude
+	-- 3 356 337 XP je Durchgang. Der alte Bedarf entsprach 1.09 Durchgaengen je Dekade --
+	-- Brasshaven und City liegen bei 1.75. Man wurde also nicht nur zu stark, man kam auch
+	-- zu schnell oben an.
+	--
+	-- Die zehn Zahlen unten summieren sich auf 392 000, mal XP_STEP_SCALE sind das
+	-- 5 880 000 XP und damit 1.75 Durchgaenge. Die Steigung innerhalb der Dekade ist
+	-- dieselbe wie im Block darueber (vom ersten zum letzten Schritt rund x1.31).
+	34000, 35150, 36300, 37450, 38600, 39800, 40950, 42100, 43250, 44400,
 }
 local XP_STEP_SCALE = 15
--- Jenseits von Level 29 geht es wieder geometrisch weiter -- VORLAEUFIG. Der Wert steht
--- bewusst niedrig, weil er nicht geeicht werden KANN: LargeCity hat 26 Gebaeude und
--- MegaCity 19, beide sind noch nicht bestueckt, und ihre gemessenen Durchgaenge (584 475
--- und 26 084 929 XP) sind deshalb keine Aussage ueber das fertige Spiel. Wer diese
--- Staedte baut, setzt hier den naechsten Zehnerblock von Hand dazu -- so wie die drei
--- darueber.
+-- Jenseits von Level 39 geht es wieder geometrisch weiter -- VORLAEUFIG, und zwar jetzt nur
+-- noch fuer MegaCity. Der Block fuer LargeCity ist am 11.10.2026 eingetragen worden, weil
+-- die Stadt bestueckt und gemessen ist. MegaCity ist es nicht: die Angaben widersprechen
+-- sich -- der Durchgang-Bericht sprach von 19 Gebaeuden, CityAlertConfig von 86 gezaehlten
+-- angreifbaren Instanzen -- und mit den am 11.10. gesenkten Gebaeudewerten ist ohnehin
+-- keine der alten Messungen noch gueltig.
+--
+-- WAS ES ZUM EICHEN BRAUCHT: eine Zeile des Durchgang-Berichts fuer MegaCity nach dem
+-- Anwenden der neuen Werte (Gebaeudezahl, Lebenspunkte, Erfahrung). Daraus wird der
+-- Zehnerblock 40-49 genauso gerechnet wie der fuer LargeCity: Durchgang-XP mal 1.75,
+-- geteilt durch XP_STEP_SCALE, auf zehn Schritte mit rund x1.31 Steigung verteilt.
+-- Bis dahin waechst der Bedarf ab Level 40 von 44 400 aus weiter, nicht mehr von 18 550 --
+-- das ist naeher dran als vorher, aber keine Eichung.
 local XP_GROWTH_BEYOND_TABLE = 1.05
 -- ACHTUNG, historischer Wert: die echte Obergrenze ist KEINE Gerade "Level * 10", sondern
 -- die Stützpunkt-Kurve STAT_CAP_BREAKPOINTS in TrainingHandler. Diese Zahl wird zwar
