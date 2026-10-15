@@ -92,10 +92,6 @@ energyArriveSound.SoundId = ENERGY_ARRIVE_SOUND_ID
 energyArriveSound.Volume = 0.7
 energyArriveSound.Parent = SoundService
 
--- Solange eine Münz-Flug-Animation läuft, soll der normale Coins-Changed-Handler
--- den Zähler NICHT sofort überschreiben (sonst springt die Zahl vor der Animation hoch).
-local isAnimatingCoins = false
-
 -- Lässt ein GUI-Element kurz hell aufblitzen (Hintergrundfarbe -> heller Blitz -> zurück
 -- zur Originalfarbe) -- z.B. bei Level-Aufstieg oder Coins-Zuwachs, als kurzes visuelles
 -- Feedback "hier hat sich gerade was erhöht".
@@ -2956,33 +2952,10 @@ end)
 
 -- ===== Update-Funktionen =====
 local function updateCoinsLabel()
-	if isAnimatingCoins then
-		return -- Zähler wird gerade von der Flug-Animation gesteuert
-	end
 	local leaderstats = player:FindFirstChild("leaderstats")
 	if leaderstats and leaderstats:FindFirstChild("Coins") then
 		coinsLabel.Text = NumberFormat.Format(leaderstats.Coins.Value)
 	end
-end
-
--- Zählt den Coins-Text weich von "fromValue" zu "toValue" hoch.
-local function animateCoinCount(fromValue, toValue)
-	isAnimatingCoins = true
-	local duration = 0.5
-	local startTime = os.clock()
-
-	local connection
-	connection = RunService.RenderStepped:Connect(function()
-		local alpha = math.clamp((os.clock() - startTime) / duration, 0, 1)
-		local current = math.floor(fromValue + (toValue - fromValue) * alpha)
-		coinsLabel.Text = NumberFormat.Format(current)
-
-		if alpha >= 1 then
-			connection:Disconnect()
-			isAnimatingCoins = false
-			coinsLabel.Text = NumberFormat.Format(toValue)
-		end
-	end)
 end
 
 -- Lässt EINE Münze vom Ort des zerstörten Hauses zum Coins-Zähler fliegen.
@@ -3021,7 +2994,7 @@ local function spawnFlyingCoin(worldPosition, onArrive)
 
 	popTween.Completed:Connect(function()
 		-- Phase 2: kurz verweilen
-		task.delay(0.3, function()
+		task.delay(0.45, function()
 			if not coinIcon.Parent then
 				return
 			end
@@ -3036,7 +3009,7 @@ local function spawnFlyingCoin(worldPosition, onArrive)
 
 			local flightTween = TweenService:Create(
 				coinIcon,
-				TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+				TweenInfo.new(0.75, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
 				{ Position = targetPosition, Rotation = 360 }
 			)
 
@@ -3052,30 +3025,41 @@ local function spawnFlyingCoin(worldPosition, onArrive)
 	popTween:Play()
 end
 
--- Lässt mehrere Münzen fliegen (eine pro 10 Coins, mindestens eine), leicht zeitversetzt.
--- Jede Münze spielt bei Ankunft den Cash-Sound; der Zähler zählt einmal am Ende komplett hoch.
+-- Die Belohnung darf auch bei Millionenbeträgen keine lange Münzserie erzeugen.
+-- Höchstens ein kurzer Flug läuft gleichzeitig; weitere Belohnungen aktualisieren
+-- nur den echten Kontostand über Coins. Es gibt keine Warteschlange für Effekte.
 local COINS_PER_FLYING_COIN = 100
-local COIN_LAUNCH_DELAY = 0.08 -- Sekunden zwischen den einzelnen Münzen
+local MAX_FLYING_COINS = 6
+local COIN_LAUNCH_DELAY = 0.12 -- Mit sechs Münzen dauert der ganze Flug etwa zwei Sekunden.
+local CASH_SOUND_COOLDOWN = 1.5
+local coinFlightActive = false
+local lastCashSoundAt = -math.huge
+
+print("[Kaiju Debug] Muenzfeedback: maximal 6 Muenzen, etwa 2 Sekunden, ein Flug gleichzeitig, ein Sound pro Flug.")
 
 local function flyCoinsToHud(worldPosition, amount)
-	local coinCount = math.max(1, math.floor(amount / COINS_PER_FLYING_COIN))
+	if coinFlightActive or amount <= 0 then
+		return
+	end
+	coinFlightActive = true
+	local coinCount = math.clamp(math.floor(amount / COINS_PER_FLYING_COIN), 1, MAX_FLYING_COINS)
 	local arrivedCount = 0
-
-	local leaderstats = player:FindFirstChild("leaderstats")
-	local newValue = (leaderstats and leaderstats:FindFirstChild("Coins")) and leaderstats.Coins.Value or amount
-	local oldValue = math.max(newValue - amount, 0)
 
 	for i = 1, coinCount do
 		task.delay((i - 1) * COIN_LAUNCH_DELAY, function()
 			spawnFlyingCoin(worldPosition, function()
-				if cashSound.SoundId ~= "" and cashSound.SoundId ~= "rbxassetid://0" then
-					cashSound.TimePosition = 0
-					cashSound:Play()
-				end
-
 				arrivedCount += 1
 				if arrivedCount == coinCount then
-					animateCoinCount(oldValue, newValue)
+					coinFlightActive = false
+					-- Immer den aktuellen Stand anzeigen, auch nach mehreren Zerstörungen.
+					updateCoinsLabel()
+					local now = os.clock()
+					if now - lastCashSoundAt >= CASH_SOUND_COOLDOWN
+						and cashSound.SoundId ~= "" and cashSound.SoundId ~= "rbxassetid://0" then
+						lastCashSoundAt = now
+						cashSound.TimePosition = 0
+						cashSound:Play()
+					end
 					-- Ein Aufruf fuer das ganze Feld -- Grund, Rahmen und beide Texte.
 					flashCoinsFrame()
 				end
