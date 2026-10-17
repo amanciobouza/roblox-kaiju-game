@@ -520,6 +520,35 @@ _G.ResetPlayerTalents = function(player)
 	ResearchCompleteEvent:FireClient(player, "Kaiju", "", 0)
 end
 
+-- ===== Rebirth: NUR den Zweig eines Kapitels leeren (15.10.2026) =====
+-- Der Reset darüber ist ein Gamemaster-Werkzeug und räumt bewusst alles ab. Der
+-- Rebirth-Knopf im Hauptmenü darf das nicht: er setzt EIN Kapitel zurück, und die
+-- Talente der beiden anderen gehören nicht dazu -- sie dort mitzunehmen wäre ein
+-- Verlust ausserhalb dessen, wofür der Spieler gedrückt hat.
+--
+-- Die laufende Forschung wird nur abgebrochen, wenn sie zu diesem Kapitel gehört.
+-- Forschung ist an eine Fraktion gebunden (siehe activeResearch.faction); eine
+-- Jaeger-Forschung darf einen Kaiju-Rebirth überleben.
+_G.ResetPlayerTalentsForChapter = function(player, chapter)
+	if not player or not chapter then
+		return false
+	end
+	local zweige = talentLevels[player]
+	if not zweige then
+		-- Kein geladener Talentstand: nichts zu tun, aber auch kein Fehler -- der Spieler
+		-- hat dann schlicht noch keine Talente.
+		return true
+	end
+	zweige[chapter] = {}
+
+	local forschung = activeResearch[player]
+	if forschung and forschung.faction == chapter then
+		activeResearch[player] = nil
+		ResearchCompleteEvent:FireClient(player, chapter, "", 0)
+	end
+	return true
+end
+
 Players.PlayerRemoving:Connect(function(player)
 	-- WICHTIG -- task.defer, NICHT sofort aufräumen: PlayerSetup speichert ebenfalls in
 	-- PlayerRemoving und holt sich den Talentstand dort über _G.GetTalentSaveData.

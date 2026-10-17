@@ -1420,6 +1420,32 @@ end
 
 Players.PlayerAdded:Connect(function(player)
 	local data = loadPlayerData(player)
+
+	-- ===== Das laufende Kapitel aus dem Stand zuruecklesen (15.10.2026) =====
+	-- Bis hierher setzte EnergyTypesHandler bei JEDEM Beitritt Faction und SelectedFaction
+	-- hart auf Kaiju, ohne in den Speicherstand zu schauen. Wer in Kapitel II aufhoerte,
+	-- kam als Kaiju zurueck. Gespeichert war das richtige Kapitel die ganze Zeit -- es las
+	-- nur niemand zurueck.
+	--
+	-- data.Chapter ist die EINZIGE Quelle dafuer. Ein zweites gespeichertes Feld "Faction"
+	-- daneben waere eine zweite Wahrheit, und die beiden liefen irgendwann auseinander --
+	-- genau der Fehler, der hier gerade behoben wird.
+	--
+	-- Warum diese drei Zeilen gewinnen: loadPlayerData oben gibt nach (DataStore), waehrend
+	-- der PlayerAdded-Handler von EnergyTypesHandler ohne Unterbrechung durchlaeuft. Diese
+	-- Zuweisung kommt also spaeter. Darauf allein wollte ich mich aber nicht verlassen --
+	-- deshalb setzt EnergyTypesHandler seinen Ausgangswert nur noch, wenn noch keiner
+	-- dasteht. Das Ergebnis haengt damit nicht mehr an der Reihenfolge der beiden Handler.
+	--
+	-- entpackeKapitel stellt sicher, dass data.Chapter nie leer ist -- beim Erstspieler
+	-- CHAPTER_ORDER[1], also Kaiju.
+	player:SetAttribute("Chapter", data.Chapter)
+	player:SetAttribute("SelectedFaction", data.Chapter)
+	player:SetAttribute("Faction", data.Chapter)
+	print(string.format(
+		"[Kaiju-Debug] Kapitel aus dem Stand uebernommen: %s spielt %s.",
+		player.Name, tostring(data.Chapter)))
+
 	-- Das Attribut bleibt das Laufzeit-Signal fuer alle uebrigen Stellen (Prolog-Start,
 	-- Spawn-Logik, PrologueOrchestrator) -- es wird jetzt nur aus der Version ABGELEITET
 	-- statt direkt gespeichert.
@@ -1864,6 +1890,36 @@ _G.MarkChapterComplete = function(player, kapitel)
 	-- "zum ersten Mal" gibt es nicht.
 	savePlayerData(player, buildPlayerSaveData(player))
 	return true
+end
+
+-- Das Gegenstueck, fuer den Rebirth. Ohne dieses Zuruecknehmen waere ein neu gestartetes
+-- Kapitel weiterhin als abgeschlossen vermerkt: der Spieler liefe das Kapitel noch einmal
+-- und bekaeme am Ende statt des Finales nur CITY BROKEN -- er liefe auf einen Hoehepunkt
+-- zu, den das Spiel schon abgehakt hat.
+--
+-- Speichert NICHT selbst: der Rebirth setzt noch ein Dutzend weiterer Dinge zurueck und
+-- schreibt danach einmal. Ein Schreibvorgang mittendrin wuerde einen halb
+-- zurueckgesetzten Stand festhalten.
+_G.ClearChapterCompletion = function(player, kapitel)
+	local stand = geladenerStand[player]
+	if not stand or not stand.CompletedChapters then
+		return false
+	end
+	if not stand.CompletedChapters[kapitel] then
+		return false
+	end
+	stand.CompletedChapters[kapitel] = nil
+	print(string.format("[Kaiju-Debug] Kapitelabschluss %q fuer %s zurueckgenommen.",
+		tostring(kapitel), player.Name))
+	return true
+end
+
+-- Welches Kapitel der Spieler gerade spielt -- aus dem Stand, nicht aus dem Attribut.
+-- Der Rebirth braucht das, und er darf sich dabei nicht auf das Attribut verlassen:
+-- genau dessen Abweichen vom Stand war der Fehler, der am 15.10.2026 behoben wurde.
+_G.GetCurrentChapter = function(player)
+	local stand = geladenerStand[player]
+	return stand and stand.Chapter or nil
 end
 
 _G.SwitchChapter = function(player, neuesKapitel)
@@ -2577,6 +2633,235 @@ ResetPlayerDataEvent.OnServerEvent:Connect(function(player, resetPrologue)
 	end)
 
 	print("[Kaiju] Alle Werte von " .. player.Name .. " wurden zurückgesetzt.")
+end)
+
+-- ===================================================================================
+-- REBIRTH -- das aktuelle Kapitel von vorn (15.10.2026)
+-- ===================================================================================
+-- Der Knopf im Hauptmenue. Er stammt vom Debug-Reset darueber ab und weicht an fuenf
+-- Stellen bewusst von ihm ab. Jede davon ist eine Entscheidung, keine Auslassung:
+--
+--   1. KEINE Berechtigungspruefung. Der Knopf gehoert jedem Spieler, der Debug-Reset
+--      einer Namensliste.
+--   2. Die FRAKTION BLEIBT. Der Debug-Reset schiebt auf Kaiju zurueck; hier waere das
+--      ein Kapitelwechsel, den niemand verlangt hat.
+--   3. Nur der TALENTZWEIG DIESES KAPITELS. Der Debug-Reset raeumt alle drei.
+--   4. Lebensstatistik, Achievements, Archiv, Menue-Laempchen und die
+--      Lifetime-Energiezaehler BLEIBEN STEHEN. An der Statistik haengt die Freischaltung
+--      von Jaeger und Ronin: wuerde sie mitgeloescht, sperrte ein Rebirth in Kapitel I
+--      die beiden anderen Kapitel wieder zu -- der Knopf waere eine Falle.
+--   5. Die WELT wird nicht angefasst. Der Debug-Reset setzt alle Staedte auf Alarmstufe
+--      0, weil ein Gamemaster genau das will. Hier sitzen andere Spieler im selben
+--      Server: einer drueckt Rebirth, und allen anderen braeche die Stadt zusammen, an
+--      der sie gerade arbeiten.
+--
+-- Was zurueckgeht, ist genau der Inhalt von CHAPTER_FIELDS -- die 21 Felder, die ohnehin
+-- pro Kapitel gespeichert werden. Das ist kein Zufall: der Speicherstand hat diese Form
+-- seit Schema 6, und der Rebirth folgt ihr, statt eine zweite Liste zu fuehren, die
+-- irgendwann davon abweicht.
+local RebirthEvent = RemoteEventUtils.GetOrCreate("RebirthEvent")
+
+-- Die Gruende stehen auf ENGLISCH, weil sie unveraendert im Hauptmenue erscheinen.
+local function rebirthGesperrtWeil(player)
+	if player:GetAttribute("IsInPrologue") == true then
+		return "Not during the prologue."
+	end
+	if player:GetAttribute("IsInChapterFinale") == true then
+		return "Not during the chapter finale."
+	end
+	-- Nur die Stadt, in der der Spieler steht. Eine Sperre, die greift, weil irgendwo
+	-- sonst auf der Karte eine Stadt gebrochen ist, waere fuer ihn nicht nachvollziehbar.
+	local stadt = player:GetAttribute("CurrentCityName")
+	if stadt and stadt ~= "None" and _G.IsCityBroken and _G.IsCityBroken(stadt) then
+		return "Not while " .. stadt .. " is broken."
+	end
+	return nil
+end
+
+RebirthEvent.OnServerEvent:Connect(function(player)
+	-- Das Kapitel kommt aus dem STAND, nicht aus dem Attribut. Beide koennen auseinander
+	-- laufen, und ein Rebirth, der dem falschen glaubt, loescht das falsche Kapitel.
+	local kapitel = _G.GetCurrentChapter(player)
+	if not kapitel then
+		warn("[Kaiju] Rebirth von " .. player.Name .. " abgelehnt -- kein geladener Stand.")
+		RebirthEvent:FireClient(player, false, "Your save is still loading. Try again in a moment.")
+		return
+	end
+
+	local grund = rebirthGesperrtWeil(player)
+	if grund then
+		print("[Kaiju-Debug] Rebirth von " .. player.Name .. " abgelehnt: " .. grund)
+		RebirthEvent:FireClient(player, false, grund)
+		return
+	end
+
+	local leaderstats = player:FindFirstChild("leaderstats")
+	if not leaderstats then
+		RebirthEvent:FireClient(player, false, "Your character is not ready yet.")
+		return
+	end
+
+	print(string.format(
+		"[Kaiju-Debug] Rebirth von %s -- Kapitel %s, vorher Level %d und %d Geld.",
+		player.Name, tostring(kapitel), leaderstats.Level.Value, leaderstats.Coins.Value))
+
+	-- Laufende Uebernahmen geordnet beenden, sonst bliebe die Kamera uebernommen und die
+	-- Steuerung umgestellt, waehrend der Prolog darunter neu anfaengt.
+	if _G.EndShowdown then
+		_G.EndShowdown(player, "Rebirth")
+	end
+	if _G.EndTelemetryRun then
+		_G.EndTelemetryRun(player, "Rebirth")
+	end
+
+	-- ===== Die 21 Kapitelfelder =====
+	leaderstats.Level.Value = 0
+	leaderstats.Kills.Value = 0
+	leaderstats.Coins.Value = 0
+
+	local xpValue = player:FindFirstChild("XP")
+	local xpNeededValue = player:FindFirstChild("XPNeeded")
+	if xpValue then
+		xpValue.Value = 0
+	end
+	if xpNeededValue then
+		xpNeededValue.Value = xpNeededForLevel(0)
+	end
+
+	local starterStats = (_G.ComputeStarterStats and _G.ComputeStarterStats())
+		or { LegPower = 1, ArmPower = 1, BodyPower = 1 }
+	for key, value in pairs(starterStats) do
+		local statValue = player:FindFirstChild(key)
+		if statValue then
+			statValue.Value = value
+		end
+	end
+
+	-- Skins: alle ausser dem kostenlosen Skin_0 wieder sperren.
+	local unlockedFolder = player:FindFirstChild("UnlockedSkins")
+	if unlockedFolder then
+		for _, marker in ipairs(unlockedFolder:GetChildren()) do
+			if marker.Name ~= "Skin_0" then
+				marker:Destroy()
+			end
+		end
+	end
+	local equippedSkin = player:FindFirstChild("EquippedSkin")
+	if equippedSkin then
+		equippedSkin.Value = 0
+	end
+
+	local evolutionPoints = player:FindFirstChild("EvolutionPoints")
+	if evolutionPoints then
+		evolutionPoints.Value = 0
+	end
+	for _, key in ipairs({
+		"EvoSpeedLevel", "EvoMoneyLevel", "EvoDamageLevel",
+		"EvoTrainingLevel", "EvoCooldownLevel", "EvoLuckLevel",
+	}) do
+		local evoValue = player:FindFirstChild(key)
+		if evoValue then
+			evoValue.Value = 0
+		end
+	end
+
+	-- Die fuenf ausgebbaren Energien. Die LifetimeEnergy*-Zaehler stehen BEWUSST nicht in
+	-- dieser Liste: sie sind reine Statistik, laufen ueber alle Kapitel und sinken nie.
+	for _, energyKey in ipairs({
+		"EnergyHeat", "EnergyChemical", "EnergyElectric", "EnergyRadiation", "EnergySpirit",
+	}) do
+		player:SetAttribute(energyKey, 0)
+	end
+
+	-- Nur der Zweig dieses Kapitels. Die Talente der anderen beiden gehoeren nicht dazu.
+	if _G.ResetPlayerTalentsForChapter then
+		_G.ResetPlayerTalentsForChapter(player, kapitel)
+	end
+
+	-- Damit das Finale beim naechsten Durchlauf wieder laeuft statt CITY BROKEN.
+	if _G.ClearChapterCompletion then
+		_G.ClearChapterCompletion(player, kapitel)
+	end
+
+	-- Der Zaehler. Er liegt in der Lebensstatistik und ueberlebt den Rebirth deshalb --
+	-- er zaehlt ueber alle Neustarts hinweg weiter, nicht nur den letzten.
+	if _G.RecordStat then
+		_G.RecordStat(player, "ChapterRestarts." .. kapitel)
+	end
+
+	-- ===== Sitzungszustand =====
+	-- Verstaerkungen haengen am Spieler, nicht am Charakter. Ein Neuanfang, nach dem noch
+	-- acht Minuten doppelter Schaden laufen, ist keiner.
+	player:SetAttribute("CoinsBoostEndsAt", 0)
+	player:SetAttribute("DamageBoostEndsAt", 0)
+	player:SetAttribute("BoostEndsAt", 0)
+	player:SetAttribute("BoostCharge", 0)
+	for _, name in ipairs({
+		"Heat", "BerserkActive", "MutationActive", "MutationType",
+		"CoinsBoostMultiplier", "DamageBoostMultiplier", "BoostChargeNeeded",
+	}) do
+		player:SetAttribute(name, nil)
+	end
+
+	-- ===== Der Prolog =====
+	player:SetAttribute("HasCompletedPrologue", nil)
+	player:SetAttribute("PrologueCompletedMajor", nil)
+	player:SetAttribute("PrologueCompletedMinor", nil)
+
+	-- Ohne diesen Aufruf bliebe die Staerke auf dem alten, hohen Wert stehen, obwohl
+	-- ArmPower schon zurueckgesetzt ist -- sie wird sonst nur beim Charakterstart neu
+	-- gerechnet.
+	recalculateStrength(player)
+
+	-- ===== Speichern, bevor der Prolog uebernimmt =====
+	-- Dieselben drei stillen Riegel wie beim Debug-Reset. Ein Rebirth, der scheinbar
+	-- wirkt und beim naechsten Beitritt wieder da ist, waere der schlimmste Ausgang:
+	-- der Spieler hat sein Kapitel aufgegeben und bekommt es halb zurueck.
+	local saveProblem = nil
+	if finalSaveDone[player] then
+		saveProblem = "Abschluss-Speicherung lief bereits"
+	elseif player:GetAttribute("SaveSchemaTooNew") then
+		saveProblem = "Speicherstand stammt aus einer neueren Fassung"
+	elseif player:GetAttribute("SaveLockedElsewhere") then
+		saveProblem = "Sitzung ist anderswo gesperrt"
+	else
+		local ok, err = pcall(function()
+			savePlayerData(player, buildPlayerSaveData(player))
+		end)
+		if not ok then
+			saveProblem = tostring(err)
+		end
+	end
+
+	if saveProblem then
+		warn("[Kaiju] Rebirth von " .. player.Name .. " NICHT gespeichert: " .. saveProblem)
+		RebirthEvent:FireClient(player, false, "Could not save. Nothing was changed on the server.")
+		return
+	end
+
+	print(string.format("[Kaiju] Rebirth von %s gespeichert -- Kapitel %s steht wieder auf null.",
+		player.Name, tostring(kapitel)))
+	RebirthEvent:FireClient(player, true, nil)
+
+	-- ===== Und von vorn =====
+	-- Der Prolog muss AUSDRUECKLICH gestartet werden. Das Loeschen der Kennzeichen oben
+	-- genuegt nicht: _G.StartPrologue wird sonst nur beim Beitritt gerufen, nichts
+	-- beobachtet die Attribute. Ohne diese Zeilen liefe der Prolog erst beim naechsten
+	-- Betreten des Spiels -- und der Knopf haette sein Versprechen nur halb gehalten.
+	--
+	-- Der Orchestrator laedt den Charakter selbst und fuehrt eine Warteschlange, falls
+	-- Prologue City gerade belegt ist. Deshalb hier KEIN eigenes LoadCharacter -- nur im
+	-- Rueckfall, falls der Prolog gar nicht vorhanden ist.
+	task.spawn(function()
+		if _G.StartPrologue then
+			_G.StartPrologue(player)
+		else
+			warn("[Kaiju] Rebirth: _G.StartPrologue fehlt -- Charakter wird nur neu geladen.")
+			pcall(function()
+				player:LoadCharacter()
+			end)
+		end
+	end)
 end)
 
 _G.AwardXP = awardXP

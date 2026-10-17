@@ -278,10 +278,12 @@ local NAV_BUTTONS = {
 	{ key = "Monster", icon = HudChrome.Icon.Skins, label = "Skins" },
 	{ key = "Achievements", icon = HudChrome.Icon.Achievements, label = "Achievements" },
 	{ key = "Talents", icon = HudChrome.Icon.Talents, label = "Talents" },
-	-- Schluessel weiterhin "Pets", Beschriftung jetzt "Fragments": derselbe Grund wie bei
+	-- Schluessel weiterhin "Pets", Beschriftung jetzt "Rebirth": derselbe Grund wie bei
 	-- "Monster"/"Skins" darueber -- der Schluessel steht im Speicherstand (NavBadge_Pets).
-	-- Der Companion war ein leerer Platzhalter; der Platz gehoert den Fragmenten.
-	{ key = "Pets", icon = HudChrome.Icon.Companion, label = "Fragments" },
+	-- Dieser Platz hat schon zweimal gewechselt: erst Companion (leerer Platzhalter), dann
+	-- Fragments, seit dem 15.10.2026 Rebirth. Die Fundstuecke zeigt jetzt die
+	-- Faction-Karte -- Zahl, Balken und die fuenf Felder.
+	{ key = "Pets", icon = HudChrome.Icon.Rebirth, label = "Rebirth" },
 	{ key = "Gifts", icon = HudChrome.Icon.Gift, label = "Gift" },
 	{ key = "Faction", icon = HudChrome.Icon.Faction, label = "Faction" },
 	{ key = "Archive", icon = HudChrome.Icon.Archive, label = "Archive" },
@@ -407,7 +409,7 @@ end
 -- Druck gar nichts tut, wirkt kaputt, deshalb sagt er kurz, woran es liegt.
 --
 -- Seit dem 11.10.2026 ist die Liste LEER. Darin stand "Pets" (Companion), und das war der
--- einzige Eintrag; sein Platz traegt jetzt die Fragmente von Kapitel I. Die Liste bleibt
+-- einzige Eintrag; sein Platz traegt seit dem 15.10.2026 den Rebirth-Knopf. Die Liste bleibt
 -- als Mechanik stehen: der naechste ungebaute Punkt braucht sie wieder, und sie ist der
 -- Unterschied zwischen "noch nicht gebaut" und "kaputt".
 local UNBUILT_KEYS = {}
@@ -682,10 +684,11 @@ local function createPlaceholderPanel(key, title, subtitle, message)
 	return panel
 end
 
--- ===== Fragmente statt Companion (11.10.2026) =====
--- Der Companion war von Anfang an ein leerer Platzhalter -- kein einziger Treffer im
--- Projekt ausserhalb dieser Datei. Der Platz gehört jetzt den Fragmenten von Kapitel I: je
--- Stadt eines, auffindbar nur im Fenster von CITY BROKEN (siehe CollectibleService).
+-- ===== Rebirth statt Fragmente (15.10.2026) =====
+-- Dieser Platz hat zweimal gewechselt: Companion (leerer Platzhalter) -> Fragments ->
+-- Rebirth. Die Fundstuecke zeigt jetzt allein die Faction-Karte, mit den fuenf Feldern
+-- und dem Fortschrittsbalken. Was dabei WEGFAELLT und bewusst nicht ersetzt wurde: die
+-- 3D-Vorschau und der Name jedes einzelnen Fundstuecks. Entscheidung von Amancio.
 --
 -- ===== Warum der Schlüssel "Pets" bleibt =====
 -- Dieselbe Begründung wie bei "Monster"/"Skins" weiter oben: der Schlüssel steht im
@@ -693,18 +696,47 @@ end
 -- würde bei jedem Spieler das gemerkte Lämpchen verwerfen -- für nichts, denn sichtbar ist
 -- nur die Beschriftung.
 --
+-- ===== Der Bildschirm IST die Warnung =====
+-- Es gibt bewusst keinen Bestätigungsdialog. Im ganzen Hauptmenü existiert keiner, und
+-- einer allein für diesen Knopf wäre ein Fremdkörper. Stattdessen trägt der Bildschirm
+-- selbst die Warnung: er nennt in Ruhe und in Ziffern, was verloren geht, und der Knopf
+-- darunter ist dann die bewusste Handlung statt eines Klicks, den ein Dialog abfangen muss.
+--
 -- Der ganze Block liegt in einem do-Block. Diese Datei ist gross, und Luau lässt je
--- Funktion nur 200 Lokale zu -- aus 20 Namen hier wird so keiner auf oberster Ebene.
+-- Funktion nur 200 Lokale zu -- aus den Namen hier wird so keiner auf oberster Ebene.
 do
-	local CollectibleConfig = require(ReplicatedStorage:WaitForChild("CollectibleConfig"))
-	local ModelPreviewUtils = require(ReplicatedStorage:WaitForChild("ModelPreviewUtils"))
-	-- Beide hier und nicht oben: im do-Block kosten sie keinen Platz auf oberster Ebene.
-	local CityAlertConfigLokal = require(ReplicatedStorage:WaitForChild("CityAlertConfig"))
-	local CityIdentityLokal = require(ReplicatedStorage:WaitForChild("CityIdentity"))
+	-- GetOrCreate waere hier falsch: auf dem Client darf nichts angelegt werden, was der
+	-- Server erwartet. Das versionierte Gegenstueck liegt als RebirthEvent.model.json in
+	-- ReplicatedStorage, das Ereignis ist also von Anfang an da. Mit Zeitgrenze, damit ein
+	-- fehlendes Ereignis auffaellt statt stumm zu haengen.
+	local rebirthEvent = ReplicatedStorage:WaitForChild("RebirthEvent", 10)
+
+	-- Die roemische Ziffer gehoert zur Figur, nicht zur Reihenfolge einer Tabelle.
+	local KAPITEL_ANZEIGE = {
+		Kaiju = "Chapter I -- Kaiju",
+		Jaeger = "Chapter II -- Jaeger",
+		Ronin = "Chapter III -- Ronin",
+	}
+
+	-- Tausendertrennung mit schmalem Abstand. 4200000 liest niemand; 4 200 000 schon --
+	-- und genau darauf beruht die Warnung: die eigene Zahl wirkt staerker als ein
+	-- Warndreieck.
+	local function mitTrennern(zahl)
+		local text = tostring(math.floor(zahl or 0))
+		local ergebnis = text
+		while true do
+			local ersetzt, anzahl = ergebnis:gsub("^(-?%d+)(%d%d%d)", "%1 %2")
+			ergebnis = ersetzt
+			if anzahl == 0 then
+				break
+			end
+		end
+		return ergebnis
+	end
 
 	local schirm = HudChrome.Screen(screenGui, {
-		name = "FragmentsPanel",
-		title = "FRAGMENTS",
+		name = "RebirthPanel",
+		title = "REBIRTH",
 		subtitle = "",
 	})
 	local panel = schirm.panel
@@ -715,146 +747,179 @@ do
 		_G.NavReturnToMenu()
 	end)
 
-	local fortschritt = schirm.subtitle
+	local spalte = Instance.new("Frame")
+	spalte.Name = "RebirthColumn"
+	spalte.AnchorPoint = Vector2.new(0.5, 0)
+	spalte.Position = UDim2.new(0.5, 0, 0, 16)
+	spalte.Size = UDim2.new(1, -32, 1, -32)
+	spalte.BackgroundTransparency = 1
+	spalte.Parent = schirm.content
 
-	local raster = Instance.new("Frame")
-	raster.Name = "FragmentGrid"
-	raster.AnchorPoint = Vector2.new(0.5, 0)
-	raster.Position = UDim2.new(0.5, 0, 0, 16)
-	raster.Size = UDim2.new(1, -32, 1, -32)
-	raster.BackgroundTransparency = 1
-	raster.Parent = schirm.content
+	-- Lesebreite deckeln. Ueber die ganze Breite eines Grossbildschirms gezogen wird der
+	-- Absatz unlesbar; dasselbe Mittel wie im Skin-Steckbrief.
+	local breite = Instance.new("UISizeConstraint")
+	breite.MaxSize = Vector2.new(620, math.huge)
+	breite.Parent = spalte
 
-	local layout = Instance.new("UIGridLayout")
-	layout.CellSize = UDim2.fromOffset(190, 232)
-	layout.CellPadding = UDim2.fromOffset(14, 14)
-	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Parent = raster
+	local liste = Instance.new("UIListLayout")
+	liste.Padding = UDim.new(0, 14)
+	liste.SortOrder = Enum.SortOrder.LayoutOrder
+	liste.Parent = spalte
 
-	-- Die Reihenfolge der Kampagne, nicht die einer Tabelle: pairs über ByCity wäre bei
-	-- jedem Spielstart eine andere. CityOrder ist die verbindliche Abfolge.
-	local reihenfolge = {}
-	for _, cityName in ipairs(CityAlertConfigLokal.CityOrder) do
-		if CollectibleConfig.ForCity(cityName) then
-			table.insert(reihenfolge, cityName)
+	local function textZeile(ordnung, hoehe)
+		local label = Instance.new("TextLabel")
+		label.BackgroundTransparency = 1
+		label.Size = UDim2.new(1, 0, 0, hoehe)
+		label.LayoutOrder = ordnung
+		label.TextXAlignment = Enum.TextXAlignment.Left
+		label.TextYAlignment = Enum.TextYAlignment.Top
+		label.TextWrapped = true
+		label.Text = ""
+		label.Parent = spalte
+		return label
+	end
+
+	local fuehrung = textZeile(1, 28)
+	HudChrome.MenuBody(fuehrung)
+	fuehrung.Text = "Start this chapter over from nothing."
+
+	local verlustText = textZeile(2, 76)
+	HudChrome.MenuBody(verlustText, HudChrome.MenuTextSize.Caption)
+	verlustText.TextColor3 = HudChrome.Color.TextSecondary
+
+	-- Die konkreten Zahlen stehen abgesetzt in einer eigenen Flaeche: sie sind das, was
+	-- den Spieler innehalten laesst, nicht der Absatz darueber.
+	local zahlenFeld = Instance.new("Frame")
+	zahlenFeld.Name = "LossFigures"
+	zahlenFeld.Size = UDim2.new(1, 0, 0, 46)
+	zahlenFeld.LayoutOrder = 3
+	zahlenFeld.Parent = spalte
+	HudChrome.Panel(zahlenFeld, { radius = HudChrome.Radius.Small })
+
+	local zahlen = Instance.new("TextLabel")
+	zahlen.BackgroundTransparency = 1
+	zahlen.Size = UDim2.new(1, -24, 1, 0)
+	zahlen.Position = UDim2.fromOffset(12, 0)
+	zahlen.TextXAlignment = Enum.TextXAlignment.Left
+	zahlen.TextWrapped = true
+	zahlen.Text = ""
+	zahlen.Parent = zahlenFeld
+	HudChrome.MenuBody(zahlen, HudChrome.MenuTextSize.Caption)
+	zahlen.TextColor3 = HudChrome.Color.Ready
+
+	local bleibt = textZeile(4, 44)
+	HudChrome.MenuBody(bleibt, HudChrome.MenuTextSize.Caption)
+	bleibt.TextColor3 = HudChrome.Color.TextDim
+	bleibt.Text = "Your achievements, your archive and the chapters you have already "
+		.. "unlocked are not affected."
+
+	local knopf = Instance.new("TextButton")
+	knopf.Name = "RebirthButton"
+	knopf.Size = UDim2.new(0, 220, 0, 46)
+	knopf.LayoutOrder = 5
+	knopf.AutoButtonColor = false
+	knopf.Text = "REBIRTH"
+	knopf.Parent = spalte
+	-- Den Rand aus dem Rueckgabewert nehmen statt ihn spaeter zu suchen: FindFirstChildOfClass
+	-- faende auch einen Rand, den irgendwann jemand anders anhaengt.
+	local _, knopfRand = HudChrome.Panel(knopf, { radius = HudChrome.Radius.Small })
+	HudChrome.Label(knopf, HudChrome.MenuTextSize.Section)
+
+	-- Rueckmeldung des Servers: abgelehnt (mit Grund) oder unterwegs. Eine eigene Zeile
+	-- statt einer Textaenderung am Knopf -- die Ablehnung soll lesbar sein, nicht in einer
+	-- Knopfbeschriftung abgeschnitten.
+	local meldung = textZeile(6, 24)
+	HudChrome.MenuCaption(meldung)
+	meldung.TextColor3 = HudChrome.Color.TextDim
+
+	local laeuft = false
+
+	local function knopfZustand(aktiv)
+		knopf.Text = aktiv and "REBIRTH" or "WORKING..."
+		if knopfRand then
+			knopfRand.Color = aktiv and HudChrome.Color.Ready or HudChrome.Color.BorderDim
 		end
-	end
-
-	local modellOrdner = ReplicatedStorage:FindFirstChild(CollectibleConfig.FolderName)
-	if not modellOrdner then
-		warn("[Kaiju Debug] Fragmente: " .. CollectibleConfig.FolderName .. " fehlt -- die "
-			.. "Kacheln zeigen Platzhalter statt der Modelle.")
-	end
-
-	local kacheln = {} -- [cityName] = { name, stadt, viewport, vorschau }
-
-	for index, cityName in ipairs(reihenfolge) do
-		local eintrag = CollectibleConfig.ForCity(cityName)
-
-		local kachel = Instance.new("Frame")
-		kachel.Name = cityName .. "Fragment"
-		kachel.LayoutOrder = index
-		kachel.Parent = raster
-		HudChrome.Panel(kachel, { fill = HudChrome.Color.PanelRaised })
-
-		local bild = Instance.new("Frame")
-		bild.Name = "Bild"
-		bild.Position = UDim2.fromOffset(8, 8)
-		bild.Size = UDim2.new(1, -16, 0, 140)
-		bild.BackgroundTransparency = 1
-		bild.Parent = kachel
-
-		local vorlage = modellOrdner and modellOrdner:FindFirstChild(eintrag.Model)
-		local vorschau = nil
-		if vorlage then
-			local viewport = ModelPreviewUtils.CreateViewport(bild, 2)
-			vorschau = vorlage:Clone()
-			vorschau.Parent = viewport
-			pcall(function()
-				ModelPreviewUtils.Fit(viewport, vorschau, bild)
-			end)
-			ModelPreviewUtils.Spin(vorschau)
-		else
-			ModelPreviewUtils.ShowPlaceholder(bild, 2)
-		end
-
-		local name = Instance.new("TextLabel")
-		name.Name = "Name"
-		name.Position = UDim2.fromOffset(8, 154)
-		name.Size = UDim2.new(1, -16, 0, 26)
-		name.BackgroundTransparency = 1
-		name.Text = string.upper(eintrag.Title)
-		name.Parent = kachel
-		HudChrome.Label(name, 17)
-
-		local stadt = Instance.new("TextLabel")
-		stadt.Name = "Stadt"
-		stadt.Position = UDim2.fromOffset(8, 180)
-		stadt.Size = UDim2.new(1, -16, 0, 20)
-		stadt.BackgroundTransparency = 1
-		stadt.Text = CityIdentityLokal.DisplayName(cityName) or cityName
-		stadt.Parent = kachel
-		HudChrome.Sublabel(stadt)
-
-		local zustand = Instance.new("TextLabel")
-		zustand.Name = "Zustand"
-		zustand.Position = UDim2.fromOffset(8, 202)
-		zustand.Size = UDim2.new(1, -16, 0, 22)
-		zustand.BackgroundTransparency = 1
-		zustand.Text = ""
-		zustand.Parent = kachel
-		HudChrome.Number(zustand, 15)
-
-		kacheln[cityName] = {
-			kachel = kachel,
-			zustand = zustand,
-			vorschau = vorschau,
-		}
-	end
-
-	-- ===== Was gesammelt ist =====
-	-- Steht in der Lebensstatistik und kommt als Attribut am Spieler an (StatsService,
-	-- Präfix "Stat_"). Der Client fragt also nichts ab und hält nichts nach -- er liest.
-	local function istGefunden(cityName)
-		return (player:GetAttribute("Stat_CollectibleFound." .. cityName) or 0) > 0
+		knopf.TextColor3 = aktiv and HudChrome.Color.Ready or HudChrome.Color.TextDim
 	end
 
 	local function zeichne()
-		local gefunden = 0
-		for cityName, teile in pairs(kacheln) do
-			local hat = istGefunden(cityName)
-			if hat then
-				gefunden += 1
-			end
+		local kapitel = player:GetAttribute("Chapter") or "Kaiju"
+		local name = KAPITEL_ANZEIGE[kapitel] or kapitel
 
-			teile.zustand.Text = hat and "FOUND" or "MISSING"
-			-- Bernstein für gefunden, gedämpft für offen. Cyan bleibt der Special Energy
-			-- vorbehalten (siehe HudChrome).
-			teile.zustand.TextColor3 = hat and HudChrome.Color.Ready or HudChrome.Color.TextDim
+		verlustText.Text = string.format(
+			"You will lose everything you have earned in %s: your level, your credits, "
+			.. "all energy, every skin you bought, your training and your talents. "
+			.. "The prologue will play again.", name)
 
-			-- Ein offenes Fragment bleibt sichtbar, aber zurückgenommen: man soll wissen,
-			-- was es gibt -- das ist der Zweck dieser Übersicht --, ohne dass es wie
-			-- erledigt aussieht.
-			if teile.vorschau then
-				for _, part in ipairs(teile.vorschau:GetDescendants()) do
-					if part:IsA("BasePart") then
-						part.Transparency = hat and 0 or 0.55
-					end
-				end
-			end
+		local leaderstats = player:FindFirstChild("leaderstats")
+		local level = leaderstats and leaderstats:FindFirstChild("Level")
+		local coins = leaderstats and leaderstats:FindFirstChild("Coins")
+		zahlen.Text = string.format(
+			"You will lose Level %d, %s credits and all energy.",
+			level and level.Value or 0, mitTrennern(coins and coins.Value or 0))
+
+		-- Der Zaehler aus der Lebensstatistik. Er ueberlebt den Rebirth und zaehlt deshalb
+		-- ueber alle Neustarts hinweg weiter.
+		local neustarts = player:GetAttribute("Stat_ChapterRestarts." .. kapitel) or 0
+		schirm.subtitle.Text = neustarts > 0
+			and string.format("RESTARTED %d%s", neustarts, utf8.char(215))
+			or ""
+	end
+
+	knopf.MouseButton1Click:Connect(function()
+		if laeuft or not rebirthEvent then
+			return
 		end
+		laeuft = true
+		knopfZustand(false)
+		meldung.Text = ""
+		rebirthEvent:FireServer()
+	end)
 
-		fortschritt.Text = string.format("%d / %d COLLECTED", gefunden, #reihenfolge)
+	if rebirthEvent then
+		rebirthEvent.OnClientEvent:Connect(function(erfolg, grund)
+			laeuft = false
+			knopfZustand(true)
+			if erfolg then
+				-- Der Prolog uebernimmt gleich Kamera und Bild -- das Menue muss vorher zu
+				-- sein, sonst liegt es ueber der Sequenz.
+				meldung.Text = ""
+				_G.NavReturnToMenu()
+				setMenuOpen(false)
+			else
+				meldung.Text = grund or "Rebirth is not possible right now."
+			end
+			print("[Kaiju Debug] Rebirth-Antwort:", erfolg, grund or "--")
+		end)
+	else
+		warn("[Kaiju Debug] RebirthEvent fehlt in ReplicatedStorage -- der Knopf bleibt wirkungslos.")
+		meldung.Text = "Rebirth is unavailable."
 	end
 
-	for _, cityName in ipairs(reihenfolge) do
-		player:GetAttributeChangedSignal("Stat_CollectibleFound." .. cityName):Connect(zeichne)
-	end
+	knopfZustand(true)
 	zeichne()
 
-	print(string.format("[Kaiju Debug] Fragmente-Panel bereit -- %d Kacheln, Modelle %s.",
-		#reihenfolge, modellOrdner and "geladen" or "FEHLEN"))
+	-- Die Zahlen am Knopf muessen stimmen, wenn der Bildschirm aufgeht -- Level und Geld
+	-- aendern sich staendig. Billiger als ein Heartbeat: auf genau die drei Quellen hoeren.
+	player:GetAttributeChangedSignal("Chapter"):Connect(zeichne)
+	do
+		local leaderstats = player:FindFirstChild("leaderstats")
+		if leaderstats then
+			local level = leaderstats:FindFirstChild("Level")
+			local coins = leaderstats:FindFirstChild("Coins")
+			if level then
+				level.Changed:Connect(zeichne)
+			end
+			if coins then
+				coins.Changed:Connect(zeichne)
+			end
+		end
+	end
+	for _, kapitel in ipairs({ "Kaiju", "Jaeger", "Ronin" }) do
+		player:GetAttributeChangedSignal("Stat_ChapterRestarts." .. kapitel):Connect(zeichne)
+	end
+
+	print("[Kaiju Debug] Rebirth-Panel bereit -- Ereignis", rebirthEvent and "gefunden" or "FEHLT")
 end
 
 -- ===== Echtes Achievement-Panel (ersetzt den bisherigen Platzhalter) =====
