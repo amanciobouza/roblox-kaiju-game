@@ -106,7 +106,11 @@
       "Bash(luau tools/tmp/abstand.luau)",
       "Bash(luau src/StarterPlayerScripts/EnergyTypesClient.client.luau)",
       "Bash(luau src/ServerScriptService/CollectibleService.server.luau)",
-      "Bash(luau src/StarterPlayerScripts/PlayerNameTagClient.client.luau)"
+      "Bash(luau src/StarterPlayerScripts/PlayerNameTagClient.client.luau)",
+      "Bash(grep -v \":0$\")",
+      "Bash(sort -t: -k2 -rn)",
+      "Bash(git commit -q -m '@ *)",
+      "Bash(awk -F: '{print $1\" :\"$2}')"
     ]
   }
 }

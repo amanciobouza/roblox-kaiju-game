@@ -329,6 +329,12 @@ _G.RunChapterFinale = function(cityName, erzwingenFuer)
 	-- die anderen nicht aufhalten soll.
 	for _, player in ipairs(offen) do
 		task.spawn(function()
+			-- Laufzeit-Kennzeichen, nach dem Vorbild von IsInPrologue. Der Rebirth-Knopf im
+			-- Hauptmenue fragt es ab und weigert sich, solange die Vorstellung laeuft: ein
+			-- Reset mitten in einer Szene, die Kamera, Filmstreifen und Steuerung
+			-- uebernommen hat, laesst den Spieler in einem Zwischenzustand zurueck.
+			player:SetAttribute("IsInChapterFinale", true)
+
 			local ok, fehler = pcall(function()
 				sperreSteuerung(player, true)
 				-- Filmstreifen an, HUD aus -- aber die Lebensanzeige bleibt, wie im Fall
@@ -381,6 +387,12 @@ _G.RunChapterFinale = function(cityName, erzwingenFuer)
 			if _G.MarkChapterComplete then
 				_G.MarkChapterComplete(player, eintrag.Kapitel)
 			end
+
+			-- In JEDEM Fall wieder loeschen, auch nach einem Abbruch -- aus demselben Grund
+			-- wie der Zeile darueber: bliebe das Kennzeichen stehen, waere der
+			-- Rebirth-Knopf fuer diesen Spieler bis zum naechsten Beitritt gesperrt, ohne
+			-- dass irgendetwas liefe.
+			player:SetAttribute("IsInChapterFinale", nil)
 		end)
 	end
 

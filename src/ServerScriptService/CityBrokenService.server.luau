@@ -115,6 +115,14 @@ end
 -- doppeltes Auslösen, während der Timer bereits läuft.
 local cityBrokenActive = {}
 
+-- Von aussen abfragbar. Der Rebirth-Knopf im Hauptmenue weigert sich, solange die Stadt
+-- des Spielers gebrochen ist: das Fenster dauert 75 Sekunden, ist die Auszahlung des
+-- ganzen Kreislaufs, und wer es mitten darin wegwirft, hat das vermutlich nicht gewollt.
+-- Als Funktion statt als zweite Tabelle, damit es nur diese eine Wahrheit gibt.
+_G.IsCityBroken = function(cityName)
+	return cityBrokenActive[cityName] == true
+end
+
 local function triggerCityBroken(cityName)
 	if cityBrokenActive[cityName] then
 		return

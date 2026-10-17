@@ -776,6 +776,37 @@ for index, faction in ipairs(FACTIONS) do
 	local chapterLabel, chapterFill = makeProgressBar("CHAPTER 0%")
 	chapterLabel.Parent.LayoutOrder = 2
 
+	-- ===== Wie oft dieses Kapitel neu gestartet wurde (15.10.2026) =====
+	-- Rechtsbuendig in die Zeile des Kapitelbalkens gesetzt, nicht in eine eigene Reihe:
+	-- progressContainer hat eine feste Hoehe, und darunter sitzt der SELECT-Knopf am
+	-- Kartenboden. Eine zusaetzliche Reihe haette den Platz zwischen beiden aufgebraucht.
+	--
+	-- Die Zahl kommt aus der Lebensstatistik und ueberlebt den Rebirth -- sie zaehlt also
+	-- ueber alle Neustarts hinweg weiter, nicht nur den letzten. Bei null bleibt die Zeile
+	-- leer: ein "RESTARTED 0x" auf jeder Karte waere Rauschen.
+	local restartLabel = Instance.new("TextLabel")
+	restartLabel.Name = "Neustarts"
+	restartLabel.Size = UDim2.new(1, 0, 0, 18)
+	restartLabel.BackgroundTransparency = 1
+	restartLabel.TextXAlignment = Enum.TextXAlignment.Right
+	restartLabel.Text = ""
+	restartLabel.ZIndex = 72
+	restartLabel.Parent = chapterLabel.Parent
+	HudChrome.MenuCaption(restartLabel)
+	restartLabel.TextColor3 = HudChrome.Color.TextDim
+
+	-- Direkt am Attribut statt in refreshFactionProgress: der Wert haengt an nichts
+	-- anderem, und so stimmt er auch, wenn das Panel gerade nicht offen war.
+	local neustartSchluessel = "Stat_ChapterRestarts." .. faction.key
+	local function zeichneNeustarts()
+		local anzahl = player:GetAttribute(neustartSchluessel) or 0
+		restartLabel.Text = anzahl > 0
+			and string.format("RESTARTED %d%s", anzahl, utf8.char(215))
+			or ""
+	end
+	player:GetAttributeChangedSignal(neustartSchluessel):Connect(zeichneNeustarts)
+	zeichneNeustarts()
+
 	-- Die Freischaltbedingungen bleiben den gesperrten Fraktionen vorbehalten. Sie liegen
 	-- jetzt in einem eigenen Rahmen, damit der Kapitelfortschritt darueber bei JEDER Karte
 	-- stehen kann -- vorher war der ganze Container bei Kaiju verborgen.

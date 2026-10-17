@@ -875,13 +875,55 @@ local function updateQuestList()
 	zaehlerTrenner.Visible = anyTaskVisible
 end
 
-RunService.Heartbeat:Connect(updateQuestList)
+-- Mehrere replizierte Werte können im selben Bild eintreffen. Ein gemeinsames
+-- Update genügt; die Aufgabenliste braucht keine Arbeit in jedem Heartbeat.
+local questUpdatePending = false
+local function requestQuestUpdate()
+	if questUpdatePending then return end
+	questUpdatePending = true
+	task.defer(function()
+		questUpdatePending = false
+		updateQuestList()
+	end)
+end
 
-for _, valueObject in ipairs(cityAlertValues:GetChildren()) do
-	if valueObject.Name:match("Task_") or valueObject.Name:match("CityBroken$") then
-		valueObject:GetPropertyChangedSignal("Value"):Connect(updateQuestList)
+local questValueConnections = {}
+local function watchQuestValue(valueObject)
+	if not valueObject:IsA("ValueBase") or questValueConnections[valueObject] then return end
+	if valueObject.Name:match("Task_") or valueObject.Name:match("CityBroken$")
+		or valueObject.Name:match("CityBrokenEndsAt$") then
+		questValueConnections[valueObject] = valueObject:GetPropertyChangedSignal("Value"):Connect(requestQuestUpdate)
+		requestQuestUpdate()
 	end
 end
+cityAlertValues.ChildAdded:Connect(watchQuestValue)
+cityAlertValues.ChildRemoved:Connect(function(valueObject)
+	local connection = questValueConnections[valueObject]
+	if connection then
+		connection:Disconnect()
+		questValueConnections[valueObject] = nil
+		requestQuestUpdate()
+	end
+end)
+for _, valueObject in ipairs(cityAlertValues:GetChildren()) do watchQuestValue(valueObject) end
+player:GetAttributeChangedSignal("CurrentCityName"):Connect(requestQuestUpdate)
+player:GetAttributeChangedSignal("CurrentZone"):Connect(requestQuestUpdate)
+warnFrame:GetPropertyChangedSignal("Visible"):Connect(requestQuestUpdate)
+
+-- Nur der sichtbare Countdown braucht einen Zeittakt, nicht die Aufgabenzeilen.
+task.spawn(function()
+	while screenGui.Parent do
+		if cityBrokenBanner.Visible then
+			local cityName = player:GetAttribute("CurrentCityName")
+			local endsAtValue = cityName and cityAlertValues:FindFirstChild(cityName .. "CityBrokenEndsAt")
+			local remaining = endsAtValue and math.max(math.floor(endsAtValue.Value - os.clock()), 0) or 0
+			local text = "FREE DESTRUCTION " .. remaining .. "s"
+			if cityBrokenSubtitle.Text ~= text then cityBrokenSubtitle.Text = text end
+		end
+		task.wait(0.25)
+	end
+end)
+print("[Kaiju Debug] Aufgaben-HUD: Updates bei Aenderungen; Countdown mit 4 Hz.")
 updateQuestList()
 
 -- Wird von CityAlertAnnouncementClient.lua aufgerufen, sobald die grosse zentrale

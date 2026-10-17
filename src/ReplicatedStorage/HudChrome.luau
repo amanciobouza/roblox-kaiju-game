@@ -160,6 +160,11 @@ HudChrome.Icon = {
 	Achievements = "rbxassetid://126073634057511",
 	Talents = "rbxassetid://124483432242014",
 	Companion = "rbxassetid://105165530758812",
+	-- NOCH NICHT HOCHGELADEN: zeigt vorerst auf dasselbe Bild wie Companion, weil der
+	-- Menuepunkt an dessen Stelle getreten ist. Ein eigenes Symbol (Kreis mit Pfeil,
+	-- Neustart) gehoert hierher -- dann ist der Austausch genau diese eine Zeile und nicht
+	-- eine Suche quer durch den NavigationClient.
+	Rebirth = "rbxassetid://105165530758812",
 	Gift = "rbxassetid://93207170168404",
 	Faction = "rbxassetid://74313387395312",
 	Archive = "rbxassetid://90336087936743",

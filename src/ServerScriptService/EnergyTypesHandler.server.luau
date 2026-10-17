@@ -405,8 +405,21 @@ end
 _G.GrantTypedEnergy = grantTypedEnergy
 
 Players.PlayerAdded:Connect(function(player)
-	player:SetAttribute("Faction", DEFAULT_FACTION)
-	player:SetAttribute("SelectedFaction", DEFAULT_FACTION)
+	-- ===== Vorbesetzung, KEINE Festlegung (15.10.2026) =====
+	-- Hier stand bisher eine unbedingte Zuweisung. Die hat bei jedem Beitritt das
+	-- gespeicherte Kapitel ueberschrieben: wer als Jaeger aufhoerte, kam als Kaiju zurueck.
+	--
+	-- Massgeblich ist data.Chapter, gesetzt von PlayerSetup, sobald der DataStore
+	-- geantwortet hat. Bis dahin vergeht aber Zeit, und alles, was in dieser Luecke Faction
+	-- liest, braucht trotzdem einen Wert -- deshalb bleibt der Ausgangswert stehen, aber
+	-- nur, wenn noch keiner da ist. Ohne dieses "nur wenn" haengt das Ergebnis daran,
+	-- welcher der beiden PlayerAdded-Handler zuletzt laeuft.
+	if player:GetAttribute("Faction") == nil then
+		player:SetAttribute("Faction", DEFAULT_FACTION)
+	end
+	if player:GetAttribute("SelectedFaction") == nil then
+		player:SetAttribute("SelectedFaction", DEFAULT_FACTION)
+	end
 	for _, energyType in ipairs(ENERGY_TYPES) do
 		player:SetAttribute(ENERGY_ATTRIBUTE_NAME[energyType], 0)
 	end
