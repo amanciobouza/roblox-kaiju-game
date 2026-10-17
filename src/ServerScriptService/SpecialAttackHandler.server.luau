@@ -7,6 +7,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HouseSpatialIndex = require(script.Parent:WaitForChild("HouseSpatialIndex", 10))
 local CollectionService = game:GetService("CollectionService")
 local Workspace = game:GetService("Workspace")
 
@@ -331,7 +332,7 @@ local function findFocusTarget(player, rootPart)
 	local bestDistance = FOCUS_ATTACK_RANGE * math.max(1 - focusRangePenalty, 0.5)
 
 	if _G.HOUSE_TAG then
-		for _, house in ipairs(CollectionService:GetTagged(_G.HOUSE_TAG)) do
+		for _, house in ipairs(HouseSpatialIndex.Query(originPosition, bestDistance)) do
 			if not house:GetAttribute("Destroyed") then
 				-- PrimaryPart gibt's nur bei Models -- bei direkt getaggten Parts/MeshParts
 				-- (kein Model drumherum) das Objekt selbst als Position nutzen.
@@ -529,7 +530,7 @@ local function performAreaDamage(player, chargePosition, radius, damage)
 	local naechsterFehlschlag = math.huge
 
 	if _G.HOUSE_TAG and _G.DamageHouse then
-		for _, house in ipairs(CollectionService:GetTagged(_G.HOUSE_TAG)) do
+		for _, house in ipairs(HouseSpatialIndex.Query(chargePosition, radius)) do
 			local housePart = house:IsA("Model") and house.PrimaryPart or (house:IsA("BasePart") and house or nil)
 			local abstand = housePart and (housePart.Position - chargePosition).Magnitude
 			if abstand and abstand > radius and abstand < naechsterFehlschlag then
@@ -554,7 +555,7 @@ local function performAreaDamage(player, chargePosition, radius, damage)
 
 	print(string.format(
 		"[Kaiju Debug] Flaeche: %d Gebaeude getroffen (Radius %.0f, Schaden %.0f je Ziel). "
-			.. "Naechstes verfehltes Gebaeude: %s.",
+			.. "Naechstes verfehltes Gebaeude in der Vorauswahl: %s.",
 		getroffen, radius, damage,
 		naechsterFehlschlag == math.huge and "keines" or string.format("%.0f Studs", naechsterFehlschlag)))
 

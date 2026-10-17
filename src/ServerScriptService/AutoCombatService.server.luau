@@ -31,7 +31,7 @@
 -- Absicht: ein Modus, aus dem man nicht einfach wieder herauslenken kann, faengt sich beim
 -- ersten Missverstaendnis selbst ein.
 
-local CollectionService = game:GetService("CollectionService")
+local HouseSpatialIndex = require(script.Parent:WaitForChild("HouseSpatialIndex", 10))
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -146,9 +146,8 @@ local function hausHalbmesser(haus)
 end
 
 local function sucheZiel(rootPart)
-	local tag = _G.HOUSE_TAG or "KaijuHouse"
 	local bestes, besterAbstand = nil, SUCHRADIUS
-	for _, haus in ipairs(CollectionService:GetTagged(tag)) do
+	for _, haus in ipairs(HouseSpatialIndex.Query(rootPart.Position, SUCHRADIUS)) do
 		if not istZerstoert(haus) then
 			local teil = zielTeil(haus)
 			if teil then

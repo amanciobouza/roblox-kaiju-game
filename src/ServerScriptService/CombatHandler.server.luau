@@ -6,6 +6,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HouseSpatialIndex = require(script.Parent:WaitForChild("HouseSpatialIndex", 10))
 local RemoteEventUtils = require(ReplicatedStorage:WaitForChild("RemoteEventUtils"))
 local CollectionService = game:GetService("CollectionService")
 local Workspace = game:GetService("Workspace")
@@ -106,7 +107,7 @@ local function getHousesInRange(position)
 	if not _G.HOUSE_TAG then
 		return housesInRange
 	end
-	for _, house in ipairs(CollectionService:GetTagged(_G.HOUSE_TAG)) do
+	for _, house in ipairs(HouseSpatialIndex.Query(position, ATTACK_RANGE)) do
 		if distanceToHouse(house, position) <= ATTACK_RANGE then
 			table.insert(housesInRange, house)
 		end

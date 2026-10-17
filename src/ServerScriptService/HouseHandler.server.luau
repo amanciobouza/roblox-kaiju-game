@@ -9,8 +9,9 @@
 
 local CollectionService = game:GetService("CollectionService")
 local ServerStorage = game:GetService("ServerStorage")
-local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HouseSpatialIndex = require(script.Parent:WaitForChild("HouseSpatialIndex", 10))
+local HouseDestructionEffects = require(script.Parent:WaitForChild("HouseDestructionEffects", 10))
 local TweenService = game:GetService("TweenService")
 
 -- WICHTIG: WaitForChild MIT Timeout statt ohne -- letzte verbliebene Stelle im
@@ -109,9 +110,6 @@ end)
 local HOUSE_TAG = "KaijuHouse"
 local RESPAWN_TIME = 30 -- Sekunden bis ein zerstörtes Haus wieder erscheint
 local GROUP_SECTION_ENERGY_TIME = 12 -- L3: Feuer/Energy pro zerstörtem Trakt, unabhängig vom Gruppen-Respawn
-local FIRE_DIE_DURATION = 3 -- Sekunden, über die das Feuer selbst langsam ausgeht
-local SMOKE_REDUCE_DURATION = 2.5 -- Sekunden, über die der Rauch danach auf einen schwächeren Nachglimm-Rauch zurückgeht
-local SMOKE_FADE_DURATION = 3.5 -- Sekunden, über die dieser Rest-Rauch danach komplett ausklingt
 
 local DEFAULT_HEALTH = 100
 -- Nicht-lineare Belohnungsformel: Belohnung = HP^EXPONENT * SCALE. Der Exponent < 1 sorgt
@@ -135,7 +133,6 @@ end
 
 -- WICHTIG: Trag hier deine eigene Sound-ID aus dem Creator Store ein (Format: "rbxassetid://12345678")
 local HOUSE_IMPACT_SOUND_ID = "rbxassetid://94204209674027"
-local HOUSE_EXPLOSION_SOUND_ID = "rbxassetid://138668273240081"
 
 -- Zerstörte Häuser werden hierhin verschoben (komplett aus der Welt entfernt --
 -- garantiert unsichtbar, unabhängig von Texturen/Decals/Unions/etc.).
@@ -345,410 +342,25 @@ local function shakeHouse(house)
 	end)
 end
 
--- Spielt einen visuellen Explosions-Effekt + Sound an der Position des Hauses ab.
--- Nutzt ein separates, unsichtbares Anker-Teil, damit der Effekt unabhängig vom
--- Verstecken/Respawnen des Hauses zuverlässig zu Ende abspielt.
-local EXPLOSION_GROWTH_DURATION = 0.3 -- schnell
+-- Der Einsturz und die Ruine bleiben Weltzustand; Partikeleffekte laufen lokal.
 local HOUSE_COLLAPSE_DURATION = 1.1 -- etwas langsamer -- die Kipp-/Sink-Bewegung soll sich Zeit lassen
 local HOUSE_UNCOLLAPSE_DURATION = 1.1 -- Respawn: Teile "richten sich wieder auf" (Umkehrung des Einsturzes), ebenfalls langsamer
 local EXPLOSION_HEIGHT_OFFSET = 8 -- Studs über der reinen Unterkante des Hauses
-local EXPLOSION_TOTAL_DURATION = 1 -- die ganze Animation soll nicht länger als 1 Sekunde dauern
-
--- ===== Gedämpfte Grössen-Skalierung basierend auf Gebäude-MaxHealth =====
--- Gemeinsam für Explosion, Feuer UND Rauch genutzt -- bewusst NICHT linear (1:1 wäre bei
--- einer Spanne von 100 bis 64 Mio. HP absurd), sondern mit Exponent gedämpft plus
--- Obergrenze. Kleine Häuser wirken dadurch spürbar kleiner als grosse, aber selbst ein
--- Mega-City-Gebäude explodiert/brennt nicht ins Unermessliche.
-local function getDestructionEffectScale(maxHealth)
-	return math.clamp(1 + (maxHealth ^ 0.3) * 0.3, 1, 6)
-end
-
--- Staubwolke beim Einsturz: emittiert über die GESAMTE Grundfläche des Gebäudes (nicht
--- nur einen einzelnen Punkt) -- dadurch skaliert die Wolke automatisch horizontal mit
--- der Gebäudegrösse (ein grosses Gebäude wirbelt über eine grosse Fläche Staub auf).
--- Vertikal bewusst NUR LEICHT grösser (Schwerkraft zieht den Staub so oder so schnell
--- wieder runter, unabhängig davon wie riesig das Gebäude war).
-local function playDustCloudEffect(groundPosition, boundsSize)
-	print("[Kaiju-Debug] playDustCloudEffect aufgerufen, groundPosition:", groundPosition, "boundsSize:", boundsSize)
-	-- Wie bei einer kontrollierten Hochhaus-Sprengung: die Staubwolke breitet sich
-	-- RADIAL/KREISFÖRMIG am Boden nach ALLEN SEITEN aus, statt wie Rauch nach oben zu
-	-- steigen. Nutzt Robloxs EINGEBAUTE "Disk"-Emitter-Form -- die emittiert nativ radial
-	-- von der Kreisfläche nach aussen, kein manuelles Rotieren einzelner Emitter nötig
-	-- (der frühere Ansatz mit 28 rotierten Attachments hat aus unbekanntem Grund nicht
-	-- gerendert -- dieser native Weg ist der von Roblox dafür vorgesehene).
-	local footprintRadius = math.max(boundsSize.X, boundsSize.Z, 6) / 2
-	local scale = math.clamp(1 + (footprintRadius ^ 0.35) * 0.5, 1.4, 5)
-
-	local dustAnchor = Instance.new("Part")
-	dustAnchor.Name = "DustCloudAnchor"
-	dustAnchor.Anchored = true
-	dustAnchor.CanCollide = false
-	dustAnchor.CanQuery = false
-	dustAnchor.Transparency = 1
-	dustAnchor.Size = Vector3.new(footprintRadius * 2.2, 0.2, footprintRadius * 2.2)
-	-- Um 90° gekippt, damit die Disk-Fläche FLACH/HORIZONTAL liegt (parallel zum Boden) --
-	-- eine unrotierte Disk stünde sonst senkrecht wie ein Rad.
-	dustAnchor.CFrame = CFrame.new(groundPosition)
-	dustAnchor.Parent = workspace
-
-	local dust = Instance.new("ParticleEmitter")
-	dust.Name = "DustCloud"
-	dust.Texture = "rbxasset://textures/particles/smoke_main.dds"
-	dust.Color = ColorSequence.new(Color3.fromRGB(200, 198, 192)) -- hellgrau
-	dust.Shape = Enum.ParticleEmitterShape.Cylinder
-	dust.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
-	dust.ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward -- WICHTIG: emittiert radial VOM Rand weg
-
-	-- Partikel BLÄHEN SICH AUF (klein -> gross) und werden dann wieder kleiner/verblassen
-	-- -- "aufblähen und langsam verschwinden", keine aufsteigende Rauchsäule.
-	dust.Size = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 5 * scale),
-		NumberSequenceKeypoint.new(0.35, 15 * scale),
-		NumberSequenceKeypoint.new(0.7, 19 * scale),
-		NumberSequenceKeypoint.new(1, 16 * scale),
-	})
-	dust.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.1),
-		NumberSequenceKeypoint.new(0.25, 0),
-		NumberSequenceKeypoint.new(0.75, 0.45),
-		NumberSequenceKeypoint.new(1, 1),
-	})
-	local lifetimeScale = math.clamp(scale * 0.6, 1, 1.8)
-	dust.Lifetime = NumberRange.new(2.8 * lifetimeScale, 3.6 * lifetimeScale)
-
-	local speedScale = math.clamp(scale * 0.5, 1, 2.5)
-	dust.Speed = NumberRange.new(footprintRadius * 0.35 * speedScale, footprintRadius * 0.55 * speedScale)
-	dust.SpreadAngle = Vector2.new(15, 15)
-	dust.Acceleration = Vector3.new(0, -6, 0) -- bremst die Steighöhe zügig, bleibt bodennah
-	dust.Drag = 1.2
-	dust.Rotation = NumberRange.new(0, 360)
-	dust.RotSpeed = NumberRange.new(-25, 25)
-
-	-- WICHTIG: Kontinuierliche Emission über "Rate" statt einmaligem Emit()-Ausstoss --
-	-- das ist exakt die Technik, die beim Feuer-Rauch (SmokePlume) nachweislich
-	-- funktioniert. Ein kurzer, hoher Rate-Stoss über 0.4s erzeugt denselben "Wumms"-
-	-- Effekt wie ein einmaliger Ausstoss, aber zuverlässig sichtbar.
-	local totalParticles = math.clamp(math.floor(55 * scale), 55, 160)
-	dust.Rate = totalParticles / 0.4
-	dust.Parent = dustAnchor
-	print("[Kaiju-Debug] Dust-Cylinder-Emitter: Rate:", dust.Rate, "Speed:", dust.Speed, "footprintRadius:", footprintRadius, "scale:", scale)
-
-	task.delay(0.4, function()
-		if dust.Parent then
-			dust.Rate = 0
-		end
-	end)
-
-	task.delay(6, function()
-		dustAnchor:Destroy()
-	end)
-end
-
--- Spielt NUR den Knallsound, sofort beim Zerstören (zusammen mit dem Staubwirbel) --
--- getrennt von der verzögerten visuellen Explosion (playExplosionEffect weiter unten),
--- die weiterhin mit Feuer/Rauch nach der Pause erscheint.
-local function playDestructionSound(groundPosition)
-	if HOUSE_EXPLOSION_SOUND_ID == "" or HOUSE_EXPLOSION_SOUND_ID == "rbxassetid://0" then
-		return
-	end
-
-	local soundAnchor = Instance.new("Part")
-	soundAnchor.Name = "DestructionSoundAnchor"
-	soundAnchor.Anchored = true
-	soundAnchor.CanCollide = false
-	soundAnchor.CanQuery = false
-	soundAnchor.Transparency = 1
-	soundAnchor.Size = Vector3.new(1, 1, 1)
-	soundAnchor.CFrame = CFrame.new(groundPosition)
-	soundAnchor.Parent = workspace
-
-	local destructionSound = Instance.new("Sound")
-	destructionSound.Name = "DestructionSound"
-	destructionSound.SoundId = HOUSE_EXPLOSION_SOUND_ID
-	destructionSound.Volume = 1
-	destructionSound.Parent = soundAnchor
-	destructionSound:Play()
-
-	Debris:AddItem(soundAnchor, 5)
-end
-
-local function playExplosionEffect(house)
-	local ok, cframe, size = pcall(function()
-		return house:GetBoundingBox()
-	end)
-	if not ok then
-		warn("[Kaiju-Debug] playExplosionEffect: GetBoundingBox fehlgeschlagen für '" .. house:GetFullName() .. "' -- keine Explosion erzeugt.")
-		return
-	end
-
-	-- Boden-Position statt Mitte der Bounding-Box, mit etwas Höhen-Puffer nach oben
-	local groundCFrame =
-		CFrame.new(cframe.Position.X, cframe.Position.Y - size.Y / 2 + EXPLOSION_HEIGHT_OFFSET, cframe.Position.Z)
-
-	local effectAnchor = Instance.new("Part")
-	effectAnchor.Name = "ExplosionEffectAnchor"
-	effectAnchor.Anchored = true
-	effectAnchor.CanCollide = false
-	effectAnchor.CanQuery = false
-	effectAnchor.Transparency = 1
-	effectAnchor.Size = Vector3.new(1, 1, 1)
-	effectAnchor.CFrame = groundCFrame
-	effectAnchor.Parent = workspace
-
-	-- Eigenes Partikel-VFX (ServerStorage.Effects.HouseExplosionVFX) statt/zusätzlich
-	-- zum generischen Roblox-Explosion-Effekt.
-	local effectsFolder = ServerStorage:FindFirstChild("Effects")
-	local vfxTemplate = effectsFolder and effectsFolder:FindFirstChild("HouseExplosionVFX")
-
-	-- Skalierungsfaktor basierend auf der Gebäudegröße (MaxHealth) -- kleine Häuser (100 HP)
-	-- bekommen jetzt spürbar größere Explosionen als vorher, riesige Mega-City-Gebäude einen
-	-- gedeckelten Maximalwert (sonst würde die Explosion absurd riesig werden).
-	local maxHealth = house:GetAttribute("MaxHealth") or 100
-	local explosionScale = getDestructionEffectScale(maxHealth)
-
-	if vfxTemplate then
-		local vfxClone = vfxTemplate:Clone()
-
-		-- WICHTIG: Statt uns auf PivotTo() zu verlassen (das bei manchen VFX-Assets
-		-- verschachtelte Teile ohne echtes BasePart NICHT mitbewegt -- die blieben dann
-		-- an ihrer Ursprungsposition, z.B. nahe (0,0,0), hängen), hängen wir JEDEN
-		-- gefundenen ParticleEmitter direkt an unseren bereits korrekt positionierten
-		-- effectAnchor um. So ist die Position garantiert richtig, unabhängig von der
-		-- internen Struktur des VFX-Assets.
-		local emitters = {}
-		for _, descendant in ipairs(vfxClone:GetDescendants()) do
-			if descendant:IsA("ParticleEmitter") then
-				table.insert(emitters, descendant)
-			elseif descendant:IsA("BasePart") then
-				descendant.Anchored = true
-				descendant.CanCollide = false
-				descendant.Transparency = 1
-			end
-		end
-
-		for _, emitter in ipairs(emitters) do
-			emitter.Parent = effectAnchor
-
-			-- Partikel-Größe mit dem Skalierungsfaktor multiplizieren (jeder Keypoint
-			-- der bestehenden Size-Kurve wird vergrößert, Form/Verlauf bleibt erhalten).
-			local scaledKeypoints = {}
-			for _, keypoint in ipairs(emitter.Size.Keypoints) do
-				table.insert(
-					scaledKeypoints,
-					NumberSequenceKeypoint.new(keypoint.Time, keypoint.Value * explosionScale, keypoint.Envelope * explosionScale)
-				)
-			end
-			emitter.Size = NumberSequence.new(scaledKeypoints)
-
-			-- Mehr Partikel bei größeren Häusern, damit die Explosion auch "voller" wirkt
-			local baseEmitCount = emitter:GetAttribute("EmitCount") or 30
-			emitter:Emit(math.floor(baseEmitCount * explosionScale))
-		end
-
-		vfxClone:Destroy() -- die leere Hülle wird nicht mehr gebraucht, nur die Emitter selbst
-	else
-		-- Fallback: generischer Roblox-Explosion-Effekt, falls kein eigenes VFX vorbereitet ist
-		local explosion = Instance.new("Explosion")
-		explosion.Position = groundCFrame.Position
-		explosion.BlastRadius = 12 * explosionScale
-		explosion.BlastPressure = 0 -- rein visueller Effekt, keine Wucht/Umgebungsschaden
-		explosion.DestroyJointRadiusPercent = 0
-		explosion.ExplosionType = Enum.ExplosionType.NoCraters
-		explosion.Parent = workspace
-	end
-
-	-- Sound wird jetzt SOFORT nach dem Zerstören abgespielt (siehe playDestructionSound
-	-- weiter unten, aufgerufen direkt neben dem Staubwirbel) -- nicht mehr hier, verzögert
-	-- zusammen mit der visuellen Explosion.
-
-	task.delay(EXPLOSION_TOTAL_DURATION, function()
-		effectAnchor:Destroy()
-	end)
-end
 
 -- Vorbereitete Ruinen-Vorlagen pro Haus (nicht in der Welt geparkt, nur zum Klonen)
 -- und die aktuell sichtbare Ruine (falls das Haus gerade zerstört ist).
 local ruinTemplates = {}
 local activeRuins = {}
 
--- Läuft aktives Feuer pro Haus, damit es beim erneuten Zerstören/Respawnen sauber
--- aufgeräumt werden kann.
-local activeFires = {}
-
--- Entzündet ein Feuer an der Position des Hauses, das bis kurz vor dem Respawn brennt
--- und dann in drei Phasen (Feuer aus -> Rest-Rauch -> ausklingen) langsam verschwindet.
-local FIRE_SIZE_BASE = 10 -- wird mit fireScale (siehe getDestructionEffectScale) multipliziert
-local FIRE_HEAT_BASE = 3
-
+-- Brennzustand replizieren; jeder Client erzeugt die Darstellung lokal.
 local function startHouseFire(house, groundCFrame, lifetimeOverride)
-	local fireLifetime = tonumber(lifetimeOverride) or RESPAWN_TIME
-	local maxHealth = house:GetAttribute("MaxHealth") or 100
-	-- Dieselbe gedämpfte Skalierung wie bei der Explosion (siehe getDestructionEffectScale)
-	-- -- kleine Häuser brennen/rauchen spürbar kleiner als grosse, aber selbst ein
-	-- Mega-City-Gebäude bekommt keine absurd riesige Feuersäule.
-	local fireScale = getDestructionEffectScale(maxHealth)
-
-	local fireAnchor = Instance.new("Part")
-	fireAnchor.Name = "HouseFireAnchor"
-	fireAnchor.Anchored = true
-	fireAnchor.CanCollide = false
-	fireAnchor.CanQuery = false
-	fireAnchor.Transparency = 1
-	fireAnchor.Size = Vector3.new(1, 1, 1)
-	fireAnchor.CFrame = groundCFrame
-	fireAnchor.Parent = workspace
-
-	-- Eigenes Feuer-VFX (ServerStorage.Effects.HouseFireVFX), falls vorhanden -- sonst
-	-- Fallback auf Robloxs eingebautes Fire-Objekt. Genau wie bei der Explosion: ALLE
-	-- ParticleEmitter im VFX werden direkt an den Anker umgehängt (unabhängig von der
-	-- internen Struktur des Assets), damit die Position garantiert stimmt.
-	local effectsFolder = ServerStorage:FindFirstChild("Effects")
-	local fireVfxTemplate = effectsFolder and effectsFolder:FindFirstChild("HouseFireVFX")
-
-	local fire, customEmitters
-	if fireVfxTemplate then
-		local vfxClone = fireVfxTemplate:Clone()
-		customEmitters = {}
-		for _, descendant in ipairs(vfxClone:GetDescendants()) do
-			if descendant:IsA("ParticleEmitter") then
-				table.insert(customEmitters, descendant)
-			end
-		end
-		for _, emitter in ipairs(customEmitters) do
-			emitter.Parent = fireAnchor
-			emitter.Enabled = true
-
-			-- Grösse (jeder Keypoint der bestehenden Size-Kurve) und Rate mit dem
-			-- Skalierungsfaktor multiplizieren -- Form/Verlauf der Kurve bleibt erhalten,
-			-- nur die Grössenordnung passt sich dem Gebäude an.
-			local scaledKeypoints = {}
-			for _, keypoint in ipairs(emitter.Size.Keypoints) do
-				table.insert(
-					scaledKeypoints,
-					NumberSequenceKeypoint.new(keypoint.Time, keypoint.Value * fireScale, keypoint.Envelope * fireScale)
-				)
-			end
-			emitter.Size = NumberSequence.new(scaledKeypoints)
-			emitter.Rate = emitter.Rate * fireScale
-		end
-		vfxClone:Destroy() -- leere Hülle, nicht mehr gebraucht
-	else
-		fire = Instance.new("Fire")
-		fire.Size = FIRE_SIZE_BASE * fireScale
-		fire.Heat = FIRE_HEAT_BASE * fireScale
-		fire.Parent = fireAnchor
-	end
-
-	-- ParticleEmitter statt Smoke-Objekt: lässt sich als schmale, aufsteigende Rauchfahne
-	-- gestalten (enger Streuwinkel, klare Aufwärtsrichtung) statt einer breiten Wolke.
-	-- Grösse UND Aufsteigrate ebenfalls mit fireScale skaliert -- ein grosses Gebäude
-	-- raucht spürbar mehr/breiter als ein kleines.
-	local smoke = Instance.new("ParticleEmitter")
-	smoke.Name = "SmokePlume"
-	smoke.Texture = "rbxasset://textures/particles/smoke_main.dds"
-	smoke.Color = ColorSequence.new(Color3.fromRGB(70, 70, 75))
-	smoke.Size = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 2 * fireScale),
-		NumberSequenceKeypoint.new(0.5, 6 * fireScale),
-		NumberSequenceKeypoint.new(1, 10 * fireScale),
-	})
-	smoke.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.3),
-		NumberSequenceKeypoint.new(1, 1),
-	})
-	smoke.Lifetime = NumberRange.new(3, 5)
-	smoke.Rate = 15 * fireScale
-	smoke.Speed = NumberRange.new(6, 10)
-	smoke.SpreadAngle = Vector2.new(5, 5) -- eng gehalten -> Fahne statt breiter Wolke
-	smoke.Acceleration = Vector3.new(0, 2, 0) -- beschleunigt weiter nach oben, je höher sie steigt
-	smoke.Rotation = NumberRange.new(0, 360)
-	smoke.RotSpeed = NumberRange.new(-20, 20)
-	smoke.Parent = fireAnchor
-
-	activeFires[house] = fireAnchor
-
-	-- ===== Dreistufige Ausklingsequenz, bevor das Haus respawnbereit ist =====
-	-- 1) Feuer geht langsam aus (Grösse/Hitze bzw. eigene Emitter-Rate -> 0), Rauch läuft
-	--    dabei noch auf volle Stärke weiter (ein frisch erloschenes Feuer raucht ja auch
-	--    im echten Leben zunächst normal weiter).
-	-- 2) Rauch reduziert sich auf einen SCHWÄCHEREN Nachglimm-Rauch (deutlich weniger als
-	--    vorher, aber noch sichtbar).
-	-- 3) Auch dieser Rest-Rauch klingt langsam komplett aus. Erst DANACH ist das Haus
-	--    respawnbereit.
-	local fadeStartDelay = math.max(fireLifetime - FIRE_DIE_DURATION - SMOKE_REDUCE_DURATION - SMOKE_FADE_DURATION, 0)
-	task.delay(fadeStartDelay, function()
-		if not fireAnchor.Parent then
-			return -- wurde schon vorher aufgeräumt (z.B. Haus erneut zerstört)
-		end
-
-		local startFireSize = fire and fire.Size
-		local startFireHeat = fire and fire.Heat
-		local startEmitterRates = {}
-		if customEmitters then
-			for _, emitter in ipairs(customEmitters) do
-				startEmitterRates[emitter] = emitter.Rate
-			end
-		end
-
-		-- Phase 1: Feuer geht aus, Rauch bleibt währenddessen auf voller Stärke.
-		local fireSteps = 10
-		for step = 1, fireSteps do
-			if not fireAnchor.Parent then
-				return
-			end
-			local alpha = step / fireSteps
-			if fire then
-				fire.Size = startFireSize * (1 - alpha)
-				fire.Heat = startFireHeat * (1 - alpha)
-			end
-			if customEmitters then
-				for _, emitter in ipairs(customEmitters) do
-					emitter.Rate = startEmitterRates[emitter] * (1 - alpha)
-				end
-			end
-			task.wait(FIRE_DIE_DURATION / fireSteps)
-		end
-
-		-- Phase 2: Rauch reduziert sich auf einen schwächeren Nachglimm-Rauch (40% der
-		-- ursprünglichen Rate) -- deutlich weniger als vorher, aber noch klar sichtbar.
-		local fullSmokeRate = smoke.Rate
-		local reducedSmokeRate = fullSmokeRate * 0.4
-		local reduceSteps = 8
-		for step = 1, reduceSteps do
-			if not fireAnchor.Parent then
-				return
-			end
-			local alpha = step / reduceSteps
-			smoke.Rate = fullSmokeRate + (reducedSmokeRate - fullSmokeRate) * alpha
-			task.wait(SMOKE_REDUCE_DURATION / reduceSteps)
-		end
-
-		-- Phase 3: auch der Nachglimm-Rauch klingt jetzt komplett aus.
-		local fadeSteps = 10
-		for step = 1, fadeSteps do
-			if not fireAnchor.Parent then
-				return
-			end
-			local alpha = step / fadeSteps
-			smoke.Rate = reducedSmokeRate * (1 - alpha)
-			task.wait(SMOKE_FADE_DURATION / fadeSteps)
-		end
-
-		fireAnchor:Destroy()
-		if activeFires[house] == fireAnchor then
-			activeFires[house] = nil
-		end
-	end)
+	HouseDestructionEffects.StartFire(house, groundCFrame, tonumber(lifetimeOverride) or RESPAWN_TIME)
 end
 
 -- Entfernt ein evtl. noch brennendes Feuer sofort (z.B. wenn das Haus respawnt oder
 -- erneut zerstört wird, bevor das alte Feuer von selbst ausgegangen ist).
 local function extinguishHouseFire(house)
-	local fireAnchor = activeFires[house]
-	if fireAnchor then
-		fireAnchor:Destroy()
-		activeFires[house] = nil
-	end
+	HouseDestructionEffects.StopFire(house)
 	if _G.UnregisterFireEnergySource then
 		_G.UnregisterFireEnergySource(house)
 	end
@@ -1757,8 +1369,7 @@ local function destroyHouse(house, destroyerPlayer, originPosition, isPassiveDam
 		-- Jetzt startet alles synchron zusammen, egal ob sofort oder verzögert.
 		if ok then
 			local groundPosition = Vector3.new(cframe.Position.X, cframe.Position.Y - size.Y / 2, cframe.Position.Z)
-			playDustCloudEffect(groundPosition, size)
-			playDestructionSound(groundPosition)
+			HouseDestructionEffects.Emit("Collapse", groundPosition, size, house:GetAttribute("MaxHealth") or 100)
 		end
 
 		collapseHouse(house, HOUSE_COLLAPSE_DURATION)
@@ -1768,7 +1379,9 @@ local function destroyHouse(house, destroyerPlayer, originPosition, isPassiveDam
 		-- Abstand -- die Explosion und das Feuer mit Rauch. Ohne diese Pause würden
 		-- Staub und Feuer praktisch gleichzeitig erscheinen.
 		task.wait(0.9)
-		playExplosionEffect(house)
+		if ok then
+			HouseDestructionEffects.Emit("Explosion", groundCFrame.Position, size, house:GetAttribute("MaxHealth") or 100)
+		end
 
 		-- "PermanentlyDestroyed"-Attribut hat drei mögliche Zustände (String):
 		--   nil/fehlt        -- normales Spiel, unverändertes Verhalten
@@ -2259,7 +1872,7 @@ onHouseTouched = function(house, housePart, hit)
 		if player:GetAttribute("MutationShockwaveJump") and _G.DamageHouse then
 			local SHOCKWAVE_RADIUS = 20
 			local SHOCKWAVE_DAMAGE_RATIO = 0.25 -- 25% des Sprungschadens an jedes Haus im Radius
-			for _, otherHouse in ipairs(CollectionService:GetTagged(_G.HOUSE_TAG or "KaijuHouse")) do
+			for _, otherHouse in ipairs(HouseSpatialIndex.Query(rootPart.Position, SHOCKWAVE_RADIUS)) do
 				if otherHouse ~= house and not otherHouse:GetAttribute("Destroyed") then
 					local otherPart = otherHouse:IsA("Model") and (otherHouse.PrimaryPart or otherHouse:FindFirstChildWhichIsA("BasePart"))
 					if otherPart and (otherPart.Position - rootPart.Position).Magnitude <= SHOCKWAVE_RADIUS then

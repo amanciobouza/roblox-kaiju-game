@@ -59,6 +59,7 @@ local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HouseSpatialIndex = require(script.Parent:WaitForChild("HouseSpatialIndex", 10))
 local ServerScriptService = game:GetService("ServerScriptService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
@@ -252,9 +253,8 @@ end
 -- bekannten Stadt steht: CurrentCityName wird nur innerhalb von Stadtgrenzen gesetzt, und
 -- es gibt Staedte ohne Grenzen (siehe CityAlertService). Dort waere ein Filter fatal -- die
 -- Figur koennte gar nichts mehr treffen. Lieber langsam als wirkungslos.
-local function taggedHouses(nurStadt)
-	local tag = _G.HOUSE_TAG or "KaijuHouse"
-	local alle = CollectionService:GetTagged(tag)
+local function taggedHouses(nurStadt, position, radius)
+	local alle = HouseSpatialIndex.Query(position, radius)
 	if not nurStadt then
 		return alle
 	end
@@ -281,14 +281,8 @@ local function stadtDesSpielers(player)
 end
 
 -- ===== Wie teuer ist die Zielsuche wirklich? =====
--- Beide Zielsuchen unten laufen ueber ALLE getaggten Gebaeude -- auch ueber die der
--- Staedte, in denen die Figur gar nicht steht. Je Gebaeude faellt dabei ein
--- Model:GetBoundingBox an, und das geht ueber jedes einzelne Teil des Modells; beim Fokus
--- kommt je Gebaeude ein Raycast dazu.
---
--- Bei ueber 300 getaggten Bauwerken mit je 50 bis 120 Teilen sind das rund 25 000
--- Teile-Durchlaeufe JE ANGRIFF. Das ist der Verdacht hinter den verzoegerten
--- Angriffsanimationen -- gemessen war er bisher nicht, und raten hilft hier nicht weiter.
+-- Beide Suchen nutzen eine raeumliche Vorauswahl. Die Messung umfasst weiterhin die
+-- genaue Bounding-Box- und Sichtpruefung der verbliebenen Kandidaten.
 --
 -- Gemeldet wird nur, was wirklich lange dauert: ein Bild dauert bei 60 Bildern je Sekunde
 -- 16.7 ms, alles darueber ist im Spiel als Stocken zu sehen.
@@ -917,7 +911,7 @@ function KaijuStageOneCombatAdapter.Attach(kaiju, root, humanoid, rootHeight)
 	local function nearestReachable()
 		local beginn = os.clock()
 		local bestHouse, bestPoint, bestDistance = nil, nil, math.huge
-		local haeuser = taggedHouses(stadtDesSpielers(player))
+		local haeuser = taggedHouses(stadtDesSpielers(player), root.Position, meleeReach)
 		for _, house in ipairs(haeuser) do
 			local point, distance = reachable(house)
 			if point and distance < bestDistance then
@@ -1368,7 +1362,7 @@ function KaijuStageOneCombatAdapter.Attach(kaiju, root, humanoid, rootHeight)
 		local best, bestDistance = nil, math.huge
 		local geprueft = 0
 		local beginn = os.clock()
-		for _, house in ipairs(taggedHouses(stadtDesSpielers(player))) do
+		for _, house in ipairs(taggedHouses(stadtDesSpielers(player), from, focusRange)) do
 			local point, visible = focusAim(house, from)
 			geprueft += 1
 			if visible then
